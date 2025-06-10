@@ -15,6 +15,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { Users, Plus, UserCheck, UserX, Shield, Settings } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 const UserManagement = () => {
   const { user, profile } = useAuth();
@@ -23,7 +26,7 @@ const UserManagement = () => {
     email: '',
     password: '',
     full_name: '',
-    role: 'staff',
+    role: 'staff' as UserRole,
     phone: '',
     address: ''
   });
@@ -110,7 +113,7 @@ const UserManagement = () => {
 
   // Update user role mutation
   const updateUserRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string, role: string }) => {
+    mutationFn: async ({ userId, role }: { userId: string, role: UserRole }) => {
       const { error } = await supabase
         .from('profiles')
         .update({ role })
@@ -196,7 +199,7 @@ const UserManagement = () => {
                   </div>
                   <div>
                     <Label>Role *</Label>
-                    <Select value={userData.role} onValueChange={(value) => setUserData(prev => ({ ...prev, role: value }))}>
+                    <Select value={userData.role} onValueChange={(value: UserRole) => setUserData(prev => ({ ...prev, role: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -354,7 +357,7 @@ const UserManagement = () => {
                                   <Label>New Role</Label>
                                   <Select 
                                     defaultValue={userData.role}
-                                    onValueChange={(value) => {
+                                    onValueChange={(value: UserRole) => {
                                       updateUserRoleMutation.mutate({ 
                                         userId: userData.id, 
                                         role: value 

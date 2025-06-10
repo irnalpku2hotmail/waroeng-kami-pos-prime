@@ -195,7 +195,7 @@ const Profile = () => {
                 <div className="flex items-center gap-3">
                   <Calendar className="h-4 w-4 text-gray-400" />
                   <span className="text-sm">
-                    Member since {new Date(profile?.created_at || '').toLocaleDateString()}
+                    Member since {new Date(user?.created_at || '').toLocaleDateString()}
                   </span>
                 </div>
               </div>
