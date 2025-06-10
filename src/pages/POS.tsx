@@ -376,17 +376,21 @@ const POS = () => {
                 <div className="space-y-2">
                   <Label>Customer (Opsional)</Label>
                   <Select
-                    value={selectedCustomer?.id || ''}
+                    value={selectedCustomer?.id || 'no-customer'}
                     onValueChange={(value) => {
-                      const customer = customers?.find(c => c.id === value);
-                      setSelectedCustomer(customer || null);
+                      if (value === 'no-customer') {
+                        setSelectedCustomer(null);
+                      } else {
+                        const customer = customers?.find(c => c.id === value);
+                        setSelectedCustomer(customer || null);
+                      }
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih customer" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tidak ada customer</SelectItem>
+                      <SelectItem value="no-customer">Tidak ada customer</SelectItem>
                       {customers?.map((customer) => (
                         <SelectItem key={customer.id} value={customer.id}>
                           {customer.name} ({customer.total_points} poin)
