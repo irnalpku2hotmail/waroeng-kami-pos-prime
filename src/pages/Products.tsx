@@ -4,14 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Upload, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import Layout from '@/components/Layout';
 
 const Products = () => {
@@ -28,8 +28,7 @@ const Products = () => {
         .select(`
           *,
           categories(name),
-          units(name, abbreviation),
-          suppliers(name)
+          units(name, abbreviation)
         `);
       
       if (searchTerm) {
@@ -55,15 +54,6 @@ const Products = () => {
     queryKey: ['units'],
     queryFn: async () => {
       const { data, error } = await supabase.from('units').select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: suppliers } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('suppliers').select('*');
       if (error) throw error;
       return data;
     }
@@ -123,18 +113,10 @@ const Products = () => {
       barcode: formData.get('barcode') as string,
       category_id: formData.get('category_id') as string || null,
       unit_id: formData.get('unit_id') as string || null,
-      supplier_id: formData.get('supplier_id') as string || null,
       base_price: Number(formData.get('base_price')),
       selling_price: Number(formData.get('selling_price')),
       min_quantity: Number(formData.get('min_quantity')),
-      tier1_quantity: Number(formData.get('tier1_quantity')) || null,
-      tier1_price: Number(formData.get('tier1_price')) || null,
-      tier2_quantity: Number(formData.get('tier2_quantity')) || null,
-      tier2_price: Number(formData.get('tier2_price')) || null,
-      tier3_quantity: Number(formData.get('tier3_quantity')) || null,
-      tier3_price: Number(formData.get('tier3_price')) || null,
       min_stock: Number(formData.get('min_stock')),
-      current_stock: Number(formData.get('current_stock')),
       loyalty_points: Number(formData.get('loyalty_points')),
       description: formData.get('description') as string,
       is_active: formData.get('is_active') === 'on'
@@ -159,7 +141,7 @@ const Products = () => {
                 Tambah Produk
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
               </DialogHeader>
@@ -184,7 +166,7 @@ const Products = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category_id">Kategori</Label>
                     <Select name="category_id" defaultValue={editProduct?.category_id}>
@@ -215,21 +197,6 @@ const Products = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="supplier_id">Supplier</Label>
-                    <Select name="supplier_id" defaultValue={editProduct?.supplier_id}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers?.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -255,67 +222,7 @@ const Products = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Harga Bertingkat (Grosir)</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="tier1_quantity">Tier 1 - Minimal Qty</Label>
-                      <Input
-                        id="tier1_quantity"
-                        name="tier1_quantity"
-                        type="number"
-                        defaultValue={editProduct?.tier1_quantity}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tier1_price">Tier 1 - Harga</Label>
-                      <Input
-                        id="tier1_price"
-                        name="tier1_price"
-                        type="number"
-                        defaultValue={editProduct?.tier1_price}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tier2_quantity">Tier 2 - Minimal Qty</Label>
-                      <Input
-                        id="tier2_quantity"
-                        name="tier2_quantity"
-                        type="number"
-                        defaultValue={editProduct?.tier2_quantity}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tier2_price">Tier 2 - Harga</Label>
-                      <Input
-                        id="tier2_price"
-                        name="tier2_price"
-                        type="number"
-                        defaultValue={editProduct?.tier2_price}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tier3_quantity">Tier 3 - Minimal Qty</Label>
-                      <Input
-                        id="tier3_quantity"
-                        name="tier3_quantity"
-                        type="number"
-                        defaultValue={editProduct?.tier3_quantity}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tier3_price">Tier 3 - Harga</Label>
-                      <Input
-                        id="tier3_price"
-                        name="tier3_price"
-                        type="number"
-                        defaultValue={editProduct?.tier3_price}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="min_quantity">Minimal Order</Label>
                     <Input
@@ -333,16 +240,6 @@ const Products = () => {
                       name="min_stock"
                       type="number"
                       defaultValue={editProduct?.min_stock || 10}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="current_stock">Stok Saat Ini</Label>
-                    <Input
-                      id="current_stock"
-                      name="current_stock"
-                      type="number"
-                      defaultValue={editProduct?.current_stock || 0}
                       required
                     />
                   </div>
@@ -398,28 +295,54 @@ const Products = () => {
           />
         </div>
 
-        <div className="grid gap-4">
+        <div className="border rounded-lg">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
           ) : products?.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">Belum ada produk</p>
-              </CardContent>
-            </Card>
+            <div className="text-center py-8">
+              <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">Belum ada produk</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products?.map((product) => (
-                <Card key={product.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama Produk</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Harga Jual</TableHead>
+                  <TableHead>Stok</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products?.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
                       <div>
-                        <CardTitle className="text-lg">{product.name}</CardTitle>
-                        <CardDescription>
-                          {product.categories?.name} • {product.units?.name}
-                        </CardDescription>
+                        <div className="font-medium">{product.name}</div>
+                        {product.barcode && (
+                          <div className="text-sm text-gray-500">{product.barcode}</div>
+                        )}
                       </div>
+                    </TableCell>
+                    <TableCell>{product.categories?.name || '-'}</TableCell>
+                    <TableCell>{product.units?.name || '-'}</TableCell>
+                    <TableCell>Rp {product.selling_price?.toLocaleString('id-ID')}</TableCell>
+                    <TableCell>
+                      <span className={product.current_stock < product.min_stock ? 'text-red-600' : 'text-green-600'}>
+                        {product.current_stock}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.is_active ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -439,35 +362,11 @@ const Products = () => {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Harga Jual:</span>
-                        <span className="font-semibold">Rp {product.selling_price?.toLocaleString('id-ID')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Stok:</span>
-                        <span className={`font-semibold ${product.current_stock < product.min_stock ? 'text-red-600' : 'text-green-600'}`}>
-                          {product.current_stock}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Poin Loyalty:</span>
-                        <span>{product.loyalty_points}</span>
-                      </div>
-                      {product.barcode && (
-                        <div className="flex justify-between">
-                          <span>Barcode:</span>
-                          <span className="text-sm text-gray-600">{product.barcode}</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
       </div>

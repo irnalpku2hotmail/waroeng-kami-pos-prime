@@ -16,29 +16,51 @@ const Login = () => {
   const { signIn, user } = useAuth();
 
   if (user) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    const { error } = await signIn(email, password);
-
-    if (error) {
+    
+    if (!email || !password) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: 'Email dan password harus diisi',
         variant: 'destructive',
       });
-    } else {
-      toast({
-        title: 'Berhasil',
-        description: 'Login berhasil!',
-      });
+      return;
     }
 
-    setLoading(false);
+    setLoading(true);
+
+    try {
+      const { error } = await signIn(email, password);
+
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          title: 'Error',
+          description: error.message === 'Invalid login credentials' 
+            ? 'Email atau password salah' 
+            : error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Berhasil',
+          description: 'Login berhasil!',
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      toast({
+        title: 'Error',
+        description: 'Terjadi kesalahan yang tidak terduga',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,6 +86,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -75,6 +98,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

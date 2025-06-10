@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Layers3 } from 'lucide-react';
 import Layout from '@/components/Layout';
@@ -113,6 +113,7 @@ const Categories = () => {
                     id="name"
                     name="name"
                     defaultValue={editCategory?.name}
+                    placeholder="Contoh: Makanan"
                     required
                   />
                 </div>
@@ -122,6 +123,7 @@ const Categories = () => {
                     id="description"
                     name="description"
                     defaultValue={editCategory?.description}
+                    placeholder="Deskripsi kategori"
                   />
                 </div>
                 <div className="flex justify-end space-x-2">
@@ -137,28 +139,33 @@ const Categories = () => {
           </Dialog>
         </div>
 
-        <div className="grid gap-4">
+        <div className="border rounded-lg">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
           ) : categories?.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Layers3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">Belum ada kategori</p>
-              </CardContent>
-            </Card>
+            <div className="text-center py-8">
+              <Layers3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">Belum ada kategori</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categories?.map((category) => (
-                <Card key={category.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{category.name}</CardTitle>
-                        {category.description && (
-                          <p className="text-sm text-gray-600 mt-2">{category.description}</p>
-                        )}
-                      </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama Kategori</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead>Tanggal Dibuat</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories?.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell>{category.description || '-'}</TableCell>
+                    <TableCell>
+                      {new Date(category.created_at).toLocaleDateString('id-ID')}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -178,11 +185,11 @@ const Categories = () => {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
       </div>
