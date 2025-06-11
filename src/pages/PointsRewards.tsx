@@ -10,10 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
-import { Gift, Plus, Star, Trophy, Users, Upload } from 'lucide-react';
+import { Gift, Plus, Star, Trophy, Users, Search, X } from 'lucide-react';
 
 const PointsRewards = () => {
   const queryClient = useQueryClient();
@@ -23,7 +24,27 @@ const PointsRewards = () => {
     description: '',
     stock_quantity: 0
   });
-  const [rewardImage, setRewardImage] = useState<File | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductSearch, setShowProductSearch] = useState(false);
+
+  // Fetch products for search
+  const { data: products = [] } = useQuery({
+    queryKey: ['products-search', productSearch],
+    queryFn: async () => {
+      if (!productSearch.trim()) return [];
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .ilike('name', `%${productSearch}%`)
+        .eq('is_active', true)
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: productSearch.length > 0
+  });
 
   // Fetch rewards
   const { data: rewards = [] } = useQuery({
@@ -31,7 +52,18 @@ const PointsRewards = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('rewards')
-        .select('*')
+        .select(`
+          *,
+          reward_items (
+            id,
+            quantity,
+            products (
+              id,
+              name,
+              selling_price
+            )
+          )
+        `)
         .order('points_required');
       
       if (error) throw error;
@@ -72,33 +104,15 @@ const PointsRewards = () => {
     }
   });
 
-  // Upload reward image
-  const uploadRewardImage = async (file: File, rewardId: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${rewardId}-${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('reward-images')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage
-      .from('reward-images')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
-
   // Create reward mutation
   const createRewardMutation = useMutation({
     mutationFn: async (data: any) => {
       const { data: reward, error } = await supabase
         .from('rewards')
         .insert({
-          ...data,
+          name: data.name,
           points_required: parseInt(data.points_required),
+          description: data.description,
           stock_quantity: parseInt(data.stock_quantity)
         })
         .select()
@@ -106,22 +120,25 @@ const PointsRewards = () => {
 
       if (error) throw error;
 
-      // Upload image if provided
-      if (rewardImage) {
-        const imageUrl = await uploadRewardImage(rewardImage, reward.id);
-        
-        const { error: updateError } = await supabase
-          .from('rewards')
-          .update({ image_url: imageUrl })
-          .eq('id', reward.id);
+      // Insert reward items
+      if (selectedProducts.length > 0) {
+        const rewardItems = selectedProducts.map(product => ({
+          reward_id: reward.id,
+          product_id: product.id,
+          quantity: product.quantity
+        }));
 
-        if (updateError) throw updateError;
+        const { error: itemsError } = await supabase
+          .from('reward_items')
+          .insert(rewardItems);
+
+        if (itemsError) throw itemsError;
       }
 
       return reward;
     },
     onSuccess: () => {
-      toast({ title: 'Reward created successfully' });
+      toast({ title: 'Reward berhasil dibuat' });
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
       setRewardData({
         name: '',
@@ -129,77 +146,36 @@ const PointsRewards = () => {
         description: '',
         stock_quantity: 0
       });
-      setRewardImage(null);
+      setSelectedProducts([]);
     },
     onError: (error: any) => {
       toast({ 
-        title: 'Error creating reward', 
+        title: 'Error membuat reward', 
         description: error.message,
         variant: 'destructive' 
       });
     }
   });
 
-  // Redeem reward mutation
-  const redeemRewardMutation = useMutation({
-    mutationFn: async ({ customerId, rewardId }: { customerId: string, rewardId: string }) => {
-      const reward = rewards.find(r => r.id === rewardId);
-      const customer = customers.find(c => c.id === customerId);
-      
-      if (!reward || !customer) throw new Error('Invalid reward or customer');
-      if (customer.total_points < reward.points_required) {
-        throw new Error('Insufficient points');
-      }
-      if (reward.stock_quantity <= 0) {
-        throw new Error('Reward out of stock');
-      }
-
-      // Create point transaction
-      const { error: pointError } = await supabase
-        .from('point_transactions')
-        .insert({
-          customer_id: customerId,
-          reward_id: rewardId,
-          points_change: -reward.points_required,
-          description: `Redeemed: ${reward.name}`
-        });
-
-      if (pointError) throw pointError;
-
-      // Update customer points
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({ 
-          total_points: customer.total_points - reward.points_required 
-        })
-        .eq('id', customerId);
-
-      if (customerError) throw customerError;
-
-      // Update reward stock
-      const { error: rewardError } = await supabase
-        .from('rewards')
-        .update({ 
-          stock_quantity: reward.stock_quantity - 1 
-        })
-        .eq('id', rewardId);
-
-      if (rewardError) throw rewardError;
-    },
-    onSuccess: () => {
-      toast({ title: 'Reward redeemed successfully' });
-      queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      queryClient.invalidateQueries({ queryKey: ['customers-points'] });
-      queryClient.invalidateQueries({ queryKey: ['point-transactions'] });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: 'Error redeeming reward', 
-        description: error.message,
-        variant: 'destructive' 
-      });
+  const addProductToReward = (product: any) => {
+    if (selectedProducts.find(p => p.id === product.id)) {
+      toast({ title: 'Produk sudah ditambahkan', variant: 'destructive' });
+      return;
     }
-  });
+    setSelectedProducts([...selectedProducts, { ...product, quantity: 1 }]);
+    setProductSearch('');
+    setShowProductSearch(false);
+  };
+
+  const removeProductFromReward = (productId: string) => {
+    setSelectedProducts(selectedProducts.filter(p => p.id !== productId));
+  };
+
+  const updateProductQuantity = (productId: string, quantity: number) => {
+    setSelectedProducts(selectedProducts.map(p => 
+      p.id === productId ? { ...p, quantity: Math.max(1, quantity) } : p
+    ));
+  };
 
   const totalPoints = customers.reduce((sum, customer) => sum + customer.total_points, 0);
   const totalRedemptions = pointTransactions.filter(t => t.points_change < 0).length;
@@ -213,25 +189,25 @@ const PointsRewards = () => {
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                Add Reward
+                Tambah Reward
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Create New Reward</DialogTitle>
+                <DialogTitle>Buat Reward Baru</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Reward Name *</Label>
+                    <Label>Nama Reward *</Label>
                     <Input
                       value={rewardData.name}
                       onChange={(e) => setRewardData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Reward name"
+                      placeholder="Nama reward"
                     />
                   </div>
                   <div>
-                    <Label>Points Required *</Label>
+                    <Label>Poin yang Dibutuhkan *</Label>
                     <Input
                       type="number"
                       value={rewardData.points_required}
@@ -241,7 +217,7 @@ const PointsRewards = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>Stock Quantity</Label>
+                  <Label>Stok</Label>
                   <Input
                     type="number"
                     value={rewardData.stock_quantity}
@@ -250,27 +226,86 @@ const PointsRewards = () => {
                   />
                 </div>
                 <div>
-                  <Label>Description</Label>
+                  <Label>Deskripsi</Label>
                   <Textarea
                     value={rewardData.description}
                     onChange={(e) => setRewardData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Reward description"
+                    placeholder="Deskripsi reward"
                   />
                 </div>
+
                 <div>
-                  <Label>Reward Image</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setRewardImage(e.target.files?.[0] || null)}
-                  />
+                  <Label>Produk Reward</Label>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowProductSearch(!showProductSearch)}
+                      className="w-full"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Cari Produk
+                    </Button>
+                    
+                    {showProductSearch && (
+                      <div className="border rounded-lg p-4 space-y-2">
+                        <Input
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          placeholder="Cari produk..."
+                        />
+                        {products.length > 0 && (
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {products.map((product) => (
+                              <div
+                                key={product.id}
+                                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded cursor-pointer"
+                                onClick={() => addProductToReward(product)}
+                              >
+                                <span>{product.name}</span>
+                                <span className="text-sm text-gray-500">
+                                  Rp {product.selling_price.toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedProducts.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Produk Terpilih:</Label>
+                        {selectedProducts.map((product) => (
+                          <div key={product.id} className="flex items-center gap-2 p-2 border rounded">
+                            <span className="flex-1">{product.name}</span>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={product.quantity}
+                              onChange={(e) => updateProductQuantity(product.id, parseInt(e.target.value))}
+                              className="w-20"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removeProductFromReward(product.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
                 <Button 
                   className="w-full" 
                   onClick={() => createRewardMutation.mutate(rewardData)}
                   disabled={createRewardMutation.isPending || !rewardData.name}
                 >
-                  {createRewardMutation.isPending ? 'Creating...' : 'Create Reward'}
+                  {createRewardMutation.isPending ? 'Membuat...' : 'Buat Reward'}
                 </Button>
               </div>
             </DialogContent>
@@ -323,54 +358,43 @@ const PointsRewards = () => {
 
         <Tabs defaultValue="rewards" className="w-full">
           <TabsList>
-            <TabsTrigger value="rewards">Rewards Catalog</TabsTrigger>
-            <TabsTrigger value="leaderboard">Points Leaderboard</TabsTrigger>
-            <TabsTrigger value="transactions">Point Transactions</TabsTrigger>
-            <TabsTrigger value="redeem">Redeem Points</TabsTrigger>
+            <TabsTrigger value="rewards">Katalog Rewards</TabsTrigger>
+            <TabsTrigger value="leaderboard">Leaderboard Poin</TabsTrigger>
+            <TabsTrigger value="transactions">Transaksi Poin</TabsTrigger>
           </TabsList>
 
           <TabsContent value="rewards">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {rewards.map((reward) => (
                 <Card key={reward.id} className={!reward.is_active ? 'opacity-50' : ''}>
                   <CardContent className="p-4">
-                    {reward.image_url && (
-                      <img 
-                        src={reward.image_url} 
-                        alt={reward.name}
-                        className="w-full h-32 object-cover rounded-lg mb-3"
-                      />
-                    )}
                     <h3 className="font-bold mb-2">{reward.name}</h3>
                     <div className="flex items-center justify-between mb-2">
                       <Badge className="bg-yellow-600">
-                        {reward.points_required} points
+                        {reward.points_required} poin
                       </Badge>
                       {reward.stock_quantity > 0 ? (
                         <Badge variant="outline">
-                          {reward.stock_quantity} left
+                          {reward.stock_quantity} tersisa
                         </Badge>
                       ) : reward.stock_quantity === 0 && reward.is_active ? (
                         <Badge variant="outline">Unlimited</Badge>
                       ) : (
-                        <Badge variant="destructive">Out of Stock</Badge>
+                        <Badge variant="destructive">Habis</Badge>
                       )}
                     </div>
                     <p className="text-sm text-gray-600 mb-3">{reward.description}</p>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="flex-1">
-                        Edit
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant={reward.is_active ? "destructive" : "default"}
-                        onClick={() => {
-                          // Toggle active status
-                        }}
-                      >
-                        {reward.is_active ? 'Deactivate' : 'Activate'}
-                      </Button>
-                    </div>
+                    
+                    {reward.reward_items && reward.reward_items.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium mb-1">Produk:</p>
+                        {reward.reward_items.map((item: any) => (
+                          <div key={item.id} className="text-xs text-gray-600">
+                            {item.quantity}x {item.products?.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -382,18 +406,17 @@ const PointsRewards = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-yellow-600" />
-                  Points Leaderboard
+                  Leaderboard Poin
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Rank</TableHead>
+                      <TableHead>Peringkat</TableHead>
                       <TableHead>Customer</TableHead>
-                      <TableHead>Points</TableHead>
-                      <TableHead>Total Spent</TableHead>
-                      <TableHead>Member Since</TableHead>
+                      <TableHead>Poin</TableHead>
+                      <TableHead>Total Belanja</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -417,7 +440,6 @@ const PointsRewards = () => {
                           {customer.total_points.toLocaleString()}
                         </TableCell>
                         <TableCell>Rp {customer.total_spent.toLocaleString()}</TableCell>
-                        <TableCell>{new Date(customer.created_at).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -429,17 +451,17 @@ const PointsRewards = () => {
           <TabsContent value="transactions">
             <Card>
               <CardHeader>
-                <CardTitle>Point Transaction History</CardTitle>
+                <CardTitle>Riwayat Transaksi Poin</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
+                      <TableHead>Tanggal</TableHead>
                       <TableHead>Customer</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Points Change</TableHead>
-                      <TableHead>Type</TableHead>
+                      <TableHead>Deskripsi</TableHead>
+                      <TableHead>Perubahan Poin</TableHead>
+                      <TableHead>Tipe</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -467,78 +489,6 @@ const PointsRewards = () => {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="redeem">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Customer Points</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Points</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {customers.slice(0, 10).map((customer) => (
-                        <TableRow key={customer.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{customer.name}</div>
-                              <div className="text-sm text-gray-500">{customer.customer_code}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-bold text-yellow-600">
-                            {customer.total_points.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="outline">
-                              Redeem
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Available Rewards</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {rewards.filter(r => r.is_active).map((reward) => (
-                      <div key={reward.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          {reward.image_url && (
-                            <img 
-                              src={reward.image_url} 
-                              alt={reward.name}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          )}
-                          <div>
-                            <div className="font-medium">{reward.name}</div>
-                            <div className="text-sm text-gray-500">{reward.points_required} points</div>
-                          </div>
-                        </div>
-                        <Badge variant={reward.stock_quantity > 0 || reward.stock_quantity === 0 ? 'default' : 'destructive'}>
-                          {reward.stock_quantity > 0 ? `${reward.stock_quantity} left` : 
-                           reward.stock_quantity === 0 ? 'Available' : 'Out of stock'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

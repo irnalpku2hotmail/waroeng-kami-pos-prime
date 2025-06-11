@@ -86,7 +86,6 @@ export type Database = {
           date_of_birth: string | null
           email: string | null
           id: string
-          member_card_url: string | null
           name: string
           phone: string | null
           qr_code_url: string | null
@@ -101,7 +100,6 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           id?: string
-          member_card_url?: string | null
           name: string
           phone?: string | null
           qr_code_url?: string | null
@@ -116,7 +114,6 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           id?: string
-          member_card_url?: string | null
           name?: string
           phone?: string | null
           qr_code_url?: string | null
@@ -173,6 +170,93 @@ export type Database = {
           },
         ]
       }
+      flash_sale_items: {
+        Row: {
+          created_at: string
+          discount_percentage: number
+          flash_sale_id: string
+          id: string
+          max_quantity_per_customer: number | null
+          original_price: number
+          product_id: string
+          sale_price: number
+          sold_quantity: number
+          stock_quantity: number
+        }
+        Insert: {
+          created_at?: string
+          discount_percentage?: number
+          flash_sale_id: string
+          id?: string
+          max_quantity_per_customer?: number | null
+          original_price?: number
+          product_id: string
+          sale_price?: number
+          sold_quantity?: number
+          stock_quantity?: number
+        }
+        Update: {
+          created_at?: string
+          discount_percentage?: number
+          flash_sale_id?: string
+          id?: string
+          max_quantity_per_customer?: number | null
+          original_price?: number
+          product_id?: string
+          sale_price?: number
+          sold_quantity?: number
+          stock_quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_sale_items_flash_sale_id_fkey"
+            columns: ["flash_sale_id"]
+            isOneToOne: false
+            referencedRelation: "flash_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flash_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_sales: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       point_transactions: {
         Row: {
           created_at: string
@@ -221,6 +305,44 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_variants: {
+        Row: {
+          created_at: string
+          id: string
+          minimum_quantity: number
+          name: string
+          price: number
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          minimum_quantity?: number
+          name: string
+          price?: number
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          minimum_quantity?: number
+          name?: string
+          price?: number
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -553,6 +675,45 @@ export type Database = {
           },
         ]
       }
+      reward_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          reward_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          reward_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          reward_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_items_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rewards: {
         Row: {
           created_at: string
@@ -586,6 +747,30 @@ export type Database = {
           points_required?: number
           stock_quantity?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
         }
         Relationships: []
       }
@@ -792,6 +977,41 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_conversions: {
+        Row: {
+          conversion_factor: number
+          created_at: string
+          from_unit: string
+          id: string
+          product_id: string
+          to_unit: string
+        }
+        Insert: {
+          conversion_factor?: number
+          created_at?: string
+          from_unit: string
+          id?: string
+          product_id: string
+          to_unit: string
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string
+          from_unit?: string
+          id?: string
+          product_id?: string
+          to_unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_conversions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

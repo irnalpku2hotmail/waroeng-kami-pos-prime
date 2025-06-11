@@ -17,6 +17,8 @@ import Customers from "./pages/Customers";
 import CreditManagement from "./pages/CreditManagement";
 import Expenses from "./pages/Expenses";
 import PointsRewards from "./pages/PointsRewards";
+import FlashSales from "./pages/FlashSales";
+import Settings from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
 import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -81,6 +83,16 @@ const App = () => (
             <Route path="/rewards" element={
               <ProtectedRoute>
                 <PointsRewards />
+              </ProtectedRoute>
+            } />
+            <Route path="/flash-sales" element={
+              <ProtectedRoute>
+                <FlashSales />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } />
             <Route path="/users" element={
