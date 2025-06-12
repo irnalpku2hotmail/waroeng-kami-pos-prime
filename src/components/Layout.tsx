@@ -1,167 +1,154 @@
 
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  CreditCard,
-  Receipt,
-  Gift,
-  Zap,
-  Settings,
-  UserCheck,
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { 
+  Home, 
+  Package, 
+  Tag, 
+  Ruler, 
+  ShoppingCart, 
+  Package2, 
+  Users, 
+  CreditCard, 
+  TrendingDown, 
+  Gift, 
+  Zap, 
+  Settings, 
+  UserCog, 
   LogOut,
   Menu,
-  X,
-  Store,
-  Tag,
-  Ruler,
-  Warehouse
+  Building2
 } from 'lucide-react';
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+const Layout = ({ children }: LayoutProps) => {
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: ShoppingCart, label: 'POS', path: '/pos' },
-    { icon: Package, label: 'Produk', path: '/products' },
-    { icon: Tag, label: 'Kategori', path: '/categories' },
-    { icon: Ruler, label: 'Unit', path: '/units' },
-    { icon: Warehouse, label: 'Inventory', path: '/inventory' },
-    { icon: Users, label: 'Customer', path: '/customers' },
-    { icon: CreditCard, label: 'Kredit', path: '/credit' },
-    { icon: Receipt, label: 'Pengeluaran', path: '/expenses' },
-    { icon: Gift, label: 'Points & Rewards', path: '/rewards' },
-    { icon: Zap, label: 'Flash Sales', path: '/flash-sales' },
-    { icon: Settings, label: 'Pengaturan', path: '/settings' },
-    { icon: UserCheck, label: 'User Management', path: '/users' },
+  const navigationItems = [
+    { icon: Home, label: 'Dashboard', href: '/' },
+    { icon: Package, label: 'Products', href: '/products' },
+    { icon: Tag, label: 'Categories', href: '/categories' },
+    { icon: Ruler, label: 'Units', href: '/units' },
+    { icon: Building2, label: 'Suppliers', href: '/suppliers' },
+    { icon: ShoppingCart, label: 'POS', href: '/pos' },
+    { icon: Package2, label: 'Inventory', href: '/inventory' },
+    { icon: Users, label: 'Customers', href: '/customers' },
+    { icon: CreditCard, label: 'Credit Management', href: '/credit' },
+    { icon: TrendingDown, label: 'Expenses', href: '/expenses' },
+    { icon: Gift, label: 'Points & Rewards', href: '/rewards' },
+    { icon: Zap, label: 'Flash Sales', href: '/flash-sales' },
+    { icon: Settings, label: 'Settings', href: '/settings' },
+    { icon: UserCog, label: 'User Management', href: '/users' },
   ];
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-      toast({ title: 'Logout berhasil' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Gagal logout', variant: 'destructive' });
-    }
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
   };
 
-  return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+  const isActiveRoute = (href: string) => {
+    if (href === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(href);
+  };
 
-      {/* Sidebar */}
-      <div className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-blue-800 text-white transform ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-blue-700">
-            <div className="flex items-center gap-3">
-              <Store className="h-8 w-8" />
-              <span className="text-xl font-bold">WaroengKami</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden text-white hover:bg-blue-700"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
+  const NavigationContent = () => (
+    <nav className="space-y-2">
+      {navigationItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = isActiveRoute(item.href);
+        
+        return (
+          <Link
+            key={item.href}
+            to={item.href}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-blue-100 text-blue-800'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Mobile menu trigger */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <div className="p-6">
+                  <h2 className="text-xl font-bold text-blue-800 mb-6">SmartPOS</h2>
+                  <NavigationContent />
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <h1 className="text-xl font-bold text-blue-800">SmartPOS</h1>
           </div>
 
-          {/* Menu Items */}
-          <nav className="flex-1 overflow-y-auto py-4">
-            <ul className="space-y-1 px-3">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                
-                return (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-blue-600 text-white'
-                          : 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          {/* Footer */}
-          <div className="border-t border-blue-700 p-4">
-            <div className="flex items-center justify-between">
-              <Link
-                to="/profile"
-                className="flex items-center gap-3 text-blue-100 hover:text-white transition-colors"
-              >
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <UserCheck className="h-4 w-4" />
-                </div>
-                <span className="text-sm font-medium">Profile</span>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-blue-100 hover:text-white hover:bg-blue-700"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
+                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center">
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200 lg:hidden">
-          <div className="flex items-center justify-between px-4 py-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(true)}
-              className="text-gray-600"
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Store className="h-6 w-6 text-blue-600" />
-              <span className="font-bold text-blue-800">WaroengKami</span>
-            </div>
-            <div className="w-8" /> {/* Spacer for centering */}
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:block w-64 bg-white border-r border-gray-200 min-h-screen">
+          <div className="p-6">
+            <NavigationContent />
           </div>
-        </header>
+        </aside>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        {/* Main Content */}
+        <main className="flex-1 p-6">
           {children}
         </main>
       </div>

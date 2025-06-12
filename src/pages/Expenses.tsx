@@ -1,455 +1,283 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Plus, Edit, Trash2, Receipt } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { Receipt, Plus, TrendingUp, Calendar, DollarSign, Upload, Edit, Trash2 } from 'lucide-react';
 
 const Expenses = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editExpense, setEditExpense] = useState<any>(null);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
   const [expenseData, setExpenseData] = useState({
     title: '',
-    category: 'operational',
-    amount: 0,
     description: '',
-    expense_date: new Date().toISOString().split('T')[0]
+    amount: 0,
+    category: 'operational',
+    expense_date: new Date().toISOString().split('T')[0],
+    receipt_url: ''
   });
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
-  // Fetch expenses
-  const { data: expenses = [] } = useQuery({
+  const { data: expenses, isLoading } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expenses')
-        .select(`
-          *,
-          profiles(full_name)
-        `)
+        .select('*, profiles(full_name)')
         .order('expense_date', { ascending: false });
-      
       if (error) throw error;
       return data;
     }
   });
 
-  // Upload receipt
-  const uploadReceipt = async (file: File, expenseId: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${expenseId}-${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('expense-receipts')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage
-      .from('expense-receipts')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
-
-  // Create expense mutation
-  const createExpenseMutation = useMutation({
+  const createExpense = useMutation({
     mutationFn: async (data: any) => {
-      const { data: expense, error } = await supabase
-        .from('expenses')
-        .insert({
-          ...data,
-          amount: parseFloat(data.amount),
-          user_id: user?.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Upload receipt if provided
-      if (receiptFile) {
-        const receiptUrl = await uploadReceipt(receiptFile, expense.id);
-        
-        const { error: updateError } = await supabase
+      if (editExpense) {
+        const { error } = await supabase
           .from('expenses')
-          .update({ receipt_url: receiptUrl })
-          .eq('id', expense.id);
-
-        if (updateError) throw updateError;
-      }
-
-      return expense;
-    },
-    onSuccess: () => {
-      toast({ title: 'Expense recorded successfully' });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      resetForm();
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: 'Error recording expense', 
-        description: error.message,
-        variant: 'destructive' 
-      });
-    }
-  });
-
-  // Update expense mutation
-  const updateExpenseMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const { id, ...updateData } = data;
-      const { error } = await supabase
-        .from('expenses')
-        .update({
-          ...updateData,
-          amount: parseFloat(updateData.amount)
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      // Upload new receipt if provided
-      if (receiptFile) {
-        const receiptUrl = await uploadReceipt(receiptFile, id);
-        
-        const { error: updateError } = await supabase
+          .update({
+            title: data.title,
+            description: data.description,
+            amount: data.amount,
+            category: data.category,
+            expense_date: data.expense_date,
+            receipt_url: data.receipt_url
+          })
+          .eq('id', editExpense.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
           .from('expenses')
-          .update({ receipt_url: receiptUrl })
-          .eq('id', id);
-
-        if (updateError) throw updateError;
+          .insert([{
+            ...data,
+            user_id: user?.id
+          }]);
+        if (error) throw error;
       }
     },
     onSuccess: () => {
-      toast({ title: 'Expense updated successfully' });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      setOpen(false);
       resetForm();
-    },
-    onError: (error: any) => {
       toast({ 
-        title: 'Error updating expense', 
-        description: error.message,
-        variant: 'destructive' 
+        title: 'Berhasil', 
+        description: editExpense ? 'Pengeluaran berhasil diperbarui' : 'Pengeluaran berhasil ditambahkan' 
       });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
-  // Delete expense mutation
-  const deleteExpenseMutation = useMutation({
+  const deleteExpense = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('expenses').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'Expense deleted successfully' });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast({ title: 'Berhasil', description: 'Pengeluaran berhasil dihapus' });
     },
-    onError: (error: any) => {
-      toast({ 
-        title: 'Error deleting expense', 
-        description: error.message,
-        variant: 'destructive' 
-      });
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
-
-  const resetForm = () => {
-    setExpenseData({
-      title: '',
-      category: 'operational',
-      amount: 0,
-      description: '',
-      expense_date: new Date().toISOString().split('T')[0]
-    });
-    setReceiptFile(null);
-    setEditExpense(null);
-    setOpen(false);
-  };
 
   const handleEdit = (expense: any) => {
     setEditExpense(expense);
     setExpenseData({
       title: expense.title,
-      category: expense.category,
-      amount: expense.amount,
       description: expense.description || '',
-      expense_date: expense.expense_date
+      amount: expense.amount,
+      category: expense.category,
+      expense_date: expense.expense_date,
+      receipt_url: expense.receipt_url || ''
     });
     setOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (editExpense) {
-      updateExpenseMutation.mutate({ id: editExpense.id, ...expenseData });
-    } else {
-      createExpenseMutation.mutate(expenseData);
-    }
+  const resetForm = () => {
+    setEditExpense(null);
+    setExpenseData({
+      title: '',
+      description: '',
+      amount: 0,
+      category: 'operational',
+      expense_date: new Date().toISOString().split('T')[0],
+      receipt_url: ''
+    });
   };
 
-  const getCategoryBadge = (category: string) => {
-    const colors: Record<string, string> = {
-      operational: 'bg-blue-600',
-      maintenance: 'bg-orange-600',
-      utilities: 'bg-green-600',
-      supplies: 'bg-purple-600',
-      other: 'bg-gray-600'
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    createExpense.mutate(expenseData);
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const categories = {
+      operational: 'Operasional',
+      inventory: 'Inventori',
+      marketing: 'Marketing',
+      maintenance: 'Maintenance',
+      other: 'Lainnya'
     };
-    
-    return <Badge className={colors[category] || 'bg-gray-600'}>{category}</Badge>;
+    return categories[category as keyof typeof categories] || category;
   };
-
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const thisMonthExpenses = expenses.filter(expense => 
-    new Date(expense.expense_date).getMonth() === new Date().getMonth()
-  ).reduce((sum, expense) => sum + expense.amount, 0);
-
-  const expensesByCategory = expenses.reduce((acc, expense) => {
-    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
-    return acc;
-  }, {} as Record<string, number>);
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Expense Management</h1>
+          <h1 className="text-3xl font-bold text-blue-800">Expenses</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2" onClick={() => setEditExpense(null)}>
-                <Plus className="h-4 w-4" />
-                Add Expense
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Pengeluaran
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editExpense ? 'Edit Expense' : 'Record New Expense'}</DialogTitle>
+                <DialogTitle>{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Title *</Label>
-                    <Input
-                      value={expenseData.title}
-                      onChange={(e) => setExpenseData(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Expense title"
-                    />
-                  </div>
-                  <div>
-                    <Label>Category *</Label>
-                    <Select value={expenseData.category} onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="operational">Operational</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="utilities">Utilities</SelectItem>
-                        <SelectItem value="supplies">Supplies</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Judul *</Label>
+                  <Input
+                    id="title"
+                    value={expenseData.title}
+                    onChange={(e) => setExpenseData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Pembelian alat tulis"
+                    required
+                  />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="description">Deskripsi</Label>
+                  <Textarea
+                    id="description"
+                    value={expenseData.description}
+                    onChange={(e) => setExpenseData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Detail pengeluaran"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Amount *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Jumlah *</Label>
                     <Input
+                      id="amount"
                       type="number"
                       value={expenseData.amount}
-                      onChange={(e) => setExpenseData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                      onChange={(e) => setExpenseData(prev => ({ ...prev, amount: Number(e.target.value) }))}
                       placeholder="0"
+                      required
                     />
                   </div>
-                  <div>
-                    <Label>Date *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="expense_date">Tanggal *</Label>
                     <Input
+                      id="expense_date"
                       type="date"
                       value={expenseData.expense_date}
                       onChange={(e) => setExpenseData(prev => ({ ...prev, expense_date: e.target.value }))}
+                      required
                     />
                   </div>
                 </div>
-                <div>
-                  <Label>Description</Label>
-                  <Textarea
-                    value={expenseData.description}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Expense description (optional)"
-                  />
-                </div>
-                <div>
-                  <Label>Receipt</Label>
-                  <Input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={resetForm}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleSubmit}
-                    disabled={createExpenseMutation.isPending || updateExpenseMutation.isPending || !expenseData.title || expenseData.amount <= 0}
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">Kategori *</Label>
+                  <Select
+                    value={expenseData.category}
+                    onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value }))}
                   >
-                    {createExpenseMutation.isPending || updateExpenseMutation.isPending ? 'Saving...' : editExpense ? 'Update' : 'Record Expense'}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="operational">Operasional</SelectItem>
+                      <SelectItem value="inventory">Inventori</SelectItem>
+                      <SelectItem value="marketing">Marketing</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="other">Lainnya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="receipt_url">URL Kwitansi</Label>
+                  <Input
+                    id="receipt_url"
+                    value={expenseData.receipt_url}
+                    onChange={(e) => setExpenseData(prev => ({ ...prev, receipt_url: e.target.value }))}
+                    placeholder="https://link-ke-kwitansi.com"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Batal
+                  </Button>
+                  <Button type="submit" disabled={!expenseData.title || !expenseData.amount}>
+                    {editExpense ? 'Update Pengeluaran' : 'Tambah Pengeluaran'}
                   </Button>
                 </div>
-              </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                Rp {totalExpenses.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                Rp {thisMonthExpenses.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{expenses.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg per Month</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                Rp {Math.round(totalExpenses / 12).toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Expenses by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(expensesByCategory).map(([category, amount]) => (
-                  <div key={category} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {getCategoryBadge(category)}
-                      <span className="capitalize">{category}</span>
-                    </div>
-                    <span className="font-bold">Rp {amount.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Expenses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {expenses.slice(0, 5).map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{expense.title}</div>
-                      <div className="text-sm text-gray-500">{new Date(expense.expense_date).toLocaleDateString()}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-red-600">Rp {expense.amount.toLocaleString()}</div>
-                      {getCategoryBadge(expense.category)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>All Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="border rounded-lg">
+          {isLoading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : expenses?.length === 0 ? (
+            <div className="text-center py-8">
+              <Receipt className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">Belum ada pengeluaran</p>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Receipt</TableHead>
-                  <TableHead>Recorded By</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Judul</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Jumlah</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Dibuat oleh</TableHead>
+                  <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses.map((expense) => (
+                {expenses?.map((expense) => (
                   <TableRow key={expense.id}>
-                    <TableCell>{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-medium">{expense.title}</TableCell>
-                    <TableCell>{getCategoryBadge(expense.category)}</TableCell>
-                    <TableCell className="text-red-600 font-bold">
-                      Rp {expense.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">{expense.description}</TableCell>
                     <TableCell>
-                      {expense.receipt_url ? (
-                        <Button size="sm" variant="outline" asChild>
-                          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer">
-                            <Upload className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      ) : (
-                        <span className="text-gray-400">No receipt</span>
-                      )}
+                      <div>
+                        <div className="font-medium">{expense.title}</div>
+                        {expense.description && (
+                          <div className="text-sm text-gray-500">{expense.description}</div>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell>{expense.profiles?.full_name}</TableCell>
+                    <TableCell>{getCategoryLabel(expense.category)}</TableCell>
+                    <TableCell className="font-medium">
+                      Rp {expense.amount.toLocaleString('id-ID')}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(expense.expense_date).toLocaleDateString('id-ID')}
+                    </TableCell>
+                    <TableCell>{expense.profiles?.full_name || 'Unknown'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -462,7 +290,7 @@ const Expenses = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                          onClick={() => deleteExpense.mutate(expense.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -472,8 +300,8 @@ const Expenses = () => {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
     </Layout>
   );
