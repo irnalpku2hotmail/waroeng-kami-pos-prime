@@ -54,6 +54,11 @@ const Products = () => {
     }
   });
 
+  const handleCloseDialog = () => {
+    setOpen(false);
+    setEditProduct(null);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -71,11 +76,9 @@ const Products = () => {
                 <DialogTitle>{editProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
               </DialogHeader>
               <ProductForm 
-                editProduct={editProduct}
-                onClose={() => {
-                  setOpen(false);
-                  setEditProduct(null);
-                }}
+                product={editProduct}
+                onSuccess={handleCloseDialog}
+                onCancel={handleCloseDialog}
               />
             </DialogContent>
           </Dialog>
