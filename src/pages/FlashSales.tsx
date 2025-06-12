@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Zap, Search, X } from 'lucide-react';
@@ -359,72 +357,75 @@ const FlashSales = () => {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {flashSales?.filter(sale => sale.is_active).map((sale) => (
-            <Card key={sale.id} className="relative">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{sale.name}</CardTitle>
-                  <Badge variant="destructive" className="animate-pulse">
-                    <Zap className="h-3 w-3 mr-1" />
-                    FLASH
-                  </Badge>
-                </div>
-                {sale.description && <p className="text-sm text-gray-600">{sale.description}</p>}
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-gray-500 mb-3">
-                  <div>Mulai: {new Date(sale.start_date).toLocaleDateString('id-ID')}</div>
-                  <div>Selesai: {new Date(sale.end_date).toLocaleDateString('id-ID')}</div>
-                </div>
-                
-                {sale.flash_sale_items && sale.flash_sale_items.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Produk ({sale.flash_sale_items.length}):</p>
-                    {sale.flash_sale_items.slice(0, 3).map((item: any) => (
-                      <div key={item.id} className="flex justify-between text-xs">
-                        <span>{item.products?.name}</span>
-                        <span className="text-red-600 font-medium">-{item.discount_percentage}%</span>
+        <div className="border rounded-lg">
+          {isLoading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : flashSales?.length === 0 ? (
+            <div className="text-center py-8">
+              <Zap className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">Belum ada flash sale</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama Flash Sale</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead>Periode</TableHead>
+                  <TableHead>Jumlah Produk</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {flashSales?.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell className="font-medium">{sale.name}</TableCell>
+                    <TableCell>{sale.description || '-'}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>Mulai: {new Date(sale.start_date).toLocaleDateString('id-ID')}</div>
+                        <div>Selesai: {new Date(sale.end_date).toLocaleDateString('id-ID')}</div>
                       </div>
-                    ))}
-                    {sale.flash_sale_items.length > 3 && (
-                      <div className="text-xs text-gray-500">
-                        +{sale.flash_sale_items.length - 3} produk lainnya
+                    </TableCell>
+                    <TableCell>{sale.flash_sale_items?.length || 0}</TableCell>
+                    <TableCell>
+                      {sale.is_active ? (
+                        <Badge variant="destructive" className="animate-pulse">
+                          <Zap className="h-3 w-3 mr-1" />
+                          FLASH
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditSale(sale);
+                            setOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => deleteFlashSale.mutate(sale.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                )}
-                
-                <div className="flex justify-between mt-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setEditSale(sale);
-                      setOpen(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteFlashSale.mutate(sale.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
-
-        {flashSales?.length === 0 && (
-          <div className="text-center py-8">
-            <Zap className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500">Belum ada flash sale</p>
-          </div>
-        )}
       </div>
     </Layout>
   );

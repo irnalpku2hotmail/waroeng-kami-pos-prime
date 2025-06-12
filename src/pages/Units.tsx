@@ -153,7 +153,6 @@ const Units = () => {
                 <TableRow>
                   <TableHead>Nama Unit</TableHead>
                   <TableHead>Singkatan</TableHead>
-                  <TableHead>Tanggal Dibuat</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -162,9 +161,6 @@ const Units = () => {
                   <TableRow key={unit.id}>
                     <TableCell className="font-medium">{unit.name}</TableCell>
                     <TableCell>{unit.abbreviation}</TableCell>
-                    <TableCell>
-                      {new Date(unit.created_at).toLocaleDateString('id-ID')}
-                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

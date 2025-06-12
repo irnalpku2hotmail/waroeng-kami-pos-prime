@@ -22,7 +22,10 @@ const Categories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select(`
+          *,
+          products(count)
+        `)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -153,7 +156,7 @@ const Categories = () => {
                 <TableRow>
                   <TableHead>Nama Kategori</TableHead>
                   <TableHead>Deskripsi</TableHead>
-                  <TableHead>Tanggal Dibuat</TableHead>
+                  <TableHead>Jumlah Produk</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -162,9 +165,7 @@ const Categories = () => {
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell>{category.description || '-'}</TableCell>
-                    <TableCell>
-                      {new Date(category.created_at).toLocaleDateString('id-ID')}
-                    </TableCell>
+                    <TableCell>{category.products?.[0]?.count || 0}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

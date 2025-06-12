@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +13,13 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import { Receipt, Plus, TrendingUp, Calendar, DollarSign, Upload } from 'lucide-react';
+import { Receipt, Plus, TrendingUp, Calendar, DollarSign, Upload, Edit, Trash2 } from 'lucide-react';
 
 const Expenses = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [editExpense, setEditExpense] = useState<any>(null);
   const [expenseData, setExpenseData] = useState({
     title: '',
     category: 'operational',
@@ -96,14 +97,7 @@ const Expenses = () => {
     onSuccess: () => {
       toast({ title: 'Expense recorded successfully' });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      setExpenseData({
-        title: '',
-        category: 'operational',
-        amount: 0,
-        description: '',
-        expense_date: new Date().toISOString().split('T')[0]
-      });
-      setReceiptFile(null);
+      resetForm();
     },
     onError: (error: any) => {
       toast({ 
@@ -113,6 +107,102 @@ const Expenses = () => {
       });
     }
   });
+
+  // Update expense mutation
+  const updateExpenseMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { id, ...updateData } = data;
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          ...updateData,
+          amount: parseFloat(updateData.amount)
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Upload new receipt if provided
+      if (receiptFile) {
+        const receiptUrl = await uploadReceipt(receiptFile, id);
+        
+        const { error: updateError } = await supabase
+          .from('expenses')
+          .update({ receipt_url: receiptUrl })
+          .eq('id', id);
+
+        if (updateError) throw updateError;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: 'Expense updated successfully' });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error updating expense', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  // Delete expense mutation
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Expense deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error deleting expense', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  const resetForm = () => {
+    setExpenseData({
+      title: '',
+      category: 'operational',
+      amount: 0,
+      description: '',
+      expense_date: new Date().toISOString().split('T')[0]
+    });
+    setReceiptFile(null);
+    setEditExpense(null);
+    setOpen(false);
+  };
+
+  const handleEdit = (expense: any) => {
+    setEditExpense(expense);
+    setExpenseData({
+      title: expense.title,
+      category: expense.category,
+      amount: expense.amount,
+      description: expense.description || '',
+      expense_date: expense.expense_date
+    });
+    setOpen(true);
+  };
+
+  const handleSubmit = () => {
+    if (editExpense) {
+      updateExpenseMutation.mutate({ id: editExpense.id, ...expenseData });
+    } else {
+      createExpenseMutation.mutate(expenseData);
+    }
+  };
 
   const getCategoryBadge = (category: string) => {
     const colors: Record<string, string> = {
@@ -141,16 +231,16 @@ const Expenses = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Expense Management</h1>
-          <Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
+              <Button className="flex items-center gap-2" onClick={() => setEditExpense(null)}>
                 <Plus className="h-4 w-4" />
                 Add Expense
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Record New Expense</DialogTitle>
+                <DialogTitle>{editExpense ? 'Edit Expense' : 'Record New Expense'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -213,13 +303,17 @@ const Expenses = () => {
                     onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
                   />
                 </div>
-                <Button 
-                  className="w-full" 
-                  onClick={() => createExpenseMutation.mutate(expenseData)}
-                  disabled={createExpenseMutation.isPending || !expenseData.title || expenseData.amount <= 0}
-                >
-                  {createExpenseMutation.isPending ? 'Recording...' : 'Record Expense'}
-                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleSubmit}
+                    disabled={createExpenseMutation.isPending || updateExpenseMutation.isPending || !expenseData.title || expenseData.amount <= 0}
+                  >
+                    {createExpenseMutation.isPending || updateExpenseMutation.isPending ? 'Saving...' : editExpense ? 'Update' : 'Record Expense'}
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
@@ -331,6 +425,7 @@ const Expenses = () => {
                   <TableHead>Description</TableHead>
                   <TableHead>Receipt</TableHead>
                   <TableHead>Recorded By</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -355,6 +450,24 @@ const Expenses = () => {
                       )}
                     </TableCell>
                     <TableCell>{expense.profiles?.full_name}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(expense)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
