@@ -12,6 +12,8 @@ import Products from "./pages/Products";
 import Categories from "./pages/Categories";
 import Units from "./pages/Units";
 import Suppliers from "./pages/Suppliers";
+import Purchases from "./pages/Purchases";
+import Returns from "./pages/Returns";
 import POS from "./pages/POS";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
@@ -59,6 +61,16 @@ const App = () => (
             <Route path="/suppliers" element={
               <ProtectedRoute>
                 <Suppliers />
+              </ProtectedRoute>
+            } />
+            <Route path="/purchases" element={
+              <ProtectedRoute>
+                <Purchases />
+              </ProtectedRoute>
+            } />
+            <Route path="/returns" element={
+              <ProtectedRoute>
+                <Returns />
               </ProtectedRoute>
             } />
             <Route path="/pos" element={

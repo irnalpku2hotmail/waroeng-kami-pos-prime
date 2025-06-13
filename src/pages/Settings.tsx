@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Store, Receipt, Palette, Upload } from 'lucide-react';
+import { Settings as SettingsIcon, Store, Receipt, Palette, Upload, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 
 const Settings = () => {
@@ -49,6 +48,21 @@ const Settings = () => {
     }
   });
 
+  const { data: banners } = useQuery({
+    queryKey: ['banners'],
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from('banners')
+        .list('', { limit: 50, sortBy: { column: 'created_at', order: 'desc' } });
+      if (error) throw error;
+      
+      return data.map(file => ({
+        ...file,
+        url: supabase.storage.from('banners').getPublicUrl(file.name).data.publicUrl
+      }));
+    }
+  });
+
   const uploadBanner = useMutation({
     mutationFn: async (file: File) => {
       const fileExt = file.name.split('.').pop();
@@ -60,20 +74,28 @@ const Settings = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage
-        .from('banners')
-        .getPublicUrl(fileName);
-
-      await updateSetting.mutateAsync({
-        key: 'banner_url',
-        value: { url: data.publicUrl }
-      });
-
-      return data.publicUrl;
+      return fileName;
     },
     onSuccess: () => {
       setBannerFile(null);
+      queryClient.invalidateQueries({ queryKey: ['banners'] });
       toast({ title: 'Berhasil', description: 'Banner berhasil diupload' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const deleteBanner = useMutation({
+    mutationFn: async (fileName: string) => {
+      const { error } = await supabase.storage
+        .from('banners')
+        .remove([fileName]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['banners'] });
+      toast({ title: 'Berhasil', description: 'Banner berhasil dihapus' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -255,35 +277,56 @@ const Settings = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <Label className="text-base font-medium">Banner Utama</Label>
-                  <p className="text-sm text-gray-600 mb-4">Upload banner untuk halaman utama aplikasi</p>
+                  <Label className="text-base font-medium">Banner Management</Label>
+                  <p className="text-sm text-gray-600 mb-4">Upload dan kelola banner untuk halaman utama aplikasi</p>
                   
-                  {settings?.banner_url?.url && (
-                    <div className="mb-4">
-                      <img 
-                        src={settings.banner_url.url} 
-                        alt="Current banner"
-                        className="w-full max-w-md h-32 object-cover rounded-lg border"
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                       />
-                      <p className="text-sm text-gray-500 mt-1">Banner saat ini</p>
+                      <Button 
+                        onClick={handleBannerUpload}
+                        disabled={!bannerFile || uploadBanner.isPending}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {uploadBanner.isPending ? 'Mengupload...' : 'Upload Banner'}
+                      </Button>
                     </div>
-                  )}
-                  
-                  <div className="space-y-3">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                      className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    <Button 
-                      onClick={handleBannerUpload}
-                      disabled={!bannerFile || uploadBanner.isPending}
-                      className="flex items-center gap-2"
-                    >
-                      <Upload className="h-4 w-4" />
-                      {uploadBanner.isPending ? 'Mengupload...' : 'Upload Banner'}
-                    </Button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                      {banners?.map((banner) => (
+                        <div key={banner.name} className="relative group">
+                          <img 
+                            src={banner.url} 
+                            alt={`Banner ${banner.name}`}
+                            className="w-full h-32 object-cover rounded-lg border shadow-sm"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => deleteBanner.mutate(banner.name)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 truncate">{banner.name}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {banners?.length === 0 && (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                        <Palette className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                        <p className="text-gray-500">Belum ada banner yang diupload</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>

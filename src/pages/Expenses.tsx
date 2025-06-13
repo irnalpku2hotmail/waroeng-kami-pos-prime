@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Edit, Trash2, Receipt } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, Upload, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 
 const Expenses = () => {
   const [open, setOpen] = useState(false);
   const [editExpense, setEditExpense] = useState<any>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -38,6 +39,36 @@ const Expenses = () => {
         .order('expense_date', { ascending: false });
       if (error) throw error;
       return data;
+    }
+  });
+
+  const uploadReceipt = useMutation({
+    mutationFn: async (file: File) => {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('expense-receipts')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('expense-receipts')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    },
+    onSuccess: (url) => {
+      setExpenseData(prev => ({ ...prev, receipt_url: url }));
+      setReceiptFile(null);
+      setUploading(false);
+      toast({ title: 'Berhasil', description: 'Kwitansi berhasil diupload' });
+    },
+    onError: (error) => {
+      setUploading(false);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -124,6 +155,12 @@ const Expenses = () => {
     createExpense.mutate(expenseData);
   };
 
+  const handleFileUpload = () => {
+    if (receiptFile) {
+      uploadReceipt.mutate(receiptFile);
+    }
+  };
+
   const getCategoryLabel = (category: string) => {
     const categories = {
       operational: 'Operasional',
@@ -147,7 +184,7 @@ const Expenses = () => {
                 Tambah Pengeluaran
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
               </DialogHeader>
@@ -216,14 +253,44 @@ const Expenses = () => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="receipt_url">URL Kwitansi</Label>
-                  <Input
-                    id="receipt_url"
-                    value={expenseData.receipt_url}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, receipt_url: e.target.value }))}
-                    placeholder="https://link-ke-kwitansi.com"
-                  />
+                <div className="space-y-4">
+                  <Label className="text-base font-medium">Upload Kwitansi</Label>
+                  
+                  {expenseData.receipt_url && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-600">Kwitansi tersimpan</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(expenseData.receipt_url, '_blank')}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Lihat
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-3">
+                    <Input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                      className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <Button 
+                      type="button"
+                      onClick={handleFileUpload}
+                      disabled={!receiptFile || uploading}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploading ? 'Mengupload...' : 'Upload Kwitansi'}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-2">
@@ -255,6 +322,7 @@ const Expenses = () => {
                   <TableHead>Kategori</TableHead>
                   <TableHead>Jumlah</TableHead>
                   <TableHead>Tanggal</TableHead>
+                  <TableHead>Kwitansi</TableHead>
                   <TableHead>Dibuat oleh</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
@@ -276,6 +344,19 @@ const Expenses = () => {
                     </TableCell>
                     <TableCell>
                       {new Date(expense.expense_date).toLocaleDateString('id-ID')}
+                    </TableCell>
+                    <TableCell>
+                      {expense.receipt_url ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(expense.receipt_url, '_blank')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </TableCell>
                     <TableCell>{expense.profiles?.full_name || 'Unknown'}</TableCell>
                     <TableCell>

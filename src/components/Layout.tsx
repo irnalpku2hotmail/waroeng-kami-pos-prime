@@ -22,7 +22,9 @@ import {
   UserCog, 
   LogOut,
   Menu,
-  Building2
+  Building2,
+  ShoppingBag,
+  RotateCcw
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -41,6 +43,8 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Tag, label: 'Categories', href: '/categories' },
     { icon: Ruler, label: 'Units', href: '/units' },
     { icon: Building2, label: 'Suppliers', href: '/suppliers' },
+    { icon: ShoppingBag, label: 'Purchases', href: '/purchases' },
+    { icon: RotateCcw, label: 'Returns', href: '/returns' },
     { icon: ShoppingCart, label: 'POS', href: '/pos' },
     { icon: Package2, label: 'Inventory', href: '/inventory' },
     { icon: Users, label: 'Customers', href: '/customers' },

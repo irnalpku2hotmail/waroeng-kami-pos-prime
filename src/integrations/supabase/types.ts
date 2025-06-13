@@ -486,6 +486,7 @@ export type Database = {
       purchase_items: {
         Row: {
           created_at: string
+          expiration_date: string | null
           id: string
           product_id: string
           purchase_id: string
@@ -495,6 +496,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expiration_date?: string | null
           id?: string
           product_id: string
           purchase_id: string
@@ -504,6 +506,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expiration_date?: string | null
           id?: string
           product_id?: string
           purchase_id?: string
@@ -531,8 +534,11 @@ export type Database = {
       purchases: {
         Row: {
           created_at: string
+          due_date: string | null
           id: string
+          invoice_number: string | null
           notes: string | null
+          payment_method: string | null
           purchase_date: string
           purchase_number: string
           supplier_id: string
@@ -542,8 +548,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          due_date?: string | null
           id?: string
+          invoice_number?: string | null
           notes?: string | null
+          payment_method?: string | null
           purchase_date?: string
           purchase_number: string
           supplier_id: string
@@ -553,8 +562,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          due_date?: string | null
           id?: string
+          invoice_number?: string | null
           notes?: string | null
+          payment_method?: string | null
           purchase_date?: string
           purchase_number?: string
           supplier_id?: string
@@ -628,9 +640,11 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          invoice_number: string | null
           reason: string | null
           return_date: string
           return_number: string
+          status: string | null
           supplier_id: string
           total_amount: number
           updated_at: string
@@ -639,9 +653,11 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          invoice_number?: string | null
           reason?: string | null
           return_date?: string
           return_number: string
+          status?: string | null
           supplier_id: string
           total_amount?: number
           updated_at?: string
@@ -650,9 +666,11 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          invoice_number?: string | null
           reason?: string | null
           return_date?: string
           return_number?: string
+          status?: string | null
           supplier_id?: string
           total_amount?: number
           updated_at?: string
