@@ -311,6 +311,18 @@ const POS = () => {
     setShowProductDialog(true);
   };
 
+  const getImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    // Handle Supabase storage URLs
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(imageUrl);
+    
+    return data.publicUrl;
+  };
+
   return (
     <Layout>
       <div className="flex gap-6 h-[calc(100vh-120px)]">
@@ -339,44 +351,47 @@ const POS = () => {
                 <p className="text-gray-500">Tidak ada produk ditemukan</p>
               </div>
             ) : (
-              products.map((product) => (
-                <Card 
-                  key={product.id} 
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => openProductDialog(product)}
-                >
-                  <CardContent className="p-3">
-                    <div className="aspect-square mb-2 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Package className="h-8 w-8 text-gray-400" />
-                      )}
-                    </div>
-                    <h3 className="font-medium text-sm truncate">{product.name}</h3>
-                    <p className="text-lg font-bold text-green-600">
-                      Rp {product.selling_price?.toLocaleString('id-ID')}
-                    </p>
-                    <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
-                      <span>Stok: {product.current_stock}</span>
-                      {product.price_variants?.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          Grosir
+              products.map((product) => {
+                const productImageUrl = getImageUrl(product.image_url);
+                return (
+                  <Card 
+                    key={product.id} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => openProductDialog(product)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="aspect-square mb-2 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
+                        {productImageUrl ? (
+                          <img 
+                            src={productImageUrl} 
+                            alt={product.name}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <Package className="h-8 w-8 text-gray-400" />
+                        )}
+                      </div>
+                      <h3 className="font-medium text-sm truncate">{product.name}</h3>
+                      <p className="text-lg font-bold text-green-600">
+                        Rp {product.selling_price?.toLocaleString('id-ID')}
+                      </p>
+                      <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                        <span>Stok: {product.current_stock}</span>
+                        {product.price_variants?.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            Grosir
+                          </Badge>
+                        )}
+                      </div>
+                      {product.current_stock <= 0 && (
+                        <Badge variant="destructive" className="w-full mt-1">
+                          Habis
                         </Badge>
                       )}
-                    </div>
-                    {product.current_stock <= 0 && (
-                      <Badge variant="destructive" className="w-full mt-1">
-                        Habis
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         </div>
@@ -394,15 +409,19 @@ const POS = () => {
               {/* Customer Selection */}
               <div>
                 <label className="text-sm font-medium">Customer (Opsional)</label>
-                <Select value={selectedCustomer?.id || ''} onValueChange={(value) => {
-                  const customer = customers.find(c => c.id === value);
-                  setSelectedCustomer(customer || null);
+                <Select value={selectedCustomer?.id || 'none'} onValueChange={(value) => {
+                  if (value === 'none') {
+                    setSelectedCustomer(null);
+                  } else {
+                    const customer = customers.find(c => c.id === value);
+                    setSelectedCustomer(customer || null);
+                  }
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tanpa Customer</SelectItem>
+                    <SelectItem value="none">Tanpa Customer</SelectItem>
                     {customers.map(customer => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name} - {customer.total_points} pts
@@ -417,49 +436,52 @@ const POS = () => {
                 {cart.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">Keranjang kosong</p>
                 ) : (
-                  cart.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2 p-2 border rounded">
-                      {item.image_url && (
-                        <img src={item.image_url} alt={item.name} className="w-10 h-10 object-cover rounded" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-gray-500">
-                          Rp {item.unit_price.toLocaleString('id-ID')}
-                          {item.price_variant && (
-                            <span className="ml-1 text-blue-600">({item.price_variant.name})</span>
-                          )}
-                        </p>
+                  cart.map((item) => {
+                    const itemImageUrl = getImageUrl(item.image_url);
+                    return (
+                      <div key={item.id} className="flex items-center gap-2 p-2 border rounded">
+                        {itemImageUrl && (
+                          <img src={itemImageUrl} alt={item.name} className="w-10 h-10 object-cover rounded" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{item.name}</p>
+                          <p className="text-xs text-gray-500">
+                            Rp {item.unit_price.toLocaleString('id-ID')}
+                            {item.price_variant && (
+                              <span className="ml-1 text-blue-600">({item.price_variant.name})</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-6 w-6 p-0"
+                            onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="w-8 text-center text-sm">{item.quantity}</span>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-6 w-6 p-0"
+                            onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            className="h-6 w-6 p-0 ml-1"
+                            onClick={() => removeFromCart(item.product_id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-6 w-6 p-0"
-                          onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-6 w-6 p-0"
-                          onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          className="h-6 w-6 p-0 ml-1"
-                          onClick={() => removeFromCart(item.product_id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
@@ -539,7 +561,7 @@ const POS = () => {
             <div className="space-y-4">
               {selectedProduct.image_url && (
                 <img 
-                  src={selectedProduct.image_url} 
+                  src={getImageUrl(selectedProduct.image_url) || undefined} 
                   alt={selectedProduct.name}
                   className="w-full h-48 object-cover rounded"
                 />
