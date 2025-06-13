@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, CreditCard, Gift, History, Print, QrCode } from 'lucide-react';
+import { CalendarDays, CreditCard, Gift, History, Printer, QrCode } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface CustomerDetailsProps {
@@ -201,7 +200,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                     </Button>
                   )}
                   <Button size="sm" onClick={printMemberCard}>
-                    <Print className="h-4 w-4 mr-2" />
+                    <Printer className="h-4 w-4 mr-2" />
                     Print Card
                   </Button>
                 </div>
