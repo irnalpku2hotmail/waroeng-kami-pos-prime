@@ -9,12 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Building2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
+import SupplierDetails from '@/components/SupplierDetails';
 
 const Suppliers = () => {
   const [open, setOpen] = useState(false);
   const [editSupplier, setEditSupplier] = useState<any>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   const [supplierData, setSupplierData] = useState({
@@ -26,12 +30,17 @@ const Suppliers = () => {
   });
 
   const { data: suppliers, isLoading } = useQuery({
-    queryKey: ['suppliers'],
+    queryKey: ['suppliers', searchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('suppliers')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+      
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -106,6 +115,11 @@ const Suppliers = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     createSupplier.mutate(supplierData);
+  };
+
+  const openSupplierDetails = (supplier: any) => {
+    setSelectedSupplier(supplier);
+    setShowDetailsDialog(true);
   };
 
   return (
@@ -191,6 +205,15 @@ const Suppliers = () => {
           </Dialog>
         </div>
 
+        <div className="flex gap-4">
+          <Input
+            placeholder="Cari nama, kontak person, email, atau telepon supplier..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+
         <div className="border rounded-lg">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
@@ -224,6 +247,14 @@ const Suppliers = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openSupplierDetails(supplier)}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(supplier)}
                         >
                           <Edit className="h-4 w-4" />
@@ -243,6 +274,13 @@ const Suppliers = () => {
             </Table>
           )}
         </div>
+
+        {/* Supplier Details Dialog */}
+        <SupplierDetails
+          supplier={selectedSupplier}
+          open={showDetailsDialog}
+          onOpenChange={setShowDetailsDialog}
+        />
       </div>
     </Layout>
   );

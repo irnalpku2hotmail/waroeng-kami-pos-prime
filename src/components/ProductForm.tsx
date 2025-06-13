@@ -7,10 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Plus, X, Upload } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { Plus, Trash2, Upload, X } from 'lucide-react';
 
 interface ProductFormProps {
   product?: any;
@@ -19,21 +19,15 @@ interface ProductFormProps {
 }
 
 const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
-  const queryClient = useQueryClient();
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
-  const [isUploading, setIsUploading] = useState(false);
-
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     barcode: '',
+    description: '',
     category_id: '',
     unit_id: '',
     supplier_id: '',
     base_price: 0,
     selling_price: 0,
-    current_stock: 0,
     min_stock: 10,
     min_quantity: 1,
     loyalty_points: 1,
@@ -42,27 +36,59 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
   });
 
   const [priceVariants, setPriceVariants] = useState([
-    { name: 'Tier 1', minimum_quantity: 10, price: 0 },
-    { name: 'Tier 2', minimum_quantity: 50, price: 0 },
-    { name: 'Tier 3', minimum_quantity: 100, price: 0 }
+    { name: '', minimum_quantity: 1, price: 0, is_active: true }
   ]);
 
   const [unitConversions, setUnitConversions] = useState([
-    { from_unit: '', to_unit: '', conversion_factor: 1 }
+    { from_unit_id: '', to_unit_id: '', conversion_factor: 1 }
   ]);
+
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+
+  const queryClient = useQueryClient();
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch units
+  const { data: units = [] } = useQuery({
+    queryKey: ['units'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('units').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch suppliers
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('suppliers').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
 
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name || '',
-        description: product.description || '',
         barcode: product.barcode || '',
+        description: product.description || '',
         category_id: product.category_id || '',
         unit_id: product.unit_id || '',
         supplier_id: product.supplier_id || '',
         base_price: product.base_price || 0,
         selling_price: product.selling_price || 0,
-        current_stock: product.current_stock || 0,
         min_stock: product.min_stock || 10,
         min_quantity: product.min_quantity || 1,
         loyalty_points: product.loyalty_points || 1,
@@ -70,117 +96,86 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
         image_url: product.image_url || ''
       });
 
+      if (product.price_variants?.length > 0) {
+        setPriceVariants(product.price_variants);
+      }
+
+      if (product.unit_conversions?.length > 0) {
+        setUnitConversions(product.unit_conversions);
+      }
+
       if (product.image_url) {
         setImagePreview(product.image_url);
       }
-
-      // Set price variants
-      setPriceVariants([
-        { 
-          name: 'Tier 1', 
-          minimum_quantity: product.tier1_quantity || 10, 
-          price: product.tier1_price || 0 
-        },
-        { 
-          name: 'Tier 2', 
-          minimum_quantity: product.tier2_quantity || 50, 
-          price: product.tier2_price || 0 
-        },
-        { 
-          name: 'Tier 3', 
-          minimum_quantity: product.tier3_quantity || 100, 
-          price: product.tier3_price || 0 
-        }
-      ]);
     }
   }, [product]);
-
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('categories').select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: units } = useQuery({
-    queryKey: ['units'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('units').select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: suppliers } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('suppliers').select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
+      setSelectedImage(file);
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
+      reader.onload = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const uploadImage = async () => {
-    if (!imageFile) return formData.image_url;
+  const uploadImage = async (): Promise<string | null> => {
+    if (!selectedImage) return null;
 
-    setIsUploading(true);
-    const fileExt = imageFile.name.split('.').pop();
+    const fileExt = selectedImage.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `products/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('product-images')
-      .upload(filePath, imageFile);
+      .upload(filePath, selectedImage);
 
-    if (uploadError) {
-      toast({ title: 'Error uploading image', description: uploadError.message, variant: 'destructive' });
-      setIsUploading(false);
-      return formData.image_url;
-    }
+    if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage.from('product-images').getPublicUrl(filePath);
-    setIsUploading(false);
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+
     return data.publicUrl;
   };
 
-  const createProduct = useMutation({
+  const saveProduct = useMutation({
     mutationFn: async (data: any) => {
-      const imageUrl = await uploadImage();
+      let imageUrl = formData.image_url;
       
-      const productData = {
-        ...data,
-        image_url: imageUrl,
-        tier1_quantity: priceVariants[0].minimum_quantity > 0 ? priceVariants[0].minimum_quantity : null,
-        tier1_price: priceVariants[0].price > 0 ? priceVariants[0].price : null,
-        tier2_quantity: priceVariants[1].minimum_quantity > 0 ? priceVariants[1].minimum_quantity : null,
-        tier2_price: priceVariants[1].price > 0 ? priceVariants[1].price : null,
-        tier3_quantity: priceVariants[2].minimum_quantity > 0 ? priceVariants[2].minimum_quantity : null,
-        tier3_price: priceVariants[2].price > 0 ? priceVariants[2].price : null,
-      };
+      if (selectedImage) {
+        imageUrl = await uploadImage();
+      }
+
+      const productData = { ...data, image_url: imageUrl };
 
       if (product) {
-        const { data: updatedProduct, error } = await supabase
+        const { error } = await supabase
           .from('products')
           .update(productData)
-          .eq('id', product.id)
-          .select()
-          .single();
+          .eq('id', product.id);
         if (error) throw error;
-        return updatedProduct;
+
+        // Update price variants
+        await supabase.from('price_variants').delete().eq('product_id', product.id);
+        if (priceVariants.some(pv => pv.name && pv.price > 0)) {
+          const validVariants = priceVariants.filter(pv => pv.name && pv.price > 0);
+          const { error: variantError } = await supabase
+            .from('price_variants')
+            .insert(validVariants.map(pv => ({ ...pv, product_id: product.id })));
+          if (variantError) throw variantError;
+        }
+
+        // Update unit conversions
+        await supabase.from('unit_conversions').delete().eq('product_id', product.id);
+        if (unitConversions.some(uc => uc.from_unit_id && uc.to_unit_id && uc.conversion_factor > 0)) {
+          const validConversions = unitConversions.filter(uc => uc.from_unit_id && uc.to_unit_id && uc.conversion_factor > 0);
+          const { error: conversionError } = await supabase
+            .from('unit_conversions')
+            .insert(validConversions.map(uc => ({ ...uc, product_id: product.id })));
+          if (conversionError) throw conversionError;
+        }
       } else {
         const { data: newProduct, error } = await supabase
           .from('products')
@@ -189,355 +184,432 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
           .single();
         if (error) throw error;
 
-        // Create unit conversions if any
-        const validConversions = unitConversions.filter(
-          conv => conv.from_unit && conv.to_unit && conv.conversion_factor > 0
-        );
-        
-        if (validConversions.length > 0) {
-          const conversionsData = validConversions.map(conv => ({
-            product_id: newProduct.id,
-            from_unit: conv.from_unit,
-            to_unit: conv.to_unit,
-            conversion_factor: conv.conversion_factor
-          }));
-
-          await supabase.from('unit_conversions').insert(conversionsData);
+        // Add price variants
+        if (priceVariants.some(pv => pv.name && pv.price > 0)) {
+          const validVariants = priceVariants.filter(pv => pv.name && pv.price > 0);
+          const { error: variantError } = await supabase
+            .from('price_variants')
+            .insert(validVariants.map(pv => ({ ...pv, product_id: newProduct.id })));
+          if (variantError) throw variantError;
         }
 
-        return newProduct;
+        // Add unit conversions
+        if (unitConversions.some(uc => uc.from_unit_id && uc.to_unit_id && uc.conversion_factor > 0)) {
+          const validConversions = unitConversions.filter(uc => uc.from_unit_id && uc.to_unit_id && uc.conversion_factor > 0);
+          const { error: conversionError } = await supabase
+            .from('unit_conversions')
+            .insert(validConversions.map(uc => ({ ...uc, product_id: newProduct.id })));
+          if (conversionError) throw conversionError;
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({ title: 'Success', description: 'Product saved successfully' });
+      toast({ title: 'Berhasil', description: `Produk berhasil ${product ? 'diperbarui' : 'ditambahkan'}` });
       onSuccess();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createProduct.mutate(formData);
+  const addPriceVariant = () => {
+    setPriceVariants([...priceVariants, { name: '', minimum_quantity: 1, price: 0, is_active: true }]);
+  };
+
+  const removePriceVariant = (index: number) => {
+    setPriceVariants(priceVariants.filter((_, i) => i !== index));
   };
 
   const addUnitConversion = () => {
-    setUnitConversions([...unitConversions, { from_unit: '', to_unit: '', conversion_factor: 1 }]);
+    setUnitConversions([...unitConversions, { from_unit_id: '', to_unit_id: '', conversion_factor: 1 }]);
   };
 
   const removeUnitConversion = (index: number) => {
     setUnitConversions(unitConversions.filter((_, i) => i !== index));
   };
 
-  const updateUnitConversion = (index: number, field: string, value: any) => {
-    const updated = unitConversions.map((conv, i) => 
-      i === index ? { ...conv, [field]: value } : conv
-    );
-    setUnitConversions(updated);
-  };
-
-  const updatePriceVariant = (index: number, field: string, value: any) => {
-    const updated = priceVariants.map((variant, i) => 
-      i === index ? { ...variant, [field]: value } : variant
-    );
-    setPriceVariants(updated);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveProduct.mutate(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto">
       {/* Basic Information */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Basic Information</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Product Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="barcode">Barcode</Label>
-            <Input
-              id="barcode"
-              value={formData.barcode}
-              onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          />
-        </div>
-
-        {/* Image Upload */}
-        <div className="space-y-2">
-          <Label>Product Image</Label>
-          <div className="flex items-center gap-4">
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="flex-1"
-            />
-            {imagePreview && (
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                className="w-20 h-20 object-cover rounded border"
+      <Card>
+        <CardHeader>
+          <CardTitle>Informasi Dasar</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Nama Produk *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                required
               />
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Select
-              value={formData.category_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories?.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            </div>
+            <div>
+              <Label htmlFor="barcode">Barcode</Label>
+              <Input
+                id="barcode"
+                value={formData.barcode}
+                onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Unit</Label>
-            <Select
-              value={formData.unit_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select unit" />
-              </SelectTrigger>
-              <SelectContent>
-                {units?.map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id}>
-                    {unit.name} ({unit.abbreviation})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Supplier</Label>
-            <Select
-              value={formData.supplier_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers?.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Pricing */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Pricing</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="base_price">Base Price *</Label>
-            <Input
-              id="base_price"
-              type="number"
-              value={formData.base_price}
-              onChange={(e) => setFormData(prev => ({ ...prev, base_price: Number(e.target.value) }))}
-              required
+          <div>
+            <Label htmlFor="description">Deskripsi</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="selling_price">Selling Price *</Label>
-            <Input
-              id="selling_price"
-              type="number"
-              value={formData.selling_price}
-              onChange={(e) => setFormData(prev => ({ ...prev, selling_price: Number(e.target.value) }))}
-              required
-            />
-          </div>
-        </div>
 
-        {/* Price Variants */}
-        <div className="space-y-3">
-          <Label>Price Variants (Wholesale)</Label>
-          {priceVariants.map((variant, index) => (
-            <div key={index} className="grid grid-cols-3 gap-2 p-3 border rounded">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="category">Kategori</Label>
+              <Select value={formData.category_id} onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="unit">Unit</Label>
+              <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map(unit => (
+                    <SelectItem key={unit.id} value={unit.id}>{unit.name} ({unit.abbreviation})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="supplier">Supplier</Label>
+              <Select value={formData.supplier_id} onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map(supplier => (
+                    <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <Label>Gambar Produk</Label>
+            <div className="flex items-center gap-4 mt-2">
+              {imagePreview && (
+                <div className="relative">
+                  <img src={imagePreview} alt="Preview" className="w-20 h-20 object-cover rounded border" />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0"
+                    onClick={() => {
+                      setImagePreview('');
+                      setSelectedImage(null);
+                      setFormData(prev => ({ ...prev, image_url: '' }));
+                    }}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
               <div>
-                <Label className="text-sm">{variant.name}</Label>
                 <Input
-                  type="number"
-                  placeholder="Min Quantity"
-                  value={variant.minimum_quantity}
-                  onChange={(e) => updatePriceVariant(index, 'minimum_quantity', Number(e.target.value))}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="image-upload"
                 />
-              </div>
-              <div>
-                <Label className="text-sm">Price</Label>
-                <Input
-                  type="number"
-                  placeholder="Price"
-                  value={variant.price}
-                  onChange={(e) => updatePriceVariant(index, 'price', Number(e.target.value))}
-                />
-              </div>
-              <div className="flex items-end">
-                <span className="text-sm text-gray-500">
-                  {variant.minimum_quantity > 0 && variant.price > 0 
-                    ? `${variant.minimum_quantity}+ items = Rp ${variant.price.toLocaleString()}`
-                    : 'Not set'
-                  }
-                </span>
+                <Label htmlFor="image-upload" className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 border rounded hover:bg-gray-50">
+                    <Upload className="w-4 h-4" />
+                    Pilih Gambar
+                  </div>
+                </Label>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Stock & Settings */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Stock & Settings</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="current_stock">Current Stock</Label>
-            <Input
-              id="current_stock"
-              type="number"
-              value={formData.current_stock}
-              onChange={(e) => setFormData(prev => ({ ...prev, current_stock: Number(e.target.value) }))}
-            />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="min_stock">Minimum Stock</Label>
-            <Input
-              id="min_stock"
-              type="number"
-              value={formData.min_stock}
-              onChange={(e) => setFormData(prev => ({ ...prev, min_stock: Number(e.target.value) }))}
-            />
+        </CardContent>
+      </Card>
+
+      {/* Pricing */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Harga</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="base_price">Harga Beli *</Label>
+              <Input
+                id="base_price"
+                type="number"
+                step="0.01"
+                value={formData.base_price}
+                onChange={(e) => setFormData(prev => ({ ...prev, base_price: parseFloat(e.target.value) || 0 }))}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="selling_price">Harga Jual *</Label>
+              <Input
+                id="selling_price"
+                type="number"
+                step="0.01"
+                value={formData.selling_price}
+                onChange={(e) => setFormData(prev => ({ ...prev, selling_price: parseFloat(e.target.value) || 0 }))}
+                required
+              />
+            </div>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="loyalty_points">Loyalty Points</Label>
-            <Input
-              id="loyalty_points"
-              type="number"
-              value={formData.loyalty_points}
-              onChange={(e) => setFormData(prev => ({ ...prev, loyalty_points: Number(e.target.value) }))}
-            />
-          </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="is_active"
-            checked={formData.is_active}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: Boolean(checked) }))}
-          />
-          <Label htmlFor="is_active">Active Product</Label>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Unit Conversions */}
-      {!product && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Unit Conversions</h3>
-            <Button type="button" variant="outline" onClick={addUnitConversion}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Conversion
+      {/* Price Variants */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Varian Harga (Berdasarkan Minimum Pembelian)
+            <Button type="button" size="sm" onClick={addPriceVariant}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Varian
             </Button>
-          </div>
-          
-          {unitConversions.map((conversion, index) => (
-            <div key={index} className="grid grid-cols-4 gap-2 p-3 border rounded">
-              <div>
-                <Label className="text-sm">From Unit</Label>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {priceVariants.map((variant, index) => (
+            <div key={index} className="flex items-center gap-4 p-4 border rounded">
+              <div className="flex-1">
+                <Label>Nama Varian</Label>
                 <Input
-                  placeholder="kg"
-                  value={conversion.from_unit}
-                  onChange={(e) => updateUnitConversion(index, 'from_unit', e.target.value)}
+                  value={variant.name}
+                  onChange={(e) => {
+                    const updated = [...priceVariants];
+                    updated[index].name = e.target.value;
+                    setPriceVariants(updated);
+                  }}
+                  placeholder="Contoh: Grosir"
                 />
               </div>
-              <div>
-                <Label className="text-sm">To Unit</Label>
+              <div className="flex-1">
+                <Label>Minimum Kuantitas</Label>
                 <Input
-                  placeholder="gram"
-                  value={conversion.to_unit}
-                  onChange={(e) => updateUnitConversion(index, 'to_unit', e.target.value)}
+                  type="number"
+                  value={variant.minimum_quantity}
+                  onChange={(e) => {
+                    const updated = [...priceVariants];
+                    updated[index].minimum_quantity = parseInt(e.target.value) || 1;
+                    setPriceVariants(updated);
+                  }}
                 />
               </div>
-              <div>
-                <Label className="text-sm">Factor</Label>
+              <div className="flex-1">
+                <Label>Harga</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  placeholder="1000"
-                  value={conversion.conversion_factor}
-                  onChange={(e) => updateUnitConversion(index, 'conversion_factor', Number(e.target.value))}
+                  value={variant.price}
+                  onChange={(e) => {
+                    const updated = [...priceVariants];
+                    updated[index].price = parseFloat(e.target.value) || 0;
+                    setPriceVariants(updated);
+                  }}
                 />
               </div>
-              <div className="flex items-end">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={variant.is_active}
+                  onCheckedChange={(checked) => {
+                    const updated = [...priceVariants];
+                    updated[index].is_active = checked;
+                    setPriceVariants(updated);
+                  }}
+                />
+                <Label>Aktif</Label>
+              </div>
+              {priceVariants.length > 1 && (
                 <Button
                   type="button"
-                  variant="outline"
                   size="sm"
-                  onClick={() => removeUnitConversion(index)}
-                  disabled={unitConversions.length === 1}
+                  variant="destructive"
+                  onClick={() => removePriceVariant(index)}
                 >
-                  <X className="h-4 w-4" />
+                  <Trash2 className="w-4 h-4" />
                 </Button>
-              </div>
+              )}
             </div>
           ))}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
+      {/* Unit Conversions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Konversi Unit
+            <Button type="button" size="sm" onClick={addUnitConversion}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Konversi
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {unitConversions.map((conversion, index) => (
+            <div key={index} className="flex items-center gap-4 p-4 border rounded">
+              <div className="flex-1">
+                <Label>Dari Unit</Label>
+                <Select 
+                  value={conversion.from_unit_id} 
+                  onValueChange={(value) => {
+                    const updated = [...unitConversions];
+                    updated[index].from_unit_id = value;
+                    setUnitConversions(updated);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map(unit => (
+                      <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label>Ke Unit</Label>
+                <Select 
+                  value={conversion.to_unit_id} 
+                  onValueChange={(value) => {
+                    const updated = [...unitConversions];
+                    updated[index].to_unit_id = value;
+                    setUnitConversions(updated);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map(unit => (
+                      <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label>Faktor Konversi</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={conversion.conversion_factor}
+                  onChange={(e) => {
+                    const updated = [...unitConversions];
+                    updated[index].conversion_factor = parseFloat(e.target.value) || 1;
+                    setUnitConversions(updated);
+                  }}
+                />
+              </div>
+              {unitConversions.length > 1 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => removeUnitConversion(index)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Stock & Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Stok & Pengaturan</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            {product && (
+              <div>
+                <Label>Stok Saat Ini (Read-only)</Label>
+                <Input value={product.current_stock || 0} disabled />
+              </div>
+            )}
+            <div>
+              <Label htmlFor="min_stock">Minimum Stok *</Label>
+              <Input
+                id="min_stock"
+                type="number"
+                value={formData.min_stock}
+                onChange={(e) => setFormData(prev => ({ ...prev, min_stock: parseInt(e.target.value) || 0 }))}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="min_quantity">Minimum Kuantitas</Label>
+              <Input
+                id="min_quantity"
+                type="number"
+                value={formData.min_quantity}
+                onChange={(e) => setFormData(prev => ({ ...prev, min_quantity: parseInt(e.target.value) || 1 }))}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="loyalty_points">Poin Loyalitas</Label>
+              <Input
+                id="loyalty_points"
+                type="number"
+                value={formData.loyalty_points}
+                onChange={(e) => setFormData(prev => ({ ...prev, loyalty_points: parseInt(e.target.value) || 1 }))}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              />
+              <Label htmlFor="is_active">Produk Aktif</Label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Form Actions */}
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          Batal
         </Button>
-        <Button type="submit" disabled={createProduct.isPending || isUploading}>
-          {createProduct.isPending || isUploading ? 'Saving...' : product ? 'Update Product' : 'Create Product'}
+        <Button type="submit" disabled={saveProduct.isPending}>
+          {saveProduct.isPending ? 'Menyimpan...' : product ? 'Update Produk' : 'Tambah Produk'}
         </Button>
       </div>
     </form>

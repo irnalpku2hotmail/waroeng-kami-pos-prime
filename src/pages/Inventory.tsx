@@ -15,41 +15,43 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import { Package, Plus, TrendingUp, TrendingDown, AlertTriangle, Upload, Download } from 'lucide-react';
+import { Package, Plus, TrendingUp, TrendingDown, AlertTriangle, Upload, Download, Edit, Trash2 } from 'lucide-react';
+import PurchaseForm from '@/components/PurchaseForm';
+import ReturnsForm from '@/components/ReturnsForm';
 
 const Inventory = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [editPurchase, setEditPurchase] = useState<any>(null);
+  const [editReturn, setEditReturn] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [adjustmentData, setAdjustmentData] = useState({
     adjustment_type: 'increase',
     quantity_change: 0,
     reason: ''
   });
-  const [purchaseData, setPurchaseData] = useState({
-    supplier_id: '',
-    items: []
-  });
-  const [returnData, setReturnData] = useState({
-    supplier_id: '',
-    reason: '',
-    items: []
-  });
 
   // Fetch products with stock info
   const { data: products = [] } = useQuery({
-    queryKey: ['inventory-products'],
+    queryKey: ['inventory-products', searchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select(`
           *,
           categories(name),
           units(name, abbreviation),
           suppliers(name)
-        `)
-        .order('name');
+        `);
       
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('name');
       if (error) throw error;
       return data;
     }
@@ -76,34 +78,78 @@ const Inventory = () => {
 
   // Fetch purchases
   const { data: purchases = [] } = useQuery({
-    queryKey: ['purchases'],
+    queryKey: ['purchases', searchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('purchases')
         .select(`
           *,
           suppliers(name),
-          profiles(full_name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(20);
+          profiles(full_name),
+          purchase_items(*)
+        `);
       
+      if (searchTerm) {
+        query = query.or(`purchase_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
   });
 
-  // Fetch suppliers
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers'],
+  // Fetch returns
+  const { data: returns = [] } = useQuery({
+    queryKey: ['returns', searchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
-        .order('name');
+      let query = supabase
+        .from('returns')
+        .select(`
+          *,
+          suppliers(name),
+          profiles(full_name),
+          return_items(*)
+        `);
       
+      if (searchTerm) {
+        query = query.or(`return_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
+    }
+  });
+
+  // Delete mutations
+  const deletePurchase = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('purchases').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+      toast({ title: 'Berhasil', description: 'Pembelian berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const deleteReturn = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('returns').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+      toast({ title: 'Berhasil', description: 'Return berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -137,7 +183,7 @@ const Inventory = () => {
       if (updateError) throw updateError;
     },
     onSuccess: () => {
-      toast({ title: 'Stock adjusted successfully' });
+      toast({ title: 'Stok berhasil disesuaikan' });
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-adjustments'] });
       setSelectedProduct(null);
@@ -153,88 +199,76 @@ const Inventory = () => {
   });
 
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
+  const processReturns = returns?.filter(r => r.status === 'process') || [];
+  const successReturns = returns?.filter(r => r.status === 'success') || [];
+
+  const handleClosePurchaseDialog = () => {
+    setShowPurchaseDialog(false);
+    setEditPurchase(null);
+  };
+
+  const handleCloseReturnDialog = () => {
+    setShowReturnDialog(false);
+    setEditReturn(null);
+  };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
+          <h1 className="text-3xl font-bold">Manajemen Inventori</h1>
           <div className="flex gap-2">
-            <Dialog>
+            <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Upload className="h-4 w-4" />
-                  Purchase
+                <Button onClick={() => setEditPurchase(null)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Tambah Pembelian
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>New Purchase</DialogTitle>
+                  <DialogTitle>{editPurchase ? 'Edit Pembelian' : 'Tambah Pembelian Baru'}</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Supplier</Label>
-                    <Select value={purchaseData.supplier_id} onValueChange={(value) => setPurchaseData(prev => ({ ...prev, supplier_id: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map(supplier => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Purchase items form would go here */}
-                  <Button className="w-full">Create Purchase</Button>
-                </div>
+                <PurchaseForm 
+                  purchase={editPurchase}
+                  onSuccess={handleClosePurchaseDialog}
+                  onCancel={handleClosePurchaseDialog}
+                />
               </DialogContent>
             </Dialog>
             
-            <Dialog>
+            <Dialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Return
+                <Button variant="outline" onClick={() => setEditReturn(null)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Tambah Return
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Product Return</DialogTitle>
+                  <DialogTitle>{editReturn ? 'Edit Return' : 'Tambah Return Baru'}</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Supplier</Label>
-                    <Select value={returnData.supplier_id} onValueChange={(value) => setReturnData(prev => ({ ...prev, supplier_id: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map(supplier => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Return Reason</Label>
-                    <Textarea 
-                      value={returnData.reason}
-                      onChange={(e) => setReturnData(prev => ({ ...prev, reason: e.target.value }))}
-                      placeholder="Reason for return..."
-                    />
-                  </div>
-                  <Button className="w-full">Create Return</Button>
-                </div>
+                <ReturnsForm 
+                  returnData={editReturn}
+                  onSuccess={handleCloseReturnDialog}
+                  onCancel={handleCloseReturnDialog}
+                />
               </DialogContent>
             </Dialog>
           </div>
         </div>
 
+        {/* Search */}
+        <div className="flex gap-4">
+          <Input
+            placeholder="Cari produk, pembelian, atau return..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -272,8 +306,9 @@ const Inventory = () => {
         <Tabs defaultValue="products" className="w-full">
           <TabsList>
             <TabsTrigger value="products">Stock Levels</TabsTrigger>
+            <TabsTrigger value="purchases">Purchases ({purchases.length})</TabsTrigger>
+            <TabsTrigger value="returns">Returns ({processReturns.length}/{successReturns.length})</TabsTrigger>
             <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
-            <TabsTrigger value="purchases">Purchases</TabsTrigger>
             <TabsTrigger value="low-stock">Low Stock Alert</TabsTrigger>
           </TabsList>
 
@@ -298,9 +333,18 @@ const Inventory = () => {
                     {products.map((product) => (
                       <TableRow key={product.id}>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{product.name}</div>
-                            <div className="text-sm text-gray-500">{product.barcode}</div>
+                          <div className="flex items-center gap-3">
+                            {product.image_url ? (
+                              <img src={product.image_url} alt={product.name} className="w-10 h-10 object-cover rounded" />
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                                <Package className="h-5 w-5 text-gray-400" />
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium">{product.name}</div>
+                              <div className="text-sm text-gray-500">{product.barcode}</div>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{product.categories?.name}</TableCell>
@@ -385,6 +429,201 @@ const Inventory = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="purchases">
+            <Card>
+              <CardHeader>
+                <CardTitle>Purchase History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>No. Pembelian</TableHead>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Metode</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Jatuh Tempo</TableHead>
+                      <TableHead>Dibuat oleh</TableHead>
+                      <TableHead>Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {purchases.map((purchase) => (
+                      <TableRow key={purchase.id}>
+                        <TableCell className="font-medium">{purchase.purchase_number}</TableCell>
+                        <TableCell>{purchase.invoice_number || '-'}</TableCell>
+                        <TableCell>{purchase.suppliers?.name || '-'}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            purchase.payment_method === 'credit' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {purchase.payment_method === 'credit' ? 'Credit' : 'Cash'}
+                          </span>
+                        </TableCell>
+                        <TableCell>Rp {purchase.total_amount?.toLocaleString('id-ID')}</TableCell>
+                        <TableCell>
+                          {new Date(purchase.purchase_date).toLocaleDateString('id-ID')}
+                        </TableCell>
+                        <TableCell>
+                          {purchase.due_date ? new Date(purchase.due_date).toLocaleDateString('id-ID') : '-'}
+                        </TableCell>
+                        <TableCell>{purchase.profiles?.full_name || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditPurchase(purchase);
+                                setShowPurchaseDialog(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => deletePurchase.mutate(purchase.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="returns">
+            <Tabs defaultValue="process" className="w-full">
+              <TabsList>
+                <TabsTrigger value="process">Process ({processReturns.length})</TabsTrigger>
+                <TabsTrigger value="history">History ({successReturns.length})</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="process">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Returns in Process</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>No. Return</TableHead>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Dibuat oleh</TableHead>
+                          <TableHead>Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {processReturns.map((returnItem) => (
+                          <TableRow key={returnItem.id}>
+                            <TableCell className="font-medium">{returnItem.return_number}</TableCell>
+                            <TableCell>{returnItem.invoice_number || '-'}</TableCell>
+                            <TableCell>{returnItem.suppliers?.name || '-'}</TableCell>
+                            <TableCell>
+                              <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                                Process
+                              </span>
+                            </TableCell>
+                            <TableCell>Rp {returnItem.total_amount?.toLocaleString('id-ID')}</TableCell>
+                            <TableCell>
+                              {new Date(returnItem.return_date).toLocaleDateString('id-ID')}
+                            </TableCell>
+                            <TableCell>{returnItem.profiles?.full_name || 'Unknown'}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditReturn(returnItem);
+                                    setShowReturnDialog(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => deleteReturn.mutate(returnItem.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="history">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Completed Returns</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>No. Return</TableHead>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Dibuat oleh</TableHead>
+                          <TableHead>Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {successReturns.map((returnItem) => (
+                          <TableRow key={returnItem.id}>
+                            <TableCell className="font-medium">{returnItem.return_number}</TableCell>
+                            <TableCell>{returnItem.invoice_number || '-'}</TableCell>
+                            <TableCell>{returnItem.suppliers?.name || '-'}</TableCell>
+                            <TableCell>
+                              <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                Success
+                              </span>
+                            </TableCell>
+                            <TableCell>Rp {returnItem.total_amount?.toLocaleString('id-ID')}</TableCell>
+                            <TableCell>
+                              {new Date(returnItem.return_date).toLocaleDateString('id-ID')}
+                            </TableCell>
+                            <TableCell>{returnItem.profiles?.full_name || 'Unknown'}</TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => deleteReturn.mutate(returnItem.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
           <TabsContent value="adjustments">
             <Card>
               <CardHeader>
@@ -425,38 +664,6 @@ const Inventory = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="purchases">
-            <Card>
-              <CardHeader>
-                <CardTitle>Purchase History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Purchase #</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Total Amount</TableHead>
-                      <TableHead>User</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {purchases.map((purchase) => (
-                      <TableRow key={purchase.id}>
-                        <TableCell>{new Date(purchase.purchase_date).toLocaleDateString()}</TableCell>
-                        <TableCell>{purchase.purchase_number}</TableCell>
-                        <TableCell>{purchase.suppliers?.name}</TableCell>
-                        <TableCell>Rp {purchase.total_amount.toLocaleString()}</TableCell>
-                        <TableCell>{purchase.profiles?.full_name}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="low-stock">
             <Card>
               <CardHeader>
@@ -483,9 +690,18 @@ const Inventory = () => {
                       {lowStockProducts.map((product) => (
                         <TableRow key={product.id}>
                           <TableCell>
-                            <div>
-                              <div className="font-medium">{product.name}</div>
-                              <div className="text-sm text-gray-500">{product.barcode}</div>
+                            <div className="flex items-center gap-3">
+                              {product.image_url ? (
+                                <img src={product.image_url} alt={product.name} className="w-10 h-10 object-cover rounded" />
+                              ) : (
+                                <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                                  <Package className="h-5 w-5 text-gray-400" />
+                                </div>
+                              )}
+                              <div>
+                                <div className="font-medium">{product.name}</div>
+                                <div className="text-sm text-gray-500">{product.barcode}</div>
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-red-600">{product.current_stock}</TableCell>
@@ -494,7 +710,14 @@ const Inventory = () => {
                             {product.min_stock - product.current_stock}
                           </TableCell>
                           <TableCell>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setShowPurchaseDialog(true);
+                                setEditPurchase(null);
+                              }}
+                            >
                               Reorder
                             </Button>
                           </TableCell>

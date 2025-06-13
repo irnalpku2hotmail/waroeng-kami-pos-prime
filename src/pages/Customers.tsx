@@ -8,21 +8,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
+import CustomerDetails from '@/components/CustomerDetails';
 
 const Customers = () => {
   const [open, setOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   const { data: customers, isLoading } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', searchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+      
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -94,6 +103,11 @@ const Customers = () => {
     } else {
       createCustomer.mutate(customerData);
     }
+  };
+
+  const openCustomerDetails = (customer: any) => {
+    setSelectedCustomer(customer);
+    setShowDetailsDialog(true);
   };
 
   return (
@@ -173,6 +187,15 @@ const Customers = () => {
           </Dialog>
         </div>
 
+        <div className="flex gap-4">
+          <Input
+            placeholder="Cari nama, kode, email, atau telepon customer..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+
         <div className="border rounded-lg">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
@@ -190,6 +213,7 @@ const Customers = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Telepon</TableHead>
                   <TableHead>Total Points</TableHead>
+                  <TableHead>Total Spent</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -200,9 +224,24 @@ const Customers = () => {
                     <TableCell>{customer.name}</TableCell>
                     <TableCell>{customer.email || '-'}</TableCell>
                     <TableCell>{customer.phone || '-'}</TableCell>
-                    <TableCell>{customer.total_points}</TableCell>
+                    <TableCell>
+                      <span className="text-blue-600 font-medium">{customer.total_points} pts</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-green-600 font-medium">
+                        Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openCustomerDetails(customer)}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -228,6 +267,13 @@ const Customers = () => {
             </Table>
           )}
         </div>
+
+        {/* Customer Details Dialog */}
+        <CustomerDetails
+          customer={selectedCustomer}
+          open={showDetailsDialog}
+          onOpenChange={setShowDetailsDialog}
+        />
       </div>
     </Layout>
   );

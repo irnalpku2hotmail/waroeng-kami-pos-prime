@@ -313,6 +313,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_active: boolean | null
           minimum_quantity: number
           name: string
           price: number
@@ -322,6 +323,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_active?: boolean | null
           minimum_quantity?: number
           name: string
           price?: number
@@ -331,6 +333,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_active?: boolean | null
           minimum_quantity?: number
           name?: string
           price?: number
@@ -364,12 +367,6 @@ export type Database = {
           name: string
           selling_price: number
           supplier_id: string | null
-          tier1_price: number | null
-          tier1_quantity: number | null
-          tier2_price: number | null
-          tier2_quantity: number | null
-          tier3_price: number | null
-          tier3_quantity: number | null
           unit_id: string | null
           updated_at: string
         }
@@ -389,12 +386,6 @@ export type Database = {
           name: string
           selling_price?: number
           supplier_id?: string | null
-          tier1_price?: number | null
-          tier1_quantity?: number | null
-          tier2_price?: number | null
-          tier2_quantity?: number | null
-          tier3_price?: number | null
-          tier3_quantity?: number | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -414,12 +405,6 @@ export type Database = {
           name?: string
           selling_price?: number
           supplier_id?: string | null
-          tier1_price?: number | null
-          tier1_quantity?: number | null
-          tier2_price?: number | null
-          tier2_quantity?: number | null
-          tier3_price?: number | null
-          tier3_quantity?: number | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -1003,33 +988,47 @@ export type Database = {
         Row: {
           conversion_factor: number
           created_at: string
-          from_unit: string
+          from_unit_id: string | null
           id: string
           product_id: string
-          to_unit: string
+          to_unit_id: string | null
         }
         Insert: {
           conversion_factor?: number
           created_at?: string
-          from_unit: string
+          from_unit_id?: string | null
           id?: string
           product_id: string
-          to_unit: string
+          to_unit_id?: string | null
         }
         Update: {
           conversion_factor?: number
           created_at?: string
-          from_unit?: string
+          from_unit_id?: string | null
           id?: string
           product_id?: string
-          to_unit?: string
+          to_unit_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "unit_conversions_from_unit_id_fkey"
+            columns: ["from_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "unit_conversions_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_conversions_to_unit_id_fkey"
+            columns: ["to_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -1063,6 +1062,44 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_customer_purchase_history: {
+        Args: { customer_uuid: string }
+        Returns: {
+          transaction_id: string
+          transaction_number: string
+          total_amount: number
+          points_earned: number
+          points_used: number
+          created_at: string
+          items: Json
+        }[]
+      }
+      get_supplier_purchase_history: {
+        Args: { supplier_uuid: string }
+        Returns: {
+          purchase_id: string
+          purchase_number: string
+          total_amount: number
+          purchase_date: string
+          payment_method: string
+          status: string
+          created_at: string
+          items: Json
+        }[]
+      }
+      get_supplier_return_history: {
+        Args: { supplier_uuid: string }
+        Returns: {
+          return_id: string
+          return_number: string
+          total_amount: number
+          return_date: string
+          status: string
+          reason: string
+          created_at: string
+          items: Json
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
