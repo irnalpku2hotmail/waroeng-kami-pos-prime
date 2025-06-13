@@ -22,6 +22,7 @@ import FlashSales from "./pages/FlashSales";
 import Settings from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
 import Profile from "./pages/Profile";
+import Frontend from "./pages/Frontend";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -34,9 +35,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<Frontend />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/" element={
+            <Route path="/admin" element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
