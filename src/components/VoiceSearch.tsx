@@ -13,39 +13,42 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-      const recognitionInstance = new SpeechRecognition();
+    if (typeof window !== 'undefined') {
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
       
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = false;
-      recognitionInstance.lang = 'id-ID';
+      if (SpeechRecognitionAPI) {
+        const recognitionInstance = new SpeechRecognitionAPI();
+        
+        recognitionInstance.continuous = false;
+        recognitionInstance.interimResults = false;
+        recognitionInstance.lang = 'id-ID';
 
-      recognitionInstance.onstart = () => {
-        setIsListening(true);
-      };
+        recognitionInstance.onstart = () => {
+          setIsListening(true);
+        };
 
-      recognitionInstance.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        onVoiceResult(transcript);
-        setIsListening(false);
-      };
+        recognitionInstance.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          onVoiceResult(transcript);
+          setIsListening(false);
+        };
 
-      recognitionInstance.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-        toast({
-          title: 'Error',
-          description: 'Gagal mengenali suara. Silakan coba lagi.',
-          variant: 'destructive'
-        });
-      };
+        recognitionInstance.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          toast({
+            title: 'Error',
+            description: 'Gagal mengenali suara. Silakan coba lagi.',
+            variant: 'destructive'
+          });
+        };
 
-      recognitionInstance.onend = () => {
-        setIsListening(false);
-      };
+        recognitionInstance.onend = () => {
+          setIsListening(false);
+        };
 
-      setRecognition(recognitionInstance);
+        setRecognition(recognitionInstance);
+      }
     }
   }, [onVoiceResult]);
 
