@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +23,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  const [purchaseData, setPurchaseData] = useState({
+  const [formData, setFormData] = useState({
     invoice_number: purchase?.invoice_number || '',
     supplier_id: purchase?.supplier_id || '',
     payment_method: purchase?.payment_method || 'cash',
@@ -32,6 +33,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   });
 
   const [items, setItems] = useState(purchase?.purchase_items || []);
+  const [autoUpdatePrice, setAutoUpdatePrice] = useState(false);
 
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
@@ -96,9 +98,23 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             purchase_id: purchaseId
           })));
         if (error) throw error;
+
+        // Auto update product base price if enabled
+        if (autoUpdatePrice) {
+          for (const item of items) {
+            await supabase
+              .from('products')
+              .update({ base_price: item.unit_cost })
+              .eq('id', item.product_id);
+          }
+        }
       }
       
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+      if (autoUpdatePrice) {
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+      }
       toast({ title: 'Berhasil', description: purchase ? 'Pembelian berhasil diperbarui' : 'Pembelian berhasil ditambahkan' });
       onSuccess();
     },
@@ -121,6 +137,15 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     
+    // Auto-fill unit cost from product base price
+    if (field === 'product_id' && value && products) {
+      const selectedProduct = products.find(p => p.id === value);
+      if (selectedProduct) {
+        newItems[index].unit_cost = selectedProduct.base_price || 0;
+        newItems[index].total_cost = newItems[index].quantity * (selectedProduct.base_price || 0);
+      }
+    }
+    
     if (field === 'quantity' || field === 'unit_cost') {
       newItems[index].total_cost = newItems[index].quantity * newItems[index].unit_cost;
     }
@@ -134,7 +159,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    savePurchase.mutate(purchaseData);
+    savePurchase.mutate(formData);
   };
 
   return (
@@ -144,8 +169,8 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           <Label htmlFor="invoice_number">Nomor Invoice *</Label>
           <Input
             id="invoice_number"
-            value={purchaseData.invoice_number}
-            onChange={(e) => setPurchaseData(prev => ({ ...prev, invoice_number: e.target.value }))}
+            value={formData.invoice_number}
+            onChange={(e) => setFormData(prev => ({ ...prev, invoice_number: e.target.value }))}
             placeholder="INV-001"
             required
           />
@@ -153,8 +178,8 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         <div className="space-y-2">
           <Label htmlFor="supplier_id">Supplier *</Label>
           <Select
-            value={purchaseData.supplier_id}
-            onValueChange={(value) => setPurchaseData(prev => ({ ...prev, supplier_id: value }))}
+            value={formData.supplier_id}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: value }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Pilih supplier" />
@@ -174,8 +199,8 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         <div className="space-y-2">
           <Label htmlFor="payment_method">Metode Pembayaran *</Label>
           <Select
-            value={purchaseData.payment_method}
-            onValueChange={(value) => setPurchaseData(prev => ({ ...prev, payment_method: value }))}
+            value={formData.payment_method}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Pilih metode" />
@@ -191,19 +216,19 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           <Input
             id="purchase_date"
             type="date"
-            value={purchaseData.purchase_date}
-            onChange={(e) => setPurchaseData(prev => ({ ...prev, purchase_date: e.target.value }))}
+            value={formData.purchase_date}
+            onChange={(e) => setFormData(prev => ({ ...prev, purchase_date: e.target.value }))}
             required
           />
         </div>
-        {purchaseData.payment_method === 'credit' && (
+        {formData.payment_method === 'credit' && (
           <div className="space-y-2">
             <Label htmlFor="due_date">Tanggal Jatuh Tempo</Label>
             <Input
               id="due_date"
               type="date"
-              value={purchaseData.due_date}
-              onChange={(e) => setPurchaseData(prev => ({ ...prev, due_date: e.target.value }))}
+              value={formData.due_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
             />
           </div>
         )}
@@ -213,10 +238,19 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         <Label htmlFor="notes">Catatan</Label>
         <Textarea
           id="notes"
-          value={purchaseData.notes}
-          onChange={(e) => setPurchaseData(prev => ({ ...prev, notes: e.target.value }))}
-          placeholder="Catatan pembelian"
+          value={formData.notes}
+          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Catatan tambahan"
         />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="auto-update-price"
+          checked={autoUpdatePrice}
+          onCheckedChange={setAutoUpdatePrice}
+        />
+        <Label htmlFor="auto-update-price">Auto Update Harga Beli Produk</Label>
       </div>
 
       <div className="space-y-4">
@@ -235,7 +269,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
               <TableHead>Jumlah</TableHead>
               <TableHead>Harga Satuan</TableHead>
               <TableHead>Total</TableHead>
-              <TableHead>Tanggal Kadaluarsa</TableHead>
+              <TableHead>Tanggal Kedaluwarsa</TableHead>
               <TableHead>Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -253,7 +287,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
                     <SelectContent>
                       {products?.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
-                          {product.name}
+                          {product.name} (Rp {product.base_price?.toLocaleString('id-ID')})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -311,7 +345,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         <Button type="button" variant="outline" onClick={onCancel}>
           Batal
         </Button>
-        <Button type="submit" disabled={!purchaseData.invoice_number || !purchaseData.supplier_id || items.length === 0}>
+        <Button type="submit" disabled={!formData.invoice_number || !formData.supplier_id || items.length === 0}>
           {purchase ? 'Update Pembelian' : 'Simpan Pembelian'}
         </Button>
       </div>

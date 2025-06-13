@@ -39,11 +39,9 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     base_price: 0,
     selling_price: 0,
     min_stock: 10,
-    min_quantity: 1,
     loyalty_points: 1,
     category_id: '',
     unit_id: '',
-    supplier_id: '',
     is_active: true
   });
 
@@ -74,16 +72,6 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     }
   });
 
-  // Fetch suppliers
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('suppliers').select('*').order('name');
-      if (error) throw error;
-      return data;
-    }
-  });
-
   // Load existing product data
   useEffect(() => {
     if (product) {
@@ -94,11 +82,9 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         base_price: product.base_price || 0,
         selling_price: product.selling_price || 0,
         min_stock: product.min_stock || 10,
-        min_quantity: product.min_quantity || 1,
         loyalty_points: product.loyalty_points || 1,
         category_id: product.category_id || '',
         unit_id: product.unit_id || '',
-        supplier_id: product.supplier_id || '',
         is_active: product.is_active !== false
       });
 
@@ -108,6 +94,15 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
           name: pv.name,
           minimum_quantity: pv.minimum_quantity,
           price: pv.price
+        })));
+      }
+
+      if (product.unit_conversions) {
+        setUnitConversions(product.unit_conversions.map((uc: any) => ({
+          id: uc.id,
+          from_unit_id: uc.from_unit_id,
+          to_unit_id: uc.to_unit_id,
+          conversion_factor: uc.conversion_factor
         })));
       }
 
@@ -146,8 +141,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         ...formData,
         image_url: imageUrl,
         category_id: formData.category_id || null,
-        unit_id: formData.unit_id || null,
-        supplier_id: formData.supplier_id || null
+        unit_id: formData.unit_id || null
       };
 
       if (product) {
@@ -183,6 +177,29 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
           if (variantError) throw variantError;
         }
 
+        // Update unit conversions
+        if (unitConversions.length > 0) {
+          // Delete existing conversions
+          await supabase
+            .from('unit_conversions')
+            .delete()
+            .eq('product_id', product.id);
+
+          // Insert new conversions
+          const conversions = unitConversions.map(uc => ({
+            product_id: product.id,
+            from_unit_id: uc.from_unit_id,
+            to_unit_id: uc.to_unit_id,
+            conversion_factor: uc.conversion_factor
+          }));
+
+          const { error: conversionError } = await supabase
+            .from('unit_conversions')
+            .insert(conversions);
+
+          if (conversionError) throw conversionError;
+        }
+
         return { id: product.id };
       } else {
         // Create new product
@@ -209,6 +226,22 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
             .insert(variants);
 
           if (variantError) throw variantError;
+        }
+
+        // Insert unit conversions
+        if (unitConversions.length > 0) {
+          const conversions = unitConversions.map(uc => ({
+            product_id: newProduct.id,
+            from_unit_id: uc.from_unit_id,
+            to_unit_id: uc.to_unit_id,
+            conversion_factor: uc.conversion_factor
+          }));
+
+          const { error: conversionError } = await supabase
+            .from('unit_conversions')
+            .insert(conversions);
+
+          if (conversionError) throw conversionError;
         }
 
         return newProduct;
@@ -249,6 +282,24 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
   const removePriceVariant = (index: number) => {
     setPriceVariants(priceVariants.filter((_, i) => i !== index));
+  };
+
+  const addUnitConversion = () => {
+    setUnitConversions([...unitConversions, {
+      from_unit_id: '',
+      to_unit_id: '',
+      conversion_factor: 1
+    }]);
+  };
+
+  const updateUnitConversion = (index: number, field: keyof UnitConversion, value: any) => {
+    const updated = [...unitConversions];
+    updated[index] = { ...updated[index], [field]: value };
+    setUnitConversions(updated);
+  };
+
+  const removeUnitConversion = (index: number) => {
+    setUnitConversions(unitConversions.filter((_, i) => i !== index));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -350,22 +401,6 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label htmlFor="supplier">Supplier</Label>
-              <Select value={formData.supplier_id} onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(supplier => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
@@ -422,18 +457,6 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                 onChange={(e) => setFormData({ ...formData, min_stock: parseInt(e.target.value) || 10 })}
                 placeholder="10"
                 min="0"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="min_quantity">Kuantitas Minimum Pembelian</Label>
-              <Input
-                id="min_quantity"
-                type="number"
-                value={formData.min_quantity}
-                onChange={(e) => setFormData({ ...formData, min_quantity: parseInt(e.target.value) || 1 })}
-                placeholder="1"
-                min="1"
               />
             </div>
 
@@ -533,6 +556,86 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                     variant="destructive" 
                     size="sm"
                     onClick={() => removePriceVariant(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Unit Conversions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            Konversi Unit
+            <Button type="button" variant="outline" size="sm" onClick={addUnitConversion}>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Konversi
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {unitConversions.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Belum ada konversi unit</p>
+          ) : (
+            <div className="space-y-4">
+              {unitConversions.map((conversion, index) => (
+                <div key={index} className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <Label>Dari Unit</Label>
+                    <Select
+                      value={conversion.from_unit_id}
+                      onValueChange={(value) => updateUnitConversion(index, 'from_unit_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih unit asal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map(unit => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Label>Ke Unit</Label>
+                    <Select
+                      value={conversion.to_unit_id}
+                      onValueChange={(value) => updateUnitConversion(index, 'to_unit_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih unit tujuan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map(unit => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Label>Faktor Konversi</Label>
+                    <Input
+                      type="number"
+                      value={conversion.conversion_factor}
+                      onChange={(e) => updateUnitConversion(index, 'conversion_factor', parseFloat(e.target.value) || 1)}
+                      placeholder="1"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => removeUnitConversion(index)}
                   >
                     <X className="h-4 w-4" />
                   </Button>

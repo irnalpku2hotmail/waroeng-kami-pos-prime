@@ -118,6 +118,15 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     
+    // Auto-fill unit cost from product base price
+    if (field === 'product_id' && value && products) {
+      const selectedProduct = products.find(p => p.id === value);
+      if (selectedProduct) {
+        newItems[index].unit_cost = selectedProduct.base_price || 0;
+        newItems[index].total_cost = newItems[index].quantity * (selectedProduct.base_price || 0);
+      }
+    }
+    
     if (field === 'quantity' || field === 'unit_cost') {
       newItems[index].total_cost = newItems[index].quantity * newItems[index].unit_cost;
     }
@@ -238,7 +247,7 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
                     <SelectContent>
                       {products?.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
-                          {product.name}
+                          {product.name} (Rp {product.base_price?.toLocaleString('id-ID')})
                         </SelectItem>
                       ))}
                     </SelectContent>
