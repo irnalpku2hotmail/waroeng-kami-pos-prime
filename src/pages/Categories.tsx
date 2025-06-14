@@ -4,12 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CategoryForm from '@/components/CategoryForm';
 
@@ -22,18 +20,13 @@ const Categories = () => {
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories', searchTerm],
     queryFn: async () => {
-      let query = supabase
-        .from('categories')
-        .select(`
-          *,
-          products(count)
-        `);
+      let query = supabase.from('categories').select('*');
       
       if (searchTerm) {
         query = query.ilike('name', `%${searchTerm}%`);
       }
       
-      const { data, error } = await query.order('name');
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -53,20 +46,20 @@ const Categories = () => {
     }
   });
 
-  const handleEdit = (category: any) => {
-    setEditCategory(category);
-    setOpen(true);
-  };
-
   const handleCloseDialog = () => {
     setOpen(false);
     setEditCategory(null);
   };
 
-  const handleSuccess = () => {
-    setOpen(false);
-    setEditCategory(null);
-    queryClient.invalidateQueries({ queryKey: ['categories'] });
+  const getIconUrl = (iconUrl: string | null | undefined) => {
+    if (!iconUrl) return null;
+    if (iconUrl.startsWith('http')) return iconUrl;
+    
+    const { data } = supabase.storage
+      .from('category-icons')
+      .getPublicUrl(iconUrl);
+    
+    return data.publicUrl;
   };
 
   return (
@@ -85,9 +78,9 @@ const Categories = () => {
               <DialogHeader>
                 <DialogTitle>{editCategory ? 'Edit Kategori' : 'Tambah Kategori Baru'}</DialogTitle>
               </DialogHeader>
-              <CategoryForm
+              <CategoryForm 
                 category={editCategory}
-                onSuccess={handleSuccess}
+                onSuccess={handleCloseDialog}
                 onClose={handleCloseDialog}
               />
             </DialogContent>
@@ -108,31 +101,50 @@ const Categories = () => {
             <div className="text-center py-8">Loading...</div>
           ) : categories?.length === 0 ? (
             <div className="text-center py-8">
-              <Tag className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">Belum ada kategori</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Icon</TableHead>
                   <TableHead>Nama Kategori</TableHead>
                   <TableHead>Deskripsi</TableHead>
-                  <TableHead>Jumlah Produk</TableHead>
+                  <TableHead>Dibuat</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {categories?.map((category) => (
                   <TableRow key={category.id}>
+                    <TableCell>
+                      {category.icon_url ? (
+                        <img 
+                          src={getIconUrl(category.icon_url)} 
+                          alt={category.name}
+                          className="w-8 h-8 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                          <Package className="h-4 w-4 text-gray-400" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell>{category.description || '-'}</TableCell>
-                    <TableCell>{category.products?.[0]?.count || 0}</TableCell>
+                    <TableCell>
+                      {new Date(category.created_at).toLocaleDateString('id-ID')}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleEdit(category)}
+                          onClick={() => {
+                            setEditCategory(category);
+                            setOpen(true);
+                          }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>

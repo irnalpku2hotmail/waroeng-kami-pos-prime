@@ -1,196 +1,154 @@
 
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { 
-  LayoutDashboard, 
+  Home, 
   Package, 
+  Ruler, 
   ShoppingCart, 
+  Package2, 
   Users, 
+  CreditCard, 
+  TrendingDown, 
+  Gift, 
+  Zap, 
   Settings, 
+  UserCog, 
   LogOut,
   Menu,
-  X,
-  Truck,
-  Tag,
-  Receipt,
-  TrendingUp,
-  CreditCard,
-  ArrowLeftRight,
-  UserCheck,
-  Zap,
-  Gift,
-  DollarSign
+  Building2,
+  Receipt
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Fetch store settings for the store name
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*');
-      if (error) throw error;
-      
-      const settingsObj: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsObj[setting.key] = setting.value;
-      });
-      return settingsObj;
-    }
-  });
-
-  const storeName = settings?.store_name?.name || 'SmartPOS';
-
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Package, label: 'Produk', path: '/products' },
-    { icon: ShoppingCart, label: 'POS', path: '/pos' },
-    { icon: Receipt, label: 'Transaksi', path: '/orders' },
-    { icon: Users, label: 'Customers', path: '/customers' },
-    { icon: Truck, label: 'Suppliers', path: '/suppliers' },
-    { icon: Tag, label: 'Kategori', path: '/categories' },
-    { icon: Package, label: 'Inventori', path: '/inventory' },
-    { icon: TrendingUp, label: 'Pembelian', path: '/purchases' },
-    { icon: ArrowLeftRight, label: 'Returns', path: '/returns' },
-    { icon: DollarSign, label: 'Pengeluaran', path: '/expenses' },
-    { icon: CreditCard, label: 'Kredit', path: '/credit-management' },
-    { icon: Gift, label: 'Poin & Reward', path: '/points-rewards' },
-    { icon: Zap, label: 'Flash Sale', path: '/flash-sales' },
-    { icon: UserCheck, label: 'User Management', path: '/user-management' },
-    { icon: Settings, label: 'Pengaturan', path: '/settings' },
+  const navigationItems = [
+    { icon: Home, label: 'Dashboard', href: '/dashboard' },
+    { icon: Package, label: 'Products', href: '/products' },
+    { icon: Ruler, label: 'Categories & Units', href: '/categories-units' },
+    { icon: Building2, label: 'Suppliers', href: '/suppliers' },
+    { icon: ShoppingCart, label: 'POS', href: '/pos' },
+    { icon: Package2, label: 'Inventory', href: '/inventory' },
+    { icon: Users, label: 'Customers', href: '/customers' },
+    { icon: Receipt, label: 'Orders', href: '/orders' },
+    { icon: CreditCard, label: 'Credit Management', href: '/credit-management' },
+    { icon: TrendingDown, label: 'Expenses', href: '/expenses' },
+    { icon: Gift, label: 'Points & Rewards', href: '/points-rewards' },
+    { icon: Zap, label: 'Flash Sales', href: '/flash-sales' },
+    { icon: Settings, label: 'Settings', href: '/settings' },
+    { icon: UserCog, label: 'User Management', href: '/user-management' },
   ];
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-      toast({ title: 'Berhasil logout' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Gagal logout', variant: 'destructive' });
-    }
+    await signOut();
+    navigate('/login');
   };
+
+  const isActiveRoute = (href: string) => {
+    if (href === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
+    return location.pathname.startsWith(href);
+  };
+
+  const NavigationContent = () => (
+    <nav className="space-y-2">
+      {navigationItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = isActiveRoute(item.href);
+        
+        return (
+          <Link
+            key={item.href}
+            to={item.href}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-blue-100 text-blue-800'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Mobile menu trigger */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <div className="p-6">
+                  <h2 className="text-xl font-bold text-blue-800 mb-6">SmartPOS</h2>
+                  <NavigationContent />
+                </div>
+              </SheetContent>
+            </Sheet>
 
-      {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-blue-900 text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex items-center justify-between h-16 px-4 border-b border-blue-800">
-          <h1 className="text-xl font-bold">{storeName}</h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden text-white hover:bg-blue-800"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <nav className="mt-8 px-4">
-          <div className="space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`
-                    flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors
-                    ${isActive 
-                      ? 'bg-blue-800 text-white' 
-                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
-                    }
-                  `}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            <h1 className="text-xl font-bold text-blue-800">SmartPOS</h1>
           </div>
-        </nav>
 
-        <div className="absolute bottom-0 w-full p-4 border-t border-blue-800">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium">
-                {user?.email?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.email}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-blue-100 hover:bg-blue-800 hover:text-white"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="lg:ml-64">
-        {/* Top bar */}
-        <div className="bg-white shadow-sm border-b h-16 flex items-center justify-between px-4 lg:px-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              {new Date().toLocaleDateString('id-ID', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </span>
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
+                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center">
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+      </header>
 
-        {/* Page content */}
-        <main className="p-4 lg:p-6">
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:block w-64 bg-white border-r border-gray-200 min-h-screen">
+          <div className="p-6">
+            <NavigationContent />
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 p-6">
           {children}
         </main>
       </div>
