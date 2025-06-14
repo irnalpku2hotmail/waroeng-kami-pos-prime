@@ -1,11 +1,11 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
-import { ShoppingCart, DollarSign, Package, Users, TrendingUp, AlertTriangle, Calendar, Clock } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, Users, AlertTriangle, Calendar, Clock, TrendingDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const Dashboard = () => {
@@ -64,6 +64,26 @@ const Dashboard = () => {
     }
   });
 
+  // Fetch monthly expenses
+  const { data: monthlyExpenses } = useQuery({
+    queryKey: ['monthly-expenses'],
+    queryFn: async () => {
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('amount')
+        .gte('expense_date', firstDayOfMonth.toISOString().split('T')[0])
+        .lte('expense_date', lastDayOfMonth.toISOString().split('T')[0]);
+      
+      if (error) throw error;
+      
+      return data?.reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
+    }
+  });
+
   // Fetch today's transactions
   const { data: todayTransactionsList } = useQuery({
     queryKey: ['today-transactions'],
@@ -83,32 +103,6 @@ const Dashboard = () => {
       
       if (error) throw error;
       return data;
-    }
-  });
-
-  // Fetch sales chart data (last 7 days)
-  const { data: salesChart } = useQuery({
-    queryKey: ['sales-chart'],
-    queryFn: async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      const { data } = await supabase
-        .from('transactions')
-        .select('total_amount, created_at')
-        .gte('created_at', sevenDaysAgo.toISOString());
-      
-      // Group by date
-      const grouped = data?.reduce((acc: any, transaction) => {
-        const date = new Date(transaction.created_at).toLocaleDateString('id-ID');
-        acc[date] = (acc[date] || 0) + Number(transaction.total_amount);
-        return acc;
-      }, {});
-      
-      return Object.entries(grouped || {}).map(([date, amount]) => ({
-        date,
-        amount: Number(amount)
-      }));
     }
   });
 
@@ -218,24 +212,21 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Sales Chart */}
+          {/* Monthly Expenses */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Sales Trend (Last 7 Days)
+                <TrendingDown className="h-5 w-5" />
+                Total Pengeluaran Bulan Ini
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={salesChart}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  <Bar dataKey="amount" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="text-3xl font-bold text-red-600">
+                {formatCurrency(monthlyExpenses || 0)}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+              </p>
             </CardContent>
           </Card>
 

@@ -1,7 +1,8 @@
-
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -34,6 +35,25 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Fetch store settings for store name
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*');
+      if (error) throw error;
+      
+      const settingsObj: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsObj[setting.key] = setting.value;
+      });
+      return settingsObj;
+    }
+  });
+
+  const storeName = settings?.store_name?.name || 'SmartPOS';
 
   const navigationItems = [
     { icon: Home, label: 'Dashboard', href: '/dashboard' },
@@ -104,13 +124,13 @@ const Layout = ({ children }: LayoutProps) => {
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0">
                 <div className="p-6">
-                  <h2 className="text-xl font-bold text-blue-800 mb-6">SmartPOS</h2>
+                  <h2 className="text-xl font-bold text-blue-800 mb-6">{storeName}</h2>
                   <NavigationContent />
                 </div>
               </SheetContent>
             </Sheet>
 
-            <h1 className="text-xl font-bold text-blue-800">SmartPOS</h1>
+            <h1 className="text-xl font-bold text-blue-800">{storeName}</h1>
           </div>
 
           <div className="flex items-center gap-4">

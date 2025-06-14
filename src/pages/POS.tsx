@@ -236,6 +236,7 @@ const POS = () => {
     return `TRF${timestamp}${random}`;
   };
 
+  // Print receipt
   const printReceipt = async (transaction: any) => {
     try {
       const storeName = settings?.store_name?.name || 'SmartPOS';
@@ -417,6 +418,7 @@ ${receiptFooter}
     }
   });
 
+  // Handle voice search
   const handleVoiceSearch = (text: string) => {
     console.log('Voice search result:', text);
     
@@ -441,11 +443,13 @@ ${receiptFooter}
     }
   };
 
+  // Open product dialog
   const openProductDialog = (product: any) => {
     setSelectedProduct(product);
     setShowProductDialog(true);
   };
 
+  // Get image URL
   const getImageUrl = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
@@ -457,10 +461,10 @@ ${receiptFooter}
     return data.publicUrl;
   };
 
-  // Auto-generate transfer reference when transfer is selected
+  // Clear transfer reference when payment type changes
   useEffect(() => {
-    if (paymentType === 'transfer' && !transferReference) {
-      setTransferReference(generateTransferReference());
+    if (paymentType === 'transfer') {
+      setTransferReference('');
     }
   }, [paymentType]);
 
@@ -682,11 +686,8 @@ ${receiptFooter}
                         type="text"
                         value={transferReference}
                         onChange={(e) => setTransferReference(e.target.value)}
-                        placeholder="Nomor referensi transfer"
+                        placeholder="Masukkan nomor referensi transfer"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Nomor referensi otomatis dibuat jika kosong
-                      </p>
                     </div>
                   )}
 
@@ -702,6 +703,7 @@ ${receiptFooter}
                     disabled={
                       cart.length === 0 || 
                       (paymentType === 'cash' && paymentAmount < getTotalAmount()) ||
+                      (paymentType === 'transfer' && !transferReference) ||
                       processTransaction.isPending
                     }
                   >
