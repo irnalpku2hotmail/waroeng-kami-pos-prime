@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -409,8 +408,8 @@ const POS = () => {
               {/* Customer Selection */}
               <div>
                 <label className="text-sm font-medium">Customer (Opsional)</label>
-                <Select value={selectedCustomer?.id || 'none'} onValueChange={(value) => {
-                  if (value === 'none') {
+                <Select value={selectedCustomer?.id || 'no-customer'} onValueChange={(value) => {
+                  if (value === 'no-customer') {
                     setSelectedCustomer(null);
                   } else {
                     const customer = customers.find(c => c.id === value);
@@ -421,7 +420,7 @@ const POS = () => {
                     <SelectValue placeholder="Pilih customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Tanpa Customer</SelectItem>
+                    <SelectItem value="no-customer">Tanpa Customer</SelectItem>
                     {customers.map(customer => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name} - {customer.total_points} pts
