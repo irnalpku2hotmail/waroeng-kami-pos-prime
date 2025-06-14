@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          icon_url: string | null
           id: string
           name: string
           updated_at: string
@@ -20,6 +21,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          icon_url?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -27,6 +29,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          icon_url?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -256,6 +259,113 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_address: string | null
+          customer_id: string | null
+          customer_name: string
+          customer_phone: string | null
+          delivery_date: string | null
+          delivery_fee: number
+          id: string
+          notes: string | null
+          order_date: string
+          order_number: string
+          payment_method: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_address?: string | null
+          customer_id?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          delivery_date?: string | null
+          delivery_fee?: number
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number: string
+          payment_method?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          delivery_date?: string | null
+          delivery_fee?: number
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number?: string
+          payment_method?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       point_transactions: {
         Row: {
@@ -1062,6 +1172,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_customer_purchase_history: {
         Args: { customer_uuid: string }
         Returns: {

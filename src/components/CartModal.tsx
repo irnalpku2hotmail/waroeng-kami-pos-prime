@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CartItem {
   id: string;
@@ -39,31 +41,116 @@ const CartModal = ({
     phone: '',
     address: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState('cod');
+
+  // Fetch COD settings
+  const { data: codSettings } = useQuery({
+    queryKey: ['cod-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'cod_settings')
+        .single();
+      if (error) throw error;
+      return data.value;
+    }
+  });
+
+  const createOrder = useMutation({
+    mutationFn: async (orderData: any) => {
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          customer_name: orderData.customer_name,
+          customer_phone: orderData.customer_phone,
+          customer_address: orderData.customer_address,
+          payment_method: orderData.payment_method,
+          total_amount: orderData.total_amount,
+          delivery_fee: orderData.delivery_fee,
+          status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = cartItems.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      return order;
+    },
+    onSuccess: (order) => {
+      toast({
+        title: 'Pesanan Berhasil Dibuat',
+        description: `Pesanan ${order.order_number} telah berhasil dibuat dan menunggu konfirmasi.`,
+      });
+      
+      onClearCart();
+      onOpenChange(false);
+      setCustomerInfo({ name: '', phone: '', address: '' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
 
   const getTotalPrice = () => {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  const getDeliveryFee = () => {
+    return codSettings?.delivery_fee || 10000;
+  };
+
   const handleCheckout = () => {
     if (cartItems.length === 0) {
       toast({
-        title: 'Cart Empty',
-        description: 'Please add items to cart before checkout',
+        title: 'Cart Kosong',
+        description: 'Silakan tambahkan produk ke cart terlebih dahulu',
         variant: 'destructive'
       });
       return;
     }
 
-    // Simulate checkout process
-    toast({
-      title: 'Order Placed',
-      description: `Your order of Rp ${getTotalPrice().toLocaleString('id-ID')} has been placed successfully!`,
+    if (!customerInfo.name || !customerInfo.phone) {
+      toast({
+        title: 'Data Tidak Lengkap',
+        description: 'Nama dan nomor telepon harus diisi',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const subtotal = getTotalPrice();
+    const deliveryFee = getDeliveryFee();
+    const total = subtotal + deliveryFee;
+
+    createOrder.mutate({
+      customer_name: customerInfo.name,
+      customer_phone: customerInfo.phone,
+      customer_address: customerInfo.address,
+      payment_method: paymentMethod,
+      total_amount: total,
+      delivery_fee: deliveryFee
     });
-    
-    onClearCart();
-    onOpenChange(false);
-    setCustomerInfo({ name: '', phone: '', address: '' });
   };
 
   const getImageUrl = (imageUrl: string | null | undefined) => {
@@ -78,7 +165,7 @@ const CartModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
-            Shopping Cart ({cartItems.length} items)
+            Keranjang Belanja ({cartItems.length} items)
           </DialogTitle>
         </DialogHeader>
 
@@ -88,7 +175,7 @@ const CartModal = ({
             {cartItems.length === 0 ? (
               <div className="text-center py-8">
                 <ShoppingBag className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">Your cart is empty</p>
+                <p className="text-gray-500">Keranjang belanja kosong</p>
               </div>
             ) : (
               cartItems.map((item) => (
@@ -101,7 +188,7 @@ const CartModal = ({
                   <div className="flex-1">
                     <h3 className="font-medium">{item.name}</h3>
                     <p className="text-sm text-gray-500">
-                      Rp {item.price.toLocaleString('id-ID')} each
+                      Rp {item.price.toLocaleString('id-ID')} per item
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -143,50 +230,51 @@ const CartModal = ({
             <>
               {/* Customer Information */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Customer Information</h3>
+                <h3 className="text-lg font-medium">Informasi Pelanggan</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="customerName">Name</Label>
+                    <Label htmlFor="customerName">Nama *</Label>
                     <Input
                       id="customerName"
                       value={customerInfo.name}
                       onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                      placeholder="Customer name"
+                      placeholder="Nama pelanggan"
+                      required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="customerPhone">Phone</Label>
+                    <Label htmlFor="customerPhone">Telepon *</Label>
                     <Input
                       id="customerPhone"
                       value={customerInfo.phone}
                       onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                      placeholder="Phone number"
+                      placeholder="Nomor telepon"
+                      required
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customerAddress">Address</Label>
+                  <Label htmlFor="customerAddress">Alamat Pengiriman</Label>
                   <Input
                     id="customerAddress"
                     value={customerInfo.address}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                    placeholder="Delivery address"
+                    placeholder="Alamat lengkap untuk pengiriman"
                   />
                 </div>
               </div>
 
               {/* Payment Method */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Payment Method</h3>
+                <h3 className="text-lg font-medium">Metode Pembayaran</h3>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select payment method" />
+                    <SelectValue placeholder="Pilih metode pembayaran" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="credit">Credit Card</SelectItem>
-                    <SelectItem value="debit">Debit Card</SelectItem>
-                    <SelectItem value="transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="cod">Cash on Delivery (COD)</SelectItem>
+                    <SelectItem value="transfer">Transfer Bank</SelectItem>
+                    <SelectItem value="ewallet">E-Wallet</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -199,12 +287,12 @@ const CartModal = ({
                     <span>Rp {getTotalPrice().toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Delivery Fee:</span>
-                    <span>Rp 10.000</span>
+                    <span>Ongkos Kirim:</span>
+                    <span>Rp {getDeliveryFee().toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total:</span>
-                    <span>Rp {(getTotalPrice() + 10000).toLocaleString('id-ID')}</span>
+                    <span>Rp {(getTotalPrice() + getDeliveryFee()).toLocaleString('id-ID')}</span>
                   </div>
                 </div>
               </div>
@@ -212,10 +300,14 @@ const CartModal = ({
               {/* Action Buttons */}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClearCart} className="flex-1">
-                  Clear Cart
+                  Kosongkan Cart
                 </Button>
-                <Button onClick={handleCheckout} className="flex-1">
-                  Checkout
+                <Button 
+                  onClick={handleCheckout} 
+                  className="flex-1"
+                  disabled={createOrder.isPending}
+                >
+                  {createOrder.isPending ? 'Memproses...' : 'Buat Pesanan'}
                 </Button>
               </div>
             </>
