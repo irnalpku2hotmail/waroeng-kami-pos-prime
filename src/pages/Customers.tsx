@@ -75,7 +75,8 @@ const Customers = () => {
       const customerCode = `CUST${Date.now()}`;
       const { error } = await supabase.from('customers').insert([{
         ...customer,
-        customer_code: customerCode
+        customer_code: customerCode,
+        qr_code_url: customerCode // Set QR code value to customer code
       }]);
       if (error) throw error;
     },

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Gift, Search, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Gift, Search, X, Star, Package } from 'lucide-react';
 import Layout from '@/components/Layout';
 
 const PointsRewards = () => {
@@ -69,6 +69,24 @@ const PointsRewards = () => {
       return data;
     }
   });
+
+  // Get total available points from all customers
+  const { data: customerStats } = useQuery({
+    queryKey: ['customer-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('total_points');
+      if (error) throw error;
+      
+      const totalPoints = data?.reduce((sum, customer) => sum + (customer.total_points || 0), 0) || 0;
+      return { totalPoints };
+    }
+  });
+
+  // Calculate totals
+  const totalAvailableRewards = rewards?.filter(reward => reward.is_active && reward.stock_quantity > 0).length || 0;
+  const totalAvailablePoints = customerStats?.totalPoints || 0;
 
   const createReward = useMutation({
     mutationFn: async (data: any) => {
@@ -370,6 +388,34 @@ const PointsRewards = () => {
               </form>
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Available Rewards</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {totalAvailableRewards}
+              </div>
+              <p className="text-xs text-muted-foreground">Active rewards in stock</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Available Points</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">
+                {totalAvailablePoints.toLocaleString('id-ID')} pts
+              </div>
+              <p className="text-xs text-muted-foreground">Points across all customers</p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="border rounded-lg">

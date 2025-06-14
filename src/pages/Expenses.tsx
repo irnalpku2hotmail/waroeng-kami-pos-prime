@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Edit, Trash2, Receipt, Upload, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, Upload, Eye, TrendingDown, Calendar } from 'lucide-react';
 import Layout from '@/components/Layout';
 
 const Expenses = () => {
@@ -41,6 +42,16 @@ const Expenses = () => {
       return data;
     }
   });
+
+  // Calculate today's and this month's totals
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM format
+
+  const todayTotal = expenses?.filter(expense => expense.expense_date === today)
+    .reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
+
+  const thisMonthTotal = expenses?.filter(expense => expense.expense_date.startsWith(currentMonth))
+    .reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
 
   const uploadReceipt = useMutation({
     mutationFn: async (file: File) => {
@@ -304,6 +315,34 @@ const Expenses = () => {
               </form>
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Expenses</CardTitle>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                Rp {todayTotal.toLocaleString('id-ID')}
+              </div>
+              <p className="text-xs text-muted-foreground">Total expenses today</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">This Month's Expenses</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">
+                Rp {thisMonthTotal.toLocaleString('id-ID')}
+              </div>
+              <p className="text-xs text-muted-foreground">Total expenses this month</p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="border rounded-lg">

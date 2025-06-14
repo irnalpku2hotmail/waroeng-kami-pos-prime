@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,9 +5,20 @@ import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
-import { ShoppingCart, DollarSign, Package, Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, Users, TrendingUp, AlertTriangle, Calendar, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const Dashboard = () => {
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   // Fetch dashboard statistics
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -121,8 +131,27 @@ const Dashboard = () => {
     <Layout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-blue-800">Dashboard</h1>
-          <p className="text-gray-600">Welcome to your SmartPOS dashboard</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-blue-800">Dashboard</h1>
+              <p className="text-gray-600">Welcome to your SmartPOS dashboard</p>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center gap-2 text-lg font-semibold text-blue-800">
+                <Calendar className="h-5 w-5" />
+                {currentDateTime.toLocaleDateString('id-ID', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Clock className="h-4 w-4" />
+                {currentDateTime.toLocaleTimeString('id-ID')}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Statistics Cards */}
