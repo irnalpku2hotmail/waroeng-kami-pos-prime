@@ -77,7 +77,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
   };
 
   const createCategory = useMutation({
-    mutationFn: async (data: CategoryFormData & { icon_url?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; icon_url?: string }) => {
       const { error } = await supabase
         .from('categories')
         .insert(data);
@@ -94,7 +94,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
   });
 
   const updateCategory = useMutation({
-    mutationFn: async (data: CategoryFormData & { icon_url?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; icon_url?: string }) => {
       const { error } = await supabase
         .from('categories')
         .update(data)
@@ -120,7 +120,11 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
         icon_url = await uploadIcon(iconFile);
       }
 
-      const formData = { ...data, icon_url };
+      const formData = { 
+        name: data.name, 
+        description: data.description || undefined, 
+        icon_url 
+      };
 
       if (category) {
         updateCategory.mutate(formData);
