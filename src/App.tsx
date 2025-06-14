@@ -26,8 +26,6 @@ import CreditManagement from '@/pages/CreditManagement';
 import Expenses from '@/pages/Expenses';
 import PointsRewards from '@/pages/PointsRewards';
 import PointExchange from '@/pages/PointExchange';
-import Cart from '@/pages/Cart';
-import CustomerPointExchange from '@/pages/CustomerPointExchange';
 import FlashSales from '@/pages/FlashSales';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
@@ -67,8 +65,6 @@ function App() {
               <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
               <Route path="/points-rewards" element={<ProtectedRoute><PointsRewards /></ProtectedRoute>} />
               <Route path="/point-exchange" element={<ProtectedRoute><PointExchange /></ProtectedRoute>} />
-              <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
-              <Route path="/customer-point-exchange" element={<ProtectedRoute><CustomerPointExchange /></ProtectedRoute>} />
               <Route path="/flash-sales" element={<ProtectedRoute><FlashSales /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />

@@ -195,8 +195,6 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: TrendingDown, label: 'Expenses', href: '/expenses' },
     { icon: Gift, label: 'Points & Rewards', href: '/points-rewards' },
     { icon: Star, label: 'Point Exchange', href: '/point-exchange' },
-    { icon: ShoppingCart, label: 'Cart', href: '/cart' },
-    { icon: Gift, label: 'Customer Point Exchange', href: '/customer-point-exchange' },
     { icon: Zap, label: 'Flash Sales', href: '/flash-sales' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: UserCog, label: 'User Management', href: '/user-management' },

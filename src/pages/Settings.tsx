@@ -9,12 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Upload, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 
 const Settings = () => {
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch settings
@@ -60,63 +58,6 @@ const Settings = () => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
-
-  // Upload logo mutation
-  const uploadLogo = useMutation({
-    mutationFn: async (file: File) => {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `logo.${fileExt}`;
-      const filePath = `logos/${fileName}`;
-
-      // Upload file to storage
-      const { error: uploadError } = await supabase.storage
-        .from('assets')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('assets')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    },
-    onSuccess: (logoUrl) => {
-      updateSettings.mutate({
-        store_logo: { url: logoUrl }
-      });
-      setLogoFile(null);
-      setLogoPreview(null);
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleLogoUpload = () => {
-    if (logoFile) {
-      uploadLogo.mutate(logoFile);
-    }
-  };
-
-  const removeLogo = () => {
-    updateSettings.mutate({
-      store_logo: { url: null }
-    });
-  };
 
   const handleStoreInfoSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -184,7 +125,6 @@ const Settings = () => {
           <TabsList>
             <TabsTrigger value="store-info">Informasi Toko</TabsTrigger>
             <TabsTrigger value="business-hours">Jam Operasional</TabsTrigger>
-            <TabsTrigger value="logo">Logo Toko</TabsTrigger>
           </TabsList>
 
           <TabsContent value="store-info">
@@ -235,61 +175,6 @@ const Settings = () => {
                   </div>
                   <Button type="submit">Simpan Informasi</Button>
                 </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="logo">
-            <Card>
-              <CardHeader>
-                <CardTitle>Logo Toko</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Current Logo */}
-                {settings?.store_logo?.url && (
-                  <div className="space-y-2">
-                    <Label>Logo Saat Ini</Label>
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={settings.store_logo.url}
-                        alt="Current Logo"
-                        className="h-16 w-16 object-contain border rounded"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={removeLogo}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Hapus Logo
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Upload New Logo */}
-                <div className="space-y-2">
-                  <Label htmlFor="logo">Upload Logo Baru</Label>
-                  <Input
-                    id="logo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoChange}
-                  />
-                  {logoPreview && (
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={logoPreview}
-                        alt="Preview"
-                        className="h-16 w-16 object-contain border rounded"
-                      />
-                      <Button onClick={handleLogoUpload} disabled={uploadLogo.isPending}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        {uploadLogo.isPending ? 'Uploading...' : 'Upload Logo'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
