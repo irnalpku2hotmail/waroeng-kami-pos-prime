@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +22,8 @@ import {
   UserCog, 
   LogOut,
   Menu,
-  Building2
+  Building2,
+  Receipt
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -35,7 +37,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigationItems = [
-    { icon: Home, label: 'Dashboard', href: '/' },
+    { icon: Home, label: 'Dashboard', href: '/dashboard' },
     { icon: Package, label: 'Products', href: '/products' },
     { icon: Tag, label: 'Categories', href: '/categories' },
     { icon: Ruler, label: 'Units', href: '/units' },
@@ -43,12 +45,13 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: ShoppingCart, label: 'POS', href: '/pos' },
     { icon: Package2, label: 'Inventory', href: '/inventory' },
     { icon: Users, label: 'Customers', href: '/customers' },
-    { icon: CreditCard, label: 'Credit Management', href: '/credit' },
+    { icon: Receipt, label: 'Orders', href: '/orders' },
+    { icon: CreditCard, label: 'Credit Management', href: '/credit-management' },
     { icon: TrendingDown, label: 'Expenses', href: '/expenses' },
-    { icon: Gift, label: 'Points & Rewards', href: '/rewards' },
+    { icon: Gift, label: 'Points & Rewards', href: '/points-rewards' },
     { icon: Zap, label: 'Flash Sales', href: '/flash-sales' },
     { icon: Settings, label: 'Settings', href: '/settings' },
-    { icon: UserCog, label: 'User Management', href: '/users' },
+    { icon: UserCog, label: 'User Management', href: '/user-management' },
   ];
 
   const handleSignOut = async () => {
@@ -57,8 +60,8 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   const isActiveRoute = (href: string) => {
-    if (href === '/') {
-      return location.pathname === '/';
+    if (href === '/dashboard') {
+      return location.pathname === '/dashboard';
     }
     return location.pathname.startsWith(href);
   };

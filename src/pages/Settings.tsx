@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Save, Store, Truck } from 'lucide-react';
+import { Save, Store, Truck, Globe, Receipt } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CODSettings from '@/components/CODSettings';
 
@@ -21,6 +21,24 @@ const Settings = () => {
     store_address: '',
     banner_title: '',
     banner_subtitle: ''
+  });
+
+  const [frontendSettings, setFrontendSettings] = useState({
+    show_products: true,
+    show_categories: true,
+    show_search: true,
+    show_cart: true,
+    show_promotions: true,
+    theme_color: '#3B82F6'
+  });
+
+  const [receiptSettings, setReceiptSettings] = useState({
+    receipt_header: '',
+    receipt_footer: '',
+    show_barcode: true,
+    show_qr_code: false,
+    paper_size: 'A4',
+    font_size: '12'
   });
 
   const queryClient = useQueryClient();
@@ -51,10 +69,28 @@ const Settings = () => {
         banner_title: settings.banner_title?.text || '',
         banner_subtitle: settings.banner_subtitle?.text || ''
       });
+
+      setFrontendSettings({
+        show_products: settings.frontend_show_products?.enabled ?? true,
+        show_categories: settings.frontend_show_categories?.enabled ?? true,
+        show_search: settings.frontend_show_search?.enabled ?? true,
+        show_cart: settings.frontend_show_cart?.enabled ?? true,
+        show_promotions: settings.frontend_show_promotions?.enabled ?? true,
+        theme_color: settings.frontend_theme_color?.color || '#3B82F6'
+      });
+
+      setReceiptSettings({
+        receipt_header: settings.receipt_header?.text || '',
+        receipt_footer: settings.receipt_footer?.text || '',
+        show_barcode: settings.receipt_show_barcode?.enabled ?? true,
+        show_qr_code: settings.receipt_show_qr_code?.enabled ?? false,
+        paper_size: settings.receipt_paper_size?.size || 'A4',
+        font_size: settings.receipt_font_size?.size || '12'
+      });
     }
   }, [settings]);
 
-  const updateSettings = useMutation({
+  const updateStoreSettings = useMutation({
     mutationFn: async (newSettings: typeof storeSettings) => {
       const settingsToUpdate = [
         { key: 'store_name', value: { name: newSettings.store_name } },
@@ -88,8 +124,84 @@ const Settings = () => {
     }
   });
 
-  const handleSave = () => {
-    updateSettings.mutate(storeSettings);
+  const updateFrontendSettings = useMutation({
+    mutationFn: async (newSettings: typeof frontendSettings) => {
+      const settingsToUpdate = [
+        { key: 'frontend_show_products', value: { enabled: newSettings.show_products } },
+        { key: 'frontend_show_categories', value: { enabled: newSettings.show_categories } },
+        { key: 'frontend_show_search', value: { enabled: newSettings.show_search } },
+        { key: 'frontend_show_cart', value: { enabled: newSettings.show_cart } },
+        { key: 'frontend_show_promotions', value: { enabled: newSettings.show_promotions } },
+        { key: 'frontend_theme_color', value: { color: newSettings.theme_color } }
+      ];
+
+      for (const setting of settingsToUpdate) {
+        const { error } = await supabase
+          .from('settings')
+          .upsert(setting);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast({
+        title: 'Berhasil',
+        description: 'Pengaturan frontend berhasil disimpan'
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const updateReceiptSettings = useMutation({
+    mutationFn: async (newSettings: typeof receiptSettings) => {
+      const settingsToUpdate = [
+        { key: 'receipt_header', value: { text: newSettings.receipt_header } },
+        { key: 'receipt_footer', value: { text: newSettings.receipt_footer } },
+        { key: 'receipt_show_barcode', value: { enabled: newSettings.show_barcode } },
+        { key: 'receipt_show_qr_code', value: { enabled: newSettings.show_qr_code } },
+        { key: 'receipt_paper_size', value: { size: newSettings.paper_size } },
+        { key: 'receipt_font_size', value: { size: newSettings.font_size } }
+      ];
+
+      for (const setting of settingsToUpdate) {
+        const { error } = await supabase
+          .from('settings')
+          .upsert(setting);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast({
+        title: 'Berhasil',
+        description: 'Pengaturan receipt berhasil disimpan'
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const handleStoreSettingsSave = () => {
+    updateStoreSettings.mutate(storeSettings);
+  };
+
+  const handleFrontendSettingsSave = () => {
+    updateFrontendSettings.mutate(frontendSettings);
+  };
+
+  const handleReceiptSettingsSave = () => {
+    updateReceiptSettings.mutate(receiptSettings);
   };
 
   if (isLoading) {
@@ -110,6 +222,14 @@ const Settings = () => {
             <TabsTrigger value="store" className="flex items-center gap-2">
               <Store className="h-4 w-4" />
               Toko
+            </TabsTrigger>
+            <TabsTrigger value="frontend" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Frontend
+            </TabsTrigger>
+            <TabsTrigger value="receipt" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Receipt
             </TabsTrigger>
             <TabsTrigger value="cod" className="flex items-center gap-2">
               <Truck className="h-4 w-4" />
@@ -199,12 +319,221 @@ const Settings = () => {
                 {/* Save Button */}
                 <div className="pt-4">
                   <Button 
-                    onClick={handleSave}
-                    disabled={updateSettings.isPending}
+                    onClick={handleStoreSettingsSave}
+                    disabled={updateStoreSettings.isPending}
                     className="w-full"
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {updateSettings.isPending ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                    {updateStoreSettings.isPending ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="frontend">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Pengaturan Frontend
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Fitur Tampilan</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_products">Tampilkan Produk</Label>
+                        <input
+                          id="show_products"
+                          type="checkbox"
+                          checked={frontendSettings.show_products}
+                          onChange={(e) => setFrontendSettings(prev => ({ ...prev, show_products: e.target.checked }))}
+                          className="rounded"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_categories">Tampilkan Kategori</Label>
+                        <input
+                          id="show_categories"
+                          type="checkbox"
+                          checked={frontendSettings.show_categories}
+                          onChange={(e) => setFrontendSettings(prev => ({ ...prev, show_categories: e.target.checked }))}
+                          className="rounded"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_search">Tampilkan Pencarian</Label>
+                        <input
+                          id="show_search"
+                          type="checkbox"
+                          checked={frontendSettings.show_search}
+                          onChange={(e) => setFrontendSettings(prev => ({ ...prev, show_search: e.target.checked }))}
+                          className="rounded"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_cart">Tampilkan Keranjang</Label>
+                        <input
+                          id="show_cart"
+                          type="checkbox"
+                          checked={frontendSettings.show_cart}
+                          onChange={(e) => setFrontendSettings(prev => ({ ...prev, show_cart: e.target.checked }))}
+                          className="rounded"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_promotions">Tampilkan Promosi</Label>
+                        <input
+                          id="show_promotions"
+                          type="checkbox"
+                          checked={frontendSettings.show_promotions}
+                          onChange={(e) => setFrontendSettings(prev => ({ ...prev, show_promotions: e.target.checked }))}
+                          className="rounded"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Tema</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="theme_color">Warna Tema</Label>
+                      <Input
+                        id="theme_color"
+                        type="color"
+                        value={frontendSettings.theme_color}
+                        onChange={(e) => setFrontendSettings(prev => ({ ...prev, theme_color: e.target.value }))}
+                        className="w-20 h-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Button 
+                    onClick={handleFrontendSettingsSave}
+                    disabled={updateFrontendSettings.isPending}
+                    className="w-full"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {updateFrontendSettings.isPending ? 'Menyimpan...' : 'Simpan Pengaturan Frontend'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="receipt">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Pengaturan Receipt
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Header & Footer</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="receipt_header">Header Receipt</Label>
+                      <Textarea
+                        id="receipt_header"
+                        value={receiptSettings.receipt_header}
+                        onChange={(e) => setReceiptSettings(prev => ({ ...prev, receipt_header: e.target.value }))}
+                        placeholder="Terima kasih telah berbelanja"
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="receipt_footer">Footer Receipt</Label>
+                      <Textarea
+                        id="receipt_footer"
+                        value={receiptSettings.receipt_footer}
+                        onChange={(e) => setReceiptSettings(prev => ({ ...prev, receipt_footer: e.target.value }))}
+                        placeholder="Barang yang sudah dibeli tidak dapat dikembalikan"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Format & Tampilan</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_barcode">Tampilkan Barcode</Label>
+                        <input
+                          id="show_barcode"
+                          type="checkbox"
+                          checked={receiptSettings.show_barcode}
+                          onChange={(e) => setReceiptSettings(prev => ({ ...prev, show_barcode: e.target.checked }))}
+                          className="rounded"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_qr_code">Tampilkan QR Code</Label>
+                        <input
+                          id="show_qr_code"
+                          type="checkbox"
+                          checked={receiptSettings.show_qr_code}
+                          onChange={(e) => setReceiptSettings(prev => ({ ...prev, show_qr_code: e.target.checked }))}
+                          className="rounded"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paper_size">Ukuran Kertas</Label>
+                        <select
+                          id="paper_size"
+                          value={receiptSettings.paper_size}
+                          onChange={(e) => setReceiptSettings(prev => ({ ...prev, paper_size: e.target.value }))}
+                          className="w-full p-2 border rounded"
+                        >
+                          <option value="A4">A4</option>
+                          <option value="thermal">Thermal (58mm)</option>
+                          <option value="thermal80">Thermal (80mm)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="font_size">Ukuran Font</Label>
+                        <select
+                          id="font_size"
+                          value={receiptSettings.font_size}
+                          onChange={(e) => setReceiptSettings(prev => ({ ...prev, font_size: e.target.value }))}
+                          className="w-full p-2 border rounded"
+                        >
+                          <option value="10">10px</option>
+                          <option value="12">12px</option>
+                          <option value="14">14px</option>
+                          <option value="16">16px</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Button 
+                    onClick={handleReceiptSettingsSave}
+                    disabled={updateReceiptSettings.isPending}
+                    className="w-full"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {updateReceiptSettings.isPending ? 'Menyimpan...' : 'Simpan Pengaturan Receipt'}
                   </Button>
                 </div>
               </CardContent>
