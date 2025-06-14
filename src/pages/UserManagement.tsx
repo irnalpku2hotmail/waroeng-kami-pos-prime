@@ -31,22 +31,7 @@ const UserManagement = () => {
     address: ''
   });
 
-  // Only admins can access this page
-  if (profile?.role !== 'admin') {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-            <p className="text-gray-600">You don't have permission to access this page.</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  // Fetch users
+  // Fetch users - moved before conditional return
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
@@ -57,7 +42,8 @@ const UserManagement = () => {
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: profile?.role === 'admin' // Only run query if user is admin
   });
 
   // Create user mutation
@@ -133,6 +119,21 @@ const UserManagement = () => {
       });
     }
   });
+
+  // Only admins can access this page - moved after all hooks
+  if (profile?.role !== 'admin') {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-gray-600">You don't have permission to access this page.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const getRoleBadge = (role: string) => {
     const colors: Record<string, string> = {
