@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import { 
   Home, 
   Package, 
@@ -23,7 +24,10 @@ import {
   LogOut,
   Menu,
   Building2,
-  Receipt
+  Receipt,
+  Bell,
+  Calendar,
+  Clock
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -35,6 +39,16 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  // Update date and time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Fetch store settings for store name
   const { data: settings } = useQuery({
@@ -50,6 +64,118 @@ const Layout = ({ children }: LayoutProps) => {
         settingsObj[setting.key] = setting.value;
       });
       return settingsObj;
+    }
+  });
+
+  // Fetch notifications
+  const { data: notifications } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const today = new Date();
+      const oneMonthFromNow = new Date();
+      oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+      const notifications = [];
+
+      // Customer birthdays (today)
+      const { data: birthdayCustomers } = await supabase
+        .from('customers')
+        .select('name, date_of_birth')
+        .not('date_of_birth', 'is', null);
+
+      if (birthdayCustomers) {
+        const todayBirthdays = birthdayCustomers.filter(customer => {
+          if (!customer.date_of_birth) return false;
+          const birthday = new Date(customer.date_of_birth);
+          return birthday.getMonth() === today.getMonth() && birthday.getDate() === today.getDate();
+        });
+
+        todayBirthdays.forEach(customer => {
+          notifications.push({
+            type: 'birthday',
+            message: `🎂 ${customer.name} has a birthday today!`,
+            priority: 'medium'
+          });
+        });
+      }
+
+      // Low stock products
+      const { data: lowStockProducts } = await supabase
+        .from('products')
+        .select('name, current_stock, min_stock')
+        .lt('current_stock', 10);
+
+      if (lowStockProducts && lowStockProducts.length > 0) {
+        notifications.push({
+          type: 'low_stock',
+          message: `📦 ${lowStockProducts.length} products have low stock`,
+          priority: 'high'
+        });
+      }
+
+      // Product expiration (1 month before)
+      const { data: expiringProducts } = await supabase
+        .from('purchase_items')
+        .select('expiration_date, products(name)')
+        .not('expiration_date', 'is', null)
+        .lte('expiration_date', oneMonthFromNow.toISOString().split('T')[0])
+        .gte('expiration_date', today.toISOString().split('T')[0]);
+
+      if (expiringProducts && expiringProducts.length > 0) {
+        notifications.push({
+          type: 'expiring',
+          message: `⚠️ ${expiringProducts.length} products expiring within a month`,
+          priority: 'medium'
+        });
+      }
+
+      // New orders (pending status)
+      const { data: newOrders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('status', 'pending');
+
+      if (newOrders && newOrders.length > 0) {
+        notifications.push({
+          type: 'new_order',
+          message: `🛒 ${newOrders.length} new orders pending`,
+          priority: 'high'
+        });
+      }
+
+      // Overdue credit purchases
+      const { data: overdueCredits } = await supabase
+        .from('purchases')
+        .select('id, suppliers(name)')
+        .eq('payment_method', 'credit')
+        .lt('due_date', today.toISOString().split('T')[0]);
+
+      if (overdueCredits && overdueCredits.length > 0) {
+        notifications.push({
+          type: 'overdue_credit',
+          message: `💳 ${overdueCredits.length} credit payments overdue`,
+          priority: 'high'
+        });
+      }
+
+      // New user registrations (last 24 hours)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const { data: newUsers } = await supabase
+        .from('profiles')
+        .select('id')
+        .gte('created_at', yesterday.toISOString());
+
+      if (newUsers && newUsers.length > 0) {
+        notifications.push({
+          type: 'new_user',
+          message: `👤 ${newUsers.length} new users registered`,
+          priority: 'low'
+        });
+      }
+
+      return notifications;
     }
   });
 
@@ -82,6 +208,16 @@ const Layout = ({ children }: LayoutProps) => {
       return location.pathname === '/dashboard';
     }
     return location.pathname.startsWith(href);
+  };
+
+  const getNotificationCount = () => {
+    if (!notifications) return 0;
+    return notifications.length;
+  };
+
+  const getHighPriorityCount = () => {
+    if (!notifications) return 0;
+    return notifications.filter(n => n.priority === 'high').length;
   };
 
   const NavigationContent = () => (
@@ -134,6 +270,71 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Date and Time */}
+            <div className="hidden md:flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                {currentDateTime.toLocaleDateString('id-ID', { 
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric'
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                {currentDateTime.toLocaleTimeString('id-ID', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+            </div>
+
+            {/* Notifications */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {getNotificationCount() > 0 && (
+                    <Badge 
+                      className={`absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs ${
+                        getHighPriorityCount() > 0 ? 'bg-red-500' : 'bg-blue-500'
+                      }`}
+                    >
+                      {getNotificationCount()}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-80" align="end">
+                <div className="p-3 border-b">
+                  <h3 className="font-semibold">Notifications</h3>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications && notifications.length > 0 ? (
+                    notifications.map((notification, index) => (
+                      <DropdownMenuItem key={index} className="p-3 border-b">
+                        <div className="flex items-start gap-2">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${
+                            notification.priority === 'high' ? 'bg-red-500' :
+                            notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                          }`} />
+                          <div className="flex-1">
+                            <p className="text-sm">{notification.message}</p>
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <div className="p-3 text-center text-gray-500">
+                      No notifications
+                    </div>
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">

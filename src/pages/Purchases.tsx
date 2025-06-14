@@ -11,7 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Package, Check, CreditCard } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
-import PurchasePaymentForm from '@/components/PurchasePaymentForm';
+import CreditPaymentForm from '@/components/CreditPaymentForm';
 
 const Purchases = () => {
   const [open, setOpen] = useState(false);
@@ -220,8 +220,8 @@ const Purchases = () => {
           )}
         </div>
 
-        {/* Purchase Payment Dialog */}
-        <PurchasePaymentForm
+        {/* Credit Payment Dialog */}
+        <CreditPaymentForm
           purchase={selectedPurchaseForPayment}
           open={paymentDialogOpen}
           onOpenChange={setPaymentDialogOpen}
