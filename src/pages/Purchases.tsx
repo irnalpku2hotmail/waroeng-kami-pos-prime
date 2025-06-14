@@ -8,13 +8,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, DollarSign, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, DollarSign, Check, CreditCard } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
+import CreditPaymentForm from '@/components/CreditPaymentForm';
 
 const Purchases = () => {
   const [open, setOpen] = useState(false);
   const [editPurchase, setEditPurchase] = useState<any>(null);
+  const [selectedPurchaseForPayment, setSelectedPurchaseForPayment] = useState<any>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
@@ -74,6 +77,11 @@ const Purchases = () => {
   const handleCloseDialog = () => {
     setOpen(false);
     setEditPurchase(null);
+  };
+
+  const openPaymentDialog = (purchase: any) => {
+    setSelectedPurchaseForPayment(purchase);
+    setPaymentDialogOpen(true);
   };
 
   const getPaymentStatus = (purchase: any) => {
@@ -165,14 +173,26 @@ const Purchases = () => {
                     <TableCell>
                       <div className="flex gap-2">
                         {purchase.payment_method === 'credit' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => markAsPaid.mutate(purchase.id)}
-                            className="text-green-600 hover:bg-green-50"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openPaymentDialog(purchase)}
+                              className="text-blue-600 hover:bg-blue-50"
+                              title="Catat Pembayaran"
+                            >
+                              <CreditCard className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => markAsPaid.mutate(purchase.id)}
+                              className="text-green-600 hover:bg-green-50"
+                              title="Tandai Lunas"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
                         <Button
                           size="sm"
@@ -199,6 +219,13 @@ const Purchases = () => {
             </Table>
           )}
         </div>
+
+        {/* Credit Payment Dialog */}
+        <CreditPaymentForm
+          purchase={selectedPurchaseForPayment}
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+        />
       </div>
     </Layout>
   );

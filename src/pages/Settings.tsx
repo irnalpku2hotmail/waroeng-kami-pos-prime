@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Save, Store, Truck, Globe, Receipt } from 'lucide-react';
+import { Save, Store, Truck, Globe, Receipt, Upload, Building } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CODSettings from '@/components/CODSettings';
 
@@ -20,7 +19,8 @@ const Settings = () => {
     store_email: '',
     store_address: '',
     banner_title: '',
-    banner_subtitle: ''
+    banner_subtitle: '',
+    store_logo: ''
   });
 
   const [frontendSettings, setFrontendSettings] = useState({
@@ -40,6 +40,9 @@ const Settings = () => {
     paper_size: 'A4',
     font_size: '12'
   });
+
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -67,7 +70,8 @@ const Settings = () => {
         store_email: settings.store_email?.email || '',
         store_address: settings.store_address?.address || '',
         banner_title: settings.banner_title?.text || '',
-        banner_subtitle: settings.banner_subtitle?.text || ''
+        banner_subtitle: settings.banner_subtitle?.text || '',
+        store_logo: settings.store_logo?.url || ''
       });
 
       setFrontendSettings({
@@ -90,15 +94,48 @@ const Settings = () => {
     }
   }, [settings]);
 
+  const uploadLogo = async (file: File) => {
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo.${fileExt}`;
+      const filePath = `store/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('assets')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('assets')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      throw error;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const updateStoreSettings = useMutation({
     mutationFn: async (newSettings: typeof storeSettings) => {
+      let logoUrl = newSettings.store_logo;
+      
+      if (logoFile) {
+        logoUrl = await uploadLogo(logoFile);
+      }
+
       const settingsToUpdate = [
         { key: 'store_name', value: { name: newSettings.store_name } },
         { key: 'store_phone', value: { phone: newSettings.store_phone } },
         { key: 'store_email', value: { email: newSettings.store_email } },
         { key: 'store_address', value: { address: newSettings.store_address } },
         { key: 'banner_title', value: { text: newSettings.banner_title } },
-        { key: 'banner_subtitle', value: { text: newSettings.banner_subtitle } }
+        { key: 'banner_subtitle', value: { text: newSettings.banner_subtitle } },
+        { key: 'store_logo', value: { url: logoUrl } }
       ];
 
       for (const setting of settingsToUpdate) {
@@ -110,6 +147,7 @@ const Settings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
+      setLogoFile(null);
       toast({
         title: 'Berhasil',
         description: 'Pengaturan toko berhasil disimpan'
@@ -204,6 +242,19 @@ const Settings = () => {
     updateReceiptSettings.mutate(receiptSettings);
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      // Preview the logo
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setStoreSettings(prev => ({ ...prev, store_logo: e.target?.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -246,6 +297,37 @@ const Settings = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Logo Upload */}
+                <div className="space-y-4">
+                  <Label>Logo Aplikasi</Label>
+                  <div className="flex items-center gap-4">
+                    {storeSettings.store_logo && (
+                      <div className="relative">
+                        <img 
+                          src={storeSettings.store_logo} 
+                          alt="Store Logo" 
+                          className="w-20 h-20 object-contain border rounded"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                        className="hidden"
+                        id="logo-upload"
+                      />
+                      <Label htmlFor="logo-upload" asChild>
+                        <Button variant="outline" className="cursor-pointer">
+                          <Upload className="h-4 w-4 mr-2" />
+                          {storeSettings.store_logo ? 'Ganti Logo' : 'Upload Logo'}
+                        </Button>
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Store Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -320,11 +402,11 @@ const Settings = () => {
                 <div className="pt-4">
                   <Button 
                     onClick={handleStoreSettingsSave}
-                    disabled={updateStoreSettings.isPending}
+                    disabled={updateStoreSettings.isPending || uploading}
                     className="w-full"
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {updateStoreSettings.isPending ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                    {updateStoreSettings.isPending || uploading ? 'Menyimpan...' : 'Simpan Pengaturan'}
                   </Button>
                 </div>
               </CardContent>

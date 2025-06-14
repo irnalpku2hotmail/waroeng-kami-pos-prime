@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Building2, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Eye, Users, TrendingUp } from 'lucide-react';
 import Layout from '@/components/Layout';
 import SupplierDetails from '@/components/SupplierDetails';
 
@@ -27,6 +27,33 @@ const Suppliers = () => {
     phone: '',
     email: '',
     address: ''
+  });
+
+  // Fetch supplier statistics
+  const { data: supplierStats } = useQuery({
+    queryKey: ['supplier-stats'],
+    queryFn: async () => {
+      const currentMonth = new Date();
+      const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString();
+      
+      // Total suppliers
+      const { data: totalSuppliers } = await supabase
+        .from('suppliers')
+        .select('id');
+      
+      // Active suppliers this month (suppliers with purchases this month)
+      const { data: activeSuppliersThisMonth } = await supabase
+        .from('purchases')
+        .select('supplier_id')
+        .gte('created_at', firstDayOfMonth);
+      
+      const uniqueActiveSuppliers = new Set(activeSuppliersThisMonth?.map(p => p.supplier_id) || []);
+      
+      return {
+        totalSuppliers: totalSuppliers?.length || 0,
+        activeSuppliersThisMonth: uniqueActiveSuppliers.size
+      };
+    }
   });
 
   const { data: suppliers, isLoading } = useQuery({
@@ -63,6 +90,7 @@ const Suppliers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-stats'] });
       setOpen(false);
       resetForm();
       toast({ 
@@ -82,6 +110,7 @@ const Suppliers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-stats'] });
       toast({ title: 'Berhasil', description: 'Supplier berhasil dihapus' });
     },
     onError: (error) => {
@@ -203,6 +232,33 @@ const Suppliers = () => {
               </form>
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Suppliers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {supplierStats?.totalSuppliers || 0}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Suppliers This Month</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {supplierStats?.activeSuppliersThisMonth || 0}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex gap-4">
