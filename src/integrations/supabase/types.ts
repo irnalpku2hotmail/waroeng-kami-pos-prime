@@ -367,6 +367,73 @@ export type Database = {
           },
         ]
       }
+      point_exchanges: {
+        Row: {
+          created_at: string
+          customer_id: string
+          exchange_date: string
+          id: string
+          notes: string | null
+          points_used: number
+          processed_by: string
+          quantity: number
+          reward_id: string
+          status: string
+          total_points_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          exchange_date?: string
+          id?: string
+          notes?: string | null
+          points_used?: number
+          processed_by: string
+          quantity?: number
+          reward_id: string
+          status?: string
+          total_points_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          exchange_date?: string
+          id?: string
+          notes?: string | null
+          points_used?: number
+          processed_by?: string
+          quantity?: number
+          reward_id?: string
+          status?: string
+          total_points_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_point_exchanges_customer_id"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_point_exchanges_processed_by"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_point_exchanges_reward_id"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       point_transactions: {
         Row: {
           created_at: string
