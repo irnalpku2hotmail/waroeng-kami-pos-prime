@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Eye, Star, CreditCard } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
 
@@ -18,10 +20,30 @@ const Customers = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [ratingFilter, setRatingFilter] = useState('all');
   const queryClient = useQueryClient();
 
+  // Get customer rating based on total spent
+  const getCustomerRating = (totalSpent: number) => {
+    if (totalSpent >= 10000000) return 'diamond'; // 10M+
+    if (totalSpent >= 5000000) return 'platinum'; // 5M+
+    if (totalSpent >= 1000000) return 'gold'; // 1M+
+    if (totalSpent >= 500000) return 'silver'; // 500K+
+    return 'bronze'; // Below 500K
+  };
+
+  const getRatingColor = (rating: string) => {
+    switch (rating) {
+      case 'diamond': return 'text-purple-600 bg-purple-100';
+      case 'platinum': return 'text-gray-600 bg-gray-100';
+      case 'gold': return 'text-yellow-600 bg-yellow-100';
+      case 'silver': return 'text-gray-500 bg-gray-50';
+      default: return 'text-orange-600 bg-orange-100';
+    }
+  };
+
   const { data: customers, isLoading } = useQuery({
-    queryKey: ['customers', searchTerm],
+    queryKey: ['customers', searchTerm, ratingFilter],
     queryFn: async () => {
       let query = supabase
         .from('customers')
@@ -33,9 +55,20 @@ const Customers = () => {
       
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
+      
+      // Filter by rating if specified
+      if (ratingFilter !== 'all') {
+        return data?.filter(customer => getCustomerRating(customer.total_spent || 0) === ratingFilter) || [];
+      }
+      
       return data;
     }
   });
+
+  // Calculate totals
+  const totalCustomers = customers?.length || 0;
+  const totalPoints = customers?.reduce((sum, customer) => sum + (customer.total_points || 0), 0) || 0;
+  const totalSpent = customers?.reduce((sum, customer) => sum + (customer.total_spent || 0), 0) || 0;
 
   const createCustomer = useMutation({
     mutationFn: async (customer: any) => {
@@ -187,13 +220,60 @@ const Customers = () => {
           </Dialog>
         </div>
 
-        <div className="flex gap-4">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalCustomers.toLocaleString('id-ID')}</div>
+              <p className="text-xs text-muted-foreground">Registered customers</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Points</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{totalPoints.toLocaleString('id-ID')} pts</div>
+              <p className="text-xs text-muted-foreground">Points across all customers</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">Rp {totalSpent.toLocaleString('id-ID')}</div>
+              <p className="text-xs text-muted-foreground">Total customer spending</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex gap-4 flex-wrap">
           <Input
             placeholder="Cari nama, kode, email, atau telepon customer..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
+          <Select value={ratingFilter} onValueChange={setRatingFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filter by rating" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Rating</SelectItem>
+              <SelectItem value="diamond">Diamond (10M+)</SelectItem>
+              <SelectItem value="platinum">Platinum (5M+)</SelectItem>
+              <SelectItem value="gold">Gold (1M+)</SelectItem>
+              <SelectItem value="silver">Silver (500K+)</SelectItem>
+              <SelectItem value="bronze">Bronze (&lt;500K)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="border rounded-lg">
@@ -212,57 +292,67 @@ const Customers = () => {
                   <TableHead>Nama</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Telepon</TableHead>
+                  <TableHead>Rating</TableHead>
                   <TableHead>Total Points</TableHead>
                   <TableHead>Total Spent</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customers?.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell className="font-medium">{customer.customer_code}</TableCell>
-                    <TableCell>{customer.name}</TableCell>
-                    <TableCell>{customer.email || '-'}</TableCell>
-                    <TableCell>{customer.phone || '-'}</TableCell>
-                    <TableCell>
-                      <span className="text-blue-600 font-medium">{customer.total_points} pts</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-green-600 font-medium">
-                        Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openCustomerDetails(customer)}
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditCustomer(customer);
-                            setOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteCustomer.mutate(customer.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {customers?.map((customer) => {
+                  const rating = getCustomerRating(customer.total_spent || 0);
+                  return (
+                    <TableRow key={customer.id}>
+                      <TableCell className="font-medium">{customer.customer_code}</TableCell>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.email || '-'}</TableCell>
+                      <TableCell>{customer.phone || '-'}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${getRatingColor(rating)}`}>
+                          <Star className="h-3 w-3 mr-1" />
+                          {rating}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-blue-600 font-medium">{customer.total_points} pts</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-green-600 font-medium">
+                          Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openCustomerDetails(customer)}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditCustomer(customer);
+                              setOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteCustomer.mutate(customer.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
