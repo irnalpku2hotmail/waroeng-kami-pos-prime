@@ -24,7 +24,7 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, 'buyer');
 
     if (error) {
       toast({

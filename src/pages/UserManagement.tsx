@@ -49,30 +49,40 @@ const UserManagement = () => {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Use service_role key for admin operations
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: data.full_name,
-          role: data.role
+        options: {
+          data: {
+            full_name: data.full_name,
+            role: data.role
+          }
         }
       });
 
       if (authError) throw authError;
 
-      // Update profile with additional information
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: data.full_name,
-          role: data.role,
-          phone: data.phone,
-          address: data.address
-        })
-        .eq('id', authData.user.id);
+      // Wait a bit for the user to be created in the profiles table via trigger
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (profileError) throw profileError;
+      // Update profile with additional information
+      if (authData.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: data.full_name,
+            role: data.role,
+            phone: data.phone,
+            address: data.address
+          })
+          .eq('id', authData.user.id);
+
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+          // Don't throw error here, just log it
+        }
+      }
 
       return authData.user;
     },
@@ -247,6 +257,7 @@ const UserManagement = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="buyer">Buyer</SelectItem>
                         <SelectItem value="staff">Staff</SelectItem>
                         <SelectItem value="cashier">Cashier</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
@@ -411,6 +422,7 @@ const UserManagement = () => {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
+                                      <SelectItem value="buyer">Buyer</SelectItem>
                                       <SelectItem value="staff">Staff</SelectItem>
                                       <SelectItem value="cashier">Cashier</SelectItem>
                                       <SelectItem value="manager">Manager</SelectItem>

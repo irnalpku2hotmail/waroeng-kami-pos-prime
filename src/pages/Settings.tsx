@@ -74,46 +74,6 @@ const Settings = () => {
     updateSettings.mutate(storeData);
   };
 
-  const handleBusinessHoursSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const hoursData = {
-      business_hours: {
-        monday: { 
-          open: formData.get('monday_open') as string, 
-          close: formData.get('monday_close') as string 
-        },
-        tuesday: { 
-          open: formData.get('tuesday_open') as string, 
-          close: formData.get('tuesday_close') as string 
-        },
-        wednesday: { 
-          open: formData.get('wednesday_open') as string, 
-          close: formData.get('wednesday_close') as string 
-        },
-        thursday: { 
-          open: formData.get('thursday_open') as string, 
-          close: formData.get('thursday_close') as string 
-        },
-        friday: { 
-          open: formData.get('friday_open') as string, 
-          close: formData.get('friday_close') as string 
-        },
-        saturday: { 
-          open: formData.get('saturday_open') as string, 
-          close: formData.get('saturday_close') as string 
-        },
-        sunday: { 
-          open: formData.get('sunday_open') as string, 
-          close: formData.get('sunday_close') as string 
-        }
-      }
-    };
-
-    updateSettings.mutate(hoursData);
-  };
-
   const handleReceiptSettingsSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -142,7 +102,6 @@ const Settings = () => {
         <Tabs defaultValue="store-info" className="space-y-4">
           <TabsList>
             <TabsTrigger value="store-info">Informasi Toko</TabsTrigger>
-            <TabsTrigger value="business-hours">Jam Operasional</TabsTrigger>
             <TabsTrigger value="receipt">Pengaturan Struk</TabsTrigger>
             <TabsTrigger value="cod">COD Settings</TabsTrigger>
           </TabsList>
@@ -194,34 +153,6 @@ const Settings = () => {
                     </div>
                   </div>
                   <Button type="submit">Simpan Informasi</Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="business-hours">
-            <Card>
-              <CardHeader>
-                <CardTitle>Jam Operasional</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleBusinessHoursSubmit} className="space-y-4">
-                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-                    <div key={day} className="grid grid-cols-3 gap-4 items-center">
-                      <Label className="capitalize">{day}</Label>
-                      <Input
-                        name={`${day}_open`}
-                        type="time"
-                        defaultValue={settings?.business_hours?.[day]?.open || '09:00'}
-                      />
-                      <Input
-                        name={`${day}_close`}
-                        type="time"
-                        defaultValue={settings?.business_hours?.[day]?.close || '17:00'}
-                      />
-                    </div>
-                  ))}
-                  <Button type="submit">Simpan Jam Operasional</Button>
                 </form>
               </CardContent>
             </Card>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,10 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { CreditCard, AlertTriangle, Phone, Mail, MessageSquare } from 'lucide-react';
 import Layout from '@/components/Layout';
+import CreditPaymentForm from '@/components/CreditPaymentForm';
 
 const CreditManagement = () => {
   const [selectedCredit, setSelectedCredit] = useState<any>(null);
   const [remindDialogOpen, setRemindDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
@@ -154,6 +155,11 @@ const CreditManagement = () => {
   const handleSendReminder = (purchase: any) => {
     setSelectedCredit(purchase);
     setRemindDialogOpen(true);
+  };
+
+  const handlePayCredit = (purchase: any) => {
+    setSelectedCredit(purchase);
+    setPaymentDialogOpen(true);
   };
 
   const handleReminderSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -311,15 +317,26 @@ const CreditManagement = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleSendReminder(purchase)}
-                          className="text-blue-600 hover:bg-blue-50"
-                        >
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Ingatkan
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePayCredit(purchase)}
+                            className="text-green-600 hover:bg-green-50"
+                          >
+                            <CreditCard className="h-4 w-4 mr-1" />
+                            Bayar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSendReminder(purchase)}
+                            className="text-blue-600 hover:bg-blue-50"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Ingatkan
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -328,6 +345,13 @@ const CreditManagement = () => {
             </Table>
           )}
         </div>
+
+        {/* Payment Dialog */}
+        <CreditPaymentForm
+          purchase={selectedCredit}
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+        />
 
         {/* Reminder Dialog */}
         <Dialog open={remindDialogOpen} onOpenChange={setRemindDialogOpen}>
