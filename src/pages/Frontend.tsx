@@ -311,38 +311,46 @@ const Frontend = () => {
                 <h2 className="text-3xl font-bold text-red-600">Flash Sale</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {flashSales[0]?.flash_sale_items?.slice(0, 4).map((item: any) => (
-                  <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4">
-                      <img 
-                        src={getImageUrl(item.products.image_url)} 
-                        alt={item.products.name}
-                        className="w-full h-48 object-cover rounded mb-4"
-                      />
-                      <h3 className="font-semibold mb-2">{item.products.name}</h3>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg font-bold text-red-600">
-                          Rp {item.sale_price.toLocaleString('id-ID')}
-                        </span>
-                        <span className="text-sm line-through text-gray-500">
-                          Rp {item.original_price.toLocaleString('id-ID')}
-                        </span>
-                        <Badge variant="destructive">
-                          -{item.discount_percentage}%
-                        </Badge>
-                      </div>
-                      <Button 
-                        className="w-full"
-                        onClick={() => addToCart({
-                          ...item.products,
-                          selling_price: item.sale_price
-                        })}
-                      >
-                        Tambah ke Cart
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                {flashSales[0]?.flash_sale_items?.slice(0, 4).map((item: any) => {
+                  // Add null check for item.products
+                  if (!item.products) {
+                    console.log('Skipping flash sale item with null products:', item);
+                    return null;
+                  }
+                  
+                  return (
+                    <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4">
+                        <img 
+                          src={getImageUrl(item.products.image_url)} 
+                          alt={item.products.name}
+                          className="w-full h-48 object-cover rounded mb-4"
+                        />
+                        <h3 className="font-semibold mb-2">{item.products.name}</h3>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-lg font-bold text-red-600">
+                            Rp {item.sale_price.toLocaleString('id-ID')}
+                          </span>
+                          <span className="text-sm line-through text-gray-500">
+                            Rp {item.original_price.toLocaleString('id-ID')}
+                          </span>
+                          <Badge variant="destructive">
+                            -{item.discount_percentage}%
+                          </Badge>
+                        </div>
+                        <Button 
+                          className="w-full"
+                          onClick={() => addToCart({
+                            ...item.products,
+                            selling_price: item.sale_price
+                          })}
+                        >
+                          Tambah ke Cart
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                }).filter(Boolean)}
               </div>
             </div>
           </section>
