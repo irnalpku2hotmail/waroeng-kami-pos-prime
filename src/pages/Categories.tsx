@@ -63,6 +63,12 @@ const Categories = () => {
     setEditCategory(null);
   };
 
+  const handleSuccess = () => {
+    setOpen(false);
+    setEditCategory(null);
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -81,6 +87,7 @@ const Categories = () => {
               </DialogHeader>
               <CategoryForm
                 category={editCategory}
+                onSuccess={handleSuccess}
                 onClose={handleCloseDialog}
               />
             </DialogContent>
@@ -110,7 +117,6 @@ const Categories = () => {
                 <TableRow>
                   <TableHead>Nama Kategori</TableHead>
                   <TableHead>Deskripsi</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Jumlah Produk</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
@@ -120,11 +126,6 @@ const Categories = () => {
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell>{category.description || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant={category.is_active ? 'default' : 'secondary'}>
-                        {category.is_active ? 'Aktif' : 'Tidak Aktif'}
-                      </Badge>
-                    </TableCell>
                     <TableCell>{category.products?.[0]?.count || 0}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
