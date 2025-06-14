@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, DollarSign, Check } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
 
@@ -53,9 +54,40 @@ const Purchases = () => {
     }
   });
 
+  const markAsPaid = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('purchases')
+        .update({ payment_method: 'cash' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      toast({ title: 'Berhasil', description: 'Pembelian berhasil ditandai sebagai lunas' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
   const handleCloseDialog = () => {
     setOpen(false);
     setEditPurchase(null);
+  };
+
+  const getPaymentStatus = (purchase: any) => {
+    if (purchase.payment_method === 'cash') {
+      return <Badge className="bg-green-600">Paid</Badge>;
+    } else if (purchase.payment_method === 'credit') {
+      const isOverdue = purchase.due_date && new Date(purchase.due_date) < new Date();
+      return (
+        <Badge className={isOverdue ? 'bg-red-600' : 'bg-orange-600'}>
+          {isOverdue ? 'Overdue' : 'Pending'}
+        </Badge>
+      );
+    }
+    return <Badge className="bg-gray-600">Unknown</Badge>;
   };
 
   return (
@@ -107,7 +139,7 @@ const Purchases = () => {
                   <TableHead>No. Pembelian</TableHead>
                   <TableHead>Invoice</TableHead>
                   <TableHead>Supplier</TableHead>
-                  <TableHead>Metode</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Tanggal</TableHead>
                   <TableHead>Jatuh Tempo</TableHead>
@@ -121,13 +153,7 @@ const Purchases = () => {
                     <TableCell className="font-medium">{purchase.purchase_number}</TableCell>
                     <TableCell>{purchase.invoice_number || '-'}</TableCell>
                     <TableCell>{purchase.suppliers?.name || '-'}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        purchase.payment_method === 'credit' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {purchase.payment_method === 'credit' ? 'Credit' : 'Cash'}
-                      </span>
-                    </TableCell>
+                    <TableCell>{getPaymentStatus(purchase)}</TableCell>
                     <TableCell>Rp {purchase.total_amount?.toLocaleString('id-ID')}</TableCell>
                     <TableCell>
                       {new Date(purchase.purchase_date).toLocaleDateString('id-ID')}
@@ -138,6 +164,16 @@ const Purchases = () => {
                     <TableCell>{purchase.profiles?.full_name || 'Unknown'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        {purchase.payment_method === 'credit' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => markAsPaid.mutate(purchase.id)}
+                            className="text-green-600 hover:bg-green-50"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +21,7 @@ type UserRole = Database['public']['Enums']['user_role'];
 const UserManagement = () => {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [userData, setUserData] = useState({
     email: '',
     password: '',
@@ -31,7 +31,7 @@ const UserManagement = () => {
     address: ''
   });
 
-  // Fetch users - moved before conditional return
+  // Fetch users
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
@@ -43,7 +43,7 @@ const UserManagement = () => {
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === 'admin' // Only run query if user is admin
+    enabled: profile?.role === 'admin'
   });
 
   // Create user mutation
@@ -79,6 +79,7 @@ const UserManagement = () => {
     onSuccess: () => {
       toast({ title: 'User created successfully' });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      setCreateDialogOpen(false);
       setUserData({
         email: '',
         password: '',
@@ -120,7 +121,48 @@ const UserManagement = () => {
     }
   });
 
-  // Only admins can access this page - moved after all hooks
+  // Deactivate user mutation
+  const deactivateUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        ban_duration: '24855h' // Effectively permanent ban
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'User deactivated successfully' });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error deactivating user', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'User deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error deleting user', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  // Only admins can access this page
   if (profile?.role !== 'admin') {
     return (
       <Layout>
@@ -157,7 +199,7 @@ const UserManagement = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">User Management</h1>
-          <Dialog>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
@@ -381,9 +423,22 @@ const UserManagement = () => {
                           </Dialog>
                           
                           {userData.id !== user?.id && (
-                            <Button size="sm" variant="destructive">
-                              Deactivate
-                            </Button>
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => deactivateUserMutation.mutate(userData.id)}
+                              >
+                                Deactivate
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => deleteUserMutation.mutate(userData.id)}
+                              >
+                                Delete
+                              </Button>
+                            </>
                           )}
                         </div>
                       )}

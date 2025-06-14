@@ -35,6 +35,23 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   const [items, setItems] = useState(purchase?.purchase_items || []);
   const [autoUpdatePrice, setAutoUpdatePrice] = useState(false);
 
+  // Auto-set due date when payment method changes to credit
+  useEffect(() => {
+    if (formData.payment_method === 'credit' && !formData.due_date) {
+      const dueDate = new Date(formData.purchase_date);
+      dueDate.setDate(dueDate.getDate() + 14);
+      setFormData(prev => ({
+        ...prev,
+        due_date: dueDate.toISOString().split('T')[0]
+      }));
+    } else if (formData.payment_method === 'cash') {
+      setFormData(prev => ({
+        ...prev,
+        due_date: ''
+      }));
+    }
+  }, [formData.payment_method, formData.purchase_date]);
+
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
     queryFn: async () => {

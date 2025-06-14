@@ -12,8 +12,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
-import Categories from "./pages/Categories";
-import Units from "./pages/Units";
+import CategoriesUnits from "./pages/CategoriesUnits";
 import Suppliers from "./pages/Suppliers";
 import Purchases from "./pages/Purchases";
 import Inventory from "./pages/Inventory";
@@ -53,8 +52,7 @@ const App = () => (
               <Route path="/admin" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-              <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
-              <Route path="/units" element={<ProtectedRoute><Units /></ProtectedRoute>} />
+              <Route path="/categories-units" element={<ProtectedRoute><CategoriesUnits /></ProtectedRoute>} />
               <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
               <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />

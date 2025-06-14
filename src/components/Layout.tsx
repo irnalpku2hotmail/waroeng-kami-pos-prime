@@ -9,7 +9,6 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { 
   Home, 
   Package, 
-  Tag, 
   Ruler, 
   ShoppingCart, 
   Package2, 
@@ -39,8 +38,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navigationItems = [
     { icon: Home, label: 'Dashboard', href: '/dashboard' },
     { icon: Package, label: 'Products', href: '/products' },
-    { icon: Tag, label: 'Categories', href: '/categories' },
-    { icon: Ruler, label: 'Units', href: '/units' },
+    { icon: Ruler, label: 'Categories & Units', href: '/categories-units' },
     { icon: Building2, label: 'Suppliers', href: '/suppliers' },
     { icon: ShoppingCart, label: 'POS', href: '/pos' },
     { icon: Package2, label: 'Inventory', href: '/inventory' },
