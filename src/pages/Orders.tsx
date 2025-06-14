@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +14,7 @@ import OrderDetailsModal from '@/components/OrderDetailsModal';
 
 const Orders = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const queryClient = useQueryClient();
@@ -37,7 +36,7 @@ const Orders = () => {
         query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
       }
       
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
       
@@ -158,7 +157,7 @@ const Orders = () => {
               <SelectValue placeholder="Filter Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua Status</SelectItem>
+              <SelectItem value="all">Semua Status</SelectItem>
               <SelectItem value="pending">Menunggu</SelectItem>
               <SelectItem value="confirmed">Dikonfirmasi</SelectItem>
               <SelectItem value="preparing">Disiapkan</SelectItem>
