@@ -402,7 +402,7 @@ ${receiptFooter}
       setSelectedCustomer(null);
       setPaymentAmount(0);
       setPaymentType('cash');
-      setTransferReference('');
+      setTransferReference(''); // Clear transfer reference
       
       // Refresh products to update stock
       queryClient.invalidateQueries({ queryKey: ['pos-products'] });
@@ -459,8 +459,10 @@ ${receiptFooter}
 
   // Auto-generate transfer reference when transfer is selected
   useEffect(() => {
-    if (paymentType === 'transfer' && !transferReference) {
+    if (paymentType === 'transfer') {
       setTransferReference(generateTransferReference());
+    } else {
+      setTransferReference(''); // Clear when not transfer
     }
   }, [paymentType]);
 
