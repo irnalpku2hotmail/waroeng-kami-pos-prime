@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, DollarSign, Check, CreditCard } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Check, CreditCard } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
-import CreditPaymentForm from '@/components/CreditPaymentForm';
+import PurchasePaymentForm from '@/components/PurchasePaymentForm';
 
 const Purchases = () => {
   const [open, setOpen] = useState(false);
@@ -220,8 +220,8 @@ const Purchases = () => {
           )}
         </div>
 
-        {/* Credit Payment Dialog */}
-        <CreditPaymentForm
+        {/* Purchase Payment Dialog */}
+        <PurchasePaymentForm
           purchase={selectedPurchaseForPayment}
           open={paymentDialogOpen}
           onOpenChange={setPaymentDialogOpen}

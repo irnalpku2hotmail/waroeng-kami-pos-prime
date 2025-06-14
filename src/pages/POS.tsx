@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { ShoppingCart, Plus, Minus, Trash2, Search, Package, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Search, Package, DollarSign, Printer } from 'lucide-react';
 import Layout from '@/components/Layout';
 import VoiceSearch from '@/components/VoiceSearch';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,7 @@ interface CartItem {
   total_price: number;
   current_stock: number;
   price_variant?: any;
+  loyalty_points: number;
 }
 
 const POS = () => {
@@ -129,7 +130,8 @@ const POS = () => {
               quantity: newQuantity,
               unit_price: priceInfo.price,
               total_price: newQuantity * priceInfo.price,
-              price_variant: priceInfo.variant
+              price_variant: priceInfo.variant,
+              loyalty_points: product.loyalty_points || 1
             }
           : item
       ));
@@ -143,7 +145,8 @@ const POS = () => {
         unit_price: priceInfo.price,
         total_price: quantity * priceInfo.price,
         current_stock: product.current_stock,
-        price_variant: priceInfo.variant
+        price_variant: priceInfo.variant,
+        loyalty_points: product.loyalty_points || 1
       };
       setCart([...cart, cartItem]);
     }
@@ -200,8 +203,74 @@ const POS = () => {
     return cart.reduce((total, item) => total + item.total_price, 0);
   };
 
+  const getTotalPointsEarned = () => {
+    return cart.reduce((total, item) => total + (item.loyalty_points * item.quantity), 0);
+  };
+
   const getChangeAmount = () => {
     return Math.max(0, paymentAmount - getTotalAmount());
+  };
+
+  const printReceipt = async (transaction: any) => {
+    try {
+      // Thermal printer receipt content
+      const receiptContent = `
+========================================
+           TOKO RECEIPT
+========================================
+Transaction: ${transaction.transaction_number}
+Date: ${new Date().toLocaleString('id-ID')}
+Cashier: ${user?.email}
+${selectedCustomer ? `Customer: ${selectedCustomer.name}` : ''}
+----------------------------------------
+${cart.map(item => `
+${item.name}
+${item.quantity} x Rp ${item.unit_price.toLocaleString('id-ID')}
+                    Rp ${item.total_price.toLocaleString('id-ID')}
+`).join('')}
+----------------------------------------
+Total: Rp ${getTotalAmount().toLocaleString('id-ID')}
+Payment: ${paymentType === 'cash' ? 'Cash' : 'Credit'}
+${paymentType === 'cash' ? `Paid: Rp ${paymentAmount.toLocaleString('id-ID')}` : ''}
+${paymentType === 'cash' ? `Change: Rp ${getChangeAmount().toLocaleString('id-ID')}` : ''}
+${selectedCustomer ? `Points Earned: ${getTotalPointsEarned()}` : ''}
+${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}` : ''}
+========================================
+         Thank You!
+========================================
+      `;
+
+      // Check if browser supports printing
+      if (window.print) {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`
+            <html>
+              <head>
+                <title>Receipt</title>
+                <style>
+                  body { font-family: monospace; font-size: 12px; }
+                  pre { white-space: pre-wrap; }
+                </style>
+              </head>
+              <body>
+                <pre>${receiptContent}</pre>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+          printWindow.print();
+          printWindow.close();
+        }
+      }
+    } catch (error) {
+      console.error('Printing error:', error);
+      toast({
+        title: 'Printing Error',
+        description: 'Unable to print receipt',
+        variant: 'destructive'
+      });
+    }
   };
 
   // Process transaction
@@ -214,9 +283,9 @@ const POS = () => {
       }
 
       const transactionNumber = `TRX${Date.now()}`;
-      const pointsEarned = selectedCustomer ? Math.floor(totalAmount / 10000) : 0;
+      const pointsEarned = selectedCustomer ? getTotalPointsEarned() : 0;
 
-      // Create transaction
+      // Create transaction with 7-day credit terms
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -229,7 +298,7 @@ const POS = () => {
           change_amount: getChangeAmount(),
           is_credit: paymentType === 'credit',
           points_earned: pointsEarned,
-          due_date: paymentType === 'credit' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null
+          due_date: paymentType === 'credit' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null
         })
         .select()
         .single();
@@ -282,6 +351,9 @@ const POS = () => {
         description: `Transaksi ${transaction.transaction_number} berhasil diproses` 
       });
       
+      // Automatic thermal printing
+      printReceipt(transaction);
+      
       // Reset form
       setCart([]);
       setSelectedCustomer(null);
@@ -302,7 +374,27 @@ const POS = () => {
   });
 
   const handleVoiceSearch = (text: string) => {
-    setSearchTerm(text);
+    console.log('Voice search result:', text);
+    
+    // Find product by name (case insensitive)
+    const foundProduct = products.find(product => 
+      product.name.toLowerCase().includes(text.toLowerCase()) ||
+      (product.barcode && product.barcode.includes(text))
+    );
+
+    if (foundProduct) {
+      addToCart(foundProduct, 1);
+      toast({
+        title: 'Produk Ditemukan',
+        description: `${foundProduct.name} ditambahkan ke keranjang melalui voice search`
+      });
+    } else {
+      setSearchTerm(text);
+      toast({
+        title: 'Produk Tidak Ditemukan',
+        description: `Mencari produk: ${text}`
+      });
+    }
   };
 
   const openProductDialog = (product: any) => {
@@ -314,7 +406,6 @@ const POS = () => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
     
-    // Handle Supabase storage URLs
     const { data } = supabase.storage
       .from('product-images')
       .getPublicUrl(imageUrl);
@@ -376,12 +467,13 @@ const POS = () => {
                       </p>
                       <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
                         <span>Stok: {product.current_stock}</span>
-                        {product.price_variants?.length > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            Grosir
-                          </Badge>
-                        )}
+                        <span>{product.loyalty_points || 1} pts</span>
                       </div>
+                      {product.price_variants?.length > 0 && (
+                        <Badge variant="secondary" className="text-xs mt-1">
+                          Grosir
+                        </Badge>
+                      )}
                       {product.current_stock <= 0 && (
                         <Badge variant="destructive" className="w-full mt-1">
                           Habis
@@ -445,7 +537,7 @@ const POS = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{item.name}</p>
                           <p className="text-xs text-gray-500">
-                            Rp {item.unit_price.toLocaleString('id-ID')}
+                            Rp {item.unit_price.toLocaleString('id-ID')} | {item.loyalty_points}pts
                             {item.price_variant && (
                               <span className="ml-1 text-blue-600">({item.price_variant.name})</span>
                             )}
@@ -495,7 +587,7 @@ const POS = () => {
                     {selectedCustomer && (
                       <div className="flex justify-between text-sm text-blue-600">
                         <span>Poin yang didapat:</span>
-                        <span>{Math.floor(getTotalAmount() / 10000)} pts</span>
+                        <span>{getTotalPointsEarned()} pts</span>
                       </div>
                     )}
                   </div>
@@ -508,7 +600,7 @@ const POS = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="credit">Credit</SelectItem>
+                        <SelectItem value="credit">Credit (7 Hari)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -528,6 +620,12 @@ const POS = () => {
                           <span className="font-bold">Rp {getChangeAmount().toLocaleString('id-ID')}</span>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {paymentType === 'credit' && (
+                    <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
+                      Jatuh tempo: {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}
                     </div>
                   )}
 
@@ -572,6 +670,7 @@ const POS = () => {
                   Rp {selectedProduct.selling_price?.toLocaleString('id-ID')}
                 </p>
                 <p className="text-sm text-gray-500">Stok: {selectedProduct.current_stock}</p>
+                <p className="text-sm text-blue-500">Loyalty Points: {selectedProduct.loyalty_points || 1}</p>
               </div>
 
               {selectedProduct.price_variants?.length > 0 && (
