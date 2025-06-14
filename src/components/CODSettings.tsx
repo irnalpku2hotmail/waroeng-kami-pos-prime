@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -33,13 +33,14 @@ const CODSettings = () => {
         return settings;
       }
       return data.value;
-    },
-    onSuccess: (data) => {
-      if (data) {
-        setSettings(data);
-      }
     }
   });
+
+  useEffect(() => {
+    if (codSettings) {
+      setSettings(codSettings as typeof settings);
+    }
+  }, [codSettings]);
 
   const updateSettings = useMutation({
     mutationFn: async (newSettings: typeof settings) => {

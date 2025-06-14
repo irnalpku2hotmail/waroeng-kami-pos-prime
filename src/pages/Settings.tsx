@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -38,18 +38,21 @@ const Settings = () => {
         settingsObj[setting.key] = setting.value;
       });
       return settingsObj;
-    },
-    onSuccess: (data) => {
-      setStoreSettings({
-        store_name: data.store_name?.name || '',
-        store_phone: data.store_phone?.phone || '',
-        store_email: data.store_email?.email || '',
-        store_address: data.store_address?.address || '',
-        banner_title: data.banner_title?.text || '',
-        banner_subtitle: data.banner_subtitle?.text || ''
-      });
     }
   });
+
+  useEffect(() => {
+    if (settings) {
+      setStoreSettings({
+        store_name: settings.store_name?.name || '',
+        store_phone: settings.store_phone?.phone || '',
+        store_email: settings.store_email?.email || '',
+        store_address: settings.store_address?.address || '',
+        banner_title: settings.banner_title?.text || '',
+        banner_subtitle: settings.banner_subtitle?.text || ''
+      });
+    }
+  }, [settings]);
 
   const updateSettings = useMutation({
     mutationFn: async (newSettings: typeof storeSettings) => {

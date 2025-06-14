@@ -80,7 +80,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
     mutationFn: async (data: CategoryFormData & { icon_url?: string }) => {
       const { error } = await supabase
         .from('categories')
-        .insert([data]);
+        .insert(data);
       if (error) throw error;
     },
     onSuccess: () => {

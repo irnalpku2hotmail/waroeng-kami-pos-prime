@@ -62,7 +62,7 @@ const CartModal = ({
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert([{
+        .insert({
           customer_name: orderData.customer_name,
           customer_phone: orderData.customer_phone,
           customer_address: orderData.customer_address,
@@ -70,7 +70,7 @@ const CartModal = ({
           total_amount: orderData.total_amount,
           delivery_fee: orderData.delivery_fee,
           status: 'pending'
-        }])
+        })
         .select()
         .single();
 
@@ -117,7 +117,8 @@ const CartModal = ({
   };
 
   const getDeliveryFee = () => {
-    return codSettings?.delivery_fee || 10000;
+    const settings = codSettings as { delivery_fee?: number } | null;
+    return settings?.delivery_fee || 10000;
   };
 
   const handleCheckout = () => {
