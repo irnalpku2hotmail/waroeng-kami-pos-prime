@@ -132,6 +132,19 @@ const CustomerPointExchange = () => {
         throw new Error('Customer tidak memiliki poin yang cukup');
       }
 
+      // Get current reward stock
+      const { data: reward, error: rewardError } = await supabase
+        .from('rewards')
+        .select('stock_quantity')
+        .eq('id', rewardId)
+        .single();
+
+      if (rewardError) throw rewardError;
+
+      if (reward.stock_quantity < quantity) {
+        throw new Error('Stok reward tidak mencukupi');
+      }
+
       // Create point exchange record
       const { data: exchange, error: exchangeError } = await supabase
         .from('point_exchanges')
@@ -158,7 +171,9 @@ const CustomerPointExchange = () => {
 
       // Update reward stock
       const { error: stockError } = await supabase
-        .rpc('decrement_reward_stock', { reward_id: rewardId, decrement_by: quantity });
+        .from('rewards')
+        .update({ stock_quantity: reward.stock_quantity - quantity })
+        .eq('id', rewardId);
 
       if (stockError) throw stockError;
 
