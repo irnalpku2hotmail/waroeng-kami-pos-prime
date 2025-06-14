@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Settings as SettingsIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
+import CODSettings from '@/components/CODSettings';
 
 const Settings = () => {
   const queryClient = useQueryClient();
@@ -113,6 +114,23 @@ const Settings = () => {
     updateSettings.mutate(hoursData);
   };
 
+  const handleReceiptSettingsSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const receiptData = {
+      receipt_settings: {
+        header_text: formData.get('header_text') as string,
+        footer_text: formData.get('footer_text') as string,
+        show_logo: formData.get('show_logo') === 'on',
+        show_cashier: formData.get('show_cashier') === 'on',
+        paper_size: formData.get('paper_size') as string
+      }
+    };
+
+    updateSettings.mutate(receiptData);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -125,6 +143,8 @@ const Settings = () => {
           <TabsList>
             <TabsTrigger value="store-info">Informasi Toko</TabsTrigger>
             <TabsTrigger value="business-hours">Jam Operasional</TabsTrigger>
+            <TabsTrigger value="receipt">Pengaturan Struk</TabsTrigger>
+            <TabsTrigger value="cod">COD Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="store-info">
@@ -205,6 +225,75 @@ const Settings = () => {
                 </form>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="receipt">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pengaturan Struk</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleReceiptSettingsSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="header_text">Teks Header Struk</Label>
+                    <Textarea
+                      id="header_text"
+                      name="header_text"
+                      defaultValue={settings?.receipt_settings?.header_text || ''}
+                      placeholder="Terima kasih telah berbelanja di toko kami"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="footer_text">Teks Footer Struk</Label>
+                    <Textarea
+                      id="footer_text"
+                      name="footer_text"
+                      defaultValue={settings?.receipt_settings?.footer_text || ''}
+                      placeholder="Barang yang sudah dibeli tidak dapat dikembalikan"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="paper_size">Ukuran Kertas</Label>
+                      <select
+                        id="paper_size"
+                        name="paper_size"
+                        defaultValue={settings?.receipt_settings?.paper_size || '80mm'}
+                        className="w-full p-2 border rounded"
+                      >
+                        <option value="58mm">58mm</option>
+                        <option value="80mm">80mm</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="show_logo"
+                        name="show_logo"
+                        defaultChecked={settings?.receipt_settings?.show_logo || false}
+                      />
+                      <Label htmlFor="show_logo">Tampilkan Logo</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="show_cashier"
+                        name="show_cashier"
+                        defaultChecked={settings?.receipt_settings?.show_cashier || true}
+                      />
+                      <Label htmlFor="show_cashier">Tampilkan Nama Kasir</Label>
+                    </div>
+                  </div>
+                  <Button type="submit">Simpan Pengaturan Struk</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="cod">
+            <CODSettings />
           </TabsContent>
         </Tabs>
       </div>
