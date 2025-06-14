@@ -1,121 +1,112 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Edit, Trash2, Receipt, Upload, Eye, TrendingDown, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, Calendar, TrendingUp } from 'lucide-react';
 import Layout from '@/components/Layout';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Expenses = () => {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editExpense, setEditExpense] = useState<any>(null);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   const [expenseData, setExpenseData] = useState({
     title: '',
-    description: '',
     amount: 0,
-    category: 'operational',
+    category: 'operational' as const,
     expense_date: new Date().toISOString().split('T')[0],
-    receipt_url: ''
+    description: ''
   });
 
   const { data: expenses, isLoading } = useQuery({
-    queryKey: ['expenses'],
+    queryKey: ['expenses', searchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('expenses')
-        .select('*, profiles(full_name)')
-        .order('expense_date', { ascending: false });
+        .select(`
+          *,
+          profiles(full_name)
+        `);
+      
+      if (searchTerm) {
+        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('expense_date', { ascending: false });
       if (error) throw error;
       return data;
     }
   });
 
-  // Calculate today's and this month's totals
-  const today = new Date().toISOString().split('T')[0];
-  const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM format
+  // Calculate today's total
+  const todayTotal = expenses?.filter(expense => {
+    const expenseDate = new Date(expense.expense_date).toDateString();
+    const today = new Date().toDateString();
+    return expenseDate === today;
+  }).reduce((total, expense) => total + Number(expense.amount), 0) || 0;
 
-  const todayTotal = expenses?.filter(expense => expense.expense_date === today)
-    .reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
+  // Calculate this month's total
+  const thisMonthTotal = expenses?.filter(expense => {
+    const expenseDate = new Date(expense.expense_date);
+    const now = new Date();
+    return expenseDate.getMonth() === now.getMonth() && 
+           expenseDate.getFullYear() === now.getFullYear();
+  }).reduce((total, expense) => total + Number(expense.amount), 0) || 0;
 
-  const thisMonthTotal = expenses?.filter(expense => expense.expense_date.startsWith(currentMonth))
-    .reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
+  // Calculate this year's total
+  const thisYearTotal = expenses?.filter(expense => {
+    const expenseDate = new Date(expense.expense_date);
+    const now = new Date();
+    return expenseDate.getFullYear() === now.getFullYear();
+  }).reduce((total, expense) => total + Number(expense.amount), 0) || 0;
 
-  const uploadReceipt = useMutation({
-    mutationFn: async (file: File) => {
-      setUploading(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('expense-receipts')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('expense-receipts')
-        .getPublicUrl(fileName);
-
-      return data.publicUrl;
+  const createExpense = useMutation({
+    mutationFn: async (data: typeof expenseData) => {
+      const { error } = await supabase
+        .from('expenses')
+        .insert([{
+          ...data,
+          user_id: user?.id
+        }]);
+      if (error) throw error;
     },
-    onSuccess: (url) => {
-      setExpenseData(prev => ({ ...prev, receipt_url: url }));
-      setReceiptFile(null);
-      setUploading(false);
-      toast({ title: 'Berhasil', description: 'Kwitansi berhasil diupload' });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast({ title: 'Berhasil', description: 'Pengeluaran berhasil ditambahkan' });
+      setOpen(false);
+      resetForm();
     },
     onError: (error) => {
-      setUploading(false);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
-  const createExpense = useMutation({
-    mutationFn: async (data: any) => {
-      if (editExpense) {
-        const { error } = await supabase
-          .from('expenses')
-          .update({
-            title: data.title,
-            description: data.description,
-            amount: data.amount,
-            category: data.category,
-            expense_date: data.expense_date,
-            receipt_url: data.receipt_url
-          })
-          .eq('id', editExpense.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('expenses')
-          .insert([{
-            ...data,
-            user_id: user?.id
-          }]);
-        if (error) throw error;
-      }
+  const updateExpense = useMutation({
+    mutationFn: async (data: typeof expenseData) => {
+      const { error } = await supabase
+        .from('expenses')
+        .update(data)
+        .eq('id', editExpense.id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast({ title: 'Berhasil', description: 'Pengeluaran berhasil diperbarui' });
       setOpen(false);
       resetForm();
-      toast({ 
-        title: 'Berhasil', 
-        description: editExpense ? 'Pengeluaran berhasil diperbarui' : 'Pengeluaran berhasil ditambahkan' 
-      });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -136,58 +127,62 @@ const Expenses = () => {
     }
   });
 
+  const resetForm = () => {
+    setExpenseData({
+      title: '',
+      amount: 0,
+      category: 'operational',
+      expense_date: new Date().toISOString().split('T')[0],
+      description: ''
+    });
+    setEditExpense(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editExpense) {
+      updateExpense.mutate(expenseData);
+    } else {
+      createExpense.mutate(expenseData);
+    }
+  };
+
   const handleEdit = (expense: any) => {
     setEditExpense(expense);
     setExpenseData({
       title: expense.title,
-      description: expense.description || '',
       amount: expense.amount,
       category: expense.category,
       expense_date: expense.expense_date,
-      receipt_url: expense.receipt_url || ''
+      description: expense.description || ''
     });
     setOpen(true);
   };
 
-  const resetForm = () => {
-    setEditExpense(null);
-    setExpenseData({
-      title: '',
-      description: '',
-      amount: 0,
-      category: 'operational',
-      expense_date: new Date().toISOString().split('T')[0],
-      receipt_url: ''
-    });
+  const handleCloseDialog = () => {
+    setOpen(false);
+    resetForm();
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    createExpense.mutate(expenseData);
-  };
-
-  const handleFileUpload = () => {
-    if (receiptFile) {
-      uploadReceipt.mutate(receiptFile);
-    }
-  };
-
-  const getCategoryLabel = (category: string) => {
+  const getCategoryBadge = (category: string) => {
     const categories = {
-      operational: 'Operasional',
-      inventory: 'Inventori',
-      marketing: 'Marketing',
-      maintenance: 'Maintenance',
-      other: 'Lainnya'
+      operational: { label: 'Operasional', color: 'bg-blue-100 text-blue-800' },
+      inventory: { label: 'Inventori', color: 'bg-green-100 text-green-800' },
+      marketing: { label: 'Marketing', color: 'bg-purple-100 text-purple-800' },
+      maintenance: { label: 'Pemeliharaan', color: 'bg-orange-100 text-orange-800' },
+      utilities: { label: 'Utilitas', color: 'bg-gray-100 text-gray-800' },
+      other: { label: 'Lainnya', color: 'bg-red-100 text-red-800' }
     };
-    return categories[category as keyof typeof categories] || category;
+    
+    const cat = categories[category as keyof typeof categories] || categories.other;
+    return <Badge className={cat.color}>{cat.label}</Badge>;
   };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Expenses</h1>
+          <h1 className="text-3xl font-bold text-blue-800">Manajemen Pengeluaran</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
@@ -195,29 +190,19 @@ const Expenses = () => {
                 Tambah Pengeluaran
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Judul *</Label>
+                  <Label htmlFor="title">Judul Pengeluaran *</Label>
                   <Input
                     id="title"
                     value={expenseData.title}
                     onChange={(e) => setExpenseData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Pembelian alat tulis"
+                    placeholder="Contoh: Listrik Bulan Januari"
                     required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">Deskripsi</Label>
-                  <Textarea
-                    id="description"
-                    value={expenseData.description}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Detail pengeluaran"
                   />
                 </div>
 
@@ -230,9 +215,11 @@ const Expenses = () => {
                       value={expenseData.amount}
                       onChange={(e) => setExpenseData(prev => ({ ...prev, amount: Number(e.target.value) }))}
                       placeholder="0"
+                      min="0"
                       required
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="expense_date">Tanggal *</Label>
                     <Input
@@ -247,10 +234,7 @@ const Expenses = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="category">Kategori *</Label>
-                  <Select
-                    value={expenseData.category}
-                    onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value }))}
-                  >
+                  <Select value={expenseData.category} onValueChange={(value: any) => setExpenseData(prev => ({ ...prev, category: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
@@ -258,58 +242,30 @@ const Expenses = () => {
                       <SelectItem value="operational">Operasional</SelectItem>
                       <SelectItem value="inventory">Inventori</SelectItem>
                       <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="maintenance">Pemeliharaan</SelectItem>
+                      <SelectItem value="utilities">Utilitas</SelectItem>
                       <SelectItem value="other">Lainnya</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-4">
-                  <Label className="text-base font-medium">Upload Kwitansi</Label>
-                  
-                  {expenseData.receipt_url && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600">Kwitansi tersimpan</p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(expenseData.receipt_url, '_blank')}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Lihat
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-3">
-                    <Input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                      className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    <Button 
-                      type="button"
-                      onClick={handleFileUpload}
-                      disabled={!receiptFile || uploading}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {uploading ? 'Mengupload...' : 'Upload Kwitansi'}
-                    </Button>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Deskripsi</Label>
+                  <Textarea
+                    id="description"
+                    value={expenseData.description}
+                    onChange={(e) => setExpenseData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Deskripsi detail pengeluaran (opsional)"
+                    rows={3}
+                  />
                 </div>
 
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
                     Batal
                   </Button>
-                  <Button type="submit" disabled={!expenseData.title || !expenseData.amount}>
-                    {editExpense ? 'Update Pengeluaran' : 'Tambah Pengeluaran'}
+                  <Button type="submit" disabled={createExpense.isPending || updateExpense.isPending}>
+                    {editExpense ? 'Update' : 'Simpan'} Pengeluaran
                   </Button>
                 </div>
               </form>
@@ -318,31 +274,55 @@ const Expenses = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Expenses</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                Rp {todayTotal.toLocaleString('id-ID')}
-              </div>
-              <p className="text-xs text-muted-foreground">Total expenses today</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month's Expenses</CardTitle>
+              <CardTitle className="text-sm font-medium">Hari Ini</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
-                Rp {thisMonthTotal.toLocaleString('id-ID')}
-              </div>
-              <p className="text-xs text-muted-foreground">Total expenses this month</p>
+              <div className="text-2xl font-bold">Rp {todayTotal.toLocaleString('id-ID')}</div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Bulan Ini</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rp {thisMonthTotal.toLocaleString('id-ID')}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tahun Ini</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rp {thisYearTotal.toLocaleString('id-ID')}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{expenses?.length || 0}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex gap-4">
+          <Input
+            placeholder="Cari pengeluaran..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
         </div>
 
         <div className="border rounded-lg">
@@ -361,7 +341,6 @@ const Expenses = () => {
                   <TableHead>Kategori</TableHead>
                   <TableHead>Jumlah</TableHead>
                   <TableHead>Tanggal</TableHead>
-                  <TableHead>Kwitansi</TableHead>
                   <TableHead>Dibuat oleh</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
@@ -371,31 +350,18 @@ const Expenses = () => {
                   <TableRow key={expense.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{expense.title}</div>
+                        <p className="font-medium">{expense.title}</p>
                         {expense.description && (
-                          <div className="text-sm text-gray-500">{expense.description}</div>
+                          <p className="text-sm text-gray-500">{expense.description}</p>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{getCategoryLabel(expense.category)}</TableCell>
+                    <TableCell>{getCategoryBadge(expense.category)}</TableCell>
                     <TableCell className="font-medium">
-                      Rp {expense.amount.toLocaleString('id-ID')}
+                      Rp {Number(expense.amount).toLocaleString('id-ID')}
                     </TableCell>
                     <TableCell>
                       {new Date(expense.expense_date).toLocaleDateString('id-ID')}
-                    </TableCell>
-                    <TableCell>
-                      {expense.receipt_url ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(expense.receipt_url, '_blank')}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
                     </TableCell>
                     <TableCell>{expense.profiles?.full_name || 'Unknown'}</TableCell>
                     <TableCell>

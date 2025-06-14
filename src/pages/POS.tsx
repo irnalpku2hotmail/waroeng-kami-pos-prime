@@ -33,10 +33,28 @@ const POS = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
-  const [paymentType, setPaymentType] = useState<'cash' | 'credit'>('cash');
+  const [paymentType, setPaymentType] = useState<'cash' | 'credit' | 'transfer'>('cash');
+  const [transferReference, setTransferReference] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const queryClient = useQueryClient();
+
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*');
+      if (error) throw error;
+      
+      const settingsObj: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsObj[setting.key] = setting.value;
+      });
+      return settingsObj;
+    }
+  });
 
   // Fetch products with stock and pricing info
   const { data: products = [], isLoading } = useQuery({
@@ -211,12 +229,29 @@ const POS = () => {
     return Math.max(0, paymentAmount - getTotalAmount());
   };
 
+  // Generate transfer reference number
+  const generateTransferReference = () => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `TRF${timestamp}${random}`;
+  };
+
   const printReceipt = async (transaction: any) => {
     try {
-      // Thermal printer receipt content
+      const storeName = settings?.store_name?.name || 'SmartPOS';
+      const storePhone = settings?.store_phone?.phone || '';
+      const storeAddress = settings?.store_address?.address || '';
+      const receiptHeader = settings?.receipt_header?.text || 'Terima kasih telah berbelanja';
+      const receiptFooter = settings?.receipt_footer?.text || 'Barang yang sudah dibeli tidak dapat dikembalikan';
+
       const receiptContent = `
 ========================================
-           TOKO RECEIPT
+           ${storeName}
+========================================
+${storePhone ? `Tel: ${storePhone}` : ''}
+${storeAddress ? `${storeAddress}` : ''}
+========================================
+${receiptHeader}
 ========================================
 Transaction: ${transaction.transaction_number}
 Date: ${new Date().toLocaleString('id-ID')}
@@ -230,17 +265,17 @@ ${item.quantity} x Rp ${item.unit_price.toLocaleString('id-ID')}
 `).join('')}
 ----------------------------------------
 Total: Rp ${getTotalAmount().toLocaleString('id-ID')}
-Payment: ${paymentType === 'cash' ? 'Cash' : 'Credit'}
+Payment: ${paymentType === 'cash' ? 'Cash' : paymentType === 'credit' ? 'Credit' : 'Transfer'}
 ${paymentType === 'cash' ? `Paid: Rp ${paymentAmount.toLocaleString('id-ID')}` : ''}
 ${paymentType === 'cash' ? `Change: Rp ${getChangeAmount().toLocaleString('id-ID')}` : ''}
+${paymentType === 'transfer' ? `Ref: ${transferReference}` : ''}
 ${selectedCustomer ? `Points Earned: ${getTotalPointsEarned()}` : ''}
 ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}` : ''}
 ========================================
-         Thank You!
+${receiptFooter}
 ========================================
       `;
 
-      // Check if browser supports printing
       if (window.print) {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
@@ -249,18 +284,22 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
               <head>
                 <title>Receipt</title>
                 <style>
-                  body { font-family: monospace; font-size: 12px; }
-                  pre { white-space: pre-wrap; }
+                  body { font-family: monospace; font-size: 12px; margin: 0; padding: 10px; }
+                  pre { white-space: pre-wrap; margin: 0; }
                 </style>
               </head>
               <body>
                 <pre>${receiptContent}</pre>
+                <script>
+                  window.onload = function() {
+                    window.print();
+                    window.close();
+                  }
+                </script>
               </body>
             </html>
           `);
           printWindow.document.close();
-          printWindow.print();
-          printWindow.close();
         }
       }
     } catch (error) {
@@ -282,10 +321,14 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
         throw new Error('Pembayaran tidak mencukupi');
       }
 
+      if (paymentType === 'transfer' && !transferReference) {
+        throw new Error('Nomor referensi transfer harus diisi');
+      }
+
       const transactionNumber = `TRX${Date.now()}`;
       const pointsEarned = selectedCustomer ? getTotalPointsEarned() : 0;
 
-      // Create transaction with 7-day credit terms
+      // Create transaction
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -294,11 +337,12 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
           cashier_id: user?.id,
           customer_id: selectedCustomer?.id,
           payment_type: paymentType,
-          payment_amount: paymentAmount,
-          change_amount: getChangeAmount(),
+          payment_amount: paymentType === 'cash' ? paymentAmount : totalAmount,
+          change_amount: paymentType === 'cash' ? getChangeAmount() : 0,
           is_credit: paymentType === 'credit',
           points_earned: pointsEarned,
-          due_date: paymentType === 'credit' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null
+          due_date: paymentType === 'credit' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
+          notes: paymentType === 'transfer' ? `Transfer Ref: ${transferReference}` : null
         })
         .select()
         .single();
@@ -332,7 +376,6 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
 
         if (customerError) throw customerError;
 
-        // Record point transaction
         await supabase
           .from('point_transactions')
           .insert({
@@ -359,6 +402,7 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
       setSelectedCustomer(null);
       setPaymentAmount(0);
       setPaymentType('cash');
+      setTransferReference('');
       
       // Refresh products to update stock
       queryClient.invalidateQueries({ queryKey: ['pos-products'] });
@@ -412,6 +456,13 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
     
     return data.publicUrl;
   };
+
+  // Auto-generate transfer reference when transfer is selected
+  useEffect(() => {
+    if (paymentType === 'transfer' && !transferReference) {
+      setTransferReference(generateTransferReference());
+    }
+  }, [paymentType]);
 
   return (
     <Layout>
@@ -594,13 +645,14 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
 
                   <div>
                     <label className="text-sm font-medium">Metode Pembayaran</label>
-                    <Select value={paymentType} onValueChange={(value: 'cash' | 'credit') => setPaymentType(value)}>
+                    <Select value={paymentType} onValueChange={(value: 'cash' | 'credit' | 'transfer') => setPaymentType(value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="credit">Credit (7 Hari)</SelectItem>
+                        <SelectItem value="transfer">Transfer</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -620,6 +672,21 @@ ${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60
                           <span className="font-bold">Rp {getChangeAmount().toLocaleString('id-ID')}</span>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {paymentType === 'transfer' && (
+                    <div>
+                      <label className="text-sm font-medium">Nomor Referensi</label>
+                      <Input
+                        type="text"
+                        value={transferReference}
+                        onChange={(e) => setTransferReference(e.target.value)}
+                        placeholder="Nomor referensi transfer"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Nomor referensi otomatis dibuat jika kosong
+                      </p>
                     </div>
                   )}
 

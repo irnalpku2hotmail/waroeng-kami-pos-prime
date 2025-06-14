@@ -98,8 +98,8 @@ const Settings = () => {
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `logo.${fileExt}`;
-      const filePath = `store/${fileName}`;
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('assets')
@@ -141,7 +141,7 @@ const Settings = () => {
       for (const setting of settingsToUpdate) {
         const { error } = await supabase
           .from('settings')
-          .upsert(setting);
+          .upsert(setting, { onConflict: 'key' });
         if (error) throw error;
       }
     },
@@ -176,7 +176,7 @@ const Settings = () => {
       for (const setting of settingsToUpdate) {
         const { error } = await supabase
           .from('settings')
-          .upsert(setting);
+          .upsert(setting, { onConflict: 'key' });
         if (error) throw error;
       }
     },
@@ -210,7 +210,7 @@ const Settings = () => {
       for (const setting of settingsToUpdate) {
         const { error } = await supabase
           .from('settings')
-          .upsert(setting);
+          .upsert(setting, { onConflict: 'key' });
         if (error) throw error;
       }
     },
@@ -319,9 +319,9 @@ const Settings = () => {
                         id="logo-upload"
                       />
                       <Label htmlFor="logo-upload" asChild>
-                        <Button variant="outline" className="cursor-pointer">
+                        <Button variant="outline" className="cursor-pointer" disabled={uploading}>
                           <Upload className="h-4 w-4 mr-2" />
-                          {storeSettings.store_logo ? 'Ganti Logo' : 'Upload Logo'}
+                          {uploading ? 'Uploading...' : storeSettings.store_logo ? 'Ganti Logo' : 'Upload Logo'}
                         </Button>
                       </Label>
                     </div>
