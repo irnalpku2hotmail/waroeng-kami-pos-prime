@@ -5,22 +5,36 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Settings, Upload, Image } from 'lucide-react';
+import { Image, Upload, Settings } from 'lucide-react';
 
 interface FrontendSettings {
+  header: string;
+  footer: string;
+  layout: string;
   banner_url: string;
-  welcome_message: string;
-  featured_categories_limit: number;
+  logo_url: string;
 }
 
+const initialSettings: FrontendSettings = {
+  header: '',
+  footer: '',
+  layout: '',
+  banner_url: '',
+  logo_url: ''
+};
+
+const bucketName = 'frontend-assets';
+
 const FrontendSettings = () => {
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch frontend settings
+  // Get current settings from Supabase
   const { data: settings, isLoading } = useQuery({
     queryKey: ['frontend-settings'],
     queryFn: async () => {
@@ -28,25 +42,13 @@ const FrontendSettings = () => {
         .from('settings')
         .select('value')
         .eq('key', 'frontend_settings')
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-      
-      if (!data) {
-        return {
-          banner_url: '',
-          welcome_message: 'Selamat datang di toko kami',
-          featured_categories_limit: 5
-        } as FrontendSettings;
-      }
-      
-      return data.value as unknown as FrontendSettings;
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.value as FrontendSettings) || initialSettings;
     }
   });
 
-  // Update settings mutation
+  // Save all settings mutation
   const updateSettings = useMutation({
     mutationFn: async (settingsData: FrontendSettings) => {
       const { error } = await supabase
@@ -55,143 +57,119 @@ const FrontendSettings = () => {
           key: 'frontend_settings',
           value: settingsData as any,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'key'
-        });
+        }, { onConflict: 'key' });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['frontend-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-      toast({
-        title: 'Berhasil',
-        description: 'Pengaturan frontend berhasil disimpan'
-      });
+      toast({ title: 'Berhasil', description: 'Pengaturan frontend berhasil disimpan!' });
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
+    onError: (err: any) => {
+      toast({ title: 'Gagal', description: err.message, variant: 'destructive' });
     }
   });
 
-  // Upload banner mutation
-  const uploadBanner = useMutation({
-    mutationFn: async (file: File) => {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `banner_${Date.now()}.${fileExt}`;
-      
-      // Remove old banner if exists
-      if (settings?.banner_url) {
-        const oldFileName = settings.banner_url.split('/').pop();
-        if (oldFileName) {
-          await supabase.storage
-            .from('frontend-assets')
-            .remove([oldFileName]);
+  // Upload utility mutation (for logo/banner)
+  const uploadAsset = useMutation({
+    mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'banner' }) => {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const filename = `${type}_${Date.now()}.${fileExt}`;
+      // Remove old asset if exists
+      const url = type === 'logo' ? settings?.logo_url : settings?.banner_url;
+      if (url) {
+        const previous = url.split('/').pop();
+        if (previous) {
+          await supabase.storage.from(bucketName).remove([previous]);
         }
       }
-      
-      const { error: uploadError } = await supabase.storage
-        .from('frontend-assets')
-        .upload(fileName, file, {
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .upload(filename, file, {
           cacheControl: '3600',
           upsert: true
         });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('frontend-assets')
-        .getPublicUrl(fileName);
-
-      return data.publicUrl;
+      if (error) throw error;
+      // get public URL
+      const { data } = supabase.storage.from(bucketName).getPublicUrl(filename);
+      return { url: data.publicUrl, type };
     },
-    onSuccess: (bannerUrl) => {
+    onSuccess: ({ url, type }) => {
       const newSettings: FrontendSettings = {
-        ...settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 },
-        banner_url: bannerUrl
+        ...(settings || initialSettings),
+        ...(type === 'logo' ? { logo_url: url } : { banner_url: url }),
       };
       updateSettings.mutate(newSettings);
-      setBannerFile(null);
-      setBannerPreview(null);
-      toast({
-        title: 'Berhasil',
-        description: 'Banner berhasil diupload dan disimpan'
-      });
+      if (type === 'logo') {
+        setLogoFile(null);
+        setLogoPreview(null);
+        toast({ title: 'Logo berhasil diupload!', description: 'Logo sudah diupdate.' });
+      } else {
+        setBannerFile(null);
+        setBannerPreview(null);
+        toast({ title: 'Banner berhasil diupload!', description: 'Banner sudah diupdate.' });
+      }
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error Upload',
-        description: error.message,
-        variant: 'destructive'
-      });
+    onError: (err: any) => {
+      toast({ title: 'Gagal upload', description: err.message, variant: 'destructive' });
     }
   });
 
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File change handler util
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: 'logo' | 'banner'
+  ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Check file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: 'Error',
-          description: 'Ukuran file terlalu besar. Maksimal 5MB',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      // Check file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: 'Error',
-          description: 'Format file tidak didukung. Gunakan JPEG, PNG, GIF, atau WebP',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      setBannerFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setBannerPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Ukuran file terlalu besar', description: 'Maksimal 5MB', variant: 'destructive' });
+      return;
     }
+    // allow only image
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!allowed.includes(file.type)) {
+      toast({ title: 'Format tidak didukung', description: 'File harus gambar', variant: 'destructive' });
+      return;
+    }
+    // preview
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (type === 'logo') setLogoPreview(evt.target?.result as string);
+      else setBannerPreview(evt.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    if (type === 'logo') setLogoFile(file);
+    else setBannerFile(file);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // Submit settings (except file asset)
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const newSettings: FrontendSettings = {
-      ...settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 },
-      welcome_message: formData.get('welcome_message') as string,
-      featured_categories_limit: parseInt(formData.get('featured_categories_limit') as string) || 5
+      header: fd.get('header')?.toString() || '',
+      footer: fd.get('footer')?.toString() || '',
+      layout: fd.get('layout')?.toString() || '',
+      logo_url: settings?.logo_url || '',
+      banner_url: settings?.banner_url || ''
     };
+    updateSettings.mutate(newSettings);
 
-    if (bannerFile) {
-      uploadBanner.mutate(bannerFile);
-    } else {
-      updateSettings.mutate(newSettings);
-    }
+    // If any files uploaded, upload after save settings
+    if (logoFile) uploadAsset.mutate({ file: logoFile, type: 'logo' });
+    if (bannerFile) uploadAsset.mutate({ file: bannerFile, type: 'banner' });
   };
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Pengaturan Frontend
+          <CardTitle>
+            <Settings className="inline mr-2" />FrontEnd Settings
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">Loading...</div>
-        </CardContent>
+        <CardContent><div className="py-8 text-center">Memuat...</div></CardContent>
       </Card>
     );
   }
@@ -199,82 +177,88 @@ const FrontendSettings = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
+        <CardTitle>
+          <Settings className="inline mr-2" />
           Pengaturan Frontend
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Banner Upload */}
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          {/* Logo */}
           <div className="space-y-2">
-            <Label>Banner Utama</Label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-              {(bannerPreview || settings?.banner_url) && (
-                <div className="mb-4">
-                  <img 
-                    src={bannerPreview || settings?.banner_url} 
-                    alt="Banner Preview" 
-                    className="w-full h-48 object-cover rounded"
-                  />
-                </div>
-              )}
-              <div className="text-center">
-                <Image className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <Label htmlFor="banner" className="cursor-pointer">
-                  <Button type="button" variant="outline" className="mb-2">
-                    <Upload className="h-4 w-4 mr-2" />
-                    {settings?.banner_url ? 'Ganti Banner' : 'Upload Banner'}
-                  </Button>
-                </Label>
-                <Input
-                  id="banner"
+            <Label>Logo</Label>
+            <div className="border border-dashed rounded-md p-3 flex flex-col md:flex-row gap-5">
+              <div className="w-32 h-32 relative flex items-center justify-center">
+                {(logoPreview || settings?.logo_url) ? (
+                  <img src={logoPreview || settings?.logo_url} alt="Logo" className="object-contain h-full w-full" />
+                ) : (
+                  <div className="bg-gray-100 border rounded w-full h-full flex justify-center items-center text-sm text-gray-400">
+                    <Image className="w-8 h-8" /> Preview Logo
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col justify-center">
+                <Input id="logo"
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handleBannerChange}
-                  className="hidden"
+                  accept="image/*"
+                  onChange={e => handleFileChange(e, 'logo')}
                 />
-                <p className="text-sm text-gray-500">
-                  Upload gambar banner untuk halaman utama (maksimal 5MB, format: JPEG, PNG, GIF, WebP)
-                </p>
+                <span className="text-xs text-gray-500">(PNG/JPG/JPEG/GIF/WebP/SVG, max 5MB)</span>
+                {logoFile && (
+                  <Button type="button" variant="secondary" size="sm"
+                    className="mt-2"
+                    onClick={() => uploadAsset.mutate({ file: logoFile, type: 'logo' })}>
+                    <Upload className="mr-1 h-4 w-4" /> Upload Sekarang
+                  </Button>
+                )}
               </div>
             </div>
           </div>
-
-          {/* Welcome Message */}
+          {/* Banner/Slider */}
           <div className="space-y-2">
-            <Label htmlFor="welcome_message">Pesan Selamat Datang</Label>
-            <Input
-              id="welcome_message"
-              name="welcome_message"
-              defaultValue={settings?.welcome_message || ''}
-              placeholder="Selamat datang di toko kami"
-            />
+            <Label>Banner/Slider</Label>
+            <div className="border border-dashed rounded-md p-3 flex flex-col md:flex-row gap-5">
+              <div className="w-full md:w-64 h-36 relative flex items-center justify-center">
+                {(bannerPreview || settings?.banner_url) ? (
+                  <img src={bannerPreview || settings?.banner_url} alt="Banner" className="object-cover h-full w-full rounded" />
+                ) : (
+                  <div className="bg-gray-100 border rounded w-full h-full flex justify-center items-center text-sm text-gray-400">
+                    <Image className="w-8 h-8" /> Preview Banner
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col justify-center">
+                <Input id="banner"
+                  type="file"
+                  accept="image/*"
+                  onChange={e => handleFileChange(e, 'banner')}
+                />
+                <span className="text-xs text-gray-500">(PNG/JPG/JPEG/GIF/WebP, max 5MB)</span>
+                {bannerFile && (
+                  <Button type="button" variant="secondary" size="sm"
+                          className="mt-2"
+                          onClick={() => uploadAsset.mutate({ file: bannerFile, type: 'banner' })}>
+                    <Upload className="mr-1 h-4 w-4" /> Upload Sekarang
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
-
-          {/* Featured Categories Limit */}
+          {/* Header/Footer/Layout */}
           <div className="space-y-2">
-            <Label htmlFor="featured_categories_limit">Jumlah Kategori Unggulan</Label>
-            <Input
-              id="featured_categories_limit"
-              name="featured_categories_limit"
-              type="number"
-              min="3"
-              max="10"
-              defaultValue={settings?.featured_categories_limit || 5}
-              placeholder="5"
-            />
-            <p className="text-sm text-gray-500">
-              Jumlah kategori yang ditampilkan di halaman utama sebelum tombol "Lihat Semua"
-            </p>
+            <Label htmlFor="header">Header</Label>
+            <Input id="header" name="header" defaultValue={settings?.header || ''} placeholder="Teks header atau html" />
           </div>
-
-          <Button 
-            type="submit" 
-            disabled={updateSettings.isPending || uploadBanner.isPending}
-            className="w-full"
-          >
-            {updateSettings.isPending || uploadBanner.isPending ? 'Menyimpan...' : 'Simpan Pengaturan'}
+          <div className="space-y-2">
+            <Label htmlFor="footer">Footer</Label>
+            <Input id="footer" name="footer" defaultValue={settings?.footer || ''} placeholder="Teks footer atau html" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="layout">Layout</Label>
+            <Input id="layout" name="layout" defaultValue={settings?.layout || ''} placeholder="Contoh: simple, boxed, wide" />
+          </div>
+          <Button type="submit" className="w-full" disabled={updateSettings.isPending || uploadAsset.isPending}>
+            {updateSettings.isPending || uploadAsset.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
           </Button>
         </form>
       </CardContent>
