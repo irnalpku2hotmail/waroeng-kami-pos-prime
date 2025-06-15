@@ -71,7 +71,7 @@ const FrontendSettings = () => {
     }
   });
 
-  // Upload banner mutation
+  // Upload banner mutation - now using Supabase Storage
   const uploadBanner = useMutation({
     mutationFn: async (file: File) => {
       const fileExt = file.name.split('.').pop();

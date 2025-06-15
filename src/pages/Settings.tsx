@@ -12,6 +12,7 @@ import { Settings as SettingsIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CODSettings from '@/components/CODSettings';
 import FrontendSettings from '@/components/FrontendSettings';
+import FaviconUpload from '@/components/FaviconUpload';
 
 const Settings = () => {
   const queryClient = useQueryClient();
@@ -109,55 +110,66 @@ const Settings = () => {
           </TabsList>
 
           <TabsContent value="store-info">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informasi Toko</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleStoreInfoSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="store_name">Nama Toko</Label>
-                    <Input
-                      id="store_name"
-                      name="store_name"
-                      defaultValue={settings?.store_name?.name || ''}
-                      placeholder="Nama toko Anda"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="store_address">Alamat</Label>
-                    <Textarea
-                      id="store_address"
-                      name="store_address"
-                      defaultValue={settings?.store_address?.address || ''}
-                      placeholder="Alamat lengkap toko"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informasi Toko</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleStoreInfoSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="store_phone">Telepon</Label>
+                      <Label htmlFor="store_name">Nama Toko</Label>
                       <Input
-                        id="store_phone"
-                        name="store_phone"
-                        defaultValue={settings?.store_phone?.phone || ''}
-                        placeholder="+62 xxx xxx xxx"
+                        id="store_name"
+                        name="store_name"
+                        defaultValue={settings?.store_name?.name || ''}
+                        placeholder="Nama toko Anda"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="store_email">Email</Label>
-                      <Input
-                        id="store_email"
-                        name="store_email"
-                        type="email"
-                        defaultValue={settings?.store_email?.email || ''}
-                        placeholder="email@toko.com"
+                      <Label htmlFor="store_address">Alamat</Label>
+                      <Textarea
+                        id="store_address"
+                        name="store_address"
+                        defaultValue={settings?.store_address?.address || ''}
+                        placeholder="Alamat lengkap toko"
                       />
                     </div>
-                  </div>
-                  <Button type="submit">Simpan Informasi</Button>
-                </form>
-              </CardContent>
-            </Card>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="store_phone">Telepon</Label>
+                        <Input
+                          id="store_phone"
+                          name="store_phone"
+                          defaultValue={settings?.store_phone?.phone || ''}
+                          placeholder="+62 xxx xxx xxx"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="store_email">Email</Label>
+                        <Input
+                          id="store_email"
+                          name="store_email"
+                          type="email"
+                          defaultValue={settings?.store_email?.email || ''}
+                          placeholder="email@toko.com"
+                        />
+                      </div>
+                    </div>
+                    <Button type="submit">Simpan Informasi</Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Favicon Website</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FaviconUpload currentFavicon={settings?.favicon_url?.url} />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="receipt">
