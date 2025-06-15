@@ -79,7 +79,10 @@ const FrontendSettings = () => {
       
       const { error: uploadError } = await supabase.storage
         .from('frontend-assets')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) throw uploadError;
 
@@ -97,6 +100,10 @@ const FrontendSettings = () => {
       updateSettings.mutate(newSettings);
       setBannerFile(null);
       setBannerPreview(null);
+      toast({
+        title: 'Berhasil',
+        description: 'Banner berhasil diupload'
+      });
     },
     onError: (error: any) => {
       toast({
@@ -110,6 +117,27 @@ const FrontendSettings = () => {
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: 'Error',
+          description: 'Ukuran file terlalu besar. Maksimal 5MB',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: 'Error',
+          description: 'Format file tidak didukung. Gunakan JPEG, PNG, GIF, atau WebP',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       setBannerFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -170,12 +198,12 @@ const FrontendSettings = () => {
                 <Input
                   id="banner"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   onChange={handleBannerChange}
                   className="hidden"
                 />
                 <p className="text-sm text-gray-500">
-                  Upload gambar banner untuk halaman utama (maksimal 5MB)
+                  Upload gambar banner untuk halaman utama (maksimal 5MB, format: JPEG, PNG, GIF, WebP)
                 </p>
               </div>
             </div>

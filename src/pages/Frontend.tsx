@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProductLikes } from '@/hooks/useProductLikes';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import CountdownTimer from '@/components/CountdownTimer';
@@ -28,6 +29,7 @@ interface FrontendSettings {
 const Frontend = () => {
   const { addItem, items } = useCart();
   const { user, signOut } = useAuth();
+  const { isLiked, toggleLike } = useProductLikes();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCart, setShowCart] = useState(false);
@@ -156,6 +158,22 @@ const Frontend = () => {
       total_price: product.selling_price,
       current_stock: product.current_stock,
       loyalty_points: product.loyalty_points || 1
+    };
+    
+    addItem(cartItem);
+  };
+
+  const handleAddFlashSaleToCart = (item: any) => {
+    const cartItem = {
+      id: Date.now().toString(),
+      product_id: item.products.id,
+      name: item.products.name,
+      image_url: item.products.image_url,
+      quantity: 1,
+      unit_price: item.sale_price,
+      total_price: item.sale_price,
+      current_stock: item.stock_quantity,
+      loyalty_points: 1
     };
     
     addItem(cartItem);
@@ -357,7 +375,7 @@ const Frontend = () => {
             <div className="bg-white p-6 rounded-b-lg shadow-lg">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {flashSales[0]?.flash_sale_items?.slice(0, 6).map((item: any) => (
-                  <Card key={item.id} className="group hover:shadow-lg transition-all">
+                  <Card key={item.id} className="group hover:shadow-lg transition-all relative">
                     <div className="relative">
                       <div className="aspect-square bg-gray-100">
                         {item.products?.image_url ? (
@@ -375,6 +393,13 @@ const Frontend = () => {
                       <Badge className="absolute top-2 left-2 bg-red-500">
                         -{item.discount_percentage}%
                       </Badge>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAddFlashSaleToCart(item)}
+                        className="absolute top-2 right-2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
                     <CardContent className="p-3">
                       <h3 className="font-medium text-sm mb-2 line-clamp-2">
@@ -424,6 +449,8 @@ const Frontend = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {products.map((product) => {
               const productImageUrl = getImageUrl(product.image_url);
+              const productIsLiked = isLiked(product.id);
+              
               return (
                 <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md">
                   <div className="relative overflow-hidden rounded-t-lg">
@@ -445,9 +472,14 @@ const Frontend = () => {
                       <Button 
                         size="sm" 
                         variant="secondary"
-                        className="absolute top-2 left-2 h-8 w-8 p-0 bg-white/80 hover:bg-white"
+                        onClick={() => toggleLike(product.id)}
+                        className={`absolute top-2 left-2 h-8 w-8 p-0 transition-colors ${
+                          productIsLiked 
+                            ? 'bg-red-500 hover:bg-red-600 text-white' 
+                            : 'bg-white/80 hover:bg-white'
+                        }`}
                       >
-                        <Heart className="h-4 w-4" />
+                        <Heart className={`h-4 w-4 ${productIsLiked ? 'fill-current' : ''}`} />
                       </Button>
                     </div>
                   </div>
