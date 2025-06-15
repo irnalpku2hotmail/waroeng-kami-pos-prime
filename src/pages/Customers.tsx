@@ -282,20 +282,28 @@ const Customers = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Ranking</TableHead>
                     <TableHead>Kode Customer</TableHead>
                     <TableHead>Nama Customer</TableHead>
                     <TableHead>Telepon</TableHead>
                     <TableHead>Alamat</TableHead>
+                    <TableHead>Total Poin</TableHead>
+                    <TableHead>Total Belanja</TableHead>
                     <TableHead>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {customers.map((customer) => (
+                  {[...customers]
+                    .sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0))
+                    .map((customer, idx) => (
                     <TableRow key={customer.id}>
+                      <TableCell className="font-medium">{idx + 1}</TableCell>
                       <TableCell className="font-medium">{customer.customer_code}</TableCell>
                       <TableCell>{customer.name}</TableCell>
                       <TableCell>{customer.phone || '-'}</TableCell>
                       <TableCell>{customer.address || '-'}</TableCell>
+                      <TableCell>{customer.total_points?.toLocaleString('id-ID') || 0}</TableCell>
+                      <TableCell>Rp {customer.total_spent?.toLocaleString('id-ID') || 0}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button

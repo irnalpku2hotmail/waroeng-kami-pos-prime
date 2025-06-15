@@ -193,7 +193,7 @@ const CODReports = () => {
             </Card>
           ))
         ) : (
-          codSummary?.map((item) => (
+          codSummary?.filter((item) => item.status !== 'delivered').map((item) => (
             <Card key={item.status}>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">COD - {item.status}</CardTitle>
