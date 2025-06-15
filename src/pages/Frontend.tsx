@@ -486,6 +486,15 @@ const Frontend = () => {
                         <Truck className="h-3 w-3" />
                         COD
                       </Badge>
+                      {/* Cart Button - positioned in front of product image */}
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAddToCart(product)}
+                        className="absolute bottom-2 right-2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={product.current_stock <= 0}
+                      >
+                        <ShoppingCart className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
                   <CardContent className="p-4">
@@ -507,14 +516,6 @@ const Frontend = () => {
                       <Truck className="h-3 w-3" />
                       <span>Bayar di Tempat (COD)</span>
                     </div>
-                    <Button 
-                      onClick={() => handleAddToCart(product)}
-                      className="w-full text-sm py-2 flex items-center justify-center gap-2"
-                      disabled={product.current_stock <= 0}
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                      Cart
-                    </Button>
                   </CardContent>
                 </Card>
               );
