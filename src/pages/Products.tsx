@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,8 +43,7 @@ const Products = () => {
           *,
           categories(id, name),
           units(id, name, abbreviation),
-          price_variants(id, name, price, minimum_quantity, is_active),
-          unit_conversions(id, conversion_factor, from_unit_id, to_unit_id)
+          price_variants(id, name, price, minimum_quantity, is_active)
         `, { count: 'exact' });
       
       if (searchTerm) {
