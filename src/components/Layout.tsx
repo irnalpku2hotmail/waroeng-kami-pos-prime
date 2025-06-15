@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -401,24 +400,16 @@ const Layout = ({ children }: LayoutProps) => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* User Menu with Avatar */}
+            {/* User Menu with Avatar Only */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 p-2">
+                <Button variant="ghost" className="p-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={getUserAvatarUrl()} alt={getUserDisplayName()} />
                     <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
                       {getUserDisplayName().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="hidden md:block text-left">
-                    <div className="text-sm font-medium text-gray-900">
-                      {getUserDisplayName()}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {user?.email}
-                    </div>
-                  </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
