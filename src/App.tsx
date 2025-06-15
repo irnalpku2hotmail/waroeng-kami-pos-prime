@@ -1,82 +1,179 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { CartProvider } from '@/contexts/CartContext';
-import { Toaster } from '@/components/ui/toaster';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { Suspense, lazy } from 'react';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
-// Auth pages
-import Login from '@/pages/auth/Login';
-import Register from '@/pages/auth/Register';
-
-// Main pages
-import Dashboard from '@/pages/Dashboard';
-import Products from '@/pages/Products';
-import CategoriesUnits from '@/pages/CategoriesUnits';
-import Suppliers from '@/pages/Suppliers';
-import POS from '@/pages/POS';
-import Inventory from '@/pages/Inventory';
-import Customers from '@/pages/Customers';
-import Orders from '@/pages/Orders';
-import CreditManagement from '@/pages/CreditManagement';
-import Expenses from '@/pages/Expenses';
-import PointsRewards from '@/pages/PointsRewards';
-import PointExchange from '@/pages/PointExchange';
-import FlashSales from '@/pages/FlashSales';
-import Settings from '@/pages/Settings';
-import Website from '@/pages/Website';
-import UserManagement from '@/pages/UserManagement';
-import Profile from '@/pages/Profile';
-import Frontend from '@/pages/Frontend';
-import Returns from '@/pages/Returns';
-import Purchases from '@/pages/Purchases';
-import NotFound from '@/pages/NotFound';
+// Lazy load components
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Products = lazy(() => import('./pages/Products'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const POS = lazy(() => import('./pages/POS'));
+const Orders = lazy(() => import('./pages/Orders'));
+const CategoriesUnits = lazy(() => import('./pages/CategoriesUnits'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Suppliers = lazy(() => import('./pages/Suppliers'));
+const Purchases = lazy(() => import('./pages/Purchases'));
+const Returns = lazy(() => import('./pages/Returns'));
+const Expenses = lazy(() => import('./pages/Expenses'));
+const PointsRewards = lazy(() => import('./pages/PointsRewards'));
+const PointExchange = lazy(() => import('./pages/PointExchange'));
+const FlashSales = lazy(() => import('./pages/FlashSales'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const Settings = lazy(() => import('./pages/Settings'));
+const CreditManagement = lazy(() => import('./pages/CreditManagement'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Website = lazy(() => import('./pages/Website'));
+const Frontend = lazy(() => import('./pages/Frontend'));
+const ProductDetails = lazy(() => import('./pages/ProductDetails'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient();
 
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <CartProvider>
-          <Router>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Frontend />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-
-              {/* Protected routes */}
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-              <Route path="/categories-units" element={<ProtectedRoute><CategoriesUnits /></ProtectedRoute>} />
-              <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
-              <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
-              <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-              <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/credit-management" element={<ProtectedRoute><CreditManagement /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-              <Route path="/points-rewards" element={<ProtectedRoute><PointsRewards /></ProtectedRoute>} />
-              <Route path="/point-exchange" element={<ProtectedRoute><PointExchange /></ProtectedRoute>} />
-              <Route path="/flash-sales" element={<ProtectedRoute><FlashSales /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/website" element={<ProtectedRoute><Website /></ProtectedRoute>} />
-              <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/returns" element={<ProtectedRoute><Returns /></ProtectedRoute>} />
-              <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
-
-              {/* Catch all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Router>
-          <Toaster />
-        </CartProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <CartProvider>
+            <Suspense fallback={<div>Loading...</div>}>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/" element={<Frontend />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
+                
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/products" element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/inventory" element={
+                  <ProtectedRoute>
+                    <Inventory />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/pos" element={
+                  <ProtectedRoute>
+                    <POS />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/orders" element={
+                  <ProtectedRoute>
+                    <Orders />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/categories-units" element={
+                  <ProtectedRoute>
+                    <CategoriesUnits />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/customers" element={
+                  <ProtectedRoute>
+                    <Customers />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/suppliers" element={
+                  <ProtectedRoute>
+                    <Suppliers />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/purchases" element={
+                  <ProtectedRoute>
+                    <Purchases />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/returns" element={
+                  <ProtectedRoute>
+                    <Returns />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/expenses" element={
+                  <ProtectedRoute>
+                    <Expenses />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/points-rewards" element={
+                  <ProtectedRoute>
+                    <PointsRewards />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/point-exchange" element={
+                  <ProtectedRoute>
+                    <PointExchange />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/flash-sales" element={
+                  <ProtectedRoute>
+                    <FlashSales />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/user-management" element={
+                  <ProtectedRoute>
+                    <UserManagement />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/credit" element={
+                  <ProtectedRoute>
+                    <CreditManagement />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/website" element={
+                  <ProtectedRoute>
+                    <Website />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </CartProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
