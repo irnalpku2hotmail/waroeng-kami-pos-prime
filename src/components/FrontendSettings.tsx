@@ -6,45 +6,53 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Image, Upload, Settings } from 'lucide-react';
+import { Image, Upload, Settings, XCircle } from 'lucide-react';
 
 interface FrontendSettings {
   header: string;
   footer: string;
-  layout: string;
-  banner_url: string;
+  banner_urls: string[];
   logo_url: string;
 }
 
 const initialSettings: FrontendSettings = {
   header: '',
   footer: '',
-  layout: '',
-  banner_url: '',
+  banner_urls: [],
   logo_url: ''
 };
 
 const bucketName = 'frontend-assets';
 
-// Type guard to ensure the data matches FrontendSettings
+// Type guard untuk data settings
 function isFrontendSettings(val: any): val is FrontendSettings {
   return val &&
     typeof val === 'object' &&
     typeof val.header === 'string' &&
     typeof val.footer === 'string' &&
-    typeof val.layout === 'string' &&
-    typeof val.banner_url === 'string' &&
+    Array.isArray(val.banner_urls) &&
     typeof val.logo_url === 'string';
+}
+
+// Update favicon di index.html
+function updateFavicon(url: string) {
+  let linkTag = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+  if (!linkTag) {
+    linkTag = document.createElement('link');
+    linkTag.rel = 'icon';
+    document.head.appendChild(linkTag);
+  }
+  linkTag.type = 'image/png';
+  linkTag.href = url;
 }
 
 const FrontendSettings = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerFiles, setBannerFiles] = useState<File[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [bannerPreviews, setBannerPreviews] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
-  // Get current settings from Supabase, using type guard to check returned value
   const { data: settings, isLoading } = useQuery({
     queryKey: ['frontend-settings'],
     queryFn: async () => {
@@ -54,12 +62,11 @@ const FrontendSettings = () => {
         .eq('key', 'frontend_settings')
         .maybeSingle();
       if (error) throw error;
-      // Use type guard here:
       return isFrontendSettings(data?.value) ? data.value : initialSettings;
     }
   });
 
-  // Save all settings mutation
+  // Save/update settings mutation
   const updateSettings = useMutation({
     mutationFn: async (settingsData: FrontendSettings) => {
       const { error } = await supabase
@@ -80,80 +87,127 @@ const FrontendSettings = () => {
     }
   });
 
-  // Upload utility mutation (for logo/banner)
-  const uploadAsset = useMutation({
-    mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'banner' }) => {
+  // Upload logo (update settings, update favicon)
+  const uploadLogo = useMutation({
+    mutationFn: async (file: File) => {
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
-      const filename = `${type}_${Date.now()}.${fileExt}`;
-      // Remove old asset if exists
-      const url = type === 'logo' ? settings?.logo_url : settings?.banner_url;
-      if (url) {
-        const previous = url.split('/').pop();
-        if (previous) {
-          await supabase.storage.from(bucketName).remove([previous]);
-        }
+      const filename = `logo_${Date.now()}.${fileExt}`;
+      if (settings?.logo_url) {
+        // Remove old logo
+        const prev = settings.logo_url.split('/').pop();
+        if (prev) await supabase.storage.from(bucketName).remove([prev]);
       }
       const { error } = await supabase.storage
         .from(bucketName)
-        .upload(filename, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
+        .upload(filename, file, { cacheControl: '3600', upsert: true });
       if (error) throw error;
-      // get public URL
       const { data } = supabase.storage.from(bucketName).getPublicUrl(filename);
-      return { url: data.publicUrl, type };
+      return data.publicUrl;
     },
-    onSuccess: ({ url, type }) => {
-      const newSettings: FrontendSettings = {
+    onSuccess: (logoUrl) => {
+      updateSettings.mutate({
         ...(settings || initialSettings),
-        ...(type === 'logo' ? { logo_url: url } : { banner_url: url }),
-      };
-      updateSettings.mutate(newSettings);
-      if (type === 'logo') {
-        setLogoFile(null);
-        setLogoPreview(null);
-        toast({ title: 'Logo berhasil diupload!', description: 'Logo sudah diupdate.' });
-      } else {
-        setBannerFile(null);
-        setBannerPreview(null);
-        toast({ title: 'Banner berhasil diupload!', description: 'Banner sudah diupdate.' });
-      }
+        logo_url: logoUrl
+      });
+      setLogoFile(null);
+      setLogoPreview(null);
+      updateFavicon(logoUrl);
+      toast({ title: 'Logo & Favicon berhasil diupload!', description: 'Logo sudah diupdate.' });
     },
     onError: (err: any) => {
-      toast({ title: 'Gagal upload', description: err.message, variant: 'destructive' });
+      toast({ title: 'Gagal upload logo', description: err.message, variant: 'destructive' });
     }
   });
 
-  // File change handler util
+  // Upload banner (array)
+  const uploadBanner = useMutation({
+    mutationFn: async (files: File[]) => {
+      const urls: string[] = [];
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+        const filename = `banner_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+        const { error } = await supabase.storage.from(bucketName).upload(filename, file, { cacheControl: '3600', upsert: true });
+        if (error) throw error;
+        const { data } = supabase.storage.from(bucketName).getPublicUrl(filename);
+        urls.push(data.publicUrl);
+      }
+      return urls;
+    },
+    onSuccess: (bannerUrls) => {
+      const mergedUrls = [...(settings?.banner_urls || []), ...bannerUrls];
+      updateSettings.mutate({
+        ...(settings || initialSettings),
+        banner_urls: mergedUrls
+      });
+      setBannerFiles([]);
+      setBannerPreviews([]);
+      toast({ title: 'Banner berhasil diupload!', description: 'Banner/slider sudah diupdate.' });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Gagal upload banner', description: err.message, variant: 'destructive' });
+    }
+  });
+
+  // Hapus satu banner
+  const handleDeleteBanner = async (url: string) => {
+    const filename = url.split('/').pop();
+    if (filename) await supabase.storage.from(bucketName).remove([filename]);
+    // Remove from setting
+    const filtered = (settings?.banner_urls || []).filter(u => u !== url);
+    updateSettings.mutate({
+      ...(settings || initialSettings),
+      banner_urls: filtered
+    });
+    toast({ title: 'Banner dihapus', description: 'Banner berhasil dihapus.' });
+  };
+
+  // Handle file change
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     type: 'logo' | 'banner'
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: 'Ukuran file terlalu besar', description: 'Maksimal 5MB', variant: 'destructive' });
-      return;
+    if (type === 'logo') {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: 'Ukuran file terlalu besar', description: 'Maksimal 5MB', variant: 'destructive' });
+        return;
+      }
+      const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+      if (!allowed.includes(file.type)) {
+        toast({ title: 'Format tidak didukung', description: 'File harus gambar', variant: 'destructive' });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (evt) => setLogoPreview(evt.target?.result as string);
+      reader.readAsDataURL(file);
+      setLogoFile(file);
+    } else {
+      const files = Array.from(e.target.files || []);
+      const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+      const oversize = files.some(f => f.size > 5 * 1024 * 1024);
+      const anyInvalid = files.some(f => !allowed.includes(f.type));
+      if (oversize) {
+        toast({ title: 'Ukuran file terlalu besar', description: 'Maksimal 5MB', variant: 'destructive' });
+        return;
+      }
+      if (anyInvalid) {
+        toast({ title: 'Format tidak didukung', description: 'File harus gambar', variant: 'destructive' });
+        return;
+      }
+      setBannerFiles(files);
+      // preview
+      Promise.all(files.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => resolve(evt.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+      })).then(setBannerPreviews);
     }
-    // allow only image
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-    if (!allowed.includes(file.type)) {
-      toast({ title: 'Format tidak didukung', description: 'File harus gambar', variant: 'destructive' });
-      return;
-    }
-    // preview
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (type === 'logo') setLogoPreview(evt.target?.result as string);
-      else setBannerPreview(evt.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    if (type === 'logo') setLogoFile(file);
-    else setBannerFile(file);
   };
 
-  // Submit settings (except file asset)
+  // Submit header/footer saja
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -161,15 +215,14 @@ const FrontendSettings = () => {
     const newSettings: FrontendSettings = {
       header: fd.get('header')?.toString() || '',
       footer: fd.get('footer')?.toString() || '',
-      layout: fd.get('layout')?.toString() || '',
-      logo_url: settings?.logo_url || '',
-      banner_url: settings?.banner_url || ''
+      banner_urls: settings?.banner_urls || [],
+      logo_url: settings?.logo_url || ''
     };
     updateSettings.mutate(newSettings);
 
-    // If any files uploaded, upload after save settings
-    if (logoFile) uploadAsset.mutate({ file: logoFile, type: 'logo' });
-    if (bannerFile) uploadAsset.mutate({ file: bannerFile, type: 'banner' });
+    // Upload file jika ada
+    if (logoFile) uploadLogo.mutate(logoFile);
+    if (bannerFiles.length > 0) uploadBanner.mutate(bannerFiles);
   };
 
   if (isLoading) {
@@ -195,9 +248,9 @@ const FrontendSettings = () => {
       </CardHeader>
       <CardContent>
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Logo */}
+          {/* Logo/Favicon */}
           <div className="space-y-2">
-            <Label>Logo</Label>
+            <Label>Logo (Favicon)</Label>
             <div className="border border-dashed rounded-md p-3 flex flex-col md:flex-row gap-5">
               <div className="w-32 h-32 relative flex items-center justify-center">
                 {(logoPreview || settings?.logo_url) ? (
@@ -218,44 +271,58 @@ const FrontendSettings = () => {
                 {logoFile && (
                   <Button type="button" variant="secondary" size="sm"
                     className="mt-2"
-                    onClick={() => uploadAsset.mutate({ file: logoFile, type: 'logo' })}>
-                    <Upload className="mr-1 h-4 w-4" /> Upload Sekarang
+                    onClick={() => uploadLogo.mutate(logoFile)}>
+                    <Upload className="mr-1 h-4 w-4" /> Upload Logo & Favicon
                   </Button>
                 )}
               </div>
             </div>
           </div>
-          {/* Banner/Slider */}
+          {/* Banner/Slider (multiple) */}
           <div className="space-y-2">
             <Label>Banner/Slider</Label>
             <div className="border border-dashed rounded-md p-3 flex flex-col md:flex-row gap-5">
-              <div className="w-full md:w-64 h-36 relative flex items-center justify-center">
-                {(bannerPreview || settings?.banner_url) ? (
-                  <img src={bannerPreview || settings?.banner_url} alt="Banner" className="object-cover h-full w-full rounded" />
-                ) : (
-                  <div className="bg-gray-100 border rounded w-full h-full flex justify-center items-center text-sm text-gray-400">
-                    <Image className="w-8 h-8" /> Preview Banner
+              <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-2">
+                {/* existing banners */}
+                {(settings?.banner_urls || []).map((url, idx) => (
+                  <div key={url} className="relative group border rounded overflow-hidden h-24 flex justify-center items-center bg-gray-50">
+                    <img src={url} alt={`Banner ${idx + 1}`} className="object-cover h-full w-full" />
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 rounded-full bg-white p-0.5 shadow group-hover:opacity-100 opacity-0 transition"
+                      onClick={() => handleDeleteBanner(url)}
+                      title="Hapus Banner"
+                    >
+                      <XCircle className="w-5 h-5 text-red-500" />
+                    </button>
                   </div>
-                )}
+                ))}
+                {/* preview baru */}
+                {bannerPreviews.map((src, idx) => (
+                  <div key={`preview-${idx}`} className="relative border rounded overflow-hidden h-24 flex justify-center items-center bg-gray-50">
+                    <img src={src} alt={`Preview Banner ${idx + 1}`} className="object-cover h-full w-full opacity-50" />
+                  </div>
+                ))}
               </div>
-              <div className="flex flex-col justify-center">
+              <div className="flex flex-col justify-center min-w-[160px]">
                 <Input id="banner"
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={e => handleFileChange(e, 'banner')}
                 />
-                <span className="text-xs text-gray-500">(PNG/JPG/JPEG/GIF/WebP, max 5MB)</span>
-                {bannerFile && (
+                <span className="text-xs text-gray-500">(PNG/JPG/JPEG/GIF/WebP/SVG, max 5MB, multiple)</span>
+                {bannerFiles.length > 0 && (
                   <Button type="button" variant="secondary" size="sm"
-                          className="mt-2"
-                          onClick={() => uploadAsset.mutate({ file: bannerFile, type: 'banner' })}>
-                    <Upload className="mr-1 h-4 w-4" /> Upload Sekarang
+                    className="mt-2"
+                    onClick={() => uploadBanner.mutate(bannerFiles)}>
+                    <Upload className="mr-1 h-4 w-4" /> Upload Semua Banner
                   </Button>
                 )}
               </div>
             </div>
           </div>
-          {/* Header/Footer/Layout */}
+          {/* Header/Footer */}
           <div className="space-y-2">
             <Label htmlFor="header">Header</Label>
             <Input id="header" name="header" defaultValue={settings?.header || ''} placeholder="Teks header atau html" />
@@ -264,12 +331,8 @@ const FrontendSettings = () => {
             <Label htmlFor="footer">Footer</Label>
             <Input id="footer" name="footer" defaultValue={settings?.footer || ''} placeholder="Teks footer atau html" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="layout">Layout</Label>
-            <Input id="layout" name="layout" defaultValue={settings?.layout || ''} placeholder="Contoh: simple, boxed, wide" />
-          </div>
-          <Button type="submit" className="w-full" disabled={updateSettings.isPending || uploadAsset.isPending}>
-            {updateSettings.isPending || uploadAsset.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
+          <Button type="submit" className="w-full" disabled={updateSettings.isPending || uploadLogo.isPending || uploadBanner.isPending}>
+            {updateSettings.isPending || uploadLogo.isPending || uploadBanner.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
           </Button>
         </form>
       </CardContent>
