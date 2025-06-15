@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Phone, Mail, Zap, Plus, Truck } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductLikes } from '@/hooks/useProductLikes';
