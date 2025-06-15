@@ -12,13 +12,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Zap, Calendar, DollarSign, TrendingUp, Package, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Zap, Calendar, DollarSign, TrendingUp, Package, Search, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import FlashSaleItemsManager from '@/components/FlashSaleItemsManager';
+import FlashSaleDetailsModal from '@/components/FlashSaleDetailsModal';
 
 const FlashSales = () => {
   const [open, setOpen] = useState(false);
   const [editFlashSale, setEditFlashSale] = useState<any>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedFlashSale, setSelectedFlashSale] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
@@ -158,6 +161,11 @@ const FlashSales = () => {
       is_active: flashSale.is_active
     });
     setOpen(true);
+  };
+
+  const handleDetails = (flashSale: any) => {
+    setSelectedFlashSale(flashSale);
+    setDetailOpen(true);
   };
 
   const resetForm = () => {
@@ -391,6 +399,13 @@ const FlashSales = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleDetails(flashSale)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(flashSale)}
                         >
                           <Edit className="h-4 w-4" />
@@ -411,6 +426,13 @@ const FlashSales = () => {
           )}
         </div>
       </div>
+      {selectedFlashSale && (
+        <FlashSaleDetailsModal
+          flashSale={selectedFlashSale}
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+        />
+      )}
     </Layout>
   );
 };

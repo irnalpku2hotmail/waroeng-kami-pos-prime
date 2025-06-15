@@ -11,15 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, DollarSign, Calendar, TrendingUp, Download, FileImage } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, Calendar, TrendingUp, Download, FileImage, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { exportToExcel } from '@/utils/excelExport';
+import ExpenseDetailsModal from '@/components/ExpenseDetailsModal';
 
 const Expenses = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editExpense, setEditExpense] = useState<any>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -220,6 +223,11 @@ const Expenses = () => {
     });
     setReceiptFile(null);
     setOpen(true);
+  };
+
+  const handleDetails = (expense: any) => {
+    setSelectedExpense(expense);
+    setDetailOpen(true);
   };
 
   const handleCloseDialog = () => {
@@ -493,6 +501,13 @@ const Expenses = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleDetails(expense)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(expense)}
                         >
                           <Edit className="h-4 w-4" />
@@ -513,6 +528,13 @@ const Expenses = () => {
           )}
         </div>
       </div>
+      {selectedExpense && (
+        <ExpenseDetailsModal
+          expense={selectedExpense}
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+        />
+      )}
     </Layout>
   );
 };

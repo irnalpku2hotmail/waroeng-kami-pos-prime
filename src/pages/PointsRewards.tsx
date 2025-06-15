@@ -11,12 +11,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Gift, Search, X, Star, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Gift, Search, X, Star, Package, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
+import RewardDetailsModal from '@/components/RewardDetailsModal';
 
 const PointsRewards = () => {
   const [open, setOpen] = useState(false);
   const [editReward, setEditReward] = useState<any>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<any>(null);
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
@@ -232,6 +235,11 @@ const PointsRewards = () => {
       points_required: item.points_required
     })) || []);
     setOpen(true);
+  };
+
+  const handleDetails = (reward: any) => {
+    setSelectedReward(reward);
+    setDetailOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -490,6 +498,13 @@ const PointsRewards = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleDetails(reward)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(reward)}
                         >
                           <Edit className="h-4 w-4" />
@@ -510,6 +525,13 @@ const PointsRewards = () => {
           )}
         </div>
       </div>
+      {selectedReward && (
+        <RewardDetailsModal
+          reward={selectedReward}
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+        />
+      )}
     </Layout>
   );
 };
