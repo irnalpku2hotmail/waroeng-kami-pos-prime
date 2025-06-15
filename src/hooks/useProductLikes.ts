@@ -17,16 +17,16 @@ export const useProductLikes = () => {
   const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchUserLikes();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const fetchUserLikes = async () => {
-    if (!user) return;
+    if (!user?.id) return;
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('user_product_likes')
         .select('product_id')
         .eq('user_id', user.id);
@@ -36,16 +36,15 @@ export const useProductLikes = () => {
         return;
       }
 
-      const productIds: string[] = data?.map((like: any) => like.product_id as string) || [];
-      const likes = new Set<string>(productIds);
-      setLikedProducts(likes);
+      const productIds = data?.map((like: any) => like.product_id as string) || [];
+      setLikedProducts(new Set(productIds));
     } catch (error) {
       console.error('Error fetching user likes:', error);
     }
   };
 
   const toggleLike = async (productId: string) => {
-    if (!user) {
+    if (!user?.id) {
       toast({
         title: 'Login Required',
         description: 'Silakan login untuk menyukai produk',
@@ -59,7 +58,7 @@ export const useProductLikes = () => {
     try {
       if (isLiked) {
         // Remove like
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('user_product_likes')
           .delete()
           .eq('user_id', user.id)
@@ -81,7 +80,7 @@ export const useProductLikes = () => {
         });
       } else {
         // Add like
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('user_product_likes')
           .insert({
             user_id: user.id,
