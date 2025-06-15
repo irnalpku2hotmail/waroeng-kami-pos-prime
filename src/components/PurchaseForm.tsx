@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2 } from 'lucide-react';
+import { getConversionFactor } from '@/hooks/useUnitConversions';
 
 interface PurchaseFormProps {
   purchase?: any;
@@ -64,7 +66,26 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').order('name');
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          units(id, name, abbreviation),
+          unit_conversions(id, from_unit_id, to_unit_id, conversion_factor,
+            from_unit:from_unit_id(id, name, abbreviation),
+            to_unit:to_unit_id(id, name, abbreviation)
+          )
+        `)
+        .order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: units } = useQuery({
+    queryKey: ['units'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('units').select('*').order('name');
       if (error) throw error;
       return data;
     }
@@ -112,7 +133,9 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           .from('purchase_items')
           .insert(items.map(item => ({
             ...item,
-            purchase_id: purchaseId
+            purchase_id: purchaseId,
+            purchase_unit_id: item.purchase_unit_id,
+            conversion_factor: item.conversion_factor || 1
           })));
         if (error) throw error;
 
@@ -146,20 +169,42 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       quantity: 1,
       unit_cost: 0,
       total_cost: 0,
-      expiration_date: ''
+      expiration_date: '',
+      purchase_unit_id: '',
+      conversion_factor: 1
     }]);
   };
 
-  const updateItem = (index: number, field: string, value: any) => {
+  const updateItem = async (index: number, field: string, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     
-    // Auto-fill unit cost from product base price
+    // Auto-fill unit cost from product base price and set default purchase unit
     if (field === 'product_id' && value && products) {
       const selectedProduct = products.find(p => p.id === value);
       if (selectedProduct) {
         newItems[index].unit_cost = selectedProduct.base_price || 0;
+        newItems[index].purchase_unit_id = selectedProduct.units?.id || '';
+        newItems[index].conversion_factor = 1;
         newItems[index].total_cost = newItems[index].quantity * (selectedProduct.base_price || 0);
+      }
+    }
+    
+    // Handle unit change and calculate conversion
+    if (field === 'purchase_unit_id' && value && newItems[index].product_id) {
+      const selectedProduct = products?.find(p => p.id === newItems[index].product_id);
+      if (selectedProduct && selectedProduct.units?.id) {
+        try {
+          const conversionFactor = await getConversionFactor(
+            newItems[index].product_id,
+            value,
+            selectedProduct.units.id
+          );
+          newItems[index].conversion_factor = conversionFactor;
+        } catch (error) {
+          console.error('Error getting conversion factor:', error);
+          newItems[index].conversion_factor = 1;
+        }
       }
     }
     
@@ -177,6 +222,24 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     savePurchase.mutate(formData);
+  };
+
+  const getAvailableUnitsForProduct = (productId: string) => {
+    const product = products?.find(p => p.id === productId);
+    if (!product) return [];
+    
+    const availableUnits = [product.units].filter(Boolean);
+    
+    // Add units that have conversions defined for this product
+    if (product.unit_conversions) {
+      product.unit_conversions.forEach((conversion: any) => {
+        if (conversion.from_unit && !availableUnits.find(u => u.id === conversion.from_unit.id)) {
+          availableUnits.push(conversion.from_unit);
+        }
+      });
+    }
+    
+    return availableUnits;
   };
 
   return (
@@ -283,71 +346,106 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           <TableHeader>
             <TableRow>
               <TableHead>Produk</TableHead>
+              <TableHead>Unit Pembelian</TableHead>
               <TableHead>Jumlah</TableHead>
               <TableHead>Harga Satuan</TableHead>
               <TableHead>Total</TableHead>
+              <TableHead>Konversi</TableHead>
               <TableHead>Tanggal Kedaluwarsa</TableHead>
               <TableHead>Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <Select
-                    value={item.product_id}
-                    onValueChange={(value) => updateItem(index, 'product_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih produk" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products?.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} (Rp {product.base_price?.toLocaleString('id-ID')})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
-                    min="1"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.unit_cost}
-                    onChange={(e) => updateItem(index, 'unit_cost', Number(e.target.value))}
-                    min="0"
-                  />
-                </TableCell>
-                <TableCell>
-                  Rp {item.total_cost?.toLocaleString('id-ID') || 0}
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="date"
-                    value={item.expiration_date}
-                    onChange={(e) => updateItem(index, 'expiration_date', e.target.value)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeItem(index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {items.map((item, index) => {
+              const selectedProduct = products?.find(p => p.id === item.product_id);
+              const availableUnits = getAvailableUnitsForProduct(item.product_id);
+              const baseUnit = selectedProduct?.units;
+              const conversionText = item.conversion_factor !== 1 && baseUnit 
+                ? `1 unit pembelian = ${item.conversion_factor} ${baseUnit.abbreviation}`
+                : '';
+
+              return (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Select
+                      value={item.product_id}
+                      onValueChange={(value) => updateItem(index, 'product_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih produk" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products?.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} (Rp {product.base_price?.toLocaleString('id-ID')})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={item.purchase_unit_id}
+                      onValueChange={(value) => updateItem(index, 'purchase_unit_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableUnits.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+                      min="1"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      value={item.unit_cost}
+                      onChange={(e) => updateItem(index, 'unit_cost', Number(e.target.value))}
+                      min="0"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    Rp {item.total_cost?.toLocaleString('id-ID') || 0}
+                  </TableCell>
+                  <TableCell>
+                    {conversionText && (
+                      <Badge variant="secondary" className="text-xs">
+                        {conversionText}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="date"
+                      value={item.expiration_date}
+                      onChange={(e) => updateItem(index, 'expiration_date', e.target.value)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
 
