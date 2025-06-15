@@ -84,6 +84,7 @@ const Settings = () => {
         footer_text: formData.get('footer_text') as string,
         show_logo: formData.get('show_logo') === 'on',
         show_cashier: formData.get('show_cashier') === 'on',
+        show_qr_code: formData.get('show_qr_code') === 'on',
         paper_size: formData.get('paper_size') as string
       }
     };
@@ -215,6 +216,15 @@ const Settings = () => {
                         defaultChecked={settings?.receipt_settings?.show_cashier || true}
                       />
                       <Label htmlFor="show_cashier">Tampilkan Nama Kasir</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="show_qr_code"
+                        name="show_qr_code"
+                        defaultChecked={settings?.receipt_settings?.show_qr_code || true}
+                      />
+                      <Label htmlFor="show_qr_code">Tampilkan QR Code (Nomor Transaksi)</Label>
                     </div>
                   </div>
                   <Button type="submit">Simpan Pengaturan Struk</Button>

@@ -95,7 +95,8 @@ const Layout = ({ children }: LayoutProps) => {
           notifications.push({
             type: 'birthday',
             message: `🎂 ${customer.name} has a birthday today!`,
-            priority: 'medium'
+            priority: 'medium',
+            link: '/customers'
           });
         });
       }
@@ -110,7 +111,8 @@ const Layout = ({ children }: LayoutProps) => {
         notifications.push({
           type: 'low_stock',
           message: `📦 ${lowStockProducts.length} products have low stock`,
-          priority: 'high'
+          priority: 'high',
+          link: '/products'
         });
       }
 
@@ -126,7 +128,8 @@ const Layout = ({ children }: LayoutProps) => {
         notifications.push({
           type: 'expiring',
           message: `⚠️ ${expiringProducts.length} products expiring within a month`,
-          priority: 'medium'
+          priority: 'medium',
+          link: '/inventory'
         });
       }
 
@@ -140,7 +143,8 @@ const Layout = ({ children }: LayoutProps) => {
         notifications.push({
           type: 'new_order',
           message: `🛒 ${newOrders.length} new orders pending`,
-          priority: 'high'
+          priority: 'high',
+          link: '/orders'
         });
       }
 
@@ -155,7 +159,8 @@ const Layout = ({ children }: LayoutProps) => {
         notifications.push({
           type: 'overdue_credit',
           message: `💳 ${overdueCredits.length} credit payments overdue`,
-          priority: 'high'
+          priority: 'high',
+          link: '/credit-management'
         });
       }
 
@@ -172,7 +177,8 @@ const Layout = ({ children }: LayoutProps) => {
         notifications.push({
           type: 'new_user',
           message: `👤 ${newUsers.length} new users registered`,
-          priority: 'low'
+          priority: 'low',
+          link: '/user-management'
         });
       }
 
@@ -220,6 +226,12 @@ const Layout = ({ children }: LayoutProps) => {
   const getHighPriorityCount = () => {
     if (!notifications) return 0;
     return notifications.filter(n => n.priority === 'high').length;
+  };
+
+  const handleNotificationClick = (notification: any) => {
+    if (notification.link) {
+      navigate(notification.link);
+    }
   };
 
   const NavigationContent = () => (
@@ -315,7 +327,11 @@ const Layout = ({ children }: LayoutProps) => {
                 <div className="max-h-96 overflow-y-auto">
                   {notifications && notifications.length > 0 ? (
                     notifications.map((notification, index) => (
-                      <DropdownMenuItem key={index} className="p-3 border-b">
+                      <DropdownMenuItem 
+                        key={index} 
+                        className="p-3 border-b cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleNotificationClick(notification)}
+                      >
                         <div className="flex items-start gap-2">
                           <div className={`w-2 h-2 rounded-full mt-2 ${
                             notification.priority === 'high' ? 'bg-red-500' :

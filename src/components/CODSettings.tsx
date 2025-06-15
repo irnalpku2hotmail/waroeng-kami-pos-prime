@@ -29,7 +29,7 @@ const CODSettings = () => {
         .eq('key', 'cod_settings')
         .single();
       if (error) {
-        // If no settings exist, return default
+        console.log('No COD settings found, using defaults');
         return settings;
       }
       return data.value;
@@ -48,12 +48,16 @@ const CODSettings = () => {
         .from('settings')
         .upsert({
           key: 'cod_settings',
-          value: newSettings
+          value: newSettings,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'key'
         });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cod-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
       toast({
         title: 'Berhasil',
         description: 'Pengaturan COD berhasil disimpan'
