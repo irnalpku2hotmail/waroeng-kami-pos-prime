@@ -122,26 +122,13 @@ const Dashboard = () => {
     }
   });
 
-  // Today's Orders untuk aktivitas, masih pakai orders table (COD)
-  const { data: todaysOrders, isLoading: isLoadingTodaysOrders } = useQuery({
-    queryKey: ['todays-orders'],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, order_number, customer_name, total_amount, status')
-        .eq('order_date', today)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Modify today's orders and sales for POS and only COD with delivered status
+  const today = new Date().toISOString().split('T')[0];
 
-  // Today's Sales/Transactions for POS
+  // POS: all transactions today
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('transactions')
         .select('id, transaction_number, total_amount, customer_id, created_at')
@@ -152,21 +139,21 @@ const Dashboard = () => {
     }
   });
 
-  // Today's Sales/Transactions for COD (orders)
+  // COD: orders - only delivered, today
   const { data: codSales } = useQuery({
     queryKey: ['cod-daily-sales'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, customer_name, created_at')
-        .eq('order_date', today);
+        .select('id, order_number, total_amount, customer_name, created_at, status')
+        .eq('order_date', today)
+        .eq('status', 'delivered');
       if (error) throw error;
       return data;
     }
   });
 
-  // Combine POS and COD for activity table
+  // Combine for activity table and calculations
   const todaySalesTable = [
     ...(posSales?.map((trx) => ({
       id: trx.id,
@@ -186,56 +173,12 @@ const Dashboard = () => {
     })) ?? []),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // For line chart: get last 7 days POS and COD sales
-  const { data: posVsCod7Days } = useQuery({
-    queryKey: ['pos-vs-cod-7days'],
-    queryFn: async () => {
-      const days = Array.from({ length: 7 }).map((_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (6 - i));
-        return date.toISOString().split('T')[0];
-      });
-
-      // POS per day
-      const { data: posRaw, error: e1 } = await supabase
-        .from('transactions')
-        .select('created_at, total_amount')
-        .gte('created_at', days[0] + 'T00:00:00')
-        .lte('created_at', days[6] + 'T23:59:59');
-
-      // COD per day
-      const { data: codRaw, error: e2 } = await supabase
-        .from('orders')
-        .select('order_date, total_amount')
-        .gte('order_date', days[0])
-        .lte('order_date', days[6]);
-
-      if (e1) throw e1;
-      if (e2) throw e2;
-
-      const posDay = Object.fromEntries(days.map(d=>[d,0]));
-      for(const trx of posRaw??[]) {
-        const d = trx.created_at.split('T')[0];
-        if (posDay[d]!==undefined) posDay[d] += trx.total_amount ?? 0;
-      }
-      const codDay = Object.fromEntries(days.map(d=>[d,0]));
-      for(const o of codRaw??[]) {
-        const d = o.order_date.split('T')[0];
-        if (codDay[d]!==undefined) codDay[d] += o.total_amount ?? 0;
-      }
-      return days.map(d => ({
-        date: d,
-        POS: posDay[d] || 0,
-        COD: codDay[d] || 0,
-      }));
-    }
-  });
-
+  // Summary cards: calculate stats
   const totalProducts = products?.length || 0;
   const lowStockProducts = lowStock?.length || 0;
   const totalCustomers = customers?.length || 0;
-  const todaySales = posSales?.reduce((sum, trx) => sum + (trx.total_amount || 0), 0) || 0;
-  const todayTransactions = todaysOrders?.length || 0;
+  const todaySales = todaySalesTable.reduce((sum, trx) => sum + (trx.total || 0), 0);
+  const todayTransactions = todaySalesTable.length;
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
   const codIncome = codRevenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
@@ -260,147 +203,63 @@ const Dashboard = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Dashboard</h1>
-        </div>
+        <h1 className="text-2xl lg:text-3xl font-bold text-blue-800 mb-2">Dashboard</h1>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Produk</CardTitle>
+        {/* Cleaner, smaller summary card style */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Total Produk</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {totalProducts}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {lowStockProducts} produk stok rendah
-              </p>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-blue-600">{totalProducts}</div>
+              <p className="text-[10px] text-muted-foreground">{lowStockProducts} produk stok rendah</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pelanggan</CardTitle>
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Total Pelanggan</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {totalCustomers}
-              </div>
-              <p className="text-xs text-muted-foreground">Pelanggan terdaftar</p>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-green-600">{totalCustomers}</div>
+              <p className="text-[10px] text-muted-foreground">Pelanggan terdaftar</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Penjualan Hari Ini (POS)</CardTitle>
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Penjualan Hari Ini</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-purple-600">
                 Rp {todaySales?.toLocaleString('id-ID') || 0}
               </div>
-              <p className="text-xs text-muted-foreground">Dari {todayTransactions} transaksi</p>
+              <p className="text-[10px] text-muted-foreground">Dari {todayTransactions} transaksi</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pengeluaran Bulanan</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Pendapatan COD</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                Rp {monthlyExpenses?.toLocaleString('id-ID') || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">Total bulan ini</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Monthly COD Revenue */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-500" />
-                Pendapatan COD
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600 mb-2">
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-green-600">
                 Rp {codIncome?.toLocaleString('id-ID') || 0}
               </div>
-              <p className="text-sm text-gray-600">COD delivered bulan ini</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                Peringatan Stok Rendah
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600 mb-2">
-                {lowStockProducts}
-              </div>
-              <p className="text-sm text-gray-600">Produk perlu diisi ulang</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5 text-blue-500" />
-                Pesanan Tertunda
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600 mb-2">
-                {pendingOrders}
-              </div>
-              <p className="text-sm text-gray-600">Pesanan menunggu diproses</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wifi className="h-5 w-5 text-teal-500" />
-                Pengguna Online
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-teal-600 mb-2">
-                {onlineUsers}
-              </div>
-              <p className="text-sm text-gray-600">Pengguna aktif saat ini</p>
+              <p className="text-[10px] text-muted-foreground">COD delivered bulan ini</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Garfik POS vs COD */}
-        <div className="bg-white rounded-xl shadow p-4">
-          <h2 className="font-semibold mb-2 text-blue-900">Tren Penjualan POS vs COD (7 Hari Terakhir)</h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={posVsCod7Days ?? []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis tickFormatter={v=>`Rp ${Number(v).toLocaleString('id-ID')}`} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="POS" stroke="#2563eb" name="POS" />
-                <Line type="monotone" dataKey="COD" stroke="#16a34a" name="COD" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        {/* Remove Garfik POS vs COD here! */}
 
-        {/* Today's Sales Activity: Now Combined POS + COD */}
-        <div className="grid grid-cols-1 gap-6">
+        {/* Today's Sales Activity, show POS vs COD */}
+        <div className="grid grid-cols-1 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <History className="h-5 w-5 text-blue-500" />
                 Transaksi Penjualan Hari Ini (POS & COD)
               </CardTitle>
@@ -409,31 +268,31 @@ const Dashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>No. Transaksi</TableHead>
-                    <TableHead>Pelanggan</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-xs">No. Transaksi</TableHead>
+                    <TableHead className="text-xs">Pelanggan</TableHead>
+                    <TableHead className="text-xs">Tipe</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {todaySalesTable.length > 0 ? (
                     todaySalesTable.map(order => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.number}</TableCell>
-                        <TableCell>{order.name}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium text-xs">{order.number}</TableCell>
+                        <TableCell className="text-xs">{order.name}</TableCell>
+                        <TableCell className="text-xs">
                           <Badge variant={order.status === "POS" ? "secondary" : "default"}>
                             {order.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right text-xs">
                           Rp {order.total?.toLocaleString('id-ID') || 0}
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
+                      <TableCell colSpan={4} className="h-16 text-center text-xs">
                         Tidak ada transaksi hari ini.
                       </TableCell>
                     </TableRow>

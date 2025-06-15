@@ -6,22 +6,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from 'date-fns';
 
 const POSSalesReports = () => {
-  // Remove timeFilter and dateRange:
-  // const [timeFilter, setTimeFilter] = useState('daily');
-  // const [dateRange, setDateRange] = useState('30');
+  // Add period filter (default: harian)
+  const [period, setPeriod] = useState<'harian' | 'mingguan' | 'bulanan' | 'tahunan' | 'range'>('harian');
+  const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
-  // Only use all-time data
+  // Calculate date filter
+  const today = new Date();
+  let from = '', to = '';
+  if (period === 'harian') {
+    from = to = format(today, 'yyyy-MM-dd');
+  } else if (period === 'mingguan') {
+    from = format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    to = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  } else if (period === 'bulanan') {
+    from = format(startOfMonth(today), 'yyyy-MM-dd');
+    to = format(endOfMonth(today), 'yyyy-MM-dd');
+  } else if (period === 'tahunan') {
+    from = format(startOfYear(today), 'yyyy-MM-dd');
+    to = format(endOfYear(today), 'yyyy-MM-dd');
+  } else if (period === 'range' && dateRange.from && dateRange.to) {
+    from = dateRange.from;
+    to = dateRange.to;
+  }
 
   // Sales by time period (transactions)
   const { data: salesByTime, isLoading: isLoadingSalesByTime } = useQuery({
-    queryKey: ['pos-sales-by-time'],
+    queryKey: ['pos-sales-by-time', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('created_at, total_amount');
-
+      let q = supabase.from('transactions').select('created_at, total_amount');
+      if (from && to) {
+        q = q.gte('created_at', from + 'T00:00:00').lte('created_at', to + 'T23:59:59');
+      }
+      const { data, error } = await q;
       if (error) throw error;
 
       const groupedData = data.reduce((acc, trx) => {

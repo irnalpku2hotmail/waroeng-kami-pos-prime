@@ -6,16 +6,45 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from 'date-fns';
 
 const SalesReports = () => {
+  // Add period filter
+  const [period, setPeriod] = useState<'harian' | 'mingguan' | 'bulanan' | 'tahunan' | 'range'>('harian');
+  const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
+
+  const today = new Date();
+  let from = '', to = '';
+  if (period === 'harian') {
+    from = to = format(today, 'yyyy-MM-dd');
+  } else if (period === 'mingguan') {
+    from = format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    to = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  } else if (period === 'bulanan') {
+    from = format(startOfMonth(today), 'yyyy-MM-dd');
+    to = format(endOfMonth(today), 'yyyy-MM-dd');
+  } else if (period === 'tahunan') {
+    from = format(startOfYear(today), 'yyyy-MM-dd');
+    to = format(endOfYear(today), 'yyyy-MM-dd');
+  } else if (period === 'range' && dateRange.from && dateRange.to) {
+    from = dateRange.from;
+    to = dateRange.to;
+  }
+
   // All-time orders
   const { data: salesByTime, isLoading: isLoadingSalesByTime } = useQuery({
-    queryKey: ['sales-by-time'],
+    queryKey: ['sales-by-time', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select('order_date, total_amount, created_at')
         .order('order_date', { ascending: true });
+
+      if (from && to) {
+        query = query.gte('order_date', from).lte('order_date', to);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -42,15 +71,21 @@ const SalesReports = () => {
 
   // Sales by product
   const { data: salesByProduct, isLoading: isLoadingSalesByProduct } = useQuery({
-    queryKey: ['sales-by-product'],
+    queryKey: ['sales-by-product', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('order_items')
         .select(`
           quantity,
           total_price,
           products(name)
         `);
+
+      if (from && to) {
+        query = query.gte('created_at', from).lte('created_at', to); // Assuming order_items has a created_at column
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -74,14 +109,20 @@ const SalesReports = () => {
 
   // Sales by category
   const { data: salesByCategory, isLoading: isLoadingSalesByCategory } = useQuery({
-    queryKey: ['sales-by-category'],
+    queryKey: ['sales-by-category', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('order_items')
         .select(`
           total_price,
           products(categories(name))
         `);
+
+      if (from && to) {
+        query = query.gte('created_at', from).lte('created_at', to); // Assuming order_items has a created_at column
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -102,11 +143,17 @@ const SalesReports = () => {
 
   // Sales by payment method
   const { data: salesByPayment, isLoading: isLoadingSalesByPayment } = useQuery({
-    queryKey: ['sales-by-payment'],
+    queryKey: ['sales-by-payment', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select('payment_method, total_amount');
+
+      if (from && to) {
+        query = query.gte('order_date', from).lte('order_date', to);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -126,11 +173,17 @@ const SalesReports = () => {
 
   // Sales by hour
   const { data: salesByHour, isLoading: isLoadingSalesByHour } = useQuery({
-    queryKey: ['sales-by-hour'],
+    queryKey: ['sales-by-hour', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select('created_at, total_amount');
+
+      if (from && to) {
+        query = query.gte('created_at', from).lte('created_at', to);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -154,6 +207,43 @@ const SalesReports = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex gap-4 items-center mb-2">
+        <Select value={period} onValueChange={(val) => setPeriod(val as any)}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Periode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="harian">Harian</SelectItem>
+            <SelectItem value="mingguan">Mingguan</SelectItem>
+            <SelectItem value="bulanan">Bulanan</SelectItem>
+            <SelectItem value="tahunan">Tahunan</SelectItem>
+            <SelectItem value="range">Custom Range</SelectItem>
+          </SelectContent>
+        </Select>
+        {period === 'range' && (
+          <>
+            <input
+              type="date"
+              className="border p-1 rounded text-xs"
+              value={dateRange.from}
+              onChange={e => setDateRange(r => ({
+                from: e.target.value,
+                to: r.to,
+              }))}
+            />
+            <span>s/d</span>
+            <input
+              type="date"
+              className="border p-1 rounded text-xs"
+              value={dateRange.to}
+              onChange={e => setDateRange(r => ({
+                from: r.from,
+                to: e.target.value,
+              }))}
+            />
+          </>
+        )}
+      </div>
       {/* Sales Trend Chart */}
       <Card>
         <CardHeader>
