@@ -12,8 +12,8 @@ export const useUnitConversions = (productId?: string) => {
         .from('unit_conversions')
         .select(`
           *,
-          from_unit:from_unit_id(id, name, abbreviation),
-          to_unit:to_unit_id(id, name, abbreviation)
+          from_unit:units!from_unit_id(id, name, abbreviation),
+          to_unit:units!to_unit_id(id, name, abbreviation)
         `)
         .eq('product_id', productId);
       
