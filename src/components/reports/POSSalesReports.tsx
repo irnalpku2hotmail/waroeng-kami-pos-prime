@@ -67,16 +67,19 @@ const POSSalesReports = () => {
 
   // Sales by product
   const { data: salesByProduct, isLoading: isLoadingSalesByProduct } = useQuery({
-    queryKey: ['pos-sales-by-product'],
+    queryKey: ['pos-sales-by-product', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('transaction_items')
         .select(`
           quantity,
           total_price,
           products(name)
         `);
-
+      if (from && to) {
+        q = q.gte('created_at', from + 'T00:00:00').lte('created_at', to + 'T23:59:59');
+      }
+      const { data, error } = await q;
       if (error) throw error;
 
       const productSales = data.reduce((acc, item) => {
@@ -99,15 +102,18 @@ const POSSalesReports = () => {
 
   // Sales by category
   const { data: salesByCategory, isLoading: isLoadingSalesByCategory } = useQuery({
-    queryKey: ['pos-sales-by-category'],
+    queryKey: ['pos-sales-by-category', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('transaction_items')
         .select(`
           total_price,
           products(categories(name))
         `);
-
+      if (from && to) {
+        q = q.gte('created_at', from + 'T00:00:00').lte('created_at', to + 'T23:59:59');
+      }
+      const { data, error } = await q;
       if (error) throw error;
 
       const categorySales = data.reduce((acc, item) => {
@@ -127,13 +133,16 @@ const POSSalesReports = () => {
 
   // Sales by cashier
   const { data: salesByCashier, isLoading: isLoadingSalesByCashier } = useQuery({
-    queryKey: ['pos-sales-by-cashier'],
+    queryKey: ['pos-sales-by-cashier', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('transactions')
-        .select('cashier_id, total_amount')
+        .select('cashier_id, total_amount, created_at')
         .not('cashier_id', 'is', null);
-
+      if (from && to) {
+        q = q.gte('created_at', from + 'T00:00:00').lte('created_at', to + 'T23:59:59');
+      }
+      const { data, error } = await q;
       if (error) throw error;
 
       // Group by cashier_id. For demo, show the id, ideally join profiles for full name.
@@ -153,12 +162,15 @@ const POSSalesReports = () => {
 
   // Sales by payment method
   const { data: salesByPayment, isLoading: isLoadingSalesByPayment } = useQuery({
-    queryKey: ['pos-sales-by-payment'],
+    queryKey: ['pos-sales-by-payment', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('transactions')
-        .select('payment_type, total_amount');
-
+        .select('payment_type, total_amount, created_at');
+      if (from && to) {
+        q = q.gte('created_at', from + 'T00:00:00').lte('created_at', to + 'T23:59:59');
+      }
+      const { data, error } = await q;
       if (error) throw error;
 
       const paymentSales = data.reduce((acc, trx) => {
@@ -177,12 +189,15 @@ const POSSalesReports = () => {
 
   // Sales by hour
   const { data: salesByHour, isLoading: isLoadingSalesByHour } = useQuery({
-    queryKey: ['pos-sales-by-hour'],
+    queryKey: ['pos-sales-by-hour', period, dateRange],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('transactions')
         .select('created_at, total_amount');
-
+      if (from && to) {
+        q = q.gte('created_at', from + 'T00:00:00').lte('created_at', to + 'T23:59:59');
+      }
+      const { data, error } = await q;
       if (error) throw error;
 
       const hourSales = data.reduce((acc, trx) => {
@@ -205,7 +220,44 @@ const POSSalesReports = () => {
 
   return (
     <div className="space-y-6">
-      {/* Remove Controls */}
+      {/* Filter Periode */}
+      <div className="flex gap-4 items-center mb-2">
+        <Select value={period} onValueChange={val => setPeriod(val as any)}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Periode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="harian">Harian</SelectItem>
+            <SelectItem value="mingguan">Mingguan</SelectItem>
+            <SelectItem value="bulanan">Bulanan</SelectItem>
+            <SelectItem value="tahunan">Tahunan</SelectItem>
+            <SelectItem value="range">Custom Range</SelectItem>
+          </SelectContent>
+        </Select>
+        {period === 'range' && (
+          <>
+            <input
+              type="date"
+              className="border p-1 rounded text-xs"
+              value={dateRange.from}
+              onChange={e => setDateRange(r => ({
+                from: e.target.value,
+                to: r.to,
+              }))}
+            />
+            <span>s/d</span>
+            <input
+              type="date"
+              className="border p-1 rounded text-xs"
+              value={dateRange.to}
+              onChange={e => setDateRange(r => ({
+                from: r.from,
+                to: e.target.value,
+              }))}
+            />
+          </>
+        )}
+      </div>
       {/* Trend chart */}
       <Card>
         <CardHeader>

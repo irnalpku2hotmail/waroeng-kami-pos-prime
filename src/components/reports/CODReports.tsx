@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,8 +5,44 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from 'react';
 
 const CODReports = () => {
+  // Perbandingan statistik POS vs COD: total POS & COD bulan berjalan
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  // POS bulan berjalan
+  const { data: posMonthStats, isLoading: lPosMonth } = useQuery({
+    queryKey: ['cod-pos-monthly-pos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('total_amount')
+        .gte('created_at', firstDayOfMonth + 'T00:00:00')
+        .lte('created_at', lastDayOfMonth + 'T23:59:59');
+      if (error) throw error;
+      return data?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
+    }
+  });
+
+  // COD delivered bulan berjalan
+  const { data: codMonthStats, isLoading: lCodMonth } = useQuery({
+    queryKey: ['cod-pos-monthly-cod'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('total_amount, status, order_date')
+        .eq('status', 'delivered')
+        .eq('payment_method', 'cod')
+        .gte('order_date', firstDayOfMonth + 'T00:00:00')
+        .lte('order_date', lastDayOfMonth + 'T23:59:59');
+      if (error) throw error;
+      return data?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
+    }
+  });
+
   // COD orders summary
   const { data: codSummary, isLoading: isLoadingCodSummary } = useQuery({
     queryKey: ['cod-summary'],
@@ -111,6 +146,38 @@ const CODReports = () => {
 
   return (
     <div className="space-y-6">
+      {/* Statistik POS vs COD */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs">Penjualan POS Bulan Ini</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold text-blue-600">
+              {lPosMonth
+                ? <Skeleton className="h-6 w-20" />
+                : <>Rp {Number(posMonthStats).toLocaleString('id-ID')}</>
+              }
+            </div>
+            <div className="text-[10px] mt-1 text-muted-foreground">Total selama bulan berjalan</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs">Pendapatan COD Bulan Ini</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold text-green-600">
+              {lCodMonth
+                ? <Skeleton className="h-6 w-20" />
+                : <>Rp {Number(codMonthStats).toLocaleString('id-ID')}</>
+              }
+            </div>
+            <div className="text-[10px] mt-1 text-muted-foreground">Order selesai bulan berjalan</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* COD Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {isLoadingCodSummary ? (
