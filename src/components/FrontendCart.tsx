@@ -392,7 +392,7 @@ const FrontendCart = () => {
           <DialogTrigger asChild>
             <Button className="w-full" size="lg">
               <Truck className="h-4 w-4 mr-2" />
-              Checkout COD
+              Pesan Sekarang
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
