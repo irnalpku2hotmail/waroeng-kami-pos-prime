@@ -12,7 +12,6 @@ import { Image, Upload, Settings, Trash } from 'lucide-react';
 interface FrontendSettings {
   header: string;
   banner_urls: string[];
-  // logo_url hanya dipakai agar tetap kompatibel dengan setting lama
   logo_url?: string;
 }
 
@@ -24,12 +23,15 @@ const initialSettings: FrontendSettings = {
 
 const bucketName = 'frontend-assets';
 
-function isFrontendSettings(val: any): val is FrontendSettings {
+// Better type guard
+function isFrontendSettings(val: unknown): val is FrontendSettings {
   return (
-    val &&
+    !!val &&
     typeof val === 'object' &&
-    typeof val.header === 'string' &&
-    Array.isArray(val.banner_urls)
+    !Array.isArray(val) &&
+    'header' in val &&
+    'banner_urls' in val &&
+    Array.isArray((val as any).banner_urls)
   );
 }
 
@@ -40,7 +42,7 @@ const FrontendSettings = () => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Query for current settings (now expecting banner_urls)
+  // Query for current settings (expecting banner_urls array)
   const { data: settings, isLoading } = useQuery({
     queryKey: ['frontend-settings'],
     queryFn: async () => {
@@ -50,21 +52,24 @@ const FrontendSettings = () => {
         .eq('key', 'frontend_settings')
         .maybeSingle();
       if (error) throw error;
-      if (isFrontendSettings(data?.value)) return data.value;
-      // migrate old data if possible
-      if (
-        typeof data?.value === 'object' &&
-        Array.isArray(data?.value?.banner_urls)
-      ) {
-        return data.value;
+
+      // Handle empty/null/malformed values
+      const value = data?.value;
+      if (isFrontendSettings(value)) return value;
+
+      // fallback migration from older shapes
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const bannerUrl = (value as any).banner_url;
+        return {
+          header: (value as any).header || '',
+          // if old data: string banner_url
+          banner_urls: bannerUrl ? [bannerUrl] : [],
+          logo_url: (value as any).logo_url || '',
+        };
       }
-      // fallback legacy
-      const legacy = data?.value || {};
-      return {
-        header: legacy.header || '',
-        banner_urls: legacy.banner_url ? [legacy.banner_url] : [],
-        logo_url: legacy.logo_url || '',
-      };
+
+      // fall back to empty settings if missing or wrong type
+      return initialSettings;
     },
   });
 
@@ -127,7 +132,7 @@ const FrontendSettings = () => {
       const newSettings: FrontendSettings = {
         header: settings?.header || '',
         banner_urls: [
-          ...(settings?.banner_urls || []),
+          ...(settings?.banner_urls ?? []),
           ...newUrls,
         ],
         logo_url: settings?.logo_url || '',
@@ -160,6 +165,7 @@ const FrontendSettings = () => {
         });
       if (error) throw error;
       const { data } = supabase.storage.from(bucketName).getPublicUrl(filename);
+
       // update favicon on index.html
       const link = document.querySelector("link[rel~='icon']");
       if (link) {
@@ -174,9 +180,10 @@ const FrontendSettings = () => {
     },
     onSuccess: (logoUrl: string) => {
       const newSettings: FrontendSettings = {
-        ...(settings || initialSettings),
+        ...(settings ?? initialSettings),
         logo_url: logoUrl,
-        banner_urls: settings?.banner_urls || [],
+        banner_urls: settings?.banner_urls ?? [],
+        header: settings?.header ?? '',
       };
       updateSettings.mutate(newSettings);
       setLogoFile(null);
@@ -196,7 +203,7 @@ const FrontendSettings = () => {
     },
   });
 
-  // File handler banners (support multi)
+  // File handler banners (multi-image)
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -280,22 +287,25 @@ const FrontendSettings = () => {
     const newSettings: FrontendSettings = {
       ...(settings as FrontendSettings),
       banner_urls: newBanners,
+      header: settings.header ?? "",
+      logo_url: settings.logo_url ?? "",
     };
     updateSettings.mutate(newSettings);
   };
 
-  // Save settings (now only header)
+  // Save settings (header, banners, logo)
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const fd = new FormData(form);
     const newSettings: FrontendSettings = {
       header: fd.get('header')?.toString() || '',
-      banner_urls: settings?.banner_urls || [],
+      banner_urls: settings?.banner_urls ?? [],
       logo_url: settings?.logo_url || '',
     };
     updateSettings.mutate(newSettings);
-    // upload files if ada
+
+    // upload files if ada (logo or new banners)
     if (logoFile) uploadLogo.mutate(logoFile);
     if (bannerFiles.length > 0) uploadBannerFiles.mutate(bannerFiles);
   };
@@ -316,6 +326,9 @@ const FrontendSettings = () => {
     );
   }
 
+  // Make sure to only access properties if settings is FrontendSettings
+  const safeSettings = isFrontendSettings(settings) ? settings : initialSettings;
+
   return (
     <Card>
       <CardHeader>
@@ -331,9 +344,9 @@ const FrontendSettings = () => {
             <Label>Logo & Favicon</Label>
             <div className="border border-dashed rounded-md p-3 flex flex-col md:flex-row gap-5">
               <div className="w-32 h-32 relative flex items-center justify-center">
-                {logoPreview || settings?.logo_url ? (
+                {logoPreview || safeSettings.logo_url ? (
                   <img
-                    src={logoPreview || settings?.logo_url}
+                    src={logoPreview || safeSettings.logo_url}
                     alt="Logo"
                     className="object-contain h-full w-full"
                   />
@@ -376,7 +389,7 @@ const FrontendSettings = () => {
             <Label>Banners/Slider (bisa lebih dari satu gambar)</Label>
             <div className="border border-dashed rounded-md p-3">
               <div className="flex flex-wrap gap-4 mb-4">
-                {settings?.banner_urls?.map((url, idx) => (
+                {safeSettings.banner_urls.length > 0 ? safeSettings.banner_urls.map((url, idx) => (
                   <div className="relative w-40 h-24" key={url + idx}>
                     <img
                       src={url}
@@ -394,8 +407,7 @@ const FrontendSettings = () => {
                       <Trash className="w-4 h-4" />
                     </Button>
                   </div>
-                ))}
-                {settings?.banner_urls?.length === 0 && (
+                )) : (
                   <div className="bg-gray-100 border rounded w-40 h-24 flex justify-center items-center text-sm text-gray-400">
                     <Image className="w-8 h-8" /> Tidak ada Banner
                   </div>
@@ -446,7 +458,7 @@ const FrontendSettings = () => {
             <Input
               id="header"
               name="header"
-              defaultValue={settings?.header || ''}
+              defaultValue={safeSettings.header}
               placeholder="Teks header atau html"
             />
           </div>
@@ -472,4 +484,3 @@ const FrontendSettings = () => {
 };
 
 export default FrontendSettings;
-
