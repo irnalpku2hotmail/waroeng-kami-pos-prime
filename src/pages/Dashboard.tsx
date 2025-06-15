@@ -125,7 +125,7 @@ const Dashboard = () => {
   // Modify today's orders and sales for POS and only COD with delivered status
   const today = new Date().toISOString().split('T')[0];
 
-  // POS: all transactions today
+  // Transaksi POS hari ini
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales'],
     queryFn: async () => {
@@ -139,21 +139,22 @@ const Dashboard = () => {
     }
   });
 
-  // COD: orders - only delivered, today
+  // Transaksi COD hari ini (orders dengan status delivered & tanggal hari ini)
   const { data: codSales } = useQuery({
     queryKey: ['cod-daily-sales'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, customer_name, created_at, status')
-        .eq('order_date', today)
-        .eq('status', 'delivered');
+        .select('id, order_number, total_amount, customer_name, created_at, status, order_date')
+        .eq('status', 'delivered')
+        .gte('order_date', today + 'T00:00:00')
+        .lte('order_date', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
   });
 
-  // Combine for activity table and calculations
+  // --- Gabungkan semua transaksi hari ini ---
   const todaySalesTable = [
     ...(posSales?.map((trx) => ({
       id: trx.id,
@@ -166,19 +167,21 @@ const Dashboard = () => {
     ...(codSales?.map((ord) => ({
       id: ord.id,
       number: ord.order_number,
-      name: ord.customer_name,
+      name: ord.customer_name ?? '-',
       total: ord.total_amount,
       status: 'COD',
       created_at: ord.created_at,
     })) ?? []),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  // --- Kalkulasi summary hari ini ---
+  const todaySales = todaySalesTable.reduce((sum, trx) => sum + (Number(trx.total) || 0), 0);
+  const todayTransactions = todaySalesTable.length;
+
   // Summary cards: calculate stats
   const totalProducts = products?.length || 0;
   const lowStockProducts = lowStock?.length || 0;
   const totalCustomers = customers?.length || 0;
-  const todaySales = todaySalesTable.reduce((sum, trx) => sum + (trx.total || 0), 0);
-  const todayTransactions = todaySalesTable.length;
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
   const codIncome = codRevenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
@@ -234,7 +237,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="pb-1">
               <div className="text-lg font-bold text-purple-600">
-                Rp {todaySales?.toLocaleString('id-ID') || 0}
+                Rp {todaySales?.toLocaleString('id-ID') || '0'}
               </div>
               <p className="text-[10px] text-muted-foreground">Dari {todayTransactions} transaksi</p>
             </CardContent>
@@ -286,7 +289,7 @@ const Dashboard = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right text-xs">
-                          Rp {order.total?.toLocaleString('id-ID') || 0}
+                          Rp {Number(order.total)?.toLocaleString('id-ID') || 0}
                         </TableCell>
                       </TableRow>
                     ))
