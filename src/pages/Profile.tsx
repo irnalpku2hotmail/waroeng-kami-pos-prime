@@ -20,7 +20,8 @@ const Profile = () => {
   const [profileData, setProfileData] = useState({
     full_name: profile?.full_name || '',
     phone: profile?.phone || '',
-    address: profile?.address || ''
+    address: profile?.address || '',
+    date_of_birth: profile?.date_of_birth || ''
   });
   const [passwordData, setPasswordData] = useState({
     current_password: '',
@@ -192,6 +193,14 @@ const Profile = () => {
                     <span className="text-sm">{profile.address}</span>
                   </div>
                 )}
+                {profile?.date_of_birth && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm">
+                      Born: {new Date(profile.date_of_birth).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-3">
                   <Calendar className="h-4 w-4 text-gray-400" />
                   <span className="text-sm">
@@ -239,6 +248,25 @@ const Profile = () => {
                     />
                   </div>
                   <div>
+                    <Label>Date of Birth</Label>
+                    <Input
+                      type="date"
+                      value={isEditing ? profileData.date_of_birth : profile?.date_of_birth || ''}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label>Address</Label>
+                    <Textarea
+                      value={isEditing ? profileData.address : profile?.address || ''}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                  <div>
                     <Label>Role</Label>
                     <Input
                       value={profile?.role || ''}
@@ -246,14 +274,6 @@ const Profile = () => {
                       className="bg-gray-50"
                     />
                   </div>
-                </div>
-                <div>
-                  <Label>Address</Label>
-                  <Textarea
-                    value={isEditing ? profileData.address : profile?.address || ''}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
-                    disabled={!isEditing}
-                  />
                 </div>
                 
                 {isEditing && (
