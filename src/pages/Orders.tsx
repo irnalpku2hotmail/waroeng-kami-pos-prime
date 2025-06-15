@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,43 +8,56 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Search, Package, Eye, Trash2 } from 'lucide-react';
+import { Eye, Package, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import OrderDetailsModal from '@/components/OrderDetailsModal';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const Orders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['orders', searchTerm, statusFilter],
+  const { data: ordersData, isLoading } = useQuery({
+    queryKey: ['orders', searchTerm, statusFilter, currentPage],
     queryFn: async () => {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
       let query = supabase
         .from('orders')
         .select(`
           *,
           order_items(
             *,
-            products(name, image_url, current_stock, min_stock)
+            products(name)
           )
-        `);
+        `, { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
       }
       
-      if (statusFilter && statusFilter !== 'all') {
+      if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
+        
       if (error) throw error;
-      return data;
+      return { data, count };
     }
   });
+
+  const orders = ordersData?.data || [];
+  const ordersCount = ordersData?.count || 0;
+  const totalPages = Math.ceil(ordersCount / ITEMS_PER_PAGE);
 
   const updateOrderStatus = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
@@ -117,7 +129,6 @@ const Orders = () => {
 
   const handleShowDetails = (order: any) => {
     setSelectedOrder(order);
-    setShowDetailsModal(true);
   };
 
   const totalOrders = orders.length;
@@ -180,17 +191,19 @@ const Orders = () => {
 
         {/* Filters */}
         <div className="flex gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Cari nomor pesanan atau nama pelanggan..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Input
+            placeholder="Cari nomor order atau nama customer..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="max-w-sm"
+          />
+          <Select value={statusFilter} onValueChange={(value) => {
+            setStatusFilter(value);
+            setCurrentPage(1);
+          }}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Filter Status" />
             </SelectTrigger>
@@ -207,108 +220,119 @@ const Orders = () => {
         </div>
 
         {/* Orders Table */}
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-hidden">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
           ) : orders.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">Belum ada pesanan</p>
+              <p className="text-gray-500">Belum ada order</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No. Pesanan</TableHead>
-                  <TableHead>Pelanggan</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Metode Bayar</TableHead>
-                  <TableHead>Stok Produk</TableHead>
-                  <TableHead>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.order_number}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{order.customer_name}</div>
-                        {order.customer_phone && (
-                          <div className="text-sm text-gray-500">{order.customer_phone}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(order.order_date).toLocaleDateString('id-ID')}
-                    </TableCell>
-                    <TableCell>Rp {Number(order.total_amount).toLocaleString('id-ID')}</TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell className="uppercase">{order.payment_method}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {order.order_items?.map((item: any) => (
-                          <div key={item.id} className="text-xs">
-                            <span className="font-medium">{item.products?.name}:</span>
-                            <span className={`ml-1 ${getStockStatusColor(item.products?.current_stock || 0, item.products?.min_stock || 0)}`}>
-                              {item.products?.current_stock || 0} stok
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleShowDetails(order)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                          <Select
-                            value={order.status}
-                            onValueChange={(status) => updateOrderStatus.mutate({ orderId: order.id, status })}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Menunggu</SelectItem>
-                              <SelectItem value="confirmed">Konfirmasi</SelectItem>
-                              <SelectItem value="preparing">Siapkan</SelectItem>
-                              <SelectItem value="shipping">Kirim</SelectItem>
-                              <SelectItem value="delivered">Selesai</SelectItem>
-                              <SelectItem value="cancelled">Batal</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteOrder.mutate(order.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No. Pesanan</TableHead>
+                    <TableHead>Pelanggan</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Metode Bayar</TableHead>
+                    <TableHead>Stok Produk</TableHead>
+                    <TableHead>Aksi</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{order.customer_name}</div>
+                          {order.customer_phone && (
+                            <div className="text-sm text-gray-500">{order.customer_phone}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(order.order_date).toLocaleDateString('id-ID')}
+                      </TableCell>
+                      <TableCell>Rp {Number(order.total_amount).toLocaleString('id-ID')}</TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell className="uppercase">{order.payment_method}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {order.order_items?.map((item: any) => (
+                            <div key={item.id} className="text-xs">
+                              <span className="font-medium">{item.products?.name}:</span>
+                              <span className={`ml-1 ${getStockStatusColor(item.products?.current_stock || 0, item.products?.min_stock || 0)}`}>
+                                {item.products?.current_stock || 0} stok
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleShowDetails(order)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                            <Select
+                              value={order.status}
+                              onValueChange={(status) => updateOrderStatus.mutate({ orderId: order.id, status })}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Menunggu</SelectItem>
+                                <SelectItem value="confirmed">Konfirmasi</SelectItem>
+                                <SelectItem value="preparing">Siapkan</SelectItem>
+                                <SelectItem value="shipping">Kirim</SelectItem>
+                                <SelectItem value="delivered">Selesai</SelectItem>
+                                <SelectItem value="cancelled">Batal</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteOrder.mutate(order.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <PaginationComponent 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={ITEMS_PER_PAGE}
+                totalItems={ordersCount}
+              />
+            </>
           )}
         </div>
       </div>
 
       {/* Order Details Modal */}
-      <OrderDetailsModal
-        order={selectedOrder}
-        open={showDetailsModal}
-        onOpenChange={setShowDetailsModal}
-      />
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          open={!!selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
     </Layout>
   );
 };

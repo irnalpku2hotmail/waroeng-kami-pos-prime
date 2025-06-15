@@ -4,104 +4,48 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Building2, Eye, Users, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Phone, Mail, User } from 'lucide-react';
 import Layout from '@/components/Layout';
-import SupplierDetails from '@/components/SupplierDetails';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const Suppliers = () => {
   const [open, setOpen] = useState(false);
   const [editSupplier, setEditSupplier] = useState<any>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const [supplierData, setSupplierData] = useState({
-    name: '',
-    contact_person: '',
-    phone: '',
-    email: '',
-    address: ''
-  });
-
-  // Fetch supplier statistics
-  const { data: supplierStats } = useQuery({
-    queryKey: ['supplier-stats'],
+  const { data: suppliersData, isLoading } = useQuery({
+    queryKey: ['suppliers', searchTerm, currentPage],
     queryFn: async () => {
-      const currentMonth = new Date();
-      const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString();
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
       
-      // Total suppliers
-      const { data: totalSuppliers } = await supabase
-        .from('suppliers')
-        .select('id');
-      
-      // Active suppliers this month (suppliers with purchases this month)
-      const { data: activeSuppliersThisMonth } = await supabase
-        .from('purchases')
-        .select('supplier_id')
-        .gte('created_at', firstDayOfMonth);
-      
-      const uniqueActiveSuppliers = new Set(activeSuppliersThisMonth?.map(p => p.supplier_id) || []);
-      
-      return {
-        totalSuppliers: totalSuppliers?.length || 0,
-        activeSuppliersThisMonth: uniqueActiveSuppliers.size
-      };
-    }
-  });
-
-  const { data: suppliers, isLoading } = useQuery({
-    queryKey: ['suppliers', searchTerm],
-    queryFn: async () => {
-      let query = supabase
-        .from('suppliers')
-        .select('*');
+      let query = supabase.from('suppliers').select('*', { count: 'exact' });
       
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.ilike('name', `%${searchTerm}%`);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error, count } = await query
+        .order('name', { ascending: true })
+        .range(from, to);
+        
       if (error) throw error;
-      return data;
+      return { data, count };
     }
   });
 
-  const createSupplier = useMutation({
-    mutationFn: async (data: any) => {
-      if (editSupplier) {
-        const { error } = await supabase
-          .from('suppliers')
-          .update(data)
-          .eq('id', editSupplier.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('suppliers')
-          .insert([data]);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      queryClient.invalidateQueries({ queryKey: ['supplier-stats'] });
-      setOpen(false);
-      resetForm();
-      toast({ 
-        title: 'Berhasil', 
-        description: editSupplier ? 'Supplier berhasil diperbarui' : 'Supplier berhasil dibuat' 
-      });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
+  const suppliers = suppliersData?.data || [];
+  const suppliersCount = suppliersData?.count || 0;
+  const totalPages = Math.ceil(suppliersCount / ITEMS_PER_PAGE);
 
   const deleteSupplier = useMutation({
     mutationFn: async (id: string) => {
@@ -110,7 +54,6 @@ const Suppliers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      queryClient.invalidateQueries({ queryKey: ['supplier-stats'] });
       toast({ title: 'Berhasil', description: 'Supplier berhasil dihapus' });
     },
     onError: (error) => {
@@ -118,115 +61,133 @@ const Suppliers = () => {
     }
   });
 
-  const handleEdit = (supplier: any) => {
-    setEditSupplier(supplier);
-    setSupplierData({
-      name: supplier.name,
-      contact_person: supplier.contact_person || '',
-      phone: supplier.phone || '',
-      email: supplier.email || '',
-      address: supplier.address || ''
-    });
-    setOpen(true);
-  };
+  const createSupplier = useMutation({
+    mutationFn: async (supplier: any) => {
+      const { error } = await supabase.from('suppliers').insert([supplier]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      setOpen(false);
+      toast({ title: 'Berhasil', description: 'Supplier berhasil ditambahkan' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
 
-  const resetForm = () => {
+  const updateSupplier = useMutation({
+    mutationFn: async ({ id, ...supplier }: any) => {
+      const { error } = await supabase.from('suppliers').update(supplier).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      setOpen(false);
+      setEditSupplier(null);
+      toast({ title: 'Berhasil', description: 'Supplier berhasil diupdate' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const handleCloseDialog = () => {
+    setOpen(false);
     setEditSupplier(null);
-    setSupplierData({
-      name: '',
-      contact_person: '',
-      phone: '',
-      email: '',
-      address: ''
-    });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSupplierSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    createSupplier.mutate(supplierData);
-  };
+    const formData = new FormData(e.currentTarget);
+    
+    const supplierData = {
+      name: formData.get('name') as string,
+      contact_person: formData.get('contact_person') as string,
+      phone: formData.get('phone') as string,
+      email: formData.get('email') as string,
+      address: formData.get('address') as string,
+    };
 
-  const openSupplierDetails = (supplier: any) => {
-    setSelectedSupplier(supplier);
-    setShowDetailsDialog(true);
+    if (editSupplier) {
+      updateSupplier.mutate({ id: editSupplier.id, ...supplierData });
+    } else {
+      createSupplier.mutate(supplierData);
+    }
   };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Suppliers</h1>
+          <h1 className="text-3xl font-bold text-blue-800">Manajemen Supplier</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm}>
+              <Button onClick={() => setEditSupplier(null)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Supplier
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editSupplier ? 'Edit Supplier' : 'Tambah Supplier Baru'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSupplierSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nama Supplier *</Label>
                   <Input
                     id="name"
-                    value={supplierData.name}
-                    onChange={(e) => setSupplierData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="PT. Supplier ABC"
+                    name="name"
+                    defaultValue={editSupplier?.name}
+                    placeholder="Contoh: PT. Maju Jaya"
                     required
                   />
                 </div>
-                
                 <div className="space-y-2">
-                  <Label htmlFor="contact_person">Kontak Person</Label>
+                  <Label htmlFor="contact_person">Kontak Person *</Label>
                   <Input
                     id="contact_person"
-                    value={supplierData.contact_person}
-                    onChange={(e) => setSupplierData(prev => ({ ...prev, contact_person: e.target.value }))}
-                    placeholder="John Doe"
+                    name="contact_person"
+                    defaultValue={editSupplier?.contact_person}
+                    placeholder="Contoh: John Doe"
+                    required
                   />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telepon</Label>
-                    <Input
-                      id="phone"
-                      value={supplierData.phone}
-                      onChange={(e) => setSupplierData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="08123456789"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={supplierData.email}
-                      onChange={(e) => setSupplierData(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="supplier@email.com"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telepon *</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    defaultValue={editSupplier?.phone}
+                    placeholder="Contoh: 081234567890"
+                    required
+                  />
                 </div>
-
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    defaultValue={editSupplier?.email}
+                    placeholder="Contoh: john.doe@example.com"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="address">Alamat</Label>
                   <Textarea
                     id="address"
-                    value={supplierData.address}
-                    onChange={(e) => setSupplierData(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="Alamat lengkap supplier"
+                    name="address"
+                    defaultValue={editSupplier?.address}
+                    placeholder="Contoh: Jl. Pahlawan No. 1"
                   />
                 </div>
-
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Batal
                   </Button>
-                  <Button type="submit" disabled={!supplierData.name}>
-                    {editSupplier ? 'Update Supplier' : 'Tambah Supplier'}
+                  <Button type="submit">
+                    {editSupplier ? 'Update' : 'Simpan'}
                   </Button>
                 </div>
               </form>
@@ -234,109 +195,82 @@ const Suppliers = () => {
           </Dialog>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Suppliers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {supplierStats?.totalSuppliers || 0}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Suppliers This Month</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {supplierStats?.activeSuppliersThisMonth || 0}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="flex gap-4">
           <Input
-            placeholder="Cari nama, kontak person, email, atau telepon supplier..."
+            placeholder="Cari supplier..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="max-w-sm"
           />
         </div>
 
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-hidden">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
-          ) : suppliers?.length === 0 ? (
+          ) : suppliers.length === 0 ? (
             <div className="text-center py-8">
               <Building2 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">Belum ada supplier</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama Supplier</TableHead>
-                  <TableHead>Kontak Person</TableHead>
-                  <TableHead>Telepon</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Alamat</TableHead>
-                  <TableHead>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {suppliers?.map((supplier) => (
-                  <TableRow key={supplier.id}>
-                    <TableCell className="font-medium">{supplier.name}</TableCell>
-                    <TableCell>{supplier.contact_person || '-'}</TableCell>
-                    <TableCell>{supplier.phone || '-'}</TableCell>
-                    <TableCell>{supplier.email || '-'}</TableCell>
-                    <TableCell className="max-w-xs truncate">{supplier.address || '-'}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openSupplierDetails(supplier)}
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(supplier)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteSupplier.mutate(supplier.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Supplier</TableHead>
+                    <TableHead>Kontak Person</TableHead>
+                    <TableHead>Telepon</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Alamat</TableHead>
+                    <TableHead>Aksi</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {suppliers.map((supplier) => (
+                    <TableRow key={supplier.id}>
+                      <TableCell className="font-medium">{supplier.name}</TableCell>
+                      <TableCell>{supplier.contact_person}</TableCell>
+                      <TableCell>{supplier.phone}</TableCell>
+                      <TableCell>{supplier.email || '-'}</TableCell>
+                      <TableCell>{supplier.address || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditSupplier(supplier);
+                              setOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteSupplier.mutate(supplier.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <PaginationComponent 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={ITEMS_PER_PAGE}
+                totalItems={suppliersCount}
+              />
+            </>
           )}
         </div>
-
-        {/* Supplier Details Dialog */}
-        <SupplierDetails
-          supplier={selectedSupplier}
-          open={showDetailsDialog}
-          onOpenChange={setShowDetailsDialog}
-        />
       </div>
     </Layout>
   );

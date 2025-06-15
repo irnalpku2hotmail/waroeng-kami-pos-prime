@@ -1,83 +1,57 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users, Eye, Star, CreditCard } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const Customers = () => {
   const [open, setOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<any>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [ratingFilter, setRatingFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  // Get customer rating based on total spent
-  const getCustomerRating = (totalSpent: number) => {
-    if (totalSpent >= 10000000) return 'diamond'; // 10M+
-    if (totalSpent >= 5000000) return 'platinum'; // 5M+
-    if (totalSpent >= 1000000) return 'gold'; // 1M+
-    if (totalSpent >= 500000) return 'silver'; // 500K+
-    return 'bronze'; // Below 500K
-  };
-
-  const getRatingColor = (rating: string) => {
-    switch (rating) {
-      case 'diamond': return 'text-purple-600 bg-purple-100';
-      case 'platinum': return 'text-gray-600 bg-gray-100';
-      case 'gold': return 'text-yellow-600 bg-yellow-100';
-      case 'silver': return 'text-gray-500 bg-gray-50';
-      default: return 'text-orange-600 bg-orange-100';
-    }
-  };
-
-  const { data: customers, isLoading } = useQuery({
-    queryKey: ['customers', searchTerm, ratingFilter],
+  const { data: customersData, isLoading } = useQuery({
+    queryKey: ['customers', searchTerm, currentPage],
     queryFn: async () => {
-      let query = supabase
-        .from('customers')
-        .select('*');
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      let query = supabase.from('customers').select('*', { count: 'exact' });
       
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%`);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
+        
       if (error) throw error;
-      
-      // Filter by rating if specified
-      if (ratingFilter !== 'all') {
-        return data?.filter(customer => getCustomerRating(customer.total_spent || 0) === ratingFilter) || [];
-      }
-      
-      return data;
+      return { data, count };
     }
   });
 
-  // Calculate totals
-  const totalCustomers = customers?.length || 0;
-  const totalPoints = customers?.reduce((sum, customer) => sum + (customer.total_points || 0), 0) || 0;
-  const totalSpent = customers?.reduce((sum, customer) => sum + (customer.total_spent || 0), 0) || 0;
+  const customers = customersData?.data || [];
+  const customersCount = customersData?.count || 0;
+  const totalPages = Math.ceil(customersCount / ITEMS_PER_PAGE);
 
   const createCustomer = useMutation({
     mutationFn: async (customer: any) => {
-      const customerCode = `CUST${Date.now()}`;
-      const { error } = await supabase.from('customers').insert([{
-        ...customer,
-        customer_code: customerCode,
-        qr_code_url: customerCode // Set QR code value to customer code
-      }]);
+      const { error } = await supabase.from('customers').insert([customer]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -120,16 +94,15 @@ const Customers = () => {
     }
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCustomerSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
     const customerData = {
+      customer_code: formData.get('customer_code') as string,
       name: formData.get('name') as string,
-      email: formData.get('email') as string,
       phone: formData.get('phone') as string,
       address: formData.get('address') as string,
-      date_of_birth: formData.get('date_of_birth') as string || null,
     };
 
     if (editCustomer) {
@@ -139,16 +112,11 @@ const Customers = () => {
     }
   };
 
-  const openCustomerDetails = (customer: any) => {
-    setSelectedCustomer(customer);
-    setShowDetailsDialog(true);
-  };
-
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Customer</h1>
+          <h1 className="text-3xl font-bold text-blue-800">Manajemen Customer</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => setEditCustomer(null)}>
@@ -156,29 +124,29 @@ const Customers = () => {
                 Tambah Customer
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editCustomer ? 'Edit Customer' : 'Tambah Customer Baru'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleCustomerSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nama *</Label>
+                  <Label htmlFor="customer_code">Kode Customer *</Label>
                   <Input
-                    id="name"
-                    name="name"
-                    defaultValue={editCustomer?.name}
-                    placeholder="Nama customer"
+                    id="customer_code"
+                    name="customer_code"
+                    defaultValue={editCustomer?.customer_code}
+                    placeholder="Contoh: C001"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="name">Nama Customer *</Label>
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    defaultValue={editCustomer?.email}
-                    placeholder="email@example.com"
+                    id="name"
+                    name="name"
+                    defaultValue={editCustomer?.name}
+                    placeholder="Contoh: John Doe"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -187,7 +155,7 @@ const Customers = () => {
                     id="phone"
                     name="phone"
                     defaultValue={editCustomer?.phone}
-                    placeholder="08123456789"
+                    placeholder="Contoh: 081234567890"
                   />
                 </div>
                 <div className="space-y-2">
@@ -196,16 +164,7 @@ const Customers = () => {
                     id="address"
                     name="address"
                     defaultValue={editCustomer?.address}
-                    placeholder="Alamat lengkap"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date_of_birth">Tanggal Lahir</Label>
-                  <Input
-                    id="date_of_birth"
-                    name="date_of_birth"
-                    type="date"
-                    defaultValue={editCustomer?.date_of_birth}
+                    placeholder="Contoh: Jl. Pahlawan No. 1"
                   />
                 </div>
                 <div className="flex justify-end space-x-2">
@@ -221,117 +180,47 @@ const Customers = () => {
           </Dialog>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCustomers.toLocaleString('id-ID')}</div>
-              <p className="text-xs text-muted-foreground">Registered customers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Points</CardTitle>
-              <Star className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{totalPoints.toLocaleString('id-ID')} pts</div>
-              <p className="text-xs text-muted-foreground">Points across all customers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">Rp {totalSpent.toLocaleString('id-ID')}</div>
-              <p className="text-xs text-muted-foreground">Total customer spending</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex gap-4 flex-wrap">
+        <div className="flex gap-4">
           <Input
-            placeholder="Cari nama, kode, email, atau telepon customer..."
+            placeholder="Cari nama, telepon, atau kode customer..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="max-w-sm"
           />
-          <Select value={ratingFilter} onValueChange={setRatingFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by rating" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Rating</SelectItem>
-              <SelectItem value="diamond">Diamond (10M+)</SelectItem>
-              <SelectItem value="platinum">Platinum (5M+)</SelectItem>
-              <SelectItem value="gold">Gold (1M+)</SelectItem>
-              <SelectItem value="silver">Silver (500K+)</SelectItem>
-              <SelectItem value="bronze">Bronze (&lt;500K)</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-hidden">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
-          ) : customers?.length === 0 ? (
+          ) : customers.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">Belum ada customer</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kode Customer</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Telepon</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Total Points</TableHead>
-                  <TableHead>Total Spent</TableHead>
-                  <TableHead>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {customers?.map((customer) => {
-                  const rating = getCustomerRating(customer.total_spent || 0);
-                  return (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Kode Customer</TableHead>
+                    <TableHead>Nama Customer</TableHead>
+                    <TableHead>Telepon</TableHead>
+                    <TableHead>Alamat</TableHead>
+                    <TableHead>Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customers.map((customer) => (
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.customer_code}</TableCell>
                       <TableCell>{customer.name}</TableCell>
-                      <TableCell>{customer.email || '-'}</TableCell>
                       <TableCell>{customer.phone || '-'}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${getRatingColor(rating)}`}>
-                          <Star className="h-3 w-3 mr-1" />
-                          {rating}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-blue-600 font-medium">{customer.total_points} pts</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-green-600 font-medium">
-                          Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
-                        </span>
-                      </TableCell>
+                      <TableCell>{customer.address || '-'}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openCustomerDetails(customer)}
-                            title="View Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -349,23 +238,43 @@ const Customers = () => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setDetailOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+              <PaginationComponent 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={ITEMS_PER_PAGE}
+                totalItems={customersCount}
+              />
+            </>
           )}
         </div>
-
-        {/* Customer Details Dialog */}
-        <CustomerDetails
-          customer={selectedCustomer}
-          open={showDetailsDialog}
-          onOpenChange={setShowDetailsDialog}
-        />
       </div>
+      {selectedCustomer && (
+        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Detail Customer</DialogTitle>
+            </DialogHeader>
+            <CustomerDetails customer={selectedCustomer} onClose={() => setDetailOpen(false)} />
+          </DialogContent>
+        </Dialog>
+      )}
     </Layout>
   );
 };

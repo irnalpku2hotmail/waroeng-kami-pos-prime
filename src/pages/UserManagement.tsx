@@ -9,6 +9,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,10 +27,13 @@ import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
 
+const ITEMS_PER_PAGE = 10;
+
 const UserManagement = () => {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [userData, setUserData] = useState({
     email: '',
     password: '',
@@ -31,20 +43,28 @@ const UserManagement = () => {
     address: ''
   });
 
-  // Fetch users
-  const { data: users = [] } = useQuery({
-    queryKey: ['users'],
+  // Fetch users with pagination
+  const { data: usersData } = useQuery({
+    queryKey: ['users', currentPage],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      const { data, error, count } = await supabase
         .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       
       if (error) throw error;
-      return data;
+      return { data, count };
     },
     enabled: profile?.role === 'admin'
   });
+
+  const users = usersData?.data || [];
+  const usersCount = usersData?.count || 0;
+  const totalPages = Math.ceil(usersCount / ITEMS_PER_PAGE);
 
   // Create user mutation
   const createUserMutation = useMutation({
@@ -202,6 +222,89 @@ const UserManagement = () => {
     if (targetUser.id === user?.id) return false; // Can't manage self
     if (profile?.role === 'admin') return true;
     return false;
+  };
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const getVisiblePages = () => {
+      const delta = 2;
+      const range = [];
+      const rangeWithDots = [];
+
+      for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+        range.push(i);
+      }
+
+      if (currentPage - delta > 2) {
+        rangeWithDots.push(1, '...');
+      } else {
+        rangeWithDots.push(1);
+      }
+
+      rangeWithDots.push(...range);
+
+      if (currentPage + delta < totalPages - 1) {
+        rangeWithDots.push('...', totalPages);
+      } else if (totalPages > 1) {
+        rangeWithDots.push(totalPages);
+      }
+
+      return rangeWithDots;
+    };
+
+    return (
+      <div className="flex items-center justify-between px-2 py-4">
+        <div className="text-sm text-muted-foreground">
+          Page {currentPage} of {totalPages}
+        </div>
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) setCurrentPage(currentPage - 1);
+                }}
+                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
+              />
+            </PaginationItem>
+            
+            {getVisiblePages().map((page, index) => (
+              <PaginationItem key={index}>
+                {page === '...' ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage(page as number);
+                    }}
+                    isActive={currentPage === page}
+                    className="hover:bg-accent"
+                  >
+                    {page}
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            ))}
+            
+            <PaginationItem>
+              <PaginationNext 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                }}
+                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    );
   };
 
   return (
@@ -462,6 +565,7 @@ const UserManagement = () => {
                 ))}
               </TableBody>
             </Table>
+            {renderPagination()}
           </CardContent>
         </Card>
       </div>
