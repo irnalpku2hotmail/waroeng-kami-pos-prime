@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -32,6 +31,7 @@ import Frontend from '@/pages/Frontend';
 import Returns from '@/pages/Returns';
 import Purchases from '@/pages/Purchases';
 import NotFound from '@/pages/NotFound';
+import ProductDetails from '@/pages/ProductDetails';
 
 const queryClient = new QueryClient();
 
@@ -46,6 +46,7 @@ function App() {
               <Route path="/" element={<Frontend />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/products/:productId" element={<ProductDetails />} />
 
               {/* Protected routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

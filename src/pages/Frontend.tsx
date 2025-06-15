@@ -19,6 +19,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
+import { Link } from 'react-router-dom';
 
 interface FrontendSettings {
   banner_url: string;
@@ -546,15 +547,19 @@ const Frontend = () => {
                   <div className="relative overflow-hidden rounded-t-lg">
                     <div className="aspect-square bg-gray-100 relative">
                       {productImageUrl ? (
-                        <img 
-                          src={productImageUrl} 
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+                        <Link to={`/products/${product.id}`}>
+                          <img 
+                            src={productImageUrl} 
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </Link>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-16 w-16 text-gray-400" />
-                        </div>
+                        <Link to={`/products/${product.id}`}>
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-16 w-16 text-gray-400" />
+                          </div>
+                        </Link>
                       )}
                       <Badge className="absolute top-2 right-2 bg-green-500 text-white">
                         Stok: {product.current_stock}
@@ -594,9 +599,11 @@ const Frontend = () => {
                     </div>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                      {product.name}
-                    </h3>
+                    <Link to={`/products/${product.id}`}>
+                      <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                        {product.name}
+                      </h3>
+                    </Link>
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <span className="text-lg font-bold text-blue-600">
