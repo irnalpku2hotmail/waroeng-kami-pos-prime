@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,7 +91,7 @@ const FrontendSettings = () => {
     },
     onSuccess: (bannerUrl) => {
       const newSettings: FrontendSettings = {
-        ...(settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 }),
+        ...settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 },
         banner_url: bannerUrl
       };
       updateSettings.mutate(newSettings);
@@ -123,7 +124,7 @@ const FrontendSettings = () => {
     const formData = new FormData(e.currentTarget);
     
     const newSettings: FrontendSettings = {
-      ...(settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 }),
+      ...settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 },
       welcome_message: formData.get('welcome_message') as string,
       featured_categories_limit: parseInt(formData.get('featured_categories_limit') as string) || 5
     };

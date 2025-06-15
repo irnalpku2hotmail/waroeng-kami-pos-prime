@@ -4,37 +4,41 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Search } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CategoryForm from '@/components/CategoryForm';
 
 const Categories = () => {
-  const [open, setOpen] = useState(false);
-  const [editCategory, setEditCategory] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: categories, isLoading } = useQuery({
-    queryKey: ['categories', searchTerm],
+  // Fetch categories
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ['categories'],
     queryFn: async () => {
-      let query = supabase.from('categories').select('*');
-      
-      if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
       if (error) throw error;
       return data;
     }
   });
 
-  const deleteCategory = useMutation({
+  // Delete category mutation
+  const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -46,123 +50,143 @@ const Categories = () => {
     }
   });
 
-  const handleCloseDialog = () => {
-    setOpen(false);
-    setEditCategory(null);
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleEdit = (category: any) => {
+    setEditingCategory(category);
+    setIsDialogOpen(true);
   };
 
-  const getIconUrl = (iconUrl: string | null | undefined) => {
-    if (!iconUrl) return null;
-    if (iconUrl.startsWith('http')) return iconUrl;
-    
-    const { data } = supabase.storage
-      .from('category-icons')
-      .getPublicUrl(iconUrl);
-    
-    return data.publicUrl;
+  const handleDelete = (id: string) => {
+    if (confirm('Apakah Anda yakin ingin menghapus kategori ini?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setEditingCategory(null);
   };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Manajemen Kategori</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <div className="flex items-center gap-2">
+            <Package className="h-8 w-8 text-blue-800" />
+            <h1 className="text-3xl font-bold text-blue-800">Kategori Produk</h1>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditCategory(null)}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
                 Tambah Kategori
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editCategory ? 'Edit Kategori' : 'Tambah Kategori Baru'}</DialogTitle>
+                <DialogTitle>
+                  {editingCategory ? 'Edit Kategori' : 'Tambah Kategori Baru'}
+                </DialogTitle>
               </DialogHeader>
               <CategoryForm 
-                category={editCategory}
-                onSuccess={handleCloseDialog}
-                onClose={handleCloseDialog}
+                category={editingCategory} 
+                onSuccess={handleDialogClose}
               />
             </DialogContent>
           </Dialog>
         </div>
 
-        <div className="flex gap-4">
-          <Input
-            placeholder="Cari kategori..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-
-        <div className="border rounded-lg">
-          {isLoading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : categories?.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">Belum ada kategori</p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Daftar Kategori</CardTitle>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Cari kategori..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Icon</TableHead>
-                  <TableHead>Nama Kategori</TableHead>
-                  <TableHead>Deskripsi</TableHead>
-                  <TableHead>Dibuat</TableHead>
-                  <TableHead>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories?.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell>
-                      {category.icon_url ? (
-                        <img 
-                          src={getIconUrl(category.icon_url)} 
-                          alt={category.name}
-                          className="w-8 h-8 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
-                          <Package className="h-4 w-4 text-gray-400" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.description || '-'}</TableCell>
-                    <TableCell>
-                      {new Date(category.created_at).toLocaleDateString('id-ID')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditCategory(category);
-                            setOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteCategory.mutate(category.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-4">Loading...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Icon</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead>Deskripsi</TableHead>
+                    <TableHead>Produk</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredCategories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-600">Belum ada kategori</p>
+                        <p className="text-sm text-gray-500">Klik tombol "Tambah Kategori" untuk membuat kategori baru</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredCategories.map((category) => (
+                      <TableRow key={category.id}>
+                        <TableCell>
+                          {category.icon_url ? (
+                            <img 
+                              src={category.icon_url} 
+                              alt={category.name} 
+                              className="w-8 h-8 object-cover rounded"
+                            />
+                          ) : (
+                            <Package className="h-8 w-8 text-gray-400" />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{category.name}</TableCell>
+                        <TableCell>{category.description || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {/* Product count would go here if needed */}
+                            -
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(category)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(category.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
