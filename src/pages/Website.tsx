@@ -63,13 +63,17 @@ const Website = () => {
   // Update website settings mutation
   const updateSettings = useMutation({
     mutationFn: async (settingsData: Partial<WebsiteSettings>) => {
+      if (!settings?.id) {
+        throw new Error('Settings ID not found');
+      }
+      
       const { error } = await supabase
         .from('website_settings')
         .update({
           ...settingsData,
           updated_at: new Date().toISOString()
         })
-        .eq('id', settings?.id);
+        .eq('id', settings.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -77,6 +81,7 @@ const Website = () => {
       toast({ title: 'Berhasil', description: 'Pengaturan website berhasil disimpan' });
     },
     onError: (error: any) => {
+      console.error('Update settings error:', error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
@@ -84,6 +89,8 @@ const Website = () => {
   // Upload favicon mutation
   const uploadFavicon = useMutation({
     mutationFn: async (file: File) => {
+      console.log('Starting favicon upload:', file.name);
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `favicon_${Date.now()}.${fileExt}`;
       
@@ -91,12 +98,14 @@ const Website = () => {
       if (settings?.favicon_url) {
         const oldFileName = settings.favicon_url.split('/').pop();
         if (oldFileName && oldFileName.startsWith('favicon_')) {
+          console.log('Removing old favicon:', oldFileName);
           await supabase.storage
             .from('website-assets')
             .remove([oldFileName]);
         }
       }
       
+      console.log('Uploading new favicon:', fileName);
       const { error: uploadError } = await supabase.storage
         .from('website-assets')
         .upload(fileName, file, {
@@ -104,15 +113,20 @@ const Website = () => {
           upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage
         .from('website-assets')
         .getPublicUrl(fileName);
 
+      console.log('Favicon uploaded successfully:', data.publicUrl);
       return data.publicUrl;
     },
     onSuccess: async (faviconUrl) => {
+      console.log('Updating settings with new favicon URL:', faviconUrl);
       await updateSettings.mutateAsync({ favicon_url: faviconUrl });
       
       // Update favicon in HTML head
@@ -136,6 +150,7 @@ const Website = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Favicon upload error:', error);
       toast({
         title: 'Error Upload',
         description: error.message,
@@ -147,9 +162,12 @@ const Website = () => {
   // Upload banner mutation
   const uploadBanner = useMutation({
     mutationFn: async ({ file, title }: { file: File; title: string }) => {
+      console.log('Starting banner upload:', file.name, 'with title:', title);
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `banner_${Date.now()}.${fileExt}`;
       
+      console.log('Uploading banner file:', fileName);
       const { error: uploadError } = await supabase.storage
         .from('website-assets')
         .upload(fileName, file, {
@@ -157,12 +175,17 @@ const Website = () => {
           upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Banner upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage
         .from('website-assets')
         .getPublicUrl(fileName);
 
+      console.log('Banner uploaded to storage, inserting record:', data.publicUrl);
+      
       // Insert banner record
       const { error: insertError } = await supabase
         .from('website_banners')
@@ -172,8 +195,12 @@ const Website = () => {
           sort_order: (banners?.length || 0) + 1
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Banner insert error:', insertError);
+        throw insertError;
+      }
 
+      console.log('Banner record inserted successfully');
       return data.publicUrl;
     },
     onSuccess: () => {
@@ -187,6 +214,7 @@ const Website = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Banner upload mutation error:', error);
       toast({
         title: 'Error Upload',
         description: error.message,
@@ -198,11 +226,14 @@ const Website = () => {
   // Delete banner mutation
   const deleteBanner = useMutation({
     mutationFn: async (bannerId: string) => {
+      console.log('Deleting banner:', bannerId);
+      
       const banner = banners?.find(b => b.id === bannerId);
       if (banner) {
         // Delete file from storage
         const fileName = banner.image_url.split('/').pop();
         if (fileName) {
+          console.log('Removing banner file from storage:', fileName);
           await supabase.storage
             .from('website-assets')
             .remove([fileName]);
@@ -214,6 +245,8 @@ const Website = () => {
         .delete()
         .eq('id', bannerId);
       if (error) throw error;
+      
+      console.log('Banner deleted successfully');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['website-banners'] });
@@ -223,6 +256,7 @@ const Website = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Delete banner error:', error);
       toast({
         title: 'Error',
         description: error.message,
@@ -234,6 +268,8 @@ const Website = () => {
   const handleFaviconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('Favicon file selected:', file.name, file.size, file.type);
+      
       // Check file size (1MB limit for favicon)
       if (file.size > 1 * 1024 * 1024) {
         toast({
@@ -267,6 +303,8 @@ const Website = () => {
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('Banner file selected:', file.name, file.size, file.type);
+      
       // Check file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
         toast({
@@ -306,11 +344,13 @@ const Website = () => {
       footer_color: formData.get('footer_color') as string
     };
 
+    console.log('Submitting color data:', colorData);
     updateSettings.mutate(colorData);
   };
 
   const handleFaviconSubmit = () => {
     if (faviconFile) {
+      console.log('Submitting favicon upload');
       uploadFavicon.mutate(faviconFile);
     } else {
       toast({
@@ -323,6 +363,7 @@ const Website = () => {
 
   const handleBannerSubmit = () => {
     if (bannerFile && bannerTitle.trim()) {
+      console.log('Submitting banner upload');
       uploadBanner.mutate({ file: bannerFile, title: bannerTitle.trim() });
     } else {
       toast({
