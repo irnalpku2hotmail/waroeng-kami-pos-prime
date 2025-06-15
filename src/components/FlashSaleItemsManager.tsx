@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -221,10 +220,10 @@ const FlashSaleItemsManager = ({ flashSaleId, onItemsChange }: FlashSaleItemsMan
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                          {getImageUrl(item.products.image_url) ? (
+                          {item.products && getImageUrl(item.products.image_url) ? (
                             <img 
                               src={getImageUrl(item.products.image_url)} 
-                              alt={item.products.name}
+                              alt={item.products?.name || 'Product'}
                               className="w-full h-full object-cover rounded-lg"
                             />
                           ) : (
@@ -232,8 +231,8 @@ const FlashSaleItemsManager = ({ flashSaleId, onItemsChange }: FlashSaleItemsMan
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{item.products.name}</p>
-                          <p className="text-xs text-gray-500">Stok tersedia: {item.products.current_stock}</p>
+                          <p className="font-medium text-sm">{item.products?.name || 'Unknown Product'}</p>
+                          <p className="text-xs text-gray-500">Stok tersedia: {item.products?.current_stock || 0}</p>
                         </div>
                       </div>
                     </TableCell>
@@ -261,7 +260,7 @@ const FlashSaleItemsManager = ({ flashSaleId, onItemsChange }: FlashSaleItemsMan
                             type="number"
                             defaultValue={item.stock_quantity}
                             min="1"
-                            max={item.products.current_stock}
+                            max={item.products?.current_stock || 999}
                             className="w-20"
                           />
                           <Input
