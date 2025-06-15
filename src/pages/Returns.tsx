@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye, CheckCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ReturnsForm from '@/components/ReturnsForm';
 import ReturnDetailModal from '@/components/ReturnDetailModal';
@@ -54,6 +54,23 @@ const Returns = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
       toast({ title: 'Berhasil', description: 'Return berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const updateReturnStatus = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('returns')
+        .update({ status: 'success' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      toast({ title: 'Berhasil', description: 'Status return berhasil diubah ke Success' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -117,6 +134,15 @@ const Returns = () => {
                     <Eye className="h-4 w-4 mr-2" />
                     Detail
                   </DropdownMenuItem>
+                  {returnItem.status === 'process' && (
+                    <DropdownMenuItem
+                      onClick={() => updateReturnStatus.mutate(returnItem.id)}
+                      className="text-green-600 focus:text-green-600"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark as Complete
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => {
                       setEditReturn(returnItem);
