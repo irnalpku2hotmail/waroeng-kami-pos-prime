@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Search, Package, Eye, Edit } from 'lucide-react';
+import { Search, Package, Eye, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import OrderDetailsModal from '@/components/OrderDetailsModal';
 
@@ -28,7 +29,7 @@ const Orders = () => {
           *,
           order_items(
             *,
-            products(name, image_url)
+            products(name, image_url, current_stock, min_stock)
           )
         `);
       
@@ -63,6 +64,33 @@ const Orders = () => {
     }
   });
 
+  const deleteOrder = useMutation({
+    mutationFn: async (orderId: string) => {
+      // First delete order items
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId);
+      
+      if (itemsError) throw itemsError;
+
+      // Then delete the order
+      const { error: orderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+      
+      if (orderError) throw orderError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast({ title: 'Berhasil', description: 'Pesanan berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: 'Menunggu', variant: 'secondary' as const },
@@ -75,6 +103,16 @@ const Orders = () => {
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getStockStatusColor = (currentStock: number, minStock: number) => {
+    if (currentStock <= minStock) {
+      return 'text-red-600 font-semibold'; // Critical/Low stock
+    } else if (currentStock <= minStock * 2) {
+      return 'text-yellow-600 font-semibold'; // Warning stock
+    } else {
+      return 'text-green-600 font-semibold'; // Good stock
+    }
   };
 
   const handleShowDetails = (order: any) => {
@@ -187,6 +225,7 @@ const Orders = () => {
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Metode Bayar</TableHead>
+                  <TableHead>Stok Produk</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -208,6 +247,18 @@ const Orders = () => {
                     <TableCell>Rp {Number(order.total_amount).toLocaleString('id-ID')}</TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="uppercase">{order.payment_method}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {order.order_items?.map((item: any) => (
+                          <div key={item.id} className="text-xs">
+                            <span className="font-medium">{item.products?.name}:</span>
+                            <span className={`ml-1 ${getStockStatusColor(item.products?.current_stock || 0, item.products?.min_stock || 0)}`}>
+                              {item.products?.current_stock || 0} stok
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -235,6 +286,13 @@ const Orders = () => {
                             </SelectContent>
                           </Select>
                         )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteOrder.mutate(order.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

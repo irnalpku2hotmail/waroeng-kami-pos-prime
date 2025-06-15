@@ -33,6 +33,26 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
     return imageUrl;
   };
 
+  const getStockStatusColor = (currentStock: number, minStock: number) => {
+    if (currentStock <= minStock) {
+      return 'text-red-600 font-semibold'; // Critical/Low stock
+    } else if (currentStock <= minStock * 2) {
+      return 'text-yellow-600 font-semibold'; // Warning stock
+    } else {
+      return 'text-green-600 font-semibold'; // Good stock
+    }
+  };
+
+  const getStockBadge = (currentStock: number, minStock: number) => {
+    if (currentStock <= minStock) {
+      return <Badge variant="destructive" className="text-xs">Stok Kritis</Badge>;
+    } else if (currentStock <= minStock * 2) {
+      return <Badge className="bg-yellow-500 text-white text-xs">Stok Warning</Badge>;
+    } else {
+      return <Badge className="bg-green-500 text-white text-xs">Stok Baik</Badge>;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -136,6 +156,13 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
                     <p className="text-sm text-gray-500">
                       Rp {Number(item.unit_price).toLocaleString('id-ID')} x {item.quantity}
                     </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-500">Stok saat ini:</span>
+                      <span className={`text-xs ${getStockStatusColor(item.products?.current_stock || 0, item.products?.min_stock || 0)}`}>
+                        {item.products?.current_stock || 0}
+                      </span>
+                      {getStockBadge(item.products?.current_stock || 0, item.products?.min_stock || 0)}
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
