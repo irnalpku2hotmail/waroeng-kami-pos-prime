@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +49,7 @@ const FrontendCart = () => {
       if (error) {
         return { enabled: true, delivery_fee: 10000, min_order: 50000 } as CODSettings;
       }
-      return data.value as CODSettings;
+      return data.value as unknown as CODSettings;
     }
   });
 

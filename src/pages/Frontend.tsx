@@ -35,7 +35,7 @@ const Frontend = () => {
           featured_categories_limit: 5
         } as FrontendSettings;
       }
-      return data.value as FrontendSettings;
+      return data.value as unknown as FrontendSettings;
     }
   });
 

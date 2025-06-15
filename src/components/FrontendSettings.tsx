@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +35,7 @@ const FrontendSettings = () => {
           featured_categories_limit: 5
         } as FrontendSettings;
       }
-      return data.value as FrontendSettings;
+      return data.value as unknown as FrontendSettings;
     }
   });
 
@@ -47,7 +46,7 @@ const FrontendSettings = () => {
         .from('settings')
         .upsert({
           key: 'frontend_settings',
-          value: settingsData,
+          value: settingsData as any,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'key'
