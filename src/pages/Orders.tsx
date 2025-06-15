@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Eye, Package, Trash2 } from 'lucide-react';
+import { Eye, Package, Trash2, Download } from 'lucide-react';
 import Layout from '@/components/Layout';
 import OrderDetailsModal from '@/components/OrderDetailsModal';
 import PaginationComponent from '@/components/PaginationComponent';
+import { exportToExcel } from '@/utils/excelExport';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -21,6 +22,26 @@ const Orders = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
+
+  // Query for all orders for export
+  const { data: allOrdersData } = useQuery({
+    queryKey: ['all-orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(
+            *,
+            products(name)
+          )
+        `)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['orders', searchTerm, statusFilter, currentPage],
@@ -138,12 +159,41 @@ const Orders = () => {
     .filter(o => o.status === 'delivered')
     .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
+  const handleExportToExcel = () => {
+    if (!allOrdersData || allOrdersData.length === 0) {
+      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
+      return;
+    }
+
+    const exportData = allOrdersData.map(order => ({
+      'No. Pesanan': order.order_number,
+      'Nama Pelanggan': order.customer_name,
+      'Telepon': order.customer_phone || '-',
+      'Alamat': order.customer_address || '-',
+      'Tanggal Pesanan': new Date(order.order_date).toLocaleDateString('id-ID'),
+      'Total Amount': Number(order.total_amount),
+      'Status': order.status,
+      'Metode Pembayaran': order.payment_method.toUpperCase(),
+      'Catatan': order.notes || '-',
+      'Produk': order.order_items?.map((item: any) => 
+        `${item.products?.name} (${item.quantity}x)`
+      ).join(', ') || '-'
+    }));
+
+    exportToExcel(exportData, 'Data_Pesanan', 'Pesanan');
+    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-blue-800">Manajemen Pesanan</h1>
+          <Button variant="outline" onClick={handleExportToExcel}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
         </div>
 
         {/* Stats Cards */}

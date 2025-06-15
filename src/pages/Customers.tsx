@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Eye, Download } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
 import PaginationComponent from '@/components/PaginationComponent';
+import { exportToExcel } from '@/utils/excelExport';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -23,6 +24,20 @@ const Customers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
+
+  // Query for all customers for export
+  const { data: allCustomersData } = useQuery({
+    queryKey: ['all-customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const { data: customersData, isLoading } = useQuery({
     queryKey: ['customers', searchTerm, currentPage],
@@ -112,72 +127,99 @@ const Customers = () => {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (!allCustomersData || allCustomersData.length === 0) {
+      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
+      return;
+    }
+
+    const exportData = allCustomersData.map(customer => ({
+      'Kode Customer': customer.customer_code,
+      'Nama Customer': customer.name,
+      'Telepon': customer.phone || '-',
+      'Email': customer.email || '-',
+      'Alamat': customer.address || '-',
+      'Total Poin': customer.total_points,
+      'Total Belanja': customer.total_spent,
+      'Tanggal Bergabung': new Date(customer.created_at).toLocaleDateString('id-ID')
+    }));
+
+    exportToExcel(exportData, 'Data_Customer', 'Customer');
+    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-blue-800">Manajemen Customer</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditCustomer(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Customer
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{editCustomer ? 'Edit Customer' : 'Tambah Customer Baru'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCustomerSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customer_code">Kode Customer *</Label>
-                  <Input
-                    id="customer_code"
-                    name="customer_code"
-                    defaultValue={editCustomer?.customer_code}
-                    placeholder="Contoh: C001"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nama Customer *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    defaultValue={editCustomer?.name}
-                    placeholder="Contoh: John Doe"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telepon</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    defaultValue={editCustomer?.phone}
-                    placeholder="Contoh: 081234567890"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Alamat</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    defaultValue={editCustomer?.address}
-                    placeholder="Contoh: Jl. Pahlawan No. 1"
-                  />
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button type="submit">
-                    {editCustomer ? 'Update' : 'Simpan'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportToExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditCustomer(null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Customer
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{editCustomer ? 'Edit Customer' : 'Tambah Customer Baru'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCustomerSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="customer_code">Kode Customer *</Label>
+                    <Input
+                      id="customer_code"
+                      name="customer_code"
+                      defaultValue={editCustomer?.customer_code}
+                      placeholder="Contoh: C001"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nama Customer *</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      defaultValue={editCustomer?.name}
+                      placeholder="Contoh: John Doe"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telepon</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      defaultValue={editCustomer?.phone}
+                      placeholder="Contoh: 081234567890"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Alamat</Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      defaultValue={editCustomer?.address}
+                      placeholder="Contoh: Jl. Pahlawan No. 1"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                      Batal
+                    </Button>
+                    <Button type="submit">
+                      {editCustomer ? 'Update' : 'Simpan'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="flex gap-4">

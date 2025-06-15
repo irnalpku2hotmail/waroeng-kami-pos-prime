@@ -15,9 +15,10 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Download } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ProductForm from '@/components/ProductForm';
+import { exportToExcel } from '@/utils/excelExport';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -57,6 +58,24 @@ const Products = () => {
     }
   });
 
+  // Query for all products for export
+  const { data: allProductsData } = useQuery({
+    queryKey: ['all-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          units(name, abbreviation)
+        `)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const products = productsData?.data || [];
   const productsCount = productsData?.count || 0;
   const totalPages = Math.ceil(productsCount / ITEMS_PER_PAGE);
@@ -74,6 +93,28 @@ const Products = () => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
+
+  const handleExportToExcel = () => {
+    if (!allProductsData || allProductsData.length === 0) {
+      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
+      return;
+    }
+
+    const exportData = allProductsData.map(product => ({
+      'Nama Produk': product.name,
+      'Barcode': product.barcode || '-',
+      'Kategori': product.categories?.name || '-',
+      'Unit': product.units?.name || '-',
+      'Harga Jual': product.selling_price,
+      'Stok Saat Ini': product.current_stock,
+      'Stok Minimum': product.min_stock,
+      'Status': product.is_active ? 'Aktif' : 'Nonaktif',
+      'Tanggal Dibuat': new Date(product.created_at).toLocaleDateString('id-ID')
+    }));
+
+    exportToExcel(exportData, 'Data_Produk', 'Produk');
+    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
+  };
 
   const handleCloseDialog = () => {
     setOpen(false);
@@ -168,24 +209,30 @@ const Products = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-blue-800">Manajemen Produk</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditProduct(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Produk
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
-              </DialogHeader>
-              <ProductForm 
-                product={editProduct}
-                onSuccess={handleCloseDialog}
-                onClose={handleCloseDialog}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportToExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditProduct(null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Produk
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
+                </DialogHeader>
+                <ProductForm 
+                  product={editProduct}
+                  onSuccess={handleCloseDialog}
+                  onClose={handleCloseDialog}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="flex gap-4">

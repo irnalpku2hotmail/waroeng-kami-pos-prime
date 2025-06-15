@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, Calendar, TrendingUp, Download } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { exportToExcel } from '@/utils/excelExport';
 
 const Expenses = () => {
   const { user } = useAuth();
@@ -46,6 +46,23 @@ const Expenses = () => {
       }
       
       const { data, error } = await query.order('expense_date', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Query for all expenses for export
+  const { data: allExpensesData } = useQuery({
+    queryKey: ['all-expenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select(`
+          *,
+          profiles(full_name)
+        `)
+        .order('expense_date', { ascending: false });
+        
       if (error) throw error;
       return data;
     }
@@ -178,99 +195,137 @@ const Expenses = () => {
     return <Badge className={cat.color}>{cat.label}</Badge>;
   };
 
+  const handleExportToExcel = () => {
+    if (!allExpensesData || allExpensesData.length === 0) {
+      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
+      return;
+    }
+
+    const exportData = allExpensesData.map(expense => ({
+      'Judul Pengeluaran': expense.title,
+      'Kategori': getCategoryLabel(expense.category),
+      'Jumlah': Number(expense.amount),
+      'Tanggal': new Date(expense.expense_date).toLocaleDateString('id-ID'),
+      'Deskripsi': expense.description || '-',
+      'Dibuat Oleh': expense.profiles?.full_name || 'Unknown',
+      'Tanggal Dibuat': new Date(expense.created_at).toLocaleDateString('id-ID')
+    }));
+
+    exportToExcel(exportData, 'Data_Pengeluaran', 'Pengeluaran');
+    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const categories = {
+      operational: 'Operasional',
+      inventory: 'Inventori',
+      marketing: 'Marketing',
+      maintenance: 'Pemeliharaan',
+      utilities: 'Utilitas',
+      other: 'Lainnya'
+    };
+    return categories[category as keyof typeof categories] || 'Lainnya';
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-blue-800">Manajemen Pengeluaran</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Pengeluaran
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Judul Pengeluaran *</Label>
-                  <Input
-                    id="title"
-                    value={expenseData.title}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Contoh: Listrik Bulan Januari"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportToExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Pengeluaran
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Jumlah *</Label>
+                    <Label htmlFor="title">Judul Pengeluaran *</Label>
                     <Input
-                      id="amount"
-                      type="number"
-                      value={expenseData.amount}
-                      onChange={(e) => setExpenseData(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                      placeholder="0"
-                      min="0"
+                      id="title"
+                      value={expenseData.title}
+                      onChange={(e) => setExpenseData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Contoh: Listrik Bulan Januari"
                       required
                     />
                   </div>
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount">Jumlah *</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        value={expenseData.amount}
+                        onChange={(e) => setExpenseData(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                        placeholder="0"
+                        min="0"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="expense_date">Tanggal *</Label>
+                      <Input
+                        id="expense_date"
+                        type="date"
+                        value={expenseData.expense_date}
+                        onChange={(e) => setExpenseData(prev => ({ ...prev, expense_date: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="expense_date">Tanggal *</Label>
-                    <Input
-                      id="expense_date"
-                      type="date"
-                      value={expenseData.expense_date}
-                      onChange={(e) => setExpenseData(prev => ({ ...prev, expense_date: e.target.value }))}
-                      required
+                    <Label htmlFor="category">Kategori *</Label>
+                    <Select value={expenseData.category} onValueChange={(value: any) => setExpenseData(prev => ({ ...prev, category: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih kategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="operational">Operasional</SelectItem>
+                        <SelectItem value="inventory">Inventori</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="maintenance">Pemeliharaan</SelectItem>
+                        <SelectItem value="utilities">Utilitas</SelectItem>
+                        <SelectItem value="other">Lainnya</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Deskripsi</Label>
+                    <Textarea
+                      id="description"
+                      value={expenseData.description}
+                      onChange={(e) => setExpenseData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Deskripsi detail pengeluaran (opsional)"
+                      rows={3}
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="category">Kategori *</Label>
-                  <Select value={expenseData.category} onValueChange={(value: any) => setExpenseData(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="operational">Operasional</SelectItem>
-                      <SelectItem value="inventory">Inventori</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="maintenance">Pemeliharaan</SelectItem>
-                      <SelectItem value="utilities">Utilitas</SelectItem>
-                      <SelectItem value="other">Lainnya</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Deskripsi</Label>
-                  <Textarea
-                    id="description"
-                    value={expenseData.description}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Deskripsi detail pengeluaran (opsional)"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Batal
-                  </Button>
-                  <Button type="submit" disabled={createExpense.isPending || updateExpense.isPending}>
-                    {editExpense ? 'Update' : 'Simpan'} Pengeluaran
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                      Batal
+                    </Button>
+                    <Button type="submit" disabled={createExpense.isPending || updateExpense.isPending}>
+                      {editExpense ? 'Update' : 'Simpan'} Pengeluaran
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Summary Cards */}
