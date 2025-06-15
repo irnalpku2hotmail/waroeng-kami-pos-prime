@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +36,28 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+// Helper function to format relative time
+const formatRelativeTime = (date: string | Date) => {
+  const now = new Date();
+  const targetDate = new Date(date);
+  const diffInMs = now.getTime() - targetDate.getTime();
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (diffInMinutes < 1) {
+    return 'Baru saja';
+  } else if (diffInMinutes < 60) {
+    return `${diffInMinutes} menit lalu`;
+  } else if (diffInHours < 24) {
+    return `${diffInHours} jam lalu`;
+  } else if (diffInDays < 7) {
+    return `${diffInDays} hari lalu`;
+  } else {
+    return targetDate.toLocaleDateString('id-ID');
+  }
+};
+
 const Layout = ({ children }: LayoutProps) => {
   const { user, signOut } = useAuth();
   const location = useLocation();
@@ -68,7 +91,7 @@ const Layout = ({ children }: LayoutProps) => {
     }
   });
 
-  // Fetch notifications
+  // Fetch notifications with enhanced data
   const { data: notifications } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
@@ -81,7 +104,7 @@ const Layout = ({ children }: LayoutProps) => {
       // Customer birthdays (today)
       const { data: birthdayCustomers } = await supabase
         .from('customers')
-        .select('name, date_of_birth')
+        .select('name, date_of_birth, created_at')
         .not('date_of_birth', 'is', null);
 
       if (birthdayCustomers) {
@@ -96,7 +119,8 @@ const Layout = ({ children }: LayoutProps) => {
             type: 'birthday',
             message: `🎂 ${customer.name} has a birthday today!`,
             priority: 'medium',
-            link: '/customers'
+            link: '/customers',
+            timestamp: today.toISOString()
           });
         });
       }
@@ -104,7 +128,7 @@ const Layout = ({ children }: LayoutProps) => {
       // Low stock products
       const { data: lowStockProducts } = await supabase
         .from('products')
-        .select('name, current_stock, min_stock')
+        .select('name, current_stock, min_stock, updated_at')
         .lt('current_stock', 10);
 
       if (lowStockProducts && lowStockProducts.length > 0) {
@@ -112,14 +136,15 @@ const Layout = ({ children }: LayoutProps) => {
           type: 'low_stock',
           message: `📦 ${lowStockProducts.length} products have low stock`,
           priority: 'high',
-          link: '/products'
+          link: '/products',
+          timestamp: lowStockProducts[0].updated_at || today.toISOString()
         });
       }
 
       // Product expiration (1 month before)
       const { data: expiringProducts } = await supabase
         .from('purchase_items')
-        .select('expiration_date, products(name)')
+        .select('expiration_date, products(name), created_at')
         .not('expiration_date', 'is', null)
         .lte('expiration_date', oneMonthFromNow.toISOString().split('T')[0])
         .gte('expiration_date', today.toISOString().split('T')[0]);
@@ -129,14 +154,15 @@ const Layout = ({ children }: LayoutProps) => {
           type: 'expiring',
           message: `⚠️ ${expiringProducts.length} products expiring within a month`,
           priority: 'medium',
-          link: '/inventory'
+          link: '/inventory',
+          timestamp: expiringProducts[0].created_at || today.toISOString()
         });
       }
 
       // New orders (pending status)
       const { data: newOrders } = await supabase
         .from('orders')
-        .select('id')
+        .select('id, created_at')
         .eq('status', 'pending');
 
       if (newOrders && newOrders.length > 0) {
@@ -144,14 +170,15 @@ const Layout = ({ children }: LayoutProps) => {
           type: 'new_order',
           message: `🛒 ${newOrders.length} new orders pending`,
           priority: 'high',
-          link: '/orders'
+          link: '/orders',
+          timestamp: newOrders[0].created_at
         });
       }
 
       // Overdue credit purchases
       const { data: overdueCredits } = await supabase
         .from('purchases')
-        .select('id, suppliers(name)')
+        .select('id, suppliers(name), due_date, created_at')
         .eq('payment_method', 'credit')
         .lt('due_date', today.toISOString().split('T')[0]);
 
@@ -160,7 +187,8 @@ const Layout = ({ children }: LayoutProps) => {
           type: 'overdue_credit',
           message: `💳 ${overdueCredits.length} credit payments overdue`,
           priority: 'high',
-          link: '/credit-management'
+          link: '/credit-management',
+          timestamp: overdueCredits[0].created_at
         });
       }
 
@@ -170,7 +198,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       const { data: newUsers } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, created_at')
         .gte('created_at', yesterday.toISOString());
 
       if (newUsers && newUsers.length > 0) {
@@ -178,11 +206,13 @@ const Layout = ({ children }: LayoutProps) => {
           type: 'new_user',
           message: `👤 ${newUsers.length} new users registered`,
           priority: 'low',
-          link: '/user-management'
+          link: '/user-management',
+          timestamp: newUsers[0].created_at
         });
       }
 
-      return notifications;
+      // Sort notifications by timestamp (newest first)
+      return notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
   });
 
@@ -232,6 +262,22 @@ const Layout = ({ children }: LayoutProps) => {
     if (notification.link) {
       navigate(notification.link);
     }
+  };
+
+  // Get user avatar URL
+  const getUserAvatarUrl = () => {
+    if (user?.user_metadata?.avatar_url) {
+      return user.user_metadata.avatar_url;
+    }
+    return null;
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    return user?.email || '';
   };
 
   const NavigationContent = () => (
@@ -332,13 +378,16 @@ const Layout = ({ children }: LayoutProps) => {
                         className="p-3 border-b cursor-pointer hover:bg-gray-50"
                         onClick={() => handleNotificationClick(notification)}
                       >
-                        <div className="flex items-start gap-2">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${
+                        <div className="flex items-start gap-2 w-full">
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
                             notification.priority === 'high' ? 'bg-red-500' :
                             notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
                           }`} />
-                          <div className="flex-1">
-                            <p className="text-sm">{notification.message}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 mb-1">{notification.message}</p>
+                            <p className="text-xs text-gray-500">
+                              {formatRelativeTime(notification.timestamp)}
+                            </p>
                           </div>
                         </div>
                       </DropdownMenuItem>
@@ -352,14 +401,24 @@ const Layout = ({ children }: LayoutProps) => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* User Menu */}
+            {/* User Menu with Avatar */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="flex items-center gap-2 p-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={getUserAvatarUrl()} alt={getUserDisplayName()} />
+                    <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                      {getUserDisplayName().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </AvatarFallback>
                   </Avatar>
+                  <div className="hidden md:block text-left">
+                    <div className="text-sm font-medium text-gray-900">
+                      {getUserDisplayName()}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {user?.email}
+                    </div>
+                  </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
