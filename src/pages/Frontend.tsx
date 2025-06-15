@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Clock, Zap } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import FrontendCart from '@/components/FrontendCart';
 import AuthModal from '@/components/AuthModal';
+import CountdownTimer from '@/components/CountdownTimer';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -351,14 +352,14 @@ const Frontend = () => {
                       <Zap className="h-8 w-8" />
                       <h2 className="text-2xl font-bold">Flash Sale</h2>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      <span className="text-lg font-semibold">Berakhir dalam 12:34:56</span>
-                    </div>
+                    <CountdownTimer 
+                      endDate={flashSales[0]?.end_date} 
+                      className="text-white"
+                    />
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-b-lg shadow-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     {flashSales[0]?.flash_sale_items?.slice(0, 6).map((item: any) => (
                       <Card key={item.id} className="group hover:shadow-lg transition-all">
                         <div className="relative">

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,13 +11,16 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Zap, Calendar, DollarSign, TrendingUp, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Zap, Calendar, DollarSign, TrendingUp, Package, Search } from 'lucide-react';
 import Layout from '@/components/Layout';
+import ProductSearchModal from '@/components/ProductSearchModal';
 
 const FlashSales = () => {
   const [open, setOpen] = useState(false);
   const [editFlashSale, setEditFlashSale] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [selectedFlashSale, setSelectedFlashSale] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const [flashSaleData, setFlashSaleData] = useState({
@@ -133,6 +135,39 @@ const FlashSales = () => {
     }
   });
 
+  const addProductToFlashSale = useMutation({
+    mutationFn: async ({ flashSaleId, product }: { flashSaleId: string, product: any }) => {
+      // Calculate discount (default 10%)
+      const discountPercentage = 10;
+      const salePrice = product.selling_price * (1 - discountPercentage / 100);
+      
+      const { error } = await supabase
+        .from('flash_sale_items')
+        .insert([{
+          flash_sale_id: flashSaleId,
+          product_id: product.id,
+          original_price: product.selling_price,
+          sale_price: salePrice,
+          discount_percentage: discountPercentage,
+          stock_quantity: Math.min(product.current_stock, 50), // Default max 50 items
+          max_quantity_per_customer: 5,
+          sold_quantity: 0
+        }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
+      queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
+      toast({ 
+        title: 'Berhasil', 
+        description: 'Produk berhasil ditambahkan ke flash sale' 
+      });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
   const handleEdit = (flashSale: any) => {
     setEditFlashSale(flashSale);
     setFlashSaleData({
@@ -163,6 +198,20 @@ const FlashSales = () => {
       start_date: new Date(flashSaleData.start_date).toISOString(),
       end_date: new Date(flashSaleData.end_date).toISOString()
     });
+  };
+
+  const handleAddProduct = (flashSale: any) => {
+    setSelectedFlashSale(flashSale);
+    setShowProductSearch(true);
+  };
+
+  const handleSelectProduct = (product: any) => {
+    if (selectedFlashSale) {
+      addProductToFlashSale.mutate({
+        flashSaleId: selectedFlashSale.id,
+        product
+      });
+    }
   };
 
   const getFlashSaleStatus = (flashSale: any) => {
@@ -355,6 +404,14 @@ const FlashSales = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleAddProduct(flashSale)}
+                          title="Tambah Produk"
+                        >
+                          <Search className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(flashSale)}
                         >
                           <Edit className="h-4 w-4" />
@@ -374,6 +431,14 @@ const FlashSales = () => {
             </Table>
           )}
         </div>
+
+        {/* Product Search Modal */}
+        <ProductSearchModal
+          open={showProductSearch}
+          onOpenChange={setShowProductSearch}
+          onSelectProduct={handleSelectProduct}
+          flashSaleId={selectedFlashSale?.id}
+        />
       </div>
     </Layout>
   );
