@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import FrontendCart from '@/components/FrontendCart';
+import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import CountdownTimer from '@/components/CountdownTimer';
 import {
@@ -340,196 +339,158 @@ const Frontend = () => {
       )}
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Flash Sales Section */}
-            {flashSales.length > 0 && (
-              <div className="mb-12">
-                <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-6 rounded-t-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Zap className="h-8 w-8" />
-                      <h2 className="text-2xl font-bold">Flash Sale</h2>
-                    </div>
-                    <CountdownTimer 
-                      endDate={flashSales[0]?.end_date} 
-                      className="text-white"
-                    />
-                  </div>
+        {/* Flash Sales Section */}
+        {flashSales.length > 0 && (
+          <div className="mb-12">
+            <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-6 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-8 w-8" />
+                  <h2 className="text-2xl font-bold">Flash Sale</h2>
                 </div>
-                <div className="bg-white p-6 rounded-b-lg shadow-lg">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {flashSales[0]?.flash_sale_items?.slice(0, 6).map((item: any) => (
-                      <Card key={item.id} className="group hover:shadow-lg transition-all">
-                        <div className="relative">
-                          <div className="aspect-square bg-gray-100">
-                            {item.products?.image_url ? (
-                              <img 
-                                src={getImageUrl(item.products.image_url)} 
-                                alt={item.products.name}
-                                className="w-full h-full object-cover rounded-t-lg"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Package className="h-12 w-12 text-gray-400" />
-                              </div>
-                            )}
-                          </div>
-                          <Badge className="absolute top-2 left-2 bg-red-500">
-                            -{item.discount_percentage}%
-                          </Badge>
-                        </div>
-                        <CardContent className="p-3">
-                          <h3 className="font-medium text-sm mb-2 line-clamp-2">
-                            {item.products?.name}
-                          </h3>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold text-red-600">
-                                Rp {item.sale_price?.toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                            <span className="text-sm text-gray-500 line-through">
-                              Rp {item.original_price?.toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                          <div className="mt-2">
-                            <div className="bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-red-500 h-2 rounded-full"
-                                style={{ width: `${(item.sold_quantity / item.stock_quantity) * 100}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-gray-600 mt-1">
-                              Terjual {item.sold_quantity}/{item.stock_quantity}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                <CountdownTimer 
+                  endDate={flashSales[0]?.end_date} 
+                  className="text-white"
+                />
               </div>
-            )}
-
-            {/* Categories Section */}
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold mb-6">Kategori Pilihan</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <Button
-                  variant={selectedCategory === null ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(null)}
-                  className="h-24 flex-col p-4 bg-white border-2 hover:border-blue-500 transition-all"
-                >
-                  <Package className="h-8 w-8 mb-2 text-blue-600" />
-                  <span className="text-sm font-medium">Semua</span>
-                </Button>
-                {featuredCategories.map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={selectedCategory === category.id ? "default" : "outline"}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className="h-24 flex-col p-4 bg-white border-2 hover:border-blue-500 transition-all"
-                  >
-                    <Package className="h-8 w-8 mb-2 text-blue-600" />
-                    <span className="text-sm font-medium text-center">{category.name}</span>
-                  </Button>
+            </div>
+            <div className="bg-white p-6 rounded-b-lg shadow-lg">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {flashSales[0]?.flash_sale_items?.slice(0, 6).map((item: any) => (
+                  <Card key={item.id} className="group hover:shadow-lg transition-all">
+                    <div className="relative">
+                      <div className="aspect-square bg-gray-100">
+                        {item.products?.image_url ? (
+                          <img 
+                            src={getImageUrl(item.products.image_url)} 
+                            alt={item.products.name}
+                            className="w-full h-full object-cover rounded-t-lg"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-12 w-12 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <Badge className="absolute top-2 left-2 bg-red-500">
+                        -{item.discount_percentage}%
+                      </Badge>
+                    </div>
+                    <CardContent className="p-3">
+                      <h3 className="font-medium text-sm mb-2 line-clamp-2">
+                        {item.products?.name}
+                      </h3>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-red-600">
+                            Rp {item.sale_price?.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-500 line-through">
+                          Rp {item.original_price?.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <div className="bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-red-500 h-2 rounded-full"
+                            style={{ width: `${(item.sold_quantity / item.stock_quantity) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Terjual {item.sold_quantity}/{item.stock_quantity}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Products Section */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">
-                  {selectedCategory ? 
-                    `Produk ${categories.find(c => c.id === selectedCategory)?.name}` : 
-                    'Semua Produk'
-                  }
-                </h2>
-                <span className="text-gray-600">{products.length} produk ditemukan</span>
-              </div>
+        {/* Products Section */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">
+              {selectedCategory ? 
+                `Produk ${categories.find(c => c.id === selectedCategory)?.name}` : 
+                'Semua Produk'
+              }
+            </h2>
+            <span className="text-gray-600">{products.length} produk ditemukan</span>
+          </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {products.map((product) => {
-                  const productImageUrl = getImageUrl(product.image_url);
-                  return (
-                    <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md">
-                      <div className="relative overflow-hidden rounded-t-lg">
-                        <div className="aspect-square bg-gray-100 relative">
-                          {productImageUrl ? (
-                            <img 
-                              src={productImageUrl} 
-                              alt={product.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-16 w-16 text-gray-400" />
-                            </div>
-                          )}
-                          <Badge className="absolute top-2 right-2 bg-green-500 text-white">
-                            Stok: {product.current_stock}
-                          </Badge>
-                          <Button 
-                            size="sm" 
-                            variant="secondary"
-                            className="absolute top-2 left-2 h-8 w-8 p-0 bg-white/80 hover:bg-white"
-                          >
-                            <Heart className="h-4 w-4" />
-                          </Button>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {products.map((product) => {
+              const productImageUrl = getImageUrl(product.image_url);
+              return (
+                <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md">
+                  <div className="relative overflow-hidden rounded-t-lg">
+                    <div className="aspect-square bg-gray-100 relative">
+                      {productImageUrl ? (
+                        <img 
+                          src={productImageUrl} 
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-16 w-16 text-gray-400" />
+                        </div>
+                      )}
+                      <Badge className="absolute top-2 right-2 bg-green-500 text-white">
+                        Stok: {product.current_stock}
+                      </Badge>
+                      <Button 
+                        size="sm" 
+                        variant="secondary"
+                        className="absolute top-2 left-2 h-8 w-8 p-0 bg-white/80 hover:bg-white"
+                      >
+                        <Heart className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      {product.name}
+                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-lg font-bold text-blue-600">
+                          Rp {product.selling_price?.toLocaleString('id-ID')}
+                        </span>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                          <span className="text-xs text-gray-500">{product.loyalty_points || 1} pts</span>
                         </div>
                       </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                          {product.name}
-                        </h3>
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <span className="text-lg font-bold text-blue-600">
-                              Rp {product.selling_price?.toLocaleString('id-ID')}
-                            </span>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                              <span className="text-xs text-gray-500">{product.loyalty_points || 1} pts</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button 
-                          onClick={() => handleAddToCart(product)}
-                          className="w-full text-sm py-2"
-                          disabled={product.current_stock <= 0}
-                        >
-                          + Keranjang
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {products.length === 0 && (
-                <div className="text-center py-16">
-                  <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">Tidak ada produk</h3>
-                  <p className="text-gray-500">
-                    {searchTerm ? 
-                      `Tidak ditemukan produk dengan kata kunci "${searchTerm}"` :
-                      'Belum ada produk dalam kategori ini'
-                    }
-                  </p>
-                </div>
-              )}
-            </div>
+                    </div>
+                    <Button 
+                      onClick={() => handleAddToCart(product)}
+                      className="w-full text-sm py-2"
+                      disabled={product.current_stock <= 0}
+                    >
+                      + Keranjang
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
-          {/* Cart Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              {showCart && <FrontendCart />}
+          {products.length === 0 && (
+            <div className="text-center py-16">
+              <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">Tidak ada produk</h3>
+              <p className="text-gray-500">
+                {searchTerm ? 
+                  `Tidak ditemukan produk dengan kata kunci "${searchTerm}"` :
+                  'Belum ada produk dalam kategori ini'
+                }
+              </p>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -585,6 +546,9 @@ const Frontend = () => {
           </div>
         </div>
       </footer>
+
+      {/* Cart Modal */}
+      <CartModal open={showCart} onOpenChange={setShowCart} />
 
       {/* Auth Modal */}
       <AuthModal 

@@ -11,7 +11,6 @@ import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 
 // Main pages
-import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
 import Products from '@/pages/Products';
 import CategoriesUnits from '@/pages/CategoriesUnits';
@@ -45,10 +44,9 @@ function App() {
           <Router>
             <Routes>
               {/* Public routes */}
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Frontend />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/frontend" element={<Frontend />} />
 
               {/* Protected routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
