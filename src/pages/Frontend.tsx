@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck, Mic } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductLikes } from '@/hooks/useProductLikes';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import CountdownTimer from '@/components/CountdownTimer';
-import VoiceSearch from '@/components/VoiceSearch';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -36,6 +34,41 @@ const Frontend = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
+  // Voice search functionality
+  const startVoiceSearch = () => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (SpeechRecognitionAPI) {
+        const recognition = new SpeechRecognitionAPI();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'id-ID';
+
+        recognition.onstart = () => {
+          setIsListening(true);
+        };
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          setSearchTerm(transcript);
+          setIsListening(false);
+        };
+
+        recognition.onerror = () => {
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognition.start();
+      }
+    }
+  };
 
   // Fetch frontend settings
   const { data: frontendSettings } = useQuery({
@@ -240,10 +273,6 @@ const Frontend = () => {
     }
   };
 
-  const handleVoiceResult = (text: string) => {
-    setSearchTerm(text);
-  };
-
   const categoriesLimit = frontendSettings?.featured_categories_limit || 5;
   const featuredCategories = categories.slice(0, categoriesLimit);
   const storeName = storeSettings?.store_name?.name || 'SmartPOS';
@@ -285,17 +314,24 @@ const Frontend = () => {
 
             {/* Search Bar with Voice Search */}
             <div className="flex-1 max-w-2xl mx-8">
-              <div className="relative flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <Input
-                    placeholder="Cari produk, kategori, brand..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500"
-                  />
-                </div>
-                <VoiceSearch onVoiceResult={handleVoiceResult} />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Input
+                  placeholder="Cari produk, kategori, brand..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-12 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={startVoiceSearch}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 ${
+                    isListening ? 'text-red-500' : 'text-gray-400 hover:text-blue-500'
+                  }`}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 

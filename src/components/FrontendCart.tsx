@@ -83,14 +83,19 @@ const FrontendCart = () => {
     enabled: items.length > 0
   });
 
-  // Set shipping cost based on COD settings
+  // Set shipping cost based on COD settings and cart total
   React.useEffect(() => {
-    if (codSettings?.enabled && getTotalPrice() >= (codSettings.min_order || 0)) {
-      setShippingCost(codSettings.delivery_fee || 10000);
+    if (codSettings?.enabled && items.length > 0) {
+      const cartTotal = getTotalPrice();
+      if (cartTotal >= (codSettings.min_order || 0)) {
+        setShippingCost(codSettings.delivery_fee || 10000);
+      } else {
+        setShippingCost(codSettings.delivery_fee || 10000);
+      }
     } else {
       setShippingCost(0);
     }
-  }, [codSettings, getTotalPrice(), setShippingCost]);
+  }, [codSettings, getTotalPrice(), items.length, setShippingCost]);
 
   const getBestPriceForQuantity = (productId: string, quantity: number) => {
     const product = productsWithVariants.find(p => p.id === productId);
@@ -282,6 +287,9 @@ const FrontendCart = () => {
     );
   }
 
+  const cartTotal = getTotalPrice();
+  const isFreeShipping = codSettings?.enabled && cartTotal >= (codSettings.min_order || 0);
+
   return (
     <Card>
       <CardHeader>
@@ -366,7 +374,7 @@ const FrontendCart = () => {
         <div className="border-t pt-4 space-y-2">
           <div className="flex justify-between">
             <span>Subtotal:</span>
-            <span className="font-medium">Rp {getTotalPrice().toLocaleString('id-ID')}</span>
+            <span className="font-medium">Rp {cartTotal.toLocaleString('id-ID')}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1">
@@ -374,16 +382,21 @@ const FrontendCart = () => {
               Ongkos Kirim:
             </span>
             <span className="font-medium">
-              {shippingCost === 0 ? (
+              {isFreeShipping ? (
                 <Badge variant="secondary" className="text-green-600">Gratis Ongkir</Badge>
               ) : (
                 `Rp ${shippingCost.toLocaleString('id-ID')}`
               )}
             </span>
           </div>
+          {codSettings?.enabled && !isFreeShipping && codSettings.min_order > cartTotal && (
+            <div className="text-xs text-gray-500">
+              Belanja Rp {(codSettings.min_order - cartTotal).toLocaleString('id-ID')} lagi untuk gratis ongkir
+            </div>
+          )}
           <div className="flex justify-between text-lg font-bold border-t pt-2">
             <span>Total:</span>
-            <span>Rp {(getTotalPrice() + shippingCost).toLocaleString('id-ID')}</span>
+            <span>Rp {(cartTotal + (isFreeShipping ? 0 : shippingCost)).toLocaleString('id-ID')}</span>
           </div>
         </div>
 
@@ -459,7 +472,7 @@ const FrontendCart = () => {
               <div className="border-t pt-4">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total Pembayaran:</span>
-                  <span>Rp {(getTotalPrice() + shippingCost).toLocaleString('id-ID')}</span>
+                  <span>Rp {(cartTotal + (isFreeShipping ? 0 : shippingCost)).toLocaleString('id-ID')}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                   <Truck className="h-4 w-4" />
