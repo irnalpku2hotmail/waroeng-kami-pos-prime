@@ -52,16 +52,16 @@ const App = () => {
               <Route path="/pos/:id" element={<ProtectedRoute><POS /></ProtectedRoute>} />
               <Route path="/frontend" element={<Frontend />} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-              <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
-              <Route path="/returns" element={<ProtectedRoute><Returns /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/credit-management" element={<ProtectedRoute><CreditManagement /></Layout></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></Layout></ProtectedRoute>} />
-              <Route path="/rewards" element={<ProtectedRoute><Rewards /></Layout></ProtectedRoute>} />
-              <Route path="/flash-sales" element={<ProtectedRoute><FlashSales /></Layout></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></Layout></ProtectedRoute>} />
-              <Route path="/user-management" element={<ProtectedRoute><UserManagement /></Layout></ProtectedRoute>} />
-              <Route path="/website" element={<ProtectedRoute><Website /></Layout></ProtectedRoute>} />
+              <Route path="/purchases" element={<ProtectedRoute><Layout><Purchases /></Layout></ProtectedRoute>} />
+              <Route path="/returns" element={<ProtectedRoute><Layout><Returns /></Layout></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute><Layout><Orders /></Layout></ProtectedRoute>} />
+              <Route path="/credit-management" element={<ProtectedRoute><Layout><CreditManagement /></Layout></ProtectedRoute>} />
+              <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
+              <Route path="/rewards" element={<ProtectedRoute><Layout><Rewards /></Layout></ProtectedRoute>} />
+              <Route path="/flash-sales" element={<ProtectedRoute><Layout><FlashSales /></Layout></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+              <Route path="/user-management" element={<ProtectedRoute><Layout><UserManagement /></Layout></ProtectedRoute>} />
+              <Route path="/website" element={<ProtectedRoute><Layout><Website /></Layout></ProtectedRoute>} />
             </Routes>
           </Suspense>
         </Router>
