@@ -21,7 +21,7 @@ const FrontendSettings = () => {
   const queryClient = useQueryClient();
 
   // Fetch frontend settings
-  const { data: settings } = useQuery({
+  const { data: settings, isLoading } = useQuery({
     queryKey: ['frontend-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -71,7 +71,7 @@ const FrontendSettings = () => {
     }
   });
 
-  // Upload banner mutation - now using Supabase Storage
+  // Upload banner mutation - using Supabase Storage
   const uploadBanner = useMutation({
     mutationFn: async (file: File) => {
       const fileExt = file.name.split('.').pop();
@@ -100,10 +100,6 @@ const FrontendSettings = () => {
       updateSettings.mutate(newSettings);
       setBannerFile(null);
       setBannerPreview(null);
-      toast({
-        title: 'Berhasil',
-        description: 'Banner berhasil diupload'
-      });
     },
     onError: (error: any) => {
       toast({
@@ -163,6 +159,22 @@ const FrontendSettings = () => {
       updateSettings.mutate(newSettings);
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Pengaturan Frontend
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">Loading...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
