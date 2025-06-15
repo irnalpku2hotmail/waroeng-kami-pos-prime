@@ -398,7 +398,7 @@ const Frontend = () => {
                         onClick={() => handleAddFlashSaleToCart(item)}
                         className="absolute top-2 right-2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
                       >
-                        <Plus className="h-4 w-4" />
+                        <ShoppingCart className="h-4 w-4" />
                       </Button>
                     </div>
                     <CardContent className="p-3">
@@ -509,10 +509,11 @@ const Frontend = () => {
                     </div>
                     <Button 
                       onClick={() => handleAddToCart(product)}
-                      className="w-full text-sm py-2"
+                      className="w-full text-sm py-2 flex items-center justify-center gap-2"
                       disabled={product.current_stock <= 0}
                     >
-                      + Keranjang
+                      <ShoppingCart className="h-4 w-4" />
+                      Cart
                     </Button>
                   </CardContent>
                 </Card>
