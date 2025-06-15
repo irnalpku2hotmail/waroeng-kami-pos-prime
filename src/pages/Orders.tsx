@@ -330,7 +330,7 @@ const Orders = () => {
         <OrderDetailsModal
           order={selectedOrder}
           open={!!selectedOrder}
-          onClose={() => setSelectedOrder(null)}
+          onOpenChange={(open) => !open && setSelectedOrder(null)}
         />
       )}
     </Layout>

@@ -266,14 +266,11 @@ const Customers = () => {
         </div>
       </div>
       {selectedCustomer && (
-        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Detail Customer</DialogTitle>
-            </DialogHeader>
-            <CustomerDetails customer={selectedCustomer} onClose={() => setDetailOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <CustomerDetails 
+          customer={selectedCustomer} 
+          open={detailOpen} 
+          onOpenChange={setDetailOpen}
+        />
       )}
     </Layout>
   );
