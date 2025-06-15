@@ -23,11 +23,21 @@ const FaviconUpload = ({ currentFavicon }: FaviconUploadProps) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `favicon_${Date.now()}.${fileExt}`;
       
+      // Remove old favicon if exists
+      if (currentFavicon) {
+        const oldFileName = currentFavicon.split('/').pop();
+        if (oldFileName && oldFileName.startsWith('favicon_')) {
+          await supabase.storage
+            .from('frontend-assets')
+            .remove([oldFileName]);
+        }
+      }
+      
       const { error: uploadError } = await supabase.storage
         .from('frontend-assets')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true
         });
 
       if (uploadError) throw uploadError;
@@ -39,33 +49,43 @@ const FaviconUpload = ({ currentFavicon }: FaviconUploadProps) => {
       return data.publicUrl;
     },
     onSuccess: async (faviconUrl) => {
-      // Update favicon in settings
-      const { error } = await supabase
-        .from('settings')
-        .upsert({
-          key: 'favicon_url',
-          value: { url: faviconUrl } as any,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'key'
+      try {
+        // Update favicon in settings
+        const { error } = await supabase
+          .from('settings')
+          .upsert({
+            key: 'favicon_url',
+            value: { url: faviconUrl } as any,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'key'
+          });
+
+        if (error) throw error;
+
+        // Update favicon in HTML head
+        const existingLink = document.querySelector("link[rel*='icon']");
+        if (existingLink) {
+          existingLink.remove();
+        }
+        
+        const link = document.createElement('link');
+        link.setAttribute('rel', 'icon');
+        link.setAttribute('href', faviconUrl);
+        link.setAttribute('type', 'image/png');
+        document.head.appendChild(link);
+
+        queryClient.invalidateQueries({ queryKey: ['settings'] });
+        setFaviconFile(null);
+        setFaviconPreview(null);
+        
+        toast({
+          title: 'Berhasil',
+          description: 'Favicon berhasil diupload dan diterapkan'
         });
-
-      if (error) throw error;
-
-      // Update favicon in HTML head
-      const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
-      link.setAttribute('rel', 'icon');
-      link.setAttribute('href', faviconUrl);
-      link.setAttribute('type', 'image/png');
-      document.getElementsByTagName('head')[0].appendChild(link);
-
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-      setFaviconFile(null);
-      setFaviconPreview(null);
-      toast({
-        title: 'Berhasil',
-        description: 'Favicon berhasil diupload dan diterapkan'
-      });
+      } catch (error: any) {
+        throw error;
+      }
     },
     onError: (error: any) => {
       toast({
@@ -90,7 +110,7 @@ const FaviconUpload = ({ currentFavicon }: FaviconUploadProps) => {
       }
 
       // Check file type
-      const allowedTypes = ['image/png', 'image/x-icon', 'image/jpeg'];
+      const allowedTypes = ['image/png', 'image/x-icon', 'image/jpeg', 'image/ico'];
       if (!allowedTypes.includes(file.type)) {
         toast({
           title: 'Error',
@@ -112,6 +132,12 @@ const FaviconUpload = ({ currentFavicon }: FaviconUploadProps) => {
   const handleSubmit = () => {
     if (faviconFile) {
       uploadFavicon.mutate(faviconFile);
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Pilih file favicon terlebih dahulu',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -140,7 +166,7 @@ const FaviconUpload = ({ currentFavicon }: FaviconUploadProps) => {
           <Input
             id="favicon"
             type="file"
-            accept="image/png,image/x-icon,image/jpeg"
+            accept="image/png,image/x-icon,image/jpeg,.ico"
             onChange={handleFaviconChange}
             className="hidden"
           />

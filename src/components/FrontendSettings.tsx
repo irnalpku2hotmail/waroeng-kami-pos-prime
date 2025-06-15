@@ -29,13 +29,19 @@ const FrontendSettings = () => {
         .select('value')
         .eq('key', 'frontend_settings')
         .single();
-      if (error) {
+      
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      if (!data) {
         return {
           banner_url: '',
           welcome_message: 'Selamat datang di toko kami',
           featured_categories_limit: 5
         } as FrontendSettings;
       }
+      
       return data.value as unknown as FrontendSettings;
     }
   });
@@ -71,17 +77,27 @@ const FrontendSettings = () => {
     }
   });
 
-  // Upload banner mutation - using Supabase Storage
+  // Upload banner mutation
   const uploadBanner = useMutation({
     mutationFn: async (file: File) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `banner_${Date.now()}.${fileExt}`;
       
+      // Remove old banner if exists
+      if (settings?.banner_url) {
+        const oldFileName = settings.banner_url.split('/').pop();
+        if (oldFileName) {
+          await supabase.storage
+            .from('frontend-assets')
+            .remove([oldFileName]);
+        }
+      }
+      
       const { error: uploadError } = await supabase.storage
         .from('frontend-assets')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true
         });
 
       if (uploadError) throw uploadError;
@@ -100,6 +116,10 @@ const FrontendSettings = () => {
       updateSettings.mutate(newSettings);
       setBannerFile(null);
       setBannerPreview(null);
+      toast({
+        title: 'Berhasil',
+        description: 'Banner berhasil diupload dan disimpan'
+      });
     },
     onError: (error: any) => {
       toast({
