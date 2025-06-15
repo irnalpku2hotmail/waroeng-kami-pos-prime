@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Phone, Mail, Zap, Plus, Truck } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductLikes } from '@/hooks/useProductLikes';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import CountdownTimer from '@/components/CountdownTimer';
+import VoiceSearch from '@/components/VoiceSearch';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -238,6 +239,10 @@ const Frontend = () => {
     }
   };
 
+  const handleVoiceResult = (text: string) => {
+    setSearchTerm(text);
+  };
+
   const categoriesLimit = frontendSettings?.featured_categories_limit || 5;
   const featuredCategories = categories.slice(0, categoriesLimit);
   const storeName = storeSettings?.store_name?.name || 'SmartPOS';
@@ -277,25 +282,24 @@ const Frontend = () => {
               <h1 className="text-2xl font-bold text-blue-600">{storeName}</h1>
             </div>
 
-            {/* Search Bar */}
+            {/* Search Bar with Voice Search */}
             <div className="flex-1 max-w-2xl mx-8">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <Input
-                  placeholder="Cari produk, kategori, brand..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500"
-                />
+              <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Input
+                    placeholder="Cari produk, kategori, brand..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500"
+                  />
+                </div>
+                <VoiceSearch onVoiceResult={handleVoiceResult} />
               </div>
             </div>
 
             {/* Right Actions */}
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Heart className="h-5 w-5" />
-              </Button>
-
               <Button 
                 variant="ghost" 
                 size="sm"
