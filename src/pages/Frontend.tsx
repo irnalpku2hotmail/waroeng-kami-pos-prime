@@ -20,6 +20,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { Link } from 'react-router-dom';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface FrontendSettings {
   banner_url: string;
@@ -281,6 +282,31 @@ const Frontend = () => {
   const storeEmail = storeSettings?.store_email?.email || 'help@smartpos.com';
   const storeAddress = storeSettings?.store_address?.address || 'Jakarta';
 
+  // Ambil banners dari pengaturan frontend
+  const banners: string[] =
+    Array.isArray((frontendSettings as any)?.banner_urls)
+      ? (frontendSettings as any).banner_urls
+      : frontendSettings?.banner_url
+        ? [frontendSettings.banner_url]
+        : [];
+
+  // Autoplay logic for carousel
+  const [currentSlide, setCurrentSlide] = useReactState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (banners.length <= 1) return; // Don't autoplay if only one banner
+
+    // Interval next slide per 5 detik
+    intervalRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, 5000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [banners.length]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
@@ -423,15 +449,40 @@ const Frontend = () => {
         </div>
       </nav>
 
-      {/* Hero Banner */}
-      {frontendSettings?.banner_url && (
-        <div className="relative h-80 bg-gradient-to-r from-blue-600 to-purple-600 overflow-hidden">
-          <img 
-            src={frontendSettings.banner_url} 
-            alt="Store Banner" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center">
+      {/* Hero Banner/Slider */}
+      {banners.length > 0 && (
+        <div className="relative h-80 bg-gradient-to-r from-blue-600 to-purple-600 overflow-hidden animate-fade-in">
+          {banners.length === 1 ? (
+            // Show single image if only one
+            <img
+              src={banners[0]}
+              alt="Store Banner"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Carousel
+              opts={{
+                // snap: true,
+                startIndex: currentSlide,
+              }}
+            >
+              <CarouselContent>
+                {banners.map((url, idx) => (
+                  <CarouselItem key={url + idx}>
+                    <img
+                      src={url}
+                      alt={`Banner ${idx + 1}`}
+                      className="w-full h-80 object-cover rounded-none"
+                      draggable="false"
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="z-10" />
+              <CarouselNext className="z-10" />
+            </Carousel>
+          )}
+          <div className="absolute inset-0 bg-black/30 flex items-center">
             <div className="container mx-auto px-4">
               <div className="text-white max-w-2xl">
                 <h2 className="text-4xl md:text-5xl font-bold mb-4">
