@@ -95,6 +95,7 @@ const Categories = () => {
               <CategoryForm 
                 category={editingCategory} 
                 onSuccess={handleDialogClose}
+                onClose={handleDialogClose}
               />
             </DialogContent>
           </Dialog>
