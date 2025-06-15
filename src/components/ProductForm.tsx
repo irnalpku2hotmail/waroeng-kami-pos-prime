@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -71,6 +70,40 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
       return data;
     }
   });
+
+  // Ambil konversi unit dari Supabase saat edit atau refresh
+  useEffect(() => {
+    if (product?.id) {
+      // Fetch dari Supabase
+      (async () => {
+        const { data: uc, error } = await supabase
+          .from('unit_conversions')
+          .select('*')
+          .eq('product_id', product.id);
+        if (!error && uc) {
+          setUnitConversions(
+            uc.map((ucItem: any) => ({
+              id: ucItem.id,
+              from_unit_id: ucItem.from_unit_id,
+              to_unit_id: ucItem.to_unit_id,
+              conversion_factor: ucItem.conversion_factor,
+            }))
+          );
+        } else {
+          setUnitConversions([]);
+        }
+      })();
+    } else if (product && product.unit_conversions) {
+      setUnitConversions(product.unit_conversions.map((uc: any) => ({
+        id: uc.id,
+        from_unit_id: uc.from_unit_id,
+        to_unit_id: uc.to_unit_id,
+        conversion_factor: uc.conversion_factor
+      })));
+    } else {
+      setUnitConversions([]);
+    }
+  }, [product]);
 
   // Load existing product data
   useEffect(() => {
@@ -177,29 +210,27 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
           if (variantError) throw variantError;
         }
 
-        // Update unit conversions
-        if (unitConversions.length > 0) {
-          // Delete existing conversions
-          await supabase
-            .from('unit_conversions')
-            .delete()
-            .eq('product_id', product.id);
+        // --- Perbaikan bagian unit conversions: hapus dan tambah ulang ---
+        // Hapus semua konversi eksisting produk
+        await supabase
+          .from('unit_conversions')
+          .delete()
+          .eq('product_id', product.id);
 
-          // Insert new conversions
+        // Insert ulang jika ada konversi
+        if (unitConversions.length > 0) {
           const conversions = unitConversions.map(uc => ({
             product_id: product.id,
             from_unit_id: uc.from_unit_id,
             to_unit_id: uc.to_unit_id,
             conversion_factor: uc.conversion_factor
           }));
-
           const { error: conversionError } = await supabase
             .from('unit_conversions')
             .insert(conversions);
-
           if (conversionError) throw conversionError;
         }
-
+        // --- END ---
         return { id: product.id };
       } else {
         // Create new product
@@ -228,7 +259,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
           if (variantError) throw variantError;
         }
 
-        // Insert unit conversions
+        // Insert konversi unit jika ada
         if (unitConversions.length > 0) {
           const conversions = unitConversions.map(uc => ({
             product_id: newProduct.id,
