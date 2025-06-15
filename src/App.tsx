@@ -8,9 +8,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import LoadingSkeleton from './components/inventory/LoadingSkeleton';
 
-// Lazy load components with better chunking
+// Lazy load components
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -34,17 +33,7 @@ const Frontend = lazy(() => import('./pages/Frontend'));
 const ProductDetails = lazy(() => import('./pages/ProductDetails'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-// Optimized QueryClient configuration
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime)
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -54,7 +43,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
-            <Suspense fallback={<LoadingSkeleton />}>
+            <Suspense fallback={<div>Loading...</div>}>
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
