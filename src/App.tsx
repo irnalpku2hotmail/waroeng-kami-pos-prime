@@ -24,7 +24,6 @@ import PointsRewards from '@/pages/PointsRewards';
 import PointExchange from '@/pages/PointExchange';
 import FlashSales from '@/pages/FlashSales';
 import Settings from '@/pages/Settings';
-import Website from '@/pages/Website';
 import UserManagement from '@/pages/UserManagement';
 import Profile from '@/pages/Profile';
 import Frontend from '@/pages/Frontend';
@@ -63,7 +62,6 @@ function App() {
               <Route path="/point-exchange" element={<ProtectedRoute><PointExchange /></ProtectedRoute>} />
               <Route path="/flash-sales" element={<ProtectedRoute><FlashSales /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/website" element={<ProtectedRoute><Website /></ProtectedRoute>} />
               <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/returns" element={<ProtectedRoute><Returns /></ProtectedRoute>} />

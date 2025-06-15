@@ -1266,63 +1266,6 @@ export type Database = {
           },
         ]
       }
-      website_banners: {
-        Row: {
-          created_at: string
-          id: string
-          image_url: string
-          is_active: boolean
-          sort_order: number
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          image_url: string
-          is_active?: boolean
-          sort_order?: number
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          image_url?: string
-          is_active?: boolean
-          sort_order?: number
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      website_settings: {
-        Row: {
-          created_at: string
-          favicon_url: string | null
-          footer_color: string
-          id: string
-          navbar_color: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          favicon_url?: string | null
-          footer_color?: string
-          id?: string
-          navbar_color?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          favicon_url?: string | null
-          footer_color?: string
-          id?: string
-          navbar_color?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
