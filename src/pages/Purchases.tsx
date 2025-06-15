@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, Check, CreditCard } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Check, CreditCard, MoreHorizontal } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
 import CreditPaymentForm from '@/components/CreditPaymentForm';
@@ -171,47 +171,43 @@ const Purchases = () => {
                     </TableCell>
                     <TableCell>{purchase.profiles?.full_name || 'Unknown'}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        {purchase.payment_method === 'credit' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openPaymentDialog(purchase)}
-                              className="text-blue-600 hover:bg-blue-50"
-                              title="Catat Pembayaran"
-                            >
-                              <CreditCard className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => markAsPaid.mutate(purchase.id)}
-                              className="text-green-600 hover:bg-green-50"
-                              title="Tandai Lunas"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditPurchase(purchase);
-                            setOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deletePurchase.mutate(purchase.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          {purchase.payment_method === 'credit' && (
+                            <>
+                              <DropdownMenuItem onClick={() => openPaymentDialog(purchase)}>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Catat Pembayaran
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => markAsPaid.mutate(purchase.id)}>
+                                <Check className="h-4 w-4 mr-2" />
+                                Tandai Lunas
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setEditPurchase(purchase);
+                              setOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => deletePurchase.mutate(purchase.id)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
