@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Truck, Mic, Folder } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck, Mic } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductLikes } from '@/hooks/useProductLikes';
@@ -318,27 +318,6 @@ const Frontend = () => {
     setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
   };
 
-  // ** NEW: Dapatkan icon kategori berbasis nama (sederhana, fallback to Package) **
-  const getCategoryIcon = (name: string) => {
-    // You can add more icon mappings if you wish
-    return <Folder className="h-7 w-7 md:h-10 md:w-10 text-blue-600" />;
-  };
-
-  // Carousel kategori untuk icon kategori
-  const [categoryCarouselIdx, setCategoryCarouselIdx] = useState(0);
-  const visibleCarousel = 6; // tampilkan 6 kategori sekaligus
-  const totalCategories = categories.length;
-  // Fungsi carousel
-  const prevCategory = () =>
-    setCategoryCarouselIdx((prev) => (prev === 0 ? totalCategories - visibleCarousel : Math.max(0, prev - visibleCarousel)));
-  const nextCategory = () =>
-    setCategoryCarouselIdx((prev) =>
-      prev + visibleCarousel >= totalCategories ? 0 : Math.min(totalCategories - visibleCarousel, prev + visibleCarousel)
-    );
-
-  // Daftar kategori untuk carousel (ambil sesuai slice index)
-  const carouselCategories = categories.slice(categoryCarouselIdx, categoryCarouselIdx + visibleCarousel);
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
@@ -362,26 +341,89 @@ const Frontend = () => {
         </div>
       </div>
 
-      {/* Header DIHAPUS */}
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Logo */}
+            <div className="flex items-center">
+              <Link to="/dashboard">
+                <h1 className="text-2xl font-bold text-blue-600 hover:text-blue-800 transition-colors">{storeName}</h1>
+              </Link>
+            </div>
+
+            {/* Search Bar with Voice Search */}
+            <div className="flex-1 max-w-2xl mx-8">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Input
+                  placeholder="Cari produk, kategori, brand..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-12 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={startVoiceSearch}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 ${
+                    isListening ? 'text-red-500' : 'text-gray-400 hover:text-blue-500'
+                  }`}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Actions */}
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleAuthAction}
+                className="flex items-center gap-2"
+              >
+                <User className="h-5 w-5" />
+                <span className="hidden md:inline">
+                  {user ? 'Logout' : 'Login'}
+                </span>
+              </Button>
+
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="relative"
+                onClick={() => setShowCart(!showCart)}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {getTotalItems() > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs bg-red-500">
+                    {getTotalItems()}
+                  </Badge>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Navigation */}
       <nav className="bg-white border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center space-x-8 py-3">
-            {/* PERAPIHAN MENU KATEGORI */}
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="flex items-center gap-2 text-[13px] md:text-sm font-medium rounded bg-blue-50 hover:bg-blue-100 transition">
+                  <NavigationMenuTrigger className="flex items-center gap-2">
                     <Menu className="h-4 w-4" />
-                    <span className="tracking-wide">Kategori</span>
+                    Kategori
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 p-4 min-w-[280px] md:min-w-[400px]">
+                    <div className="grid grid-cols-3 gap-4 p-6 w-96">
                       <Button
                         variant={selectedCategory === null ? "default" : "ghost"}
                         onClick={() => setSelectedCategory(null)}
-                        className="flex items-center gap-2 px-2 py-1 md:py-2 text-[13px] md:text-sm rounded hover:scale-105 transition"
+                        className="flex items-center gap-2 justify-start"
                       >
                         Semua Kategori
                       </Button>
@@ -390,10 +432,9 @@ const Frontend = () => {
                           key={category.id}
                           variant={selectedCategory === category.id ? "default" : "ghost"}
                           onClick={() => setSelectedCategory(category.id)}
-                          className="flex items-center gap-2 px-2 py-1 md:py-2 text-[13px] md:text-sm rounded capitalize whitespace-nowrap hover:scale-105 transition"
+                          className="flex items-center gap-2 justify-start"
                         >
-                          {getCategoryIcon(category.name)}
-                          <span>{category.name}</span>
+                          {category.name}
                         </Button>
                       ))}
                     </div>
@@ -402,7 +443,7 @@ const Frontend = () => {
               </NavigationMenuList>
             </NavigationMenu>
             {flashSales.length > 0 && (
-              <Button variant="ghost" size="sm" className="flex items-center gap-2 text-red-600 text-[13px] md:text-base">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 text-red-600">
                 <Zap className="h-4 w-4" />
                 Flash Sale
               </Button>
@@ -562,52 +603,6 @@ const Frontend = () => {
           </div>
         )}
 
-        {/* CATEGORY ICON CAROUSEL: tampilkan di bawah flash sale */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between px-1 mb-2">
-            <h3 className="font-semibold tracking-wide text-md md:text-lg text-gray-700">
-              Pilihan Kategori
-            </h3>
-            <div className="flex gap-2">
-              <Button 
-                size="icon"
-                variant="ghost"
-                onClick={prevCategory}
-                className="h-8 w-8 p-0"
-                disabled={totalCategories <= visibleCarousel}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" className="text-blue-600" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
-              </Button>
-              <Button 
-                size="icon"
-                variant="ghost"
-                onClick={nextCategory}
-                className="h-8 w-8 p-0"
-                disabled={totalCategories <= visibleCarousel}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" className="text-blue-600" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 6l6 6-6 6"/></svg>
-              </Button>
-            </div>
-          </div>
-          <div className="flex gap-3 md:gap-6 overflow-x-auto py-2 transition-all duration-200">
-            {carouselCategories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`flex flex-col items-center justify-center border-none outline-none bg-white rounded-lg shadow hover:shadow-lg py-2 px-3 md:px-5 transition-all duration-150
-                ${selectedCategory === category.id ? "ring-2 ring-blue-200" : "ring-0"}`}
-                style={{ minWidth: "90px", maxWidth: "100px" }}
-              >
-                {getCategoryIcon(category.name)}
-                <span className="mt-2 text-xs md:text-sm font-medium text-gray-700 capitalize truncate text-center">{category.name}</span>
-              </button>
-            ))}
-            {carouselCategories.length === 0 && (
-              <div className="text-gray-500 text-xs">Tidak ada kategori</div>
-            )}
-          </div>
-        </div>
-
         {/* Products Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
@@ -620,8 +615,7 @@ const Frontend = () => {
             <span className="text-gray-600">{products.length} produk ditemukan</span>
           </div>
 
-          {/* == PERBAIKI CARD PRODUK == */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {products.map((product) => {
               const productImageUrl = getImageUrl(product.image_url);
               const productIsLiked = isLiked(product.id);
@@ -629,23 +623,21 @@ const Frontend = () => {
               const hasWholesalePrice = product.price_variants && product.price_variants.some((v: any) => v.is_active);
               
               return (
-                <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md rounded-xl">
-                  <div className="relative overflow-hidden rounded-t-xl">
-                    {/* Card Image: height ditetapkan & aspect ratio kuadrat */}
-                    <div className="aspect-square bg-gray-100 relative flex items-center justify-center">
+                <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md">
+                  <div className="relative overflow-hidden rounded-t-lg">
+                    <div className="aspect-square bg-gray-100 relative">
                       {productImageUrl ? (
                         <Link to={`/products/${product.id}`}>
                           <img 
                             src={productImageUrl} 
                             alt={product.name}
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300 rounded-t-xl"
-                            style={{ maxHeight: 180, minHeight: 140 }}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </Link>
                       ) : (
                         <Link to={`/products/${product.id}`}>
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-14 w-14 text-gray-400" />
+                            <Package className="h-16 w-16 text-gray-400" />
                           </div>
                         </Link>
                       )}
@@ -675,7 +667,7 @@ const Frontend = () => {
                           Grosir
                         </Badge>
                       )}
-                      {/* Cart Button */}
+                      {/* Cart Button - positioned in front of product image */}
                       <Button 
                         size="sm" 
                         onClick={() => handleAddToCart(product)}
@@ -686,15 +678,15 @@ const Frontend = () => {
                       </Button>
                     </div>
                   </div>
-                  <CardContent className="p-3">
+                  <CardContent className="p-4">
                     <Link to={`/products/${product.id}`}>
-                      <h3 className="font-semibold text-xs md:text-sm mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
                         {product.name}
                       </h3>
                     </Link>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div>
-                        <span className="text-base md:text-lg font-bold text-blue-600">
+                        <span className="text-lg font-bold text-blue-600">
                           Rp {priceInfo.price?.toLocaleString('id-ID')}
                         </span>
                         {priceInfo.isWholesale && (
@@ -709,13 +701,11 @@ const Frontend = () => {
                         )}
                         <div className="flex items-center gap-1 mt-1">
                           <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                          <span className="text-[11px] md:text-xs text-gray-500">
-                            {product.loyalty_points || 1} pts
-                          </span>
+                          <span className="text-xs text-gray-500">{product.loyalty_points || 1} pts</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 mb-1 text-[11px] md:text-xs text-green-600">
+                    <div className="flex items-center gap-1 mb-2 text-xs text-green-600">
                       <Truck className="h-3 w-3" />
                       <span>Bayar di Tempat (COD)</span>
                     </div>
@@ -745,13 +735,8 @@ const Frontend = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              {/* == LINK KE DASHBOARD DI NAMA TOKO == */}
-              <Link 
-                to="/dashboard"
-                className="text-xl md:text-2xl font-bold mb-4 text-blue-300 hover:text-blue-400 transition underline">
-                {storeName}
-              </Link>
-              <p className="text-gray-300 text-sm mt-2">
+              <h3 className="text-xl font-bold mb-4">{storeName}</h3>
+              <p className="text-gray-300 text-sm">
                 Platform e-commerce terpercaya dengan produk berkualitas dan harga terjangkau.
               </p>
               <div className="mt-4 space-y-2">
