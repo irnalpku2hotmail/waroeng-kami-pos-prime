@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,47 +8,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 
 const POSSalesReports = () => {
-  const [timeFilter, setTimeFilter] = useState('daily');
-  const [dateRange, setDateRange] = useState('30');
+  // Remove timeFilter and dateRange:
+  // const [timeFilter, setTimeFilter] = useState('daily');
+  // const [dateRange, setDateRange] = useState('30');
+
+  // Only use all-time data
 
   // Sales by time period (transactions)
   const { data: salesByTime, isLoading: isLoadingSalesByTime } = useQuery({
-    queryKey: ['pos-sales-by-time', timeFilter, dateRange],
+    queryKey: ['pos-sales-by-time'],
     queryFn: async () => {
-      const days = parseInt(dateRange, 10);
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-
       const { data, error } = await supabase
         .from('transactions')
-        .select('created_at, total_amount')
-        .gte('created_at', startDate.toISOString());
+        .select('created_at, total_amount');
 
       if (error) throw error;
 
       const groupedData = data.reduce((acc, trx) => {
-        let key;
         const date = new Date(trx.created_at);
-        switch (timeFilter) {
-          case 'daily':
-            key = date.toISOString().split('T')[0];
-            break;
-          case 'weekly': {
-            const weekStart = new Date(date);
-            weekStart.setDate(date.getDate() - date.getDay());
-            key = weekStart.toISOString().split('T')[0];
-            break;
-          }
-          case 'monthly':
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            break;
-          case 'yearly':
-            key = date.getFullYear().toString();
-            break;
-          default:
-            key = date.toISOString().split('T')[0];
-        }
-
+        const key = date.toISOString().split('T')[0];
         if (!acc[key]) {
           acc[key] = { date: key, total: 0, count: 0 };
         }
@@ -59,14 +36,10 @@ const POSSalesReports = () => {
       }, {} as Record<string, { date: string; total: number; count: number }>);
 
       return Object.values(groupedData).map(item => ({
-        name: (() => {
-          const d = new Date(item.date);
-          return d.toLocaleDateString('id-ID', {
-            month: 'short',
-            day: timeFilter === 'daily' ? 'numeric' : undefined,
-            year: timeFilter === 'yearly' ? 'numeric' : undefined,
-          });
-        })(),
+        name: new Date(item.date).toLocaleDateString('id-ID', {
+          month: 'short',
+          day: 'numeric',
+        }),
         Total: item.total,
         Transaksi: item.count,
       }));
@@ -213,37 +186,11 @@ const POSSalesReports = () => {
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
-      <div className="flex gap-4">
-        <Select value={timeFilter} onValueChange={setTimeFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Pilih periode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">Harian</SelectItem>
-            <SelectItem value="weekly">Mingguan</SelectItem>
-            <SelectItem value="monthly">Bulanan</SelectItem>
-            <SelectItem value="yearly">Tahunan</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Pilih rentang" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">7 Hari Terakhir</SelectItem>
-            <SelectItem value="30">30 Hari Terakhir</SelectItem>
-            <SelectItem value="90">3 Bulan Terakhir</SelectItem>
-            <SelectItem value="365">1 Tahun Terakhir</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
+      {/* Remove Controls */}
       {/* Trend chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Tren Penjualan POS {timeFilter === 'daily' ? 'Harian' : timeFilter === 'weekly' ? 'Mingguan' : timeFilter === 'monthly' ? 'Bulanan' : 'Tahunan'}</CardTitle>
+          <CardTitle>Tren Penjualan POS</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingSalesByTime ? (

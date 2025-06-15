@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +16,7 @@ import Layout from '@/components/Layout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { usePresence } from '@/contexts/PresenceContext';
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Fetching helper
 const getDateRange = (type: string) => {
@@ -67,36 +67,6 @@ const Dashboard = () => {
       const { data, error } = await supabase
         .from('customers')
         .select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Penjualan hari ini: dari tabel transactions (POS)
-  const { data: posSales } = useQuery({
-    queryKey: ['pos-daily-sales'],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('total_amount')
-        .gte('created_at', today + 'T00:00:00')
-        .lte('created_at', today + 'T23:59:59');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Jumlah transaksi hari ini: dari tabel transactions (POS)
-  const { data: posTransactions } = useQuery({
-    queryKey: ['pos-daily-transactions'],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('id')
-        .gte('created_at', today + 'T00:00:00')
-        .lte('created_at', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
@@ -167,11 +137,105 @@ const Dashboard = () => {
     }
   });
 
+  // Today's Sales/Transactions for POS
+  const { data: posSales } = useQuery({
+    queryKey: ['pos-daily-sales'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id, transaction_number, total_amount, customer_id, created_at')
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T23:59:59');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Today's Sales/Transactions for COD (orders)
+  const { data: codSales } = useQuery({
+    queryKey: ['cod-daily-sales'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, total_amount, customer_name, created_at')
+        .eq('order_date', today);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Combine POS and COD for activity table
+  const todaySalesTable = [
+    ...(posSales?.map((trx) => ({
+      id: trx.id,
+      number: trx.transaction_number,
+      name: trx.customer_id ? `Pelanggan #${trx.customer_id.slice(-4)}` : 'Umum',
+      total: trx.total_amount,
+      status: 'POS',
+      created_at: trx.created_at,
+    })) ?? []),
+    ...(codSales?.map((ord) => ({
+      id: ord.id,
+      number: ord.order_number,
+      name: ord.customer_name,
+      total: ord.total_amount,
+      status: 'COD',
+      created_at: ord.created_at,
+    })) ?? []),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  // For line chart: get last 7 days POS and COD sales
+  const { data: posVsCod7Days } = useQuery({
+    queryKey: ['pos-vs-cod-7days'],
+    queryFn: async () => {
+      const days = Array.from({ length: 7 }).map((_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return date.toISOString().split('T')[0];
+      });
+
+      // POS per day
+      const { data: posRaw, error: e1 } = await supabase
+        .from('transactions')
+        .select('created_at, total_amount')
+        .gte('created_at', days[0] + 'T00:00:00')
+        .lte('created_at', days[6] + 'T23:59:59');
+
+      // COD per day
+      const { data: codRaw, error: e2 } = await supabase
+        .from('orders')
+        .select('order_date, total_amount')
+        .gte('order_date', days[0])
+        .lte('order_date', days[6]);
+
+      if (e1) throw e1;
+      if (e2) throw e2;
+
+      const posDay = Object.fromEntries(days.map(d=>[d,0]));
+      for(const trx of posRaw??[]) {
+        const d = trx.created_at.split('T')[0];
+        if (posDay[d]!==undefined) posDay[d] += trx.total_amount ?? 0;
+      }
+      const codDay = Object.fromEntries(days.map(d=>[d,0]));
+      for(const o of codRaw??[]) {
+        const d = o.order_date.split('T')[0];
+        if (codDay[d]!==undefined) codDay[d] += o.total_amount ?? 0;
+      }
+      return days.map(d => ({
+        date: d,
+        POS: posDay[d] || 0,
+        COD: codDay[d] || 0,
+      }));
+    }
+  });
+
   const totalProducts = products?.length || 0;
   const lowStockProducts = lowStock?.length || 0;
   const totalCustomers = customers?.length || 0;
   const todaySales = posSales?.reduce((sum, trx) => sum + (trx.total_amount || 0), 0) || 0;
-  const todayTransactions = posTransactions?.length || 0;
+  const todayTransactions = todaysOrders?.length || 0;
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
   const codIncome = codRevenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
@@ -314,40 +378,56 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Today's Sales Activity */}
+        {/* Garfik POS vs COD */}
+        <div className="bg-white rounded-xl shadow p-4">
+          <h2 className="font-semibold mb-2 text-blue-900">Tren Penjualan POS vs COD (7 Hari Terakhir)</h2>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={posVsCod7Days ?? []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis tickFormatter={v=>`Rp ${Number(v).toLocaleString('id-ID')}`} />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="POS" stroke="#2563eb" name="POS" />
+                <Line type="monotone" dataKey="COD" stroke="#16a34a" name="COD" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Today's Sales Activity: Now Combined POS + COD */}
         <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <History className="h-5 w-5 text-blue-500" />
-                Transaksi Penjualan Hari Ini (COD)
+                Transaksi Penjualan Hari Ini (POS & COD)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>No. Pesanan</TableHead>
+                    <TableHead>No. Transaksi</TableHead>
                     <TableHead>Pelanggan</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoadingTodaysOrders ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
-                        Loading...
-                      </TableCell>
-                    </TableRow>
-                  ) : todaysOrders && todaysOrders.length > 0 ? (
-                    todaysOrders.map((order) => (
+                  {todaySalesTable.length > 0 ? (
+                    todaySalesTable.map(order => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.order_number}</TableCell>
-                        <TableCell>{order.customer_name}</TableCell>
-                        <TableCell>{getStatusBadge(order.status)}</TableCell>
+                        <TableCell className="font-medium">{order.number}</TableCell>
+                        <TableCell>{order.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={order.status === "POS" ? "secondary" : "default"}>
+                            {order.status}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
-                          Rp {order.total_amount?.toLocaleString('id-ID') || 0}
+                          Rp {order.total?.toLocaleString('id-ID') || 0}
                         </TableCell>
                       </TableRow>
                     ))

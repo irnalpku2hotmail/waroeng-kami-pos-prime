@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,48 +8,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 
 const SalesReports = () => {
-  const [timeFilter, setTimeFilter] = useState('daily');
-  const [dateRange, setDateRange] = useState('30');
-
-  // Sales by time period
+  // All-time orders
   const { data: salesByTime, isLoading: isLoadingSalesByTime } = useQuery({
-    queryKey: ['sales-by-time', timeFilter, dateRange],
+    queryKey: ['sales-by-time'],
     queryFn: async () => {
-      const days = parseInt(dateRange);
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-
       const { data, error } = await supabase
         .from('orders')
         .select('order_date, total_amount, created_at')
-        .gte('order_date', startDate.toISOString().split('T')[0])
         .order('order_date', { ascending: true });
 
       if (error) throw error;
 
       const groupedData = data.reduce((acc, order) => {
-        let key;
-        const date = new Date(order.order_date);
-        
-        switch (timeFilter) {
-          case 'daily':
-            key = order.order_date;
-            break;
-          case 'weekly':
-            const weekStart = new Date(date);
-            weekStart.setDate(date.getDate() - date.getDay());
-            key = weekStart.toISOString().split('T')[0];
-            break;
-          case 'monthly':
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            break;
-          case 'yearly':
-            key = date.getFullYear().toString();
-            break;
-          default:
-            key = order.order_date;
-        }
-
+        const key = order.order_date;
         if (!acc[key]) {
           acc[key] = { date: key, total: 0, count: 0 };
         }
@@ -62,8 +32,7 @@ const SalesReports = () => {
       return Object.values(groupedData).map(item => ({
         name: new Date(item.date).toLocaleDateString('id-ID', { 
           month: 'short', 
-          day: timeFilter === 'daily' ? 'numeric' : undefined,
-          year: timeFilter === 'yearly' ? 'numeric' : undefined
+          day: 'numeric'
         }),
         Total: item.total,
         Transaksi: item.count
@@ -185,37 +154,10 @@ const SalesReports = () => {
 
   return (
     <div className="space-y-6">
-      {/* Time Period Controls */}
-      <div className="flex gap-4">
-        <Select value={timeFilter} onValueChange={setTimeFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Pilih periode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">Harian</SelectItem>
-            <SelectItem value="weekly">Mingguan</SelectItem>
-            <SelectItem value="monthly">Bulanan</SelectItem>
-            <SelectItem value="yearly">Tahunan</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Pilih rentang" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">7 Hari Terakhir</SelectItem>
-            <SelectItem value="30">30 Hari Terakhir</SelectItem>
-            <SelectItem value="90">3 Bulan Terakhir</SelectItem>
-            <SelectItem value="365">1 Tahun Terakhir</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Sales Trend Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Tren Penjualan {timeFilter === 'daily' ? 'Harian' : timeFilter === 'weekly' ? 'Mingguan' : timeFilter === 'monthly' ? 'Bulanan' : 'Tahunan'}</CardTitle>
+          <CardTitle>Tren Penjualan COD</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingSalesByTime ? (

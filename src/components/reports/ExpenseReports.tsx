@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,17 +6,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { addMonths, format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 const ExpenseReports = () => {
-  const [timeFilter, setTimeFilter] = useState('monthly');
+  // Add filter
+  const [filter, setFilter] = useState<'monthly' | 'yearly' | 'range'>('monthly');
+  const [range, setRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
-  // Expenses by category
+  // Expenses by category, filtered
   const { data: expensesByCategory, isLoading: isLoadingExpensesByCategory } = useQuery({
-    queryKey: ['expenses-by-category', timeFilter],
+    queryKey: ['expenses-by-category', filter, range],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('category, amount, expense_date');
+      // filtering logic
+      const today = new Date();
+      let from = '', to = '';
+      if (filter === 'monthly') {
+        from = format(startOfMonth(today), 'yyyy-MM-dd');
+        to = format(endOfMonth(today), 'yyyy-MM-dd');
+      } else if (filter === 'yearly') {
+        from = format(startOfYear(today), 'yyyy-MM-dd');
+        to = format(endOfYear(today), 'yyyy-MM-dd');
+      } else if (filter === 'range' && range.from && range.to) {
+        from = range.from;
+        to = range.to;
+      }
+
+      let query = supabase.from('expenses').select('category, amount, expense_date');
+
+      if (from && to) {
+        query = query.gte('expense_date', from).lte('expense_date', to);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -35,21 +55,38 @@ const ExpenseReports = () => {
     },
   });
 
-  // Monthly expenses trend
+  // Monthly/yearly expenses trend
   const { data: monthlyExpenses, isLoading: isLoadingMonthlyExpenses } = useQuery({
-    queryKey: ['monthly-expenses'],
+    queryKey: ['monthly-expenses', filter, range],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('expense_date, amount')
-        .order('expense_date', { ascending: true });
+      // filtering
+      const today = new Date();
+      let from = '', to = '';
+      if (filter === 'monthly') {
+        from = format(startOfMonth(today), 'yyyy-MM-dd');
+        to = format(endOfMonth(today), 'yyyy-MM-dd');
+      } else if (filter === 'yearly') {
+        from = format(startOfYear(today), 'yyyy-MM-dd');
+        to = format(endOfYear(today), 'yyyy-MM-dd');
+      } else if (filter === 'range' && range.from && range.to) {
+        from = range.from;
+        to = range.to;
+      }
 
+      let q = supabase.from('expenses').select('expense_date, amount').order('expense_date', { ascending: true });
+      if (from && to) q = q.gte('expense_date', from).lte('expense_date', to);
+
+      const { data, error } = await q;
       if (error) throw error;
 
       const monthlyData = data.reduce((acc, expense) => {
         const date = new Date(expense.expense_date);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        
+        const monthKey = filter === "yearly"
+          ? `${date.getFullYear()}`
+          : filter === "monthly"
+            ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+            : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
         if (!acc[monthKey]) {
           acc[monthKey] = { month: monthKey, total: 0, count: 0 };
         }
@@ -60,18 +97,56 @@ const ExpenseReports = () => {
 
       return Object.values(monthlyData)
         .map(item => ({
-          name: new Date(item.month + '-01').toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }),
+          name: filter === "yearly"
+            ? item.month
+            : new Date(item.month + '-01').toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }),
           Total: item.total,
           Transaksi: item.count
         }))
-        .slice(-12); // Last 12 months
+        .slice(-12);
     },
   });
 
-  const COLORS = ['#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#16a34a'];
+  const COLORS = ['#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#16a34a'];  
 
   return (
     <div className="space-y-6">
+      {/* Filter Controls */}
+      <div className="flex gap-4 items-center">
+        <Select value={filter} onValueChange={(val) => setFilter(val as any)}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Periode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="monthly">Bulanan</SelectItem>
+            <SelectItem value="yearly">Tahunan</SelectItem>
+            <SelectItem value="range">Custom Range</SelectItem>
+          </SelectContent>
+        </Select>
+        {filter === 'range' && (
+          <>
+            <input
+              type="date"
+              className="border p-1 rounded text-xs"
+              value={range.from}
+              onChange={e => setRange(r => ({
+                from: e.target.value,
+                to: r.to
+              }))}
+            />
+            <span>s/d</span>
+            <input
+              type="date"
+              className="border p-1 rounded text-xs"
+              value={range.to}
+              onChange={e => setRange(r => ({
+                from: r.from,
+                to: e.target.value
+              }))}
+            />
+          </>
+        )}
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expenses by Category */}
         <Card>
