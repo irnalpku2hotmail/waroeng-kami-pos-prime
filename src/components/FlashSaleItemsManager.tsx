@@ -157,7 +157,10 @@ const FlashSaleItemsManager = ({ flashSaleId, onItemsChange }: FlashSaleItemsMan
     });
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (amount == null || amount === undefined) {
+      return 'Rp 0';
+    }
     return `Rp ${amount.toLocaleString('id-ID')}`;
   };
 
