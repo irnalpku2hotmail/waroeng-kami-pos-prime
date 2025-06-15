@@ -11,6 +11,7 @@ interface UserProductLike {
   created_at: string;
 }
 
+// Hook for managing product likes functionality
 export const useProductLikes = () => {
   const { user } = useAuth();
   const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
