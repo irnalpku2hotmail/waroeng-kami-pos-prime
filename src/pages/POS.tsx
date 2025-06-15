@@ -242,8 +242,13 @@ const POS = () => {
       const storeName = settings?.store_name?.name || 'SmartPOS';
       const storePhone = settings?.store_phone?.phone || '';
       const storeAddress = settings?.store_address?.address || '';
-      const receiptHeader = settings?.receipt_header?.text || 'Terima kasih telah berbelanja';
-      const receiptFooter = settings?.receipt_footer?.text || 'Barang yang sudah dibeli tidak dapat dikembalikan';
+      const receiptSettings = settings?.receipt_settings || {};
+      const receiptHeader = receiptSettings.header_text || 'Terima kasih telah berbelanja';
+      const receiptFooter = receiptSettings.footer_text || 'Barang yang sudah dibeli tidak dapat dikembalikan';
+      const showQrCode = receiptSettings.show_qr_code !== false; // Default true
+
+      // Generate QR code URL for transaction number
+      const qrCodeUrl = showQrCode ? `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${transaction.transaction_number}` : '';
 
       const receiptContent = `
 ========================================
@@ -285,12 +290,14 @@ ${receiptFooter}
               <head>
                 <title>Receipt</title>
                 <style>
-                  body { font-family: monospace; font-size: 12px; margin: 0; padding: 10px; }
+                  body { font-family: monospace; font-size: 12px; margin: 0; padding: 10px; text-align: center; }
                   pre { white-space: pre-wrap; margin: 0; }
+                  .qr-code { margin: 10px 0; }
                 </style>
               </head>
               <body>
                 <pre>${receiptContent}</pre>
+                ${showQrCode ? `<div class="qr-code"><img src="${qrCodeUrl}" alt="QR Code" /></div>` : ''}
                 <script>
                   window.onload = function() {
                     window.print();

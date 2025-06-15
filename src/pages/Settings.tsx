@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Settings as SettingsIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CODSettings from '@/components/CODSettings';
+import FrontendSettings from '@/components/FrontendSettings';
 
 const Settings = () => {
   const queryClient = useQueryClient();
@@ -105,6 +105,7 @@ const Settings = () => {
             <TabsTrigger value="store-info">Informasi Toko</TabsTrigger>
             <TabsTrigger value="receipt">Pengaturan Struk</TabsTrigger>
             <TabsTrigger value="cod">COD Settings</TabsTrigger>
+            <TabsTrigger value="frontend">Frontend Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="store-info">
@@ -235,6 +236,10 @@ const Settings = () => {
 
           <TabsContent value="cod">
             <CODSettings />
+          </TabsContent>
+
+          <TabsContent value="frontend">
+            <FrontendSettings />
           </TabsContent>
         </Tabs>
       </div>

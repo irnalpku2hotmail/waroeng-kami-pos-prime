@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
 
 const FrontendCart = () => {
+  const { user } = useAuth();
   const { 
     items, 
     updateQuantity, 
@@ -29,6 +31,59 @@ const FrontendCart = () => {
   
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [orderNotes, setOrderNotes] = useState('');
+
+  // Fetch COD settings
+  const { data: codSettings } = useQuery({
+    queryKey: ['cod-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'cod_settings')
+        .single();
+      if (error) {
+        return { enabled: true, delivery_fee: 10000, min_order: 50000 };
+      }
+      return data.value;
+    }
+  });
+
+  // Fetch user profile to sync with customer info
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  // Set shipping cost based on COD settings
+  React.useEffect(() => {
+    if (codSettings?.enabled && getTotalPrice() >= (codSettings.min_order || 0)) {
+      setShippingCost(codSettings.delivery_fee || 10000);
+    } else {
+      setShippingCost(0);
+    }
+  }, [codSettings, getTotalPrice(), setShippingCost]);
+
+  // Sync customer info with profile when available
+  React.useEffect(() => {
+    if (profile) {
+      setCustomerInfo({
+        name: profile.full_name || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        email: profile.email || ''
+      });
+    }
+  }, [profile, setCustomerInfo]);
 
   const createOrder = useMutation({
     mutationFn: async () => {
@@ -272,17 +327,6 @@ const FrontendCart = () => {
                   onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
                   placeholder="Masukkan alamat lengkap"
                   rows={3}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="shipping_cost">Ongkos Kirim</Label>
-                <Input
-                  id="shipping_cost"
-                  type="number"
-                  value={shippingCost}
-                  onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
-                  placeholder="0 = Gratis Ongkir"
                 />
               </div>
               
