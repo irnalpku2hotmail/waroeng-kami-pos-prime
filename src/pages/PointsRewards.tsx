@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +25,8 @@ const PointsRewards = () => {
   const [rewardData, setRewardData] = useState({
     name: '',
     description: '',
-    stock_quantity: 0
+    stock_quantity: 0,
+    is_active: true
   });
 
   // Fetch products for search
@@ -95,7 +97,8 @@ const PointsRewards = () => {
         .insert({
           name: data.name,
           description: data.description,
-          stock_quantity: data.stock_quantity
+          stock_quantity: data.stock_quantity,
+          is_active: data.is_active
         })
         .select()
         .single();
@@ -123,7 +126,7 @@ const PointsRewards = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
       setOpen(false);
-      setRewardData({ name: '', description: '', stock_quantity: 0 });
+      setRewardData({ name: '', description: '', stock_quantity: 0, is_active: true });
       setSelectedProducts([]);
       toast({ title: 'Berhasil', description: 'Reward berhasil dibuat' });
     },
@@ -139,7 +142,8 @@ const PointsRewards = () => {
         .update({
           name: data.name,
           description: data.description,
-          stock_quantity: data.stock_quantity
+          stock_quantity: data.stock_quantity,
+          is_active: data.is_active
         })
         .eq('id', id);
 
@@ -167,7 +171,7 @@ const PointsRewards = () => {
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
       setOpen(false);
       setEditReward(null);
-      setRewardData({ name: '', description: '', stock_quantity: 0 });
+      setRewardData({ name: '', description: '', stock_quantity: 0, is_active: true });
       setSelectedProducts([]);
       toast({ title: 'Berhasil', description: 'Reward berhasil diupdate' });
     },
@@ -219,7 +223,8 @@ const PointsRewards = () => {
     setRewardData({
       name: reward.name,
       description: reward.description || '',
-      stock_quantity: reward.stock_quantity
+      stock_quantity: reward.stock_quantity,
+      is_active: reward.is_active
     });
     setSelectedProducts(reward.reward_items?.map((item: any) => ({
       ...item.products,
@@ -247,7 +252,7 @@ const PointsRewards = () => {
             <DialogTrigger asChild>
               <Button onClick={() => {
                 setEditReward(null);
-                setRewardData({ name: '', description: '', stock_quantity: 0 });
+                setRewardData({ name: '', description: '', stock_quantity: 0, is_active: true });
                 setSelectedProducts([]);
               }}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -289,6 +294,15 @@ const PointsRewards = () => {
                     onChange={(e) => setRewardData(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Deskripsi reward"
                   />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_active"
+                    checked={rewardData.is_active}
+                    onCheckedChange={(checked) => setRewardData(prev => ({ ...prev, is_active: checked }))}
+                  />
+                  <Label htmlFor="is_active">Status Aktif</Label>
                 </div>
 
                 <div>
