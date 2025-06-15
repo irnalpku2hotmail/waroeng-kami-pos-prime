@@ -26,7 +26,7 @@ import Layout from '@/components/Layout';
 import { Users, Plus, UserCheck, UserX, Shield, Settings, ShoppingBag, Briefcase } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
-type UserRole = Database['public']['Enums']['user_role'];
+type UserRole = Database['public']['Enums']['user_role'] | 'buyer';
 
 const ITEMS_PER_PAGE = 10;
 

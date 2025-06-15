@@ -1384,7 +1384,7 @@ export type Database = {
         | "supplies"
         | "other"
       transaction_type: "cash" | "transfer" | "credit"
-      user_role: "admin" | "cashier" | "manager" | "staff"
+      user_role: "admin" | "cashier" | "manager" | "staff" | "buyer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1509,7 +1509,7 @@ export const Constants = {
         "other",
       ],
       transaction_type: ["cash", "transfer", "credit"],
-      user_role: ["admin", "cashier", "manager", "staff"],
+      user_role: ["admin", "cashier", "manager", "staff", "buyer"],
     },
   },
 } as const
