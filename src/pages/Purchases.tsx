@@ -8,16 +8,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, Check, CreditCard, MoreHorizontal } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Check, CreditCard, MoreHorizontal, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
 import CreditPaymentForm from '@/components/CreditPaymentForm';
+import PurchaseDetailModal from '@/components/PurchaseDetailModal';
 
 const Purchases = () => {
   const [open, setOpen] = useState(false);
   const [editPurchase, setEditPurchase] = useState<any>(null);
   const [selectedPurchaseForPayment, setSelectedPurchaseForPayment] = useState<any>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPurchaseForDetail, setSelectedPurchaseForDetail] = useState<any>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
@@ -30,7 +33,9 @@ const Purchases = () => {
           *,
           suppliers(name),
           profiles(full_name),
-          purchase_items(*)
+          purchase_items(*,
+            products(name)
+          )
         `);
       
       if (searchTerm) {
@@ -82,6 +87,11 @@ const Purchases = () => {
   const openPaymentDialog = (purchase: any) => {
     setSelectedPurchaseForPayment(purchase);
     setPaymentDialogOpen(true);
+  };
+
+  const openDetailDialog = (purchase: any) => {
+    setSelectedPurchaseForDetail(purchase);
+    setDetailDialogOpen(true);
   };
 
   const getPaymentStatus = (purchase: any) => {
@@ -178,6 +188,10 @@ const Purchases = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => openDetailDialog(purchase)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Detail
+                          </DropdownMenuItem>
                           {purchase.payment_method === 'credit' && (
                             <>
                               <DropdownMenuItem onClick={() => openPaymentDialog(purchase)}>
@@ -221,6 +235,13 @@ const Purchases = () => {
           purchase={selectedPurchaseForPayment}
           open={paymentDialogOpen}
           onOpenChange={setPaymentDialogOpen}
+        />
+
+        {/* Purchase Detail Dialog */}
+        <PurchaseDetailModal
+          purchase={selectedPurchaseForDetail}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
         />
       </div>
     </Layout>

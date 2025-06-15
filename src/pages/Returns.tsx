@@ -7,14 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ReturnsForm from '@/components/ReturnsForm';
+import ReturnDetailModal from '@/components/ReturnDetailModal';
 
 const Returns = () => {
   const [open, setOpen] = useState(false);
   const [editReturn, setEditReturn] = useState<any>(null);
+  const [selectedReturnForDetail, setSelectedReturnForDetail] = useState<any>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
@@ -27,7 +31,9 @@ const Returns = () => {
           *,
           suppliers(name),
           profiles(full_name),
-          return_items(*)
+          return_items(*,
+            products(name)
+          )
         `);
       
       if (searchTerm) {
@@ -57,6 +63,11 @@ const Returns = () => {
   const handleCloseDialog = () => {
     setOpen(false);
     setEditReturn(null);
+  };
+
+  const openDetailDialog = (returnData: any) => {
+    setSelectedReturnForDetail(returnData);
+    setDetailDialogOpen(true);
   };
 
   const processReturns = returns?.filter(r => r.status === 'process') || [];
@@ -95,25 +106,35 @@ const Returns = () => {
             </TableCell>
             <TableCell>{returnItem.profiles?.full_name || 'Unknown'}</TableCell>
             <TableCell>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditReturn(returnItem);
-                    setOpen(true);
-                  }}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => deleteReturn.mutate(returnItem.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => openDetailDialog(returnItem)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Detail
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditReturn(returnItem);
+                      setOpen(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => deleteReturn.mutate(returnItem.id)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Hapus
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </TableCell>
           </TableRow>
         ))}
@@ -191,6 +212,13 @@ const Returns = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Return Detail Dialog */}
+        <ReturnDetailModal
+          returnData={selectedReturnForDetail}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+        />
       </div>
     </Layout>
   );
