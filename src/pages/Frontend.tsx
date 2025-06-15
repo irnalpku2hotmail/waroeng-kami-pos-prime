@@ -6,9 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, MapPin, Phone, Mail } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, MapPin, Phone, Mail, Clock, Zap } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import FrontendCart from '@/components/FrontendCart';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 
 interface FrontendSettings {
   banner_url: string;
@@ -42,6 +49,24 @@ const Frontend = () => {
     }
   });
 
+  // Fetch store settings
+  const { data: storeSettings } = useQuery({
+    queryKey: ['store-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .in('key', ['store_name', 'store_address', 'store_phone', 'store_email']);
+      if (error) throw error;
+      
+      const settingsObj: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsObj[setting.key] = setting.value;
+      });
+      return settingsObj;
+    }
+  });
+
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -50,6 +75,28 @@ const Frontend = () => {
         .from('categories')
         .select('*')
         .order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch active flash sales
+  const { data: flashSales = [] } = useQuery({
+    queryKey: ['active-flash-sales'],
+    queryFn: async () => {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('flash_sales')
+        .select(`
+          *,
+          flash_sale_items(
+            *,
+            products(name, image_url, selling_price)
+          )
+        `)
+        .eq('is_active', true)
+        .lte('start_date', now)
+        .gte('end_date', now);
       if (error) throw error;
       return data;
     }
@@ -116,6 +163,10 @@ const Frontend = () => {
 
   const categoriesLimit = frontendSettings?.featured_categories_limit || 5;
   const featuredCategories = categories.slice(0, categoriesLimit);
+  const storeName = storeSettings?.store_name?.name || 'SmartPOS';
+  const storePhone = storeSettings?.store_phone?.phone || '0800-1-SMARTPOS';
+  const storeEmail = storeSettings?.store_email?.email || 'help@smartpos.com';
+  const storeAddress = storeSettings?.store_address?.address || 'Jakarta';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,11 +176,11 @@ const Frontend = () => {
           <div className="flex items-center space-x-4">
             <span className="flex items-center gap-1">
               <Phone className="h-4 w-4" />
-              0800-1-BLIBLI
+              {storePhone}
             </span>
             <span className="flex items-center gap-1">
               <Mail className="h-4 w-4" />
-              help@smartpos.com
+              {storeEmail}
             </span>
           </div>
           <div className="flex items-center space-x-4">
@@ -146,7 +197,7 @@ const Frontend = () => {
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-blue-600">SmartPOS</h1>
+              <h1 className="text-2xl font-bold text-blue-600">{storeName}</h1>
             </div>
 
             {/* Search Bar */}
@@ -166,7 +217,7 @@ const Frontend = () => {
             <div className="flex items-center space-x-4">
               <Button variant="ghost" size="sm" className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                <span className="hidden md:inline">Jakarta</span>
+                <span className="hidden md:inline">{storeAddress}</span>
               </Button>
               
               <Button variant="ghost" size="sm">
@@ -199,12 +250,52 @@ const Frontend = () => {
       <nav className="bg-white border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center space-x-8 py-3">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <Menu className="h-4 w-4" />
-              Kategori
-            </Button>
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="flex items-center gap-2">
+                    <Menu className="h-4 w-4" />
+                    Kategori
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="grid grid-cols-3 gap-4 p-6 w-96">
+                      <Button
+                        variant={selectedCategory === null ? "default" : "ghost"}
+                        onClick={() => setSelectedCategory(null)}
+                        className="flex items-center gap-2 justify-start"
+                      >
+                        <Package className="h-4 w-4" />
+                        Semua Kategori
+                      </Button>
+                      {categories.map((category) => (
+                        <Button
+                          key={category.id}
+                          variant={selectedCategory === category.id ? "default" : "ghost"}
+                          onClick={() => setSelectedCategory(category.id)}
+                          className="flex items-center gap-2 justify-start"
+                        >
+                          {category.icon_url ? (
+                            <img src={category.icon_url} alt={category.name} className="h-4 w-4 object-contain" />
+                          ) : (
+                            <Package className="h-4 w-4" />
+                          )}
+                          {category.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+            
+            {flashSales.length > 0 && (
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 text-red-600">
+                <Zap className="h-4 w-4" />
+                Flash Sale
+              </Button>
+            )}
+            
             <div className="flex space-x-6 text-sm">
-              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Flash Sale</a>
               <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Official Store</a>
               <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Tiket & Hiburan</a>
               <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Pulsa & Data</a>
@@ -242,6 +333,76 @@ const Frontend = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3">
+            {/* Flash Sales Section */}
+            {flashSales.length > 0 && (
+              <div className="mb-12">
+                <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-6 rounded-t-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Zap className="h-8 w-8" />
+                      <h2 className="text-2xl font-bold">Flash Sale</h2>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      <span className="text-lg font-semibold">Berakhir dalam 12:34:56</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-b-lg shadow-lg">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {flashSales[0]?.flash_sale_items?.slice(0, 4).map((item: any) => (
+                      <Card key={item.id} className="group hover:shadow-lg transition-all">
+                        <div className="relative">
+                          <div className="aspect-square bg-gray-100">
+                            {item.products?.image_url ? (
+                              <img 
+                                src={getImageUrl(item.products.image_url)} 
+                                alt={item.products.name}
+                                className="w-full h-full object-cover rounded-t-lg"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="h-12 w-12 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                          <Badge className="absolute top-2 left-2 bg-red-500">
+                            -{item.discount_percentage}%
+                          </Badge>
+                        </div>
+                        <CardContent className="p-3">
+                          <h3 className="font-medium text-sm mb-2 line-clamp-2">
+                            {item.products?.name}
+                          </h3>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-red-600">
+                                Rp {item.sale_price?.toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <span className="text-sm text-gray-500 line-through">
+                              Rp {item.original_price?.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="mt-2">
+                            <div className="bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-red-500 h-2 rounded-full"
+                                style={{ width: `${(item.sold_quantity / item.stock_quantity) * 100}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Terjual {item.sold_quantity}/{item.stock_quantity}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Categories Section */}
             <div className="mb-12">
               <h2 className="text-2xl font-bold mb-6">Kategori Pilihan</h2>
@@ -371,10 +532,16 @@ const Frontend = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">SmartPOS</h3>
+              <h3 className="text-xl font-bold mb-4">{storeName}</h3>
               <p className="text-gray-300 text-sm">
                 Platform e-commerce terpercaya dengan produk berkualitas dan harga terjangkau.
               </p>
+              <div className="mt-4 space-y-2">
+                <p className="text-sm text-gray-300 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  {storeAddress}
+                </p>
+              </div>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Bantuan</h4>
@@ -386,7 +553,7 @@ const Frontend = () => {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Tentang SmartPOS</h4>
+              <h4 className="font-semibold mb-4">Tentang {storeName}</h4>
               <ul className="space-y-2 text-sm text-gray-300">
                 <li><a href="#" className="hover:text-white">Tentang Kami</a></li>
                 <li><a href="#" className="hover:text-white">Karir</a></li>
@@ -399,17 +566,17 @@ const Frontend = () => {
               <ul className="space-y-2 text-sm text-gray-300">
                 <li className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  0800-1-SMARTPOS
+                  {storePhone}
                 </li>
                 <li className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  help@smartpos.com
+                  {storeEmail}
                 </li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 SmartPOS. All rights reserved.</p>
+            <p>&copy; 2024 {storeName}. All rights reserved.</p>
           </div>
         </div>
       </footer>
