@@ -22,6 +22,11 @@ const POS = () => {
             products={pos.products}
             isLoading={pos.isLoading}
             addToCart={pos.addToCart}
+            currentPage={pos.currentPage}
+            totalPages={pos.totalPages}
+            onPageChange={pos.setCurrentPage}
+            itemsPerPage={pos.itemsPerPage}
+            totalItems={pos.totalItems}
           />
         </div>
 

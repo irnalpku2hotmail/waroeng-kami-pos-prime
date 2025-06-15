@@ -1,70 +1,122 @@
 
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Package } from 'lucide-react';
-import { getImageUrl } from '@/hooks/usePOS';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import PaginationComponent from '@/components/PaginationComponent';
 
-interface ProductGridProps {
-  products: any[];
-  isLoading: boolean;
-  addToCart: (product: any, quantity?: number) => void;
+interface Product {
+  id: string;
+  name: string;
+  selling_price: number;
+  current_stock: number;
+  image_url?: string;
+  barcode?: string;
+  price_variants?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    minimum_quantity: number;
+  }>;
 }
 
-const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, addToCart }) => {
+interface ProductGridProps {
+  products: Product[];
+  isLoading: boolean;
+  addToCart: (product: Product) => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  itemsPerPage: number;
+  totalItems: number;
+}
+
+const ProductGrid = ({ 
+  products, 
+  isLoading, 
+  addToCart,
+  currentPage,
+  totalPages,
+  onPageChange,
+  itemsPerPage,
+  totalItems
+}: ProductGridProps) => {
   if (isLoading) {
-    return <div className="col-span-full text-center py-8">Loading...</div>;
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="aspect-square bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
   }
 
   if (products.length === 0) {
     return (
-      <div className="col-span-full text-center py-8">
-        <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+      <div className="text-center py-12">
+        <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
         <p className="text-gray-500">Tidak ada produk ditemukan</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[calc(100vh-220px)] overflow-y-auto">
-      {products.map((product) => {
-        const productImageUrl = getImageUrl(product.image_url);
-        return (
-          <Card 
-            key={product.id} 
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => addToCart(product, 1)}
-          >
-            <CardContent className="p-3">
-              <div className="aspect-square mb-2 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
-                {productImageUrl ? (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {products.map((product) => (
+          <Card key={product.id} className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="aspect-square mb-3 overflow-hidden rounded">
+                {product.image_url ? (
                   <img 
-                    src={productImageUrl} 
+                    src={product.image_url} 
                     alt={product.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Package className="h-8 w-8 text-gray-400" />
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <Package className="h-8 w-8 text-gray-400" />
+                  </div>
                 )}
               </div>
-              <h3 className="font-medium text-sm truncate">{product.name}</h3>
-              <p className="text-lg font-bold text-green-600">
-                Rp {product.selling_price?.toLocaleString('id-ID')}
-              </p>
-              <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
-                <span>Stok: {product.current_stock}</span>
-                <span>{product.loyalty_points || 1} pts</span>
+              
+              <div className="space-y-2">
+                <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
+                
+                <div className="text-sm text-gray-600">
+                  Stok: {product.current_stock}
+                </div>
+                
+                <div className="text-lg font-bold text-blue-600">
+                  Rp {product.selling_price.toLocaleString('id-ID')}
+                </div>
+                
+                <Button 
+                  onClick={() => addToCart(product)}
+                  className="w-full"
+                  size="sm"
+                  disabled={product.current_stock <= 0}
+                >
+                  {product.current_stock <= 0 ? 'Stok Habis' : 'Tambah'}
+                </Button>
               </div>
-              {product.price_variants?.length > 0 && (
-                <Badge variant="secondary" className="text-xs mt-1">Grosir</Badge>
-              )}
-              {product.current_stock <= 0 && (
-                <Badge variant="destructive" className="w-full mt-1">Habis</Badge>
-              )}
             </CardContent>
           </Card>
-        );
-      })}
+        ))}
+      </div>
+      
+      <PaginationComponent 
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        itemsPerPage={itemsPerPage}
+        totalItems={totalItems}
+      />
     </div>
   );
 };

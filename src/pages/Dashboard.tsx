@@ -103,8 +103,10 @@ const Dashboard = () => {
     }
   });
 
-  // --- POS: Transaksi POS hari ini ---
-  const today = new Date().toISOString().split('T')[0];
+  // --- POS: Transaksi POS hari ini (fixed date filtering) ---
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+  const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
 
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales'],
@@ -112,8 +114,8 @@ const Dashboard = () => {
       const { data, error } = await supabase
         .from('transactions')
         .select('id, transaction_number, total_amount, customer_id, created_at')
-        .gte('created_at', today + 'T00:00:00')
-        .lte('created_at', today + 'T23:59:59');
+        .gte('created_at', todayStart)
+        .lt('created_at', todayEnd);
       if (error) throw error;
       return data;
     }
@@ -125,10 +127,10 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status')
+        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status, order_date')
         .eq('status', 'delivered')
-        .gte('order_date', today + 'T00:00:00')
-        .lte('order_date', today + 'T23:59:59');
+        .gte('order_date', todayStart)
+        .lt('order_date', todayEnd);
       if (error) throw error;
       return data;
     }

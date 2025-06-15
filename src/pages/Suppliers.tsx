@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +25,45 @@ const Suppliers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
+
+  // Query for supplier statistics
+  const { data: supplierStats } = useQuery({
+    queryKey: ['supplier-stats'],
+    queryFn: async () => {
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+      const startOfYear = new Date(today.getFullYear(), 0, 1).toISOString();
+
+      // Total suppliers
+      const { data: totalSuppliers, error: totalError } = await supabase
+        .from('suppliers')
+        .select('id', { count: 'exact' });
+
+      if (totalError) throw totalError;
+
+      // Active suppliers this month (suppliers with purchases this month)
+      const { data: monthlyActiveSuppliers, error: monthlyError } = await supabase
+        .from('purchases')
+        .select('supplier_id', { count: 'exact' })
+        .gte('created_at', startOfMonth);
+
+      if (monthlyError) throw monthlyError;
+
+      // Active suppliers this year (suppliers with purchases this year)
+      const { data: yearlyActiveSuppliers, error: yearlyError } = await supabase
+        .from('purchases')
+        .select('supplier_id', { count: 'exact' })
+        .gte('created_at', startOfYear);
+
+      if (yearlyError) throw yearlyError;
+
+      return {
+        totalSuppliers: totalSuppliers?.length || 0,
+        monthlyActiveSuppliers: new Set(monthlyActiveSuppliers?.map(p => p.supplier_id)).size || 0,
+        yearlyActiveSuppliers: new Set(yearlyActiveSuppliers?.map(p => p.supplier_id)).size || 0
+      };
+    }
+  });
 
   // Query for all suppliers for export
   const { data: allSuppliersData } = useQuery({
@@ -237,6 +275,48 @@ const Suppliers = () => {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+
+        {/* Supplier Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-2">
+              <CardTitle className="text-sm font-medium">Total Supplier</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {supplierStats?.totalSuppliers || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Supplier terdaftar</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-2">
+              <CardTitle className="text-sm font-medium">Supplier Aktif Bulan Ini</CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {supplierStats?.monthlyActiveSuppliers || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Dengan transaksi bulan ini</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-2">
+              <CardTitle className="text-sm font-medium">Supplier Aktif Tahun Ini</CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {supplierStats?.yearlyActiveSuppliers || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Dengan transaksi tahun ini</p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex gap-4">
