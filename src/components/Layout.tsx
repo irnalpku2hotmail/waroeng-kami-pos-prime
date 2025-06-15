@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { useLocation, Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -39,7 +39,6 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import CartModal from './CartModal';
@@ -100,7 +99,7 @@ const mobileNavItems = [
 ];
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { items } = useCart();
@@ -133,7 +132,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {mobileNavItems.map((item) => (
               <Link
                 key={item.label}
-                href={item.href}
+                to={item.href}
                 className={cn(
                   "flex items-center space-x-2 px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800",
                   pathname === item.href ? "bg-gray-100 dark:bg-gray-800" : ""
@@ -150,7 +149,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {/* Sidebar (hidden on small screens) */}
       <aside className="hidden md:flex flex-col w-64 border-r bg-gray-100 dark:bg-gray-800 dark:border-gray-700">
         <div className="flex items-center justify-between py-4 px-4">
-          <Link href="/" className="font-bold text-lg">SmartPOS</Link>
+          <Link to="/" className="font-bold text-lg">SmartPOS</Link>
           <ModeToggle />
         </div>
         <nav className="flex-1">
@@ -162,7 +161,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               {navGroup.subItems.map((item) => (
                 <Link
                   key={item.label}
-                  href={item.href}
+                  to={item.href}
                   className={cn(
                     "flex items-center space-x-2 px-4 py-2 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700",
                     pathname === item.href ? "bg-gray-200 dark:bg-gray-700" : ""
@@ -201,7 +200,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <Link href="/settings" className="w-full h-full block">Settings</Link>
+                  <Link to="/settings" className="w-full h-full block">Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
                   signOut();

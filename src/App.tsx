@@ -1,3 +1,4 @@
+
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -6,14 +7,14 @@ import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import { CartProvider } from './contexts/CartContext';
 
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Customers = lazy(() => import('./pages/Customers'));
 const Products = lazy(() => import('./pages/Products'));
-const CategoriesAndUnits = lazy(() => import('./pages/CategoriesAndUnits'));
+const CategoriesAndUnits = lazy(() => import('./pages/CategoriesUnits'));
 const Suppliers = lazy(() => import('./pages/Suppliers'));
 const Inventory = lazy(() => import('./pages/Inventory'));
 const Purchases = lazy(() => import('./pages/Purchases'));
@@ -40,7 +41,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
               <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute><Layout><Products /></Layout></ProtectedRoute>} />
@@ -54,13 +55,13 @@ const App = () => {
               <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
               <Route path="/returns" element={<ProtectedRoute><Returns /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/credit-management" element={<ProtectedRoute><CreditManagement /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-              <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
-              <Route path="/flash-sales" element={<ProtectedRoute><FlashSales /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-              <Route path="/website" element={<ProtectedRoute><Website /></ProtectedRoute>} />
+              <Route path="/credit-management" element={<ProtectedRoute><CreditManagement /></Layout></ProtectedRoute>} />
+              <Route path="/expenses" element={<ProtectedRoute><Expenses /></Layout></ProtectedRoute>} />
+              <Route path="/rewards" element={<ProtectedRoute><Rewards /></Layout></ProtectedRoute>} />
+              <Route path="/flash-sales" element={<ProtectedRoute><FlashSales /></Layout></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></Layout></ProtectedRoute>} />
+              <Route path="/user-management" element={<ProtectedRoute><UserManagement /></Layout></ProtectedRoute>} />
+              <Route path="/website" element={<ProtectedRoute><Website /></Layout></ProtectedRoute>} />
             </Routes>
           </Suspense>
         </Router>
