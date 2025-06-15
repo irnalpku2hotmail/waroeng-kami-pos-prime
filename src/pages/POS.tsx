@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { ShoppingCart, Plus, Minus, Trash2, Search, Package, DollarSign, Printer } from 'lucide-react';
@@ -35,8 +34,6 @@ const POS = () => {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentType, setPaymentType] = useState<'cash' | 'credit' | 'transfer'>('cash');
   const [transferReference, setTransferReference] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [showProductDialog, setShowProductDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch store settings
@@ -169,7 +166,6 @@ const POS = () => {
       setCart([...cart, cartItem]);
     }
 
-    setShowProductDialog(false);
     toast({ 
       title: 'Produk Ditambahkan', 
       description: `${product.name} ditambahkan ke keranjang` 
@@ -450,12 +446,6 @@ ${receiptFooter}
     }
   };
 
-  // Open product dialog
-  const openProductDialog = (product: any) => {
-    setSelectedProduct(product);
-    setShowProductDialog(true);
-  };
-
   // Get image URL
   const getImageUrl = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return null;
@@ -509,7 +499,7 @@ ${receiptFooter}
                   <Card 
                     key={product.id} 
                     className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => openProductDialog(product)}
+                    onClick={() => addToCart(product, 1)}
                   >
                     <CardContent className="p-3">
                       <div className="aspect-square mb-2 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
@@ -723,63 +713,6 @@ ${receiptFooter}
           </Card>
         </div>
       </div>
-
-      {/* Product Detail Dialog */}
-      <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Detail Produk</DialogTitle>
-          </DialogHeader>
-          {selectedProduct && (
-            <div className="space-y-4">
-              {selectedProduct.image_url && (
-                <img 
-                  src={getImageUrl(selectedProduct.image_url) || undefined} 
-                  alt={selectedProduct.name}
-                  className="w-full h-48 object-cover rounded"
-                />
-              )}
-              <div>
-                <h3 className="font-bold text-lg">{selectedProduct.name}</h3>
-                <p className="text-gray-600">{selectedProduct.description}</p>
-                <p className="text-2xl font-bold text-green-600 mt-2">
-                  Rp {selectedProduct.selling_price?.toLocaleString('id-ID')}
-                </p>
-                <p className="text-sm text-gray-500">Stok: {selectedProduct.current_stock}</p>
-                <p className="text-sm text-blue-500">Loyalty Points: {selectedProduct.loyalty_points || 1}</p>
-              </div>
-
-              {selectedProduct.price_variants?.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Harga Grosir:</h4>
-                  <div className="space-y-1">
-                    {selectedProduct.price_variants
-                      .filter((pv: any) => pv.is_active)
-                      .sort((a: any, b: any) => a.minimum_quantity - b.minimum_quantity)
-                      .map((variant: any) => (
-                        <div key={variant.id} className="flex justify-between text-sm">
-                          <span>Min {variant.minimum_quantity} pcs</span>
-                          <span className="font-medium">Rp {variant.price.toLocaleString('id-ID')}</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1"
-                  onClick={() => addToCart(selectedProduct, 1)}
-                  disabled={selectedProduct.current_stock <= 0}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tambah ke Keranjang
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 };
