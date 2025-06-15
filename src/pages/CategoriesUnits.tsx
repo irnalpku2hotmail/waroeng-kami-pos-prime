@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +33,7 @@ const CategoriesUnits = () => {
         query = query.ilike('name', `%${searchTerm}%`);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('name', { ascending: true });
       if (error) throw error;
       return data;
     }
@@ -47,7 +46,7 @@ const CategoriesUnits = () => {
       const { data, error } = await supabase
         .from('units')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
       if (error) throw error;
       return data;
     }
