@@ -12,9 +12,14 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
   const [onlineUsers, setOnlineUsers] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setOnlineUsers(0);
+      return;
+    }
 
-    const channel = supabase.channel(`online-users-${new Date().getTime()}`, {
+    console.log('Setting up presence tracking for user:', user.id);
+
+    const channel = supabase.channel('online-users', {
       config: {
         presence: {
           key: user.id,
@@ -26,15 +31,28 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const count = Object.keys(state).length;
+        console.log('Presence sync - online users count:', count);
         setOnlineUsers(count);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('User joined:', key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('User left:', key, leftPresences);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await channel.track({ online_at: new Date().toISOString() });
+          console.log('Presence channel subscribed, tracking user presence');
+          await channel.track({ 
+            user_id: user.id,
+            online_at: new Date().toISOString(),
+            email: user.email 
+          });
         }
       });
 
     return () => {
+      console.log('Cleaning up presence tracking');
       supabase.removeChannel(channel);
     };
   }, [user]);

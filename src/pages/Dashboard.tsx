@@ -22,13 +22,24 @@ import { usePresence } from '@/contexts/PresenceContext';
 const Dashboard = () => {
   const { onlineUsers } = usePresence();
 
-  // Get today's date in YYYY-MM-DD format for filtering
+  // Get today's date in local timezone for better accuracy
   const today = new Date();
-  const todayString = today.toISOString().split('T')[0];
-  const startOfToday = `${todayString}T00:00:00.000Z`;
-  const endOfToday = `${todayString}T23:59:59.999Z`;
+  const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Create proper date boundaries for today in local timezone
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+  
+  const startOfTodayISO = startOfToday.toISOString();
+  const endOfTodayISO = endOfToday.toISOString();
 
-  console.log('Today filter:', { todayString, startOfToday, endOfToday });
+  console.log('Today filter improved:', { 
+    todayString, 
+    startOfTodayISO, 
+    endOfTodayISO,
+    localDate: today.toLocaleDateString(),
+    localTime: today.toLocaleTimeString()
+  });
 
   // Total produk
   const { data: products } = useQuery({
@@ -90,30 +101,42 @@ const Dashboard = () => {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .gte('created_at', startOfToday)
-        .lte('created_at', endOfToday);
+        .gte('created_at', startOfTodayISO)
+        .lte('created_at', endOfTodayISO);
       if (error) throw error;
       return data;
     }
   });
 
-  // Transaksi POS hari ini (fixed calculation with better date filtering)
+  // Fixed POS sales calculation with proper date filtering
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales', todayString],
     queryFn: async () => {
-      console.log('Fetching POS sales for date:', todayString);
+      console.log('Fetching POS sales with improved date filter:', {
+        startOfTodayISO,
+        endOfTodayISO
+      });
+      
       const { data, error } = await supabase
         .from('transactions')
         .select('id, transaction_number, total_amount, customer_id, created_at')
-        .gte('created_at', startOfToday)
-        .lte('created_at', endOfToday);
+        .gte('created_at', startOfTodayISO)
+        .lte('created_at', endOfTodayISO);
       
       if (error) {
         console.error('Error fetching POS sales:', error);
         throw error;
       }
       
-      console.log('POS sales data:', data);
+      console.log('POS sales data fetched:', {
+        count: data?.length || 0,
+        data: data?.map(t => ({
+          id: t.id,
+          amount: t.total_amount,
+          created_at: t.created_at
+        }))
+      });
+      
       return data;
     }
   });
@@ -126,8 +149,8 @@ const Dashboard = () => {
         .from('orders')
         .select('id, order_number, total_amount, customer_id, customer_name, created_at, status')
         .eq('status', 'delivered')
-        .gte('delivery_date', startOfToday)
-        .lte('delivery_date', endOfToday);
+        .gte('delivery_date', startOfTodayISO)
+        .lte('delivery_date', endOfTodayISO);
       if (error) throw error;
       return data;
     }
@@ -140,15 +163,27 @@ const Dashboard = () => {
   const totalCustomers = customers?.length || 0;
   const todayOrdersCount = todayOrders?.length || 0;
 
-  // Calculate today's POS sales (improved calculation)
+  // Fixed POS sales calculation with better logging
   const todaySales = posSales?.reduce((sum, trx) => {
     const amount = Number(trx.total_amount) || 0;
-    console.log('Adding transaction amount:', amount);
+    console.log('Processing transaction:', {
+      id: trx.id,
+      amount: amount,
+      created_at: trx.created_at
+    });
     return sum + amount;
   }, 0) || 0;
   const todayTransactions = posSales?.length || 0;
 
-  console.log('Today sales calculation:', { todaySales, todayTransactions, posSales });
+  console.log('Final POS sales calculation:', { 
+    todaySales, 
+    todayTransactions, 
+    totalTransactions: posSales?.length,
+    transactionDetails: posSales?.map(t => ({ 
+      amount: t.total_amount, 
+      created: t.created_at 
+    }))
+  });
 
   // Calculate COD income today
   const codIncomeToday = codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
@@ -211,7 +246,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="pb-1">
               <div className="text-lg font-bold text-green-600">{onlineUsers}</div>
-              <p className="text-[10px] text-muted-foreground">User aktif</p>
+              <p className="text-[10px] text-muted-foreground">User aktif login</p>
             </CardContent>
           </Card>
           
@@ -279,7 +314,7 @@ const Dashboard = () => {
               <div className="text-lg font-bold text-purple-600">
                 Rp {todaySales?.toLocaleString('id-ID') || '0'}
               </div>
-              <p className="text-[10px] text-muted-foreground">Dari {todayTransactions} transaksi</p>
+              <p className="text-[10px] text-muted-foreground">Dari {todayTransactions} transaksi POS</p>
             </CardContent>
           </Card>
           
