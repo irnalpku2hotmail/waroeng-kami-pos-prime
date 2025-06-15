@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +18,9 @@ import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
 import CreditPaymentForm from '@/components/CreditPaymentForm';
 import PurchaseDetailModal from '@/components/PurchaseDetailModal';
-import { Package, TrendingUp, AlertTriangle, Plus, Edit, Trash2, Check, CreditCard, MoreHorizontal, Eye } from 'lucide-react';
+import ReturnsForm from '@/components/ReturnsForm';
+import ReturnDetailModal from '@/components/ReturnDetailModal';
+import { Package, TrendingUp, AlertTriangle, Plus, Edit, Trash2, Check, CreditCard, MoreHorizontal, Eye, RotateCcw, CheckCircle } from 'lucide-react';
 
 const Inventory = () => {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ const Inventory = () => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [purchaseSearchTerm, setPurchaseSearchTerm] = useState('');
+  const [returnSearchTerm, setReturnSearchTerm] = useState('');
   const [adjustmentData, setAdjustmentData] = useState({
     adjustment_type: 'increase',
     quantity_change: 0,
@@ -40,6 +42,12 @@ const Inventory = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPurchaseForDetail, setSelectedPurchaseForDetail] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  // Return states
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [editReturn, setEditReturn] = useState<any>(null);
+  const [selectedReturnForDetail, setSelectedReturnForDetail] = useState<any>(null);
+  const [returnDetailDialogOpen, setReturnDetailDialogOpen] = useState(false);
 
   // Fetch products with stock info
   const { data: products = [] } = useQuery({
@@ -81,6 +89,31 @@ const Inventory = () => {
       
       if (purchaseSearchTerm) {
         query = query.or(`purchase_number.ilike.%${purchaseSearchTerm}%,invoice_number.ilike.%${purchaseSearchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch returns
+  const { data: returns, isLoading: returnsLoading } = useQuery({
+    queryKey: ['returns', returnSearchTerm],
+    queryFn: async () => {
+      let query = supabase
+        .from('returns')
+        .select(`
+          *,
+          suppliers(name),
+          profiles(full_name),
+          return_items(*,
+            products(name)
+          )
+        `);
+      
+      if (returnSearchTerm) {
+        query = query.or(`return_number.ilike.%${returnSearchTerm}%,invoice_number.ilike.%${returnSearchTerm}%`);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -185,11 +218,48 @@ const Inventory = () => {
     }
   });
 
+  // Return mutations
+  const deleteReturn = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('returns').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      toast({ title: 'Berhasil', description: 'Return berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const updateReturnStatus = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('returns')
+        .update({ status: 'success' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      toast({ title: 'Berhasil', description: 'Status return berhasil diubah ke Success' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
 
   const handleCloseDialog = () => {
     setOpen(false);
     setEditPurchase(null);
+  };
+
+  const handleCloseReturnDialog = () => {
+    setReturnOpen(false);
+    setEditReturn(null);
   };
 
   const openPaymentDialog = (purchase: any) => {
@@ -200,6 +270,11 @@ const Inventory = () => {
   const openDetailDialog = (purchase: any) => {
     setSelectedPurchaseForDetail(purchase);
     setDetailDialogOpen(true);
+  };
+
+  const openReturnDetailDialog = (returnData: any) => {
+    setSelectedReturnForDetail(returnData);
+    setReturnDetailDialogOpen(true);
   };
 
   const getPaymentStatus = (purchase: any) => {
@@ -215,6 +290,87 @@ const Inventory = () => {
     }
     return <Badge className="bg-gray-600">Unknown</Badge>;
   };
+
+  const processReturns = returns?.filter(r => r.status === 'process') || [];
+  const successReturns = returns?.filter(r => r.status === 'success') || [];
+
+  const ReturnTable = ({ data }: { data: any[] }) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>No. Return</TableHead>
+          <TableHead>Invoice</TableHead>
+          <TableHead>Supplier</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Total</TableHead>
+          <TableHead>Tanggal</TableHead>
+          <TableHead>Dibuat oleh</TableHead>
+          <TableHead>Aksi</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((returnItem) => (
+          <TableRow key={returnItem.id}>
+            <TableCell className="font-medium">{returnItem.return_number}</TableCell>
+            <TableCell>{returnItem.invoice_number || '-'}</TableCell>
+            <TableCell>{returnItem.suppliers?.name || '-'}</TableCell>
+            <TableCell>
+              <span className={`px-2 py-1 rounded-full text-xs ${
+                returnItem.status === 'success' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {returnItem.status === 'success' ? 'Success' : 'Process'}
+              </span>
+            </TableCell>
+            <TableCell>Rp {returnItem.total_amount?.toLocaleString('id-ID')}</TableCell>
+            <TableCell>
+              {new Date(returnItem.return_date).toLocaleDateString('id-ID')}
+            </TableCell>
+            <TableCell>{returnItem.profiles?.full_name || 'Unknown'}</TableCell>
+            <TableCell>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => openReturnDetailDialog(returnItem)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Detail
+                  </DropdownMenuItem>
+                  {returnItem.status === 'process' && (
+                    <DropdownMenuItem
+                      onClick={() => updateReturnStatus.mutate(returnItem.id)}
+                      className="text-green-600 focus:text-green-600"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark as Complete
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditReturn(returnItem);
+                      setReturnOpen(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => deleteReturn.mutate(returnItem.id)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Hapus
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 
   return (
     <Layout>
@@ -264,6 +420,7 @@ const Inventory = () => {
             <TabsTrigger value="adjustments">Penyesuaian</TabsTrigger>
             <TabsTrigger value="low-stock">Peringatan Stok Rendah</TabsTrigger>
             <TabsTrigger value="purchases">Pembelian</TabsTrigger>
+            <TabsTrigger value="returns">Return</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
@@ -619,6 +776,78 @@ const Inventory = () => {
                 open={detailDialogOpen}
                 onOpenChange={setDetailDialogOpen}
               />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="returns">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">Manajemen Return</h3>
+                <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setEditReturn(null)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tambah Return
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editReturn ? 'Edit Return' : 'Tambah Return Baru'}</DialogTitle>
+                    </DialogHeader>
+                    <ReturnsForm 
+                      returnData={editReturn}
+                      onSuccess={handleCloseReturnDialog}
+                      onCancel={handleCloseReturnDialog}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="flex gap-4">
+                <Input
+                  placeholder="Cari nomor return atau invoice..."
+                  value={returnSearchTerm}
+                  onChange={(e) => setReturnSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+
+              <Tabs defaultValue="process" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="process">Process ({processReturns.length})</TabsTrigger>
+                  <TabsTrigger value="history">History ({successReturns.length})</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="process">
+                  <div className="border rounded-lg">
+                    {returnsLoading ? (
+                      <div className="text-center py-8">Loading...</div>
+                    ) : processReturns.length === 0 ? (
+                      <div className="text-center py-8">
+                        <RotateCcw className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-500">Belum ada return dalam proses</p>
+                      </div>
+                    ) : (
+                      <ReturnTable data={processReturns} />
+                    )}
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="history">
+                  <div className="border rounded-lg">
+                    {returnsLoading ? (
+                      <div className="text-center py-8">Loading...</div>
+                    ) : successReturns.length === 0 ? (
+                      <div className="text-center py-8">
+                        <RotateCcw className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-500">Belum ada return yang selesai</p>
+                      </div>
+                    ) : (
+                      <ReturnTable data={successReturns} />
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </TabsContent>
         </Tabs>

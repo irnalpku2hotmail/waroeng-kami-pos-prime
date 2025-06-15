@@ -226,7 +226,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Package2, label: 'Inventory', href: '/inventory' },
     { icon: Users, label: 'Customers', href: '/customers' },
     { icon: Receipt, label: 'Orders', href: '/orders' },
-    { icon: CreditCard, label: 'Credit Management', href: '/credit-management' },
+    { icon: CreditCard, label: 'Credit Management', href: '/credit' },
     { icon: TrendingDown, label: 'Expenses', href: '/expenses' },
     { icon: Gift, label: 'Points & Rewards', href: '/points-rewards' },
     { icon: Star, label: 'Point Exchange', href: '/point-exchange' },
