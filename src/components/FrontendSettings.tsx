@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +26,17 @@ const initialSettings: FrontendSettings = {
 
 const bucketName = 'frontend-assets';
 
+// Type guard to ensure the data matches FrontendSettings
+function isFrontendSettings(val: any): val is FrontendSettings {
+  return val &&
+    typeof val === 'object' &&
+    typeof val.header === 'string' &&
+    typeof val.footer === 'string' &&
+    typeof val.layout === 'string' &&
+    typeof val.banner_url === 'string' &&
+    typeof val.logo_url === 'string';
+}
+
 const FrontendSettings = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -34,7 +44,7 @@ const FrontendSettings = () => {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Get current settings from Supabase
+  // Get current settings from Supabase, using type guard to check returned value
   const { data: settings, isLoading } = useQuery({
     queryKey: ['frontend-settings'],
     queryFn: async () => {
@@ -44,7 +54,8 @@ const FrontendSettings = () => {
         .eq('key', 'frontend_settings')
         .maybeSingle();
       if (error) throw error;
-      return (data?.value as FrontendSettings) || initialSettings;
+      // Use type guard here:
+      return isFrontendSettings(data?.value) ? data.value : initialSettings;
     }
   });
 
