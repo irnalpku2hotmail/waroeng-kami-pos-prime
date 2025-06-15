@@ -12,17 +12,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { DollarSign } from 'lucide-react';
 
 interface CreditPaymentFormProps {
-  purchase: any;
+  purchase: any; // This will be transaction data, keeping the prop name for compatibility
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const CreditPaymentForm = ({ purchase, open, onOpenChange }: CreditPaymentFormProps) => {
+const CreditPaymentForm = ({ purchase: transaction, open, onOpenChange }: CreditPaymentFormProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
   const [paymentData, setPaymentData] = useState({
-    payment_amount: purchase?.total_amount || 0,
+    payment_amount: transaction?.total_amount || 0,
     notes: ''
   });
 
@@ -32,7 +32,7 @@ const CreditPaymentForm = ({ purchase, open, onOpenChange }: CreditPaymentFormPr
       const { error: paymentError } = await supabase
         .from('credit_payments')
         .insert([{
-          transaction_id: purchase.id,
+          transaction_id: transaction.id,
           payment_amount: data.payment_amount,
           payment_date: new Date().toISOString().split('T')[0],
           notes: data.notes,
@@ -41,19 +41,20 @@ const CreditPaymentForm = ({ purchase, open, onOpenChange }: CreditPaymentFormPr
       
       if (paymentError) throw paymentError;
 
-      // Update purchase status to paid if fully paid
+      // Update transaction status to paid if fully paid
       const { error: updateError } = await supabase
-        .from('purchases')
-        .update({ payment_method: 'cash' })
-        .eq('id', purchase.id);
+        .from('transactions')
+        .update({ is_credit: false })
+        .eq('id', transaction.id);
       
       if (updateError) throw updateError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-stats'] });
       toast({ 
         title: 'Berhasil', 
-        description: 'Pembayaran berhasil dicatat dan status pembelian diperbarui' 
+        description: 'Pembayaran berhasil dicatat dan status transaksi diperbarui' 
       });
       onOpenChange(false);
       setPaymentData({ payment_amount: 0, notes: '' });
@@ -78,19 +79,19 @@ const CreditPaymentForm = ({ purchase, open, onOpenChange }: CreditPaymentFormPr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            Pembayaran Kredit
+            Pembayaran Piutang Pelanggan
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <p className="text-sm text-gray-600">
-              Pembelian: {purchase?.purchase_number}
+              Transaksi: {transaction?.transaction_number}
             </p>
             <p className="text-sm text-gray-600">
-              Total: {formatCurrency(purchase?.total_amount || 0)}
+              Total: {formatCurrency(transaction?.total_amount || 0)}
             </p>
             <p className="text-sm text-gray-600">
-              Supplier: {purchase?.suppliers?.name}
+              Pelanggan: {transaction?.customers?.name || 'Customer Umum'}
             </p>
           </div>
 
@@ -103,11 +104,11 @@ const CreditPaymentForm = ({ purchase, open, onOpenChange }: CreditPaymentFormPr
               onChange={(e) => setPaymentData(prev => ({ ...prev, payment_amount: Number(e.target.value) }))}
               placeholder="0"
               min="0"
-              max={purchase?.total_amount}
+              max={transaction?.total_amount}
               required
             />
             <p className="text-xs text-gray-500">
-              Maksimal: {formatCurrency(purchase?.total_amount || 0)}
+              Maksimal: {formatCurrency(transaction?.total_amount || 0)}
             </p>
           </div>
 

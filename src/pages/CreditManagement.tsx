@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,21 +22,21 @@ const CreditManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
-  // Fetch credit purchases
-  const { data: creditPurchases, isLoading } = useQuery({
-    queryKey: ['credit-purchases', searchTerm],
+  // Fetch credit transactions (customer debts from POS sales)
+  const { data: creditTransactions, isLoading } = useQuery({
+    queryKey: ['credit-transactions', searchTerm],
     queryFn: async () => {
       let query = supabase
-        .from('purchases')
+        .from('transactions')
         .select(`
           *,
-          suppliers(name, phone, email),
+          customers(name, phone, email),
           profiles(full_name)
         `)
-        .eq('payment_method', 'credit');
+        .eq('is_credit', true);
       
       if (searchTerm) {
-        query = query.or(`purchase_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
+        query = query.or(`transaction_number.ilike.%${searchTerm}%`);
       }
       
       const { data, error } = await query.order('due_date', { ascending: true });
@@ -52,27 +53,27 @@ const CreditManagement = () => {
       
       // Total credit amount
       const { data: totalCredit } = await supabase
-        .from('purchases')
+        .from('transactions')
         .select('total_amount')
-        .eq('payment_method', 'credit');
+        .eq('is_credit', true);
 
       // Overdue credits
       const { data: overdueCredits } = await supabase
-        .from('purchases')
+        .from('transactions')
         .select('total_amount')
-        .eq('payment_method', 'credit')
+        .eq('is_credit', true)
         .lt('due_date', today);
 
       // Due today
       const { data: dueToday } = await supabase
-        .from('purchases')
+        .from('transactions')
         .select('total_amount')
-        .eq('payment_method', 'credit')
+        .eq('is_credit', true)
         .eq('due_date', today);
 
-      const totalAmount = totalCredit?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
-      const overdueAmount = overdueCredits?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
-      const dueTodayAmount = dueToday?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
+      const totalAmount = totalCredit?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+      const overdueAmount = overdueCredits?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+      const dueTodayAmount = dueToday?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
 
       return {
         totalAmount,
@@ -87,10 +88,10 @@ const CreditManagement = () => {
 
   // Send reminder mutation
   const sendReminder = useMutation({
-    mutationFn: async ({ purchaseId, method, message }: { purchaseId: string, method: string, message: string }) => {
+    mutationFn: async ({ transactionId, method, message }: { transactionId: string, method: string, message: string }) => {
       // Create a reminder log entry (you can create a reminders table for this)
       const reminderData = {
-        purchase_id: purchaseId,
+        transaction_id: transactionId,
         method: method,
         message: message,
         sent_at: new Date().toISOString(),
@@ -125,9 +126,9 @@ const CreditManagement = () => {
     }
   });
 
-  const getPaymentStatus = (purchase: any) => {
+  const getPaymentStatus = (transaction: any) => {
     const today = new Date();
-    const dueDate = new Date(purchase.due_date);
+    const dueDate = new Date(transaction.due_date);
     
     if (dueDate < today) {
       const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -152,13 +153,13 @@ const CreditManagement = () => {
     }
   };
 
-  const handleSendReminder = (purchase: any) => {
-    setSelectedCredit(purchase);
+  const handleSendReminder = (transaction: any) => {
+    setSelectedCredit(transaction);
     setRemindDialogOpen(true);
   };
 
-  const handlePayCredit = (purchase: any) => {
-    setSelectedCredit(purchase);
+  const handlePayCredit = (transaction: any) => {
+    setSelectedCredit(transaction);
     setPaymentDialogOpen(true);
   };
 
@@ -179,7 +180,7 @@ const CreditManagement = () => {
     }
 
     sendReminder.mutate({
-      purchaseId: selectedCredit.id,
+      transactionId: selectedCredit.id,
       method,
       message
     });
@@ -189,14 +190,14 @@ const CreditManagement = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Credit Management</h1>
+          <h1 className="text-3xl font-bold text-blue-800">Manajemen Piutang Pelanggan</h1>
         </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Credit</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Piutang</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -224,7 +225,7 @@ const CreditManagement = () => {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Due Today</CardTitle>
+              <CardTitle className="text-sm font-medium">Jatuh Tempo Hari Ini</CardTitle>
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
@@ -241,7 +242,7 @@ const CreditManagement = () => {
         {/* Search */}
         <div className="flex gap-4">
           <Input
-            placeholder="Cari nomor pembelian atau invoice..."
+            placeholder="Cari nomor transaksi..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
@@ -252,17 +253,17 @@ const CreditManagement = () => {
         <div className="border rounded-lg">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
-          ) : creditPurchases?.length === 0 ? (
+          ) : creditTransactions?.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">Belum ada pembelian kredit</p>
+              <p className="text-gray-500">Belum ada transaksi kredit</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>No. Pembelian</TableHead>
-                  <TableHead>Supplier</TableHead>
+                  <TableHead>No. Transaksi</TableHead>
+                  <TableHead>Pelanggan</TableHead>
                   <TableHead>Kontak</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Jatuh Tempo</TableHead>
@@ -271,45 +272,38 @@ const CreditManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {creditPurchases?.map((purchase) => {
-                  const paymentStatus = getPaymentStatus(purchase);
+                {creditTransactions?.map((transaction) => {
+                  const paymentStatus = getPaymentStatus(transaction);
                   
                   return (
-                    <TableRow key={purchase.id}>
+                    <TableRow key={transaction.id}>
                       <TableCell className="font-medium">
-                        <div>
-                          {purchase.purchase_number}
-                          {purchase.invoice_number && (
-                            <div className="text-sm text-gray-500">
-                              Inv: {purchase.invoice_number}
-                            </div>
-                          )}
-                        </div>
+                        {transaction.transaction_number}
                       </TableCell>
-                      <TableCell>{purchase.suppliers?.name || '-'}</TableCell>
+                      <TableCell>{transaction.customers?.name || 'Customer Umum'}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {purchase.suppliers?.phone && (
+                          {transaction.customers?.phone && (
                             <div className="flex items-center gap-1">
                               <Phone className="h-3 w-3" />
-                              {purchase.suppliers.phone}
+                              {transaction.customers.phone}
                             </div>
                           )}
-                          {purchase.suppliers?.email && (
+                          {transaction.customers?.email && (
                             <div className="flex items-center gap-1">
                               <Mail className="h-3 w-3" />
-                              {purchase.suppliers.email}
+                              {transaction.customers.email}
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
-                          Rp {purchase.total_amount?.toLocaleString('id-ID')}
+                          Rp {transaction.total_amount?.toLocaleString('id-ID')}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {purchase.due_date ? new Date(purchase.due_date).toLocaleDateString('id-ID') : '-'}
+                        {transaction.due_date ? new Date(transaction.due_date).toLocaleDateString('id-ID') : '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={paymentStatus.variant}>
@@ -321,21 +315,23 @@ const CreditManagement = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handlePayCredit(purchase)}
+                            onClick={() => handlePayCredit(transaction)}
                             className="text-green-600 hover:bg-green-50"
                           >
                             <CreditCard className="h-4 w-4 mr-1" />
                             Bayar
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendReminder(purchase)}
-                            className="text-blue-600 hover:bg-blue-50"
-                          >
-                            <MessageSquare className="h-4 w-4 mr-1" />
-                            Ingatkan
-                          </Button>
+                          {transaction.customers && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSendReminder(transaction)}
+                              className="text-blue-600 hover:bg-blue-50"
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Ingatkan
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -362,8 +358,8 @@ const CreditManagement = () => {
             {selectedCredit && (
               <form onSubmit={handleReminderSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Supplier</Label>
-                  <div className="font-medium">{selectedCredit.suppliers?.name}</div>
+                  <Label>Pelanggan</Label>
+                  <div className="font-medium">{selectedCredit.customers?.name || 'Customer Umum'}</div>
                 </div>
                 <div className="space-y-2">
                   <Label>Total Tagihan</Label>
@@ -397,7 +393,7 @@ const CreditManagement = () => {
                     id="message"
                     name="message"
                     placeholder="Masukkan pesan pengingat..."
-                    defaultValue={`Halo ${selectedCredit.suppliers?.name}, kami mengingatkan bahwa pembayaran untuk invoice ${selectedCredit.purchase_number} sebesar Rp ${selectedCredit.total_amount?.toLocaleString('id-ID')} akan jatuh tempo pada ${selectedCredit.due_date ? new Date(selectedCredit.due_date).toLocaleDateString('id-ID') : ''}. Terima kasih.`}
+                    defaultValue={`Halo ${selectedCredit.customers?.name || 'Customer'}, kami mengingatkan bahwa pembayaran untuk transaksi ${selectedCredit.transaction_number} sebesar Rp ${selectedCredit.total_amount?.toLocaleString('id-ID')} akan jatuh tempo pada ${selectedCredit.due_date ? new Date(selectedCredit.due_date).toLocaleDateString('id-ID') : ''}. Terima kasih.`}
                     rows={4}
                     required
                   />
