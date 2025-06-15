@@ -111,48 +111,86 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     }
   };
 
-  // New helper: handle purchase unit change & set conversion factor
-  const handlePurchaseUnitChange = async (index: number, unitId: string) => {
+  // NEW: Fungsi untuk benar-benar mengkalkulasi conversion_factor dari/to unit dasar produk
+  const getConversionFactor = (
+    conversions: any[],
+    fromUnitId: string,
+    toUnitId: string
+  ): number => {
+    if (fromUnitId === toUnitId) return 1;
+    const direct = conversions.find(
+      (conv: any) =>
+        conv.from_unit_id === fromUnitId && conv.to_unit_id === toUnitId
+    );
+    if (direct) return Number(direct.conversion_factor || 1);
+
+    // Reverse search
+    const reverse = conversions.find(
+      (conv: any) =>
+        conv.from_unit_id === toUnitId && conv.to_unit_id === fromUnitId
+    );
+    if (reverse && reverse.conversion_factor) {
+      return 1 / Number(reverse.conversion_factor);
+    }
+    // fallback
+    return 1;
+  };
+
+  // Sinkronisasi conversion_factor ke base unit pada perubahan unit pembelian
+  const handlePurchaseUnitChange = async (index: number, newPurchaseUnitId: string) => {
     const newItems = [...items];
-    const productId = newItems[index].product_id;
+    const item = newItems[index];
+    const productId = item.product_id;
+
+    // Default conversion: 1 (jika tidak ada konversi)
     let conversion = 1;
-    if (productId && unitId) {
-      // Cek unit dasar produk
+
+    if (productId && newPurchaseUnitId) {
+      // Ambil product dan unit dasarnya
       const selectedProduct = products?.find((p) => p.id === productId);
-      if (selectedProduct && selectedProduct.unit_id !== unitId) {
-        // Pastikan sudah ambil data konversi
-        await fetchConversions(productId);
-        const conversions = productConversions[productId] || [];
-        // Cari konversi dari purchase_unit ke unit dasar
-        const match = conversions.find(
-          (c) => c.from_unit_id === unitId && c.to_unit_id === selectedProduct.unit_id
-        );
-        if (match) conversion = match.conversion_factor;
-        else {
-          // Cek reverse
-          const rev = conversions.find(
-            (c) => c.to_unit_id === unitId && c.from_unit_id === selectedProduct.unit_id
-          );
-          if (rev && rev.conversion_factor) conversion = 1 / rev.conversion_factor;
-        }
+      const baseUnitId = selectedProduct?.unit_id;
+
+      await fetchConversions(productId);
+      // Setelah di-fetch, conversions bisa diambil dari terbaru di state
+      const conversions = productConversions[productId] || [];
+
+      if (baseUnitId && newPurchaseUnitId) {
+        conversion = getConversionFactor(conversions, newPurchaseUnitId, baseUnitId);
       }
     }
-    newItems[index].purchase_unit_id = unitId;
-    newItems[index].conversion_factor = conversion;
+
+    newItems[index] = {
+      ...item,
+      purchase_unit_id: newPurchaseUnitId,
+      conversion_factor: conversion,
+    };
     setItems(newItems);
   };
 
-  // Handler when a product is selected from the search modal
+  // Handler saat produk dipilih, pastikan conversion sinkron
   const handleProductSelected = async (product: any, rowIdx: number) => {
     const newItems = [...items];
-    newItems[rowIdx].product_id = product.id;
-    // Fetch conversions for this product if needed
     await fetchConversions(product.id);
-    // Default unit and conversion
-    newItems[rowIdx].purchase_unit_id = product.unit_id || "";
-    newItems[rowIdx].conversion_factor = 1;
-    newItems[rowIdx].unit_cost = product.base_price || 0;
-    newItems[rowIdx].total_cost = newItems[rowIdx].quantity * newItems[rowIdx].unit_cost;
+
+    const conversions = productConversions[product.id] || [];
+    // Default: unit_id produk sebagai purchase_unit, conversion 1
+    let purchase_unit_id = product.unit_id || "";
+    let conversion_factor = 1;
+    if (purchase_unit_id) {
+      // conversion dari purchase_unit_id ke baseUnitId (selalu 1 jika sama)
+      conversion_factor = getConversionFactor(conversions, purchase_unit_id, product.unit_id);
+    }
+
+    newItems[rowIdx] = {
+      ...newItems[rowIdx],
+      product_id: product.id,
+      purchase_unit_id,
+      conversion_factor,
+      unit_cost: product.base_price || 0,
+      total_cost:
+        (newItems[rowIdx].quantity || 1) *
+        (product.base_price || 0),
+    };
     setItems(newItems);
     setSearchModalOpenIdx(null);
   };
