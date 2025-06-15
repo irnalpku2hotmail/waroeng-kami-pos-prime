@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -277,7 +276,7 @@ const FrontendCart = () => {
             </span>
             <span className="font-medium">
               {shippingCost === 0 ? (
-                <Badge variant="secondary" className="text-green-600">Free Shipping</Badge>
+                <Badge variant="secondary" className="text-green-600">Gratis Ongkir</Badge>
               ) : (
                 `Rp ${shippingCost.toLocaleString('id-ID')}`
               )}
