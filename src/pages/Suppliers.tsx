@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,16 +10,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Building2, Phone, Mail, User, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Phone, Mail, User, Download, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
 import { exportToExcel } from '@/utils/excelExport';
+import SupplierDetails from '@/components/SupplierDetails';
 
 const ITEMS_PER_PAGE = 10;
 
 const Suppliers = () => {
   const [open, setOpen] = useState(false);
   const [editSupplier, setEditSupplier] = useState<any>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
@@ -282,6 +286,16 @@ const Suppliers = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => {
+                              setSelectedSupplier(supplier);
+                              setDetailsOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
                               setEditSupplier(supplier);
                               setOpen(true);
                             }}
@@ -312,6 +326,11 @@ const Suppliers = () => {
           )}
         </div>
       </div>
+      <SupplierDetails
+        supplier={selectedSupplier}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
     </Layout>
   );
 };

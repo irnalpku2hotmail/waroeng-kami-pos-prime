@@ -8,9 +8,12 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  AlertTriangle
+  AlertTriangle,
+  History
 } from 'lucide-react';
 import Layout from '@/components/Layout';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 const Dashboard = () => {
   // Fetch total products
@@ -127,6 +130,21 @@ const Dashboard = () => {
     }
   });
 
+  // Fetch today's orders for the activity list
+  const { data: todaysOrders, isLoading: isLoadingTodaysOrders } = useQuery({
+    queryKey: ['todays-orders'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, customer_name, total_amount, status')
+        .eq('order_date', today)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const totalProducts = products?.length || 0;
   const lowStockProducts = lowStock?.length || 0;
   const totalCustomers = customers?.length || 0;
@@ -135,6 +153,23 @@ const Dashboard = () => {
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
   const monthlyRevenue = revenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'delivered':
+        return <Badge className="bg-green-100 text-green-800">Delivered</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>;
+      case 'processing':
+         return <Badge className="bg-blue-100 text-blue-800">Processing</Badge>;
+      case 'shipped':
+        return <Badge className="bg-yellow-100 text-yellow-800">Shipped</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
 
   return (
     <Layout>
@@ -241,6 +276,56 @@ const Dashboard = () => {
                 Rp {monthlyRevenue?.toLocaleString('id-ID') || 0}
               </div>
               <p className="text-sm text-gray-600">Total bulan ini</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Today's Sales Activity */}
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-blue-500" />
+                Transaksi Penjualan Hari Ini
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No. Pesanan</TableHead>
+                    <TableHead>Pelanggan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingTodaysOrders ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : todaysOrders && todaysOrders.length > 0 ? (
+                    todaysOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.order_number}</TableCell>
+                        <TableCell>{order.customer_name}</TableCell>
+                        <TableCell>{getStatusBadge(order.status)}</TableCell>
+                        <TableCell className="text-right">
+                          Rp {order.total_amount?.toLocaleString('id-ID') || 0}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center">
+                        Tidak ada transaksi hari ini.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </div>
