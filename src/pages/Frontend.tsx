@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck, Mic, Grid3x3, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck, Mic } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductLikes } from '@/hooks/useProductLikes';
@@ -19,13 +19,6 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface FrontendSettings {
   banner_url: string;
@@ -374,122 +367,54 @@ const Frontend = () => {
         </div>
       </header>
 
-      {/* Enhanced Navigation with Beautiful Category Menu */}
-      <nav className="bg-white border-b shadow-sm">
+      {/* Navigation */}
+      <nav className="bg-white border-b">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-3">
-            {/* Enhanced Category Menu */}
-            <div className="flex items-center space-x-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white border-0 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3 rounded-lg"
-                  >
-                    <Grid3x3 className="h-5 w-5" />
-                    <span className="font-medium">Semua Kategori</span>
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-80 p-0 bg-white shadow-2xl border-0 rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4">
-                    <h3 className="text-white font-semibold text-lg flex items-center gap-2">
-                      <Grid3x3 className="h-5 w-5" />
-                      Pilih Kategori
-                    </h3>
-                  </div>
-                  <div className="p-2">
-                    <DropdownMenuItem
-                      onClick={() => setSelectedCategory(null)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                        selectedCategory === null 
-                          ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                        <Package className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">Semua Kategori</div>
-                        <div className="text-sm text-gray-500">{products.length} produk</div>
-                      </div>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuSeparator className="my-2" />
-                    
-                    {categories.map((category, index) => (
-                      <DropdownMenuItem
-                        key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                          selectedCategory === category.id 
-                            ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500' 
-                            : 'hover:bg-gray-50'
-                        }`}
+          <div className="flex items-center space-x-8 py-3">
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="flex items-center gap-2">
+                    <Menu className="h-4 w-4" />
+                    Kategori
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="grid grid-cols-3 gap-4 p-6 w-96">
+                      <Button
+                        variant={selectedCategory === null ? "default" : "ghost"}
+                        onClick={() => setSelectedCategory(null)}
+                        className="flex items-center gap-2 justify-start"
                       >
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                          `bg-gradient-to-br ${
-                            index % 6 === 0 ? 'from-purple-400 to-purple-600' :
-                            index % 6 === 1 ? 'from-green-400 to-green-600' :
-                            index % 6 === 2 ? 'from-yellow-400 to-yellow-600' :
-                            index % 6 === 3 ? 'from-pink-400 to-pink-600' :
-                            index % 6 === 4 ? 'from-indigo-400 to-indigo-600' :
-                            'from-red-400 to-red-600'
-                          }`
-                        }`}>
-                          {category.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">{category.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {products.filter(p => p.category_id === category.id).length} produk
-                          </div>
-                        </div>
-                        {selectedCategory === category.id && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Featured Categories as Quick Links */}
-              <div className="hidden md:flex items-center space-x-3 ml-6">
-                {featuredCategories.map((category, index) => (
-                  <Button
-                    key={category.id}
-                    variant={selectedCategory === category.id ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`transition-all duration-300 rounded-full px-4 py-2 ${
-                      selectedCategory === category.id
-                        ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700'
-                        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                    }`}
-                  >
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
+                        Semua Kategori
+                      </Button>
+                      {categories.map((category) => (
+                        <Button
+                          key={category.id}
+                          variant={selectedCategory === category.id ? "default" : "ghost"}
+                          onClick={() => setSelectedCategory(category.id)}
+                          className="flex items-center gap-2 justify-start"
+                        >
+                          {category.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
             
-            {/* Right Side Navigation */}
-            <div className="flex items-center space-x-6">
-              {flashSales.length > 0 && (
-                <Button variant="ghost" size="sm" className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full px-4 py-2 transition-all duration-300">
-                  <Zap className="h-4 w-4" />
-                  <span className="font-medium">Flash Sale</span>
-                </Button>
-              )}
-              
-              <div className="hidden lg:flex space-x-6 text-sm">
-                <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors duration-200 font-medium">Official Store</a>
-                <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors duration-200 font-medium">Tiket & Hiburan</a>
-                <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors duration-200 font-medium">Pulsa & Data</a>
-                <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors duration-200 font-medium">Travel</a>
-              </div>
+            {flashSales.length > 0 && (
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 text-red-600">
+                <Zap className="h-4 w-4" />
+                Flash Sale
+              </Button>
+            )}
+            
+            <div className="flex space-x-6 text-sm">
+              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Official Store</a>
+              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Tiket & Hiburan</a>
+              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Pulsa & Data</a>
+              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Travel</a>
             </div>
           </div>
         </div>
