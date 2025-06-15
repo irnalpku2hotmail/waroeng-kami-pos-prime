@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Truck, Mic, Category } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Truck, Mic, Folder } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductLikes } from '@/hooks/useProductLikes';
@@ -320,8 +320,8 @@ const Frontend = () => {
 
   // ** NEW: Dapatkan icon kategori berbasis nama (sederhana, fallback to Package) **
   const getCategoryIcon = (name: string) => {
-    // Add more icons mapping if desired
-    return <Category className="h-7 w-7 md:h-10 md:w-10 text-blue-600" />;
+    // You can add more icon mappings if you wish
+    return <Folder className="h-7 w-7 md:h-10 md:w-10 text-blue-600" />;
   };
 
   // Carousel kategori untuk icon kategori
