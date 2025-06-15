@@ -4,7 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign } from 'lucide-react';
-import { CartItem } from '@/hooks/usePOS';
+
+interface CartItem {
+  id: string;
+  product_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  image_url?: string;
+  loyalty_points: number;
+}
 
 interface PaymentDetailsProps {
   cart: CartItem[];

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,8 +7,29 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const ITEMS_PER_PAGE = 8;
 
+export interface CartItem {
+  id: string;
+  product_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  image_url?: string;
+  loyalty_points: number;
+  price_variant?: {
+    id: string;
+    name: string;
+    price: number;
+    minimum_quantity: number;
+  };
+}
+
+export const getImageUrl = (imageUrl?: string) => {
+  return imageUrl || null;
+};
+
 export const usePOS = () => {
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [customerId, setCustomerId] = useState<string>('');
@@ -16,6 +38,9 @@ export const usePOS = () => {
   const [pointsUsed, setPointsUsed] = useState(0);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [isListening, setIsListening] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [paymentType, setPaymentType] = useState<'cash' | 'credit' | 'transfer'>('cash');
+  const [transferReference, setTransferReference] = useState('');
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -71,12 +96,15 @@ export const usePOS = () => {
       const transactionNumber = `POS-${new Date().getTime()}`;
       const transactionData = {
         transaction_number: transactionNumber,
-        customer_id: customerId || null,
-        total_amount: totalAfterDiscount,
+        customer_id: selectedCustomer?.id || null,
+        total_amount: getTotalAmount(),
         discount_amount: discountAmount,
         points_used: pointsUsed,
         payment_amount: paymentAmount,
-        user_id: user?.id,
+        cashier_id: user?.id,
+        payment_type: paymentType,
+        change_amount: getChangeAmount(),
+        points_earned: getTotalPointsEarned(),
       };
 
       const { data: transaction, error: transactionError } = await supabase
@@ -93,9 +121,10 @@ export const usePOS = () => {
 
       const cartItemsData = cart.map(item => ({
         transaction_id: transactionId,
-        product_id: item.id,
+        product_id: item.product_id,
         quantity: item.quantity,
-        selling_price: getEffectivePrice(item, item.quantity),
+        unit_price: item.unit_price,
+        total_price: item.total_price,
       }));
 
       const { error: cartItemsError } = await supabase
@@ -108,13 +137,16 @@ export const usePOS = () => {
 
       // Update product stocks
       for (const item of cart) {
-        const { error: updateStockError } = await supabase
-          .from('products')
-          .update({ current_stock: item.current_stock - item.quantity })
-          .eq('id', item.id);
+        const product = products.find(p => p.id === item.product_id);
+        if (product) {
+          const { error: updateStockError } = await supabase
+            .from('products')
+            .update({ current_stock: product.current_stock - item.quantity })
+            .eq('id', item.product_id);
 
-        if (updateStockError) {
-          throw updateStockError;
+          if (updateStockError) {
+            throw updateStockError;
+          }
         }
       }
 
@@ -138,7 +170,7 @@ export const usePOS = () => {
   });
 
   const addToCart = (product: any) => {
-    const existingItem = cart.find(item => item.id === product.id);
+    const existingItem = cart.find(item => item.product_id === product.id);
     
     if (existingItem) {
       if (existingItem.quantity >= product.current_stock) {
@@ -151,20 +183,30 @@ export const usePOS = () => {
       }
       
       setCart(cart.map(item =>
-        item.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
+        item.product_id === product.id
+          ? { ...item, quantity: item.quantity + 1, total_price: (item.quantity + 1) * item.unit_price }
           : item
       ));
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      const effectivePrice = getEffectivePrice(product, 1);
+      setCart([...cart, {
+        id: product.id,
+        product_id: product.id,
+        name: product.name,
+        quantity: 1,
+        unit_price: effectivePrice,
+        total_price: effectivePrice,
+        image_url: product.image_url,
+        loyalty_points: product.loyalty_points,
+      }]);
     }
   };
 
   const removeFromCart = (productId: string) => {
-    setCart(cart.filter(item => item.id !== productId));
+    setCart(cart.filter(item => item.product_id !== productId));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateCartQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
@@ -181,8 +223,8 @@ export const usePOS = () => {
     }
 
     setCart(cart.map(item =>
-      item.id === productId
-        ? { ...item, quantity }
+      item.product_id === productId
+        ? { ...item, quantity, total_price: quantity * item.unit_price }
         : item
     ));
   };
@@ -198,64 +240,36 @@ export const usePOS = () => {
     return product.selling_price;
   };
 
-  const subtotal = cart.reduce((sum, item) => {
-    const effectivePrice = getEffectivePrice(item, item.quantity);
-    return sum + (effectivePrice * item.quantity);
-  }, 0);
+  const getTotalAmount = () => {
+    const subtotal = cart.reduce((sum, item) => sum + item.total_price, 0);
+    return Math.max(0, subtotal - discountAmount);
+  };
 
-  const totalAfterDiscount = Math.max(0, subtotal - discountAmount);
-  const changeAmount = Math.max(0, paymentAmount - totalAfterDiscount);
+  const getChangeAmount = () => {
+    if (paymentType !== 'cash') return 0;
+    return Math.max(0, paymentAmount - getTotalAmount());
+  };
+
+  const getTotalPointsEarned = () => {
+    if (!selectedCustomer) return 0;
+    return cart.reduce((sum, item) => sum + (item.loyalty_points * item.quantity), 0);
+  };
 
   const clearCart = () => {
     setCart([]);
+    setSelectedCustomer(null);
     setCustomerId('');
     setCustomerName('');
     setDiscountAmount(0);
     setPointsUsed(0);
     setPaymentAmount(0);
+    setPaymentType('cash');
+    setTransferReference('');
   };
 
-  const handleVoiceSearch = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast({
-        title: 'Browser tidak mendukung',
-        description: 'Browser Anda tidak mendukung voice search',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.lang = 'id-ID';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setSearchTerm(transcript);
-      setCurrentPage(1);
-    };
-
-    recognition.onerror = () => {
-      toast({
-        title: 'Error',
-        description: 'Gagal mengenali suara, coba lagi',
-        variant: 'destructive'
-      });
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
+  const handleVoiceSearch = (text: string) => {
+    setSearchTerm(text);
+    setCurrentPage(1);
   };
 
   return {
@@ -269,6 +283,9 @@ export const usePOS = () => {
     setCurrentPage: (page: number) => setCurrentPage(page),
     itemsPerPage: ITEMS_PER_PAGE,
     totalItems: productsCount,
+    customers: customers || [],
+    selectedCustomer,
+    setSelectedCustomer,
     customerId,
     setCustomerId,
     customerName,
@@ -279,12 +296,16 @@ export const usePOS = () => {
     setPointsUsed,
     paymentAmount,
     setPaymentAmount,
-    subtotal,
-    totalAfterDiscount,
-    changeAmount,
+    paymentType,
+    setPaymentType,
+    transferReference,
+    setTransferReference,
+    getTotalAmount,
+    getChangeAmount,
+    getTotalPointsEarned,
     addToCart,
     removeFromCart,
-    updateQuantity,
+    updateCartQuantity,
     clearCart,
     processTransaction,
     handleVoiceSearch,
