@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Building2, Phone, Mail, User } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Phone, Mail, User, Download } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
+import { exportToExcel } from '@/utils/excelExport';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -21,6 +22,20 @@ const Suppliers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
+
+  // Query for all suppliers for export
+  const { data: allSuppliersData } = useQuery({
+    queryKey: ['all-suppliers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('name', { ascending: true });
+        
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const { data: suppliersData, isLoading } = useQuery({
     queryKey: ['suppliers', searchTerm, currentPage],
@@ -116,83 +131,108 @@ const Suppliers = () => {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (!allSuppliersData || allSuppliersData.length === 0) {
+      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
+      return;
+    }
+
+    const exportData = allSuppliersData.map(supplier => ({
+      'Nama Supplier': supplier.name,
+      'Kontak Person': supplier.contact_person || '-',
+      'Telepon': supplier.phone || '-',
+      'Email': supplier.email || '-',
+      'Alamat': supplier.address || '-',
+      'Tanggal Dibuat': new Date(supplier.created_at).toLocaleDateString('id-ID')
+    }));
+
+    exportToExcel(exportData, 'Data_Supplier', 'Supplier');
+    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-blue-800">Manajemen Supplier</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditSupplier(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Supplier
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{editSupplier ? 'Edit Supplier' : 'Tambah Supplier Baru'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSupplierSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nama Supplier *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    defaultValue={editSupplier?.name}
-                    placeholder="Contoh: PT. Maju Jaya"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contact_person">Kontak Person *</Label>
-                  <Input
-                    id="contact_person"
-                    name="contact_person"
-                    defaultValue={editSupplier?.contact_person}
-                    placeholder="Contoh: John Doe"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telepon *</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    defaultValue={editSupplier?.phone}
-                    placeholder="Contoh: 081234567890"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    defaultValue={editSupplier?.email}
-                    placeholder="Contoh: john.doe@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Alamat</Label>
-                  <Textarea
-                    id="address"
-                    name="address"
-                    defaultValue={editSupplier?.address}
-                    placeholder="Contoh: Jl. Pahlawan No. 1"
-                  />
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button type="submit">
-                    {editSupplier ? 'Update' : 'Simpan'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportToExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditSupplier(null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Supplier
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{editSupplier ? 'Edit Supplier' : 'Tambah Supplier Baru'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSupplierSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nama Supplier *</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      defaultValue={editSupplier?.name}
+                      placeholder="Contoh: PT. Maju Jaya"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_person">Kontak Person *</Label>
+                    <Input
+                      id="contact_person"
+                      name="contact_person"
+                      defaultValue={editSupplier?.contact_person}
+                      placeholder="Contoh: John Doe"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telepon *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      defaultValue={editSupplier?.phone}
+                      placeholder="Contoh: 081234567890"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      defaultValue={editSupplier?.email}
+                      placeholder="Contoh: john.doe@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Alamat</Label>
+                    <Textarea
+                      id="address"
+                      name="address"
+                      defaultValue={editSupplier?.address}
+                      placeholder="Contoh: Jl. Pahlawan No. 1"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                      Batal
+                    </Button>
+                    <Button type="submit">
+                      {editSupplier ? 'Update' : 'Simpan'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="flex gap-4">
