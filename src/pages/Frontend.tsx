@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, MapPin, Phone, Mail, Clock, Zap } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Clock, Zap } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import FrontendCart from '@/components/FrontendCart';
+import AuthModal from '@/components/AuthModal';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -25,9 +27,11 @@ interface FrontendSettings {
 
 const Frontend = () => {
   const { addItem, items } = useCart();
+  const { user, signOut } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCart, setShowCart] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Fetch frontend settings
   const { data: frontendSettings } = useQuery({
@@ -161,6 +165,14 @@ const Frontend = () => {
     return items.reduce((total, item) => total + item.quantity, 0);
   };
 
+  const handleAuthAction = () => {
+    if (user) {
+      signOut();
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
   const categoriesLimit = frontendSettings?.featured_categories_limit || 5;
   const featuredCategories = categories.slice(0, categoriesLimit);
   const storeName = storeSettings?.store_name?.name || 'SmartPOS';
@@ -184,7 +196,7 @@ const Frontend = () => {
             </span>
           </div>
           <div className="flex items-center space-x-4">
-            <span>Gratis ongkir se-Indonesia</span>
+            <span>Gratis ongkir se-Pekanbaru</span>
             <span>•</span>
             <span>Download App</span>
           </div>
@@ -215,17 +227,20 @@ const Frontend = () => {
 
             {/* Right Actions */}
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                <span className="hidden md:inline">{storeAddress}</span>
-              </Button>
-              
               <Button variant="ghost" size="sm">
                 <Heart className="h-5 w-5" />
               </Button>
 
-              <Button variant="ghost" size="sm">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleAuthAction}
+                className="flex items-center gap-2"
+              >
                 <User className="h-5 w-5" />
+                <span className="hidden md:inline">
+                  {user ? 'Logout' : 'Login'}
+                </span>
               </Button>
 
               <Button 
@@ -264,7 +279,6 @@ const Frontend = () => {
                         onClick={() => setSelectedCategory(null)}
                         className="flex items-center gap-2 justify-start"
                       >
-                        <Package className="h-4 w-4" />
                         Semua Kategori
                       </Button>
                       {categories.map((category) => (
@@ -274,11 +288,6 @@ const Frontend = () => {
                           onClick={() => setSelectedCategory(category.id)}
                           className="flex items-center gap-2 justify-start"
                         >
-                          {category.icon_url ? (
-                            <img src={category.icon_url} alt={category.name} className="h-4 w-4 object-contain" />
-                          ) : (
-                            <Package className="h-4 w-4" />
-                          )}
                           {category.name}
                         </Button>
                       ))}
@@ -349,8 +358,8 @@ const Frontend = () => {
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-b-lg shadow-lg">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {flashSales[0]?.flash_sale_items?.slice(0, 4).map((item: any) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    {flashSales[0]?.flash_sale_items?.slice(0, 6).map((item: any) => (
                       <Card key={item.id} className="group hover:shadow-lg transition-all">
                         <div className="relative">
                           <div className="aspect-square bg-gray-100">
@@ -422,11 +431,7 @@ const Frontend = () => {
                     onClick={() => setSelectedCategory(category.id)}
                     className="h-24 flex-col p-4 bg-white border-2 hover:border-blue-500 transition-all"
                   >
-                    {category.icon_url ? (
-                      <img src={category.icon_url} alt={category.name} className="h-8 w-8 mb-2 object-contain" />
-                    ) : (
-                      <Package className="h-8 w-8 mb-2 text-blue-600" />
-                    )}
+                    <Package className="h-8 w-8 mb-2 text-blue-600" />
                     <span className="text-sm font-medium text-center">{category.name}</span>
                   </Button>
                 ))}
@@ -538,8 +543,7 @@ const Frontend = () => {
               </p>
               <div className="mt-4 space-y-2">
                 <p className="text-sm text-gray-300 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  {storeAddress}
+                  <span>{storeAddress}</span>
                 </p>
               </div>
             </div>
@@ -580,6 +584,12 @@ const Frontend = () => {
           </div>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        open={showAuthModal} 
+        onOpenChange={setShowAuthModal} 
+      />
     </div>
   );
 };
