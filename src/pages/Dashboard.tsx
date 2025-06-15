@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,10 +18,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { usePresence } from '@/contexts/PresenceContext';
 
+// Fetching helper
+const getDateRange = (type: string) => {
+  const today = new Date();
+  if (type === "month") {
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return {
+      from: firstDay.toISOString().split('T')[0],
+      to: lastDay.toISOString().split('T')[0]
+    };
+  }
+  return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+};
+
 const Dashboard = () => {
   const { onlineUsers } = usePresence();
 
-  // Fetch total products
+  // Total produk
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
@@ -32,7 +47,7 @@ const Dashboard = () => {
     }
   });
 
-  // Fetch low stock products
+  // Produk stok rendah
   const { data: lowStock } = useQuery({
     queryKey: ['low-stock'],
     queryFn: async () => {
@@ -45,7 +60,7 @@ const Dashboard = () => {
     }
   });
 
-  // Fetch total customers
+  // Total pelanggan
   const { data: customers } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
@@ -57,35 +72,37 @@ const Dashboard = () => {
     }
   });
 
-  // Fetch today's sales
-  const { data: sales } = useQuery({
-    queryKey: ['sales'],
+  // Penjualan hari ini: dari tabel transactions (POS)
+  const { data: posSales } = useQuery({
+    queryKey: ['pos-daily-sales'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
-        .from('orders')
+        .from('transactions')
         .select('total_amount')
-        .eq('order_date', today);
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
   });
 
-  // Fetch today's transactions
-  const { data: transactions } = useQuery({
-    queryKey: ['transactions'],
+  // Jumlah transaksi hari ini: dari tabel transactions (POS)
+  const { data: posTransactions } = useQuery({
+    queryKey: ['pos-daily-transactions'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
-        .from('orders')
+        .from('transactions')
         .select('id')
-        .eq('order_date', today);
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
   });
 
-  // Fetch monthly expenses
+  // Pengeluaran bulanan
   const { data: expenses } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => {
@@ -103,7 +120,7 @@ const Dashboard = () => {
     }
   });
 
-  // Fetch pending orders
+  // Pesanan tertunda
   const { data: pending } = useQuery({
     queryKey: ['pending-orders'],
     queryFn: async () => {
@@ -116,9 +133,9 @@ const Dashboard = () => {
     }
   });
 
-  // Fetch monthly revenue
-  const { data: revenue } = useQuery({
-    queryKey: ['monthly-revenue'],
+  // Pendapatan COD (orders delivered dalam bulan ini)
+  const { data: codRevenue } = useQuery({
+    queryKey: ['cod-revenue'],
     queryFn: async () => {
       const today = new Date();
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
@@ -126,15 +143,16 @@ const Dashboard = () => {
 
       const { data, error } = await supabase
         .from('orders')
-        .select('total_amount')
+        .select('total_amount, status')
         .gte('order_date', firstDayOfMonth)
-        .lte('order_date', lastDayOfMonth);
+        .lte('order_date', lastDayOfMonth)
+        .eq('status', 'delivered');
       if (error) throw error;
       return data;
     }
   });
 
-  // Fetch today's orders for the activity list
+  // Today's Orders untuk aktivitas, masih pakai orders table (COD)
   const { data: todaysOrders, isLoading: isLoadingTodaysOrders } = useQuery({
     queryKey: ['todays-orders'],
     queryFn: async () => {
@@ -152,11 +170,11 @@ const Dashboard = () => {
   const totalProducts = products?.length || 0;
   const lowStockProducts = lowStock?.length || 0;
   const totalCustomers = customers?.length || 0;
-  const todaySales = sales?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
-  const todayTransactions = transactions?.length || 0;
+  const todaySales = posSales?.reduce((sum, trx) => sum + (trx.total_amount || 0), 0) || 0;
+  const todayTransactions = posTransactions?.length || 0;
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
-  const monthlyRevenue = revenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+  const codIncome = codRevenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -212,7 +230,7 @@ const Dashboard = () => {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Penjualan Hari Ini</CardTitle>
+              <CardTitle className="text-sm font-medium">Penjualan Hari Ini (POS)</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -236,8 +254,22 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Additional Info */}
+        {/* Monthly COD Revenue */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-500" />
+                Pendapatan COD
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600 mb-2">
+                Rp {codIncome?.toLocaleString('id-ID') || 0}
+              </div>
+              <p className="text-sm text-gray-600">COD delivered bulan ini</p>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -252,7 +284,6 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600">Produk perlu diisi ulang</p>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -267,22 +298,6 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600">Pesanan menunggu diproses</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-500" />
-                Pendapatan Bulanan
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600 mb-2">
-                Rp {monthlyRevenue?.toLocaleString('id-ID') || 0}
-              </div>
-              <p className="text-sm text-gray-600">Total bulan ini</p>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -305,7 +320,7 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <History className="h-5 w-5 text-blue-500" />
-                Transaksi Penjualan Hari Ini
+                Transaksi Penjualan Hari Ini (COD)
               </CardTitle>
             </CardHeader>
             <CardContent>
