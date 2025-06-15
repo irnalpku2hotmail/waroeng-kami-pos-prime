@@ -14,7 +14,6 @@ import Register from '@/pages/auth/Register';
 import Dashboard from '@/pages/Dashboard';
 import Products from '@/pages/Products';
 import CategoriesUnits from '@/pages/CategoriesUnits';
-import Categories from '@/pages/Categories';
 import Units from '@/pages/Units';
 import Suppliers from '@/pages/Suppliers';
 import POS from '@/pages/POS';
@@ -52,7 +51,6 @@ function App() {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
               <Route path="/categories-units" element={<ProtectedRoute><CategoriesUnits /></ProtectedRoute>} />
-              <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
               <Route path="/units" element={<ProtectedRoute><Units /></ProtectedRoute>} />
               <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
               <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
