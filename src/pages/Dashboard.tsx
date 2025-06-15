@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,7 +103,7 @@ const Dashboard = () => {
     }
   });
 
-  // --- POS: Transaksi POS hari ini (fixed date filtering) ---
+  // --- POS: Transaksi POS hari ini ---
   const today = new Date().toISOString().split('T')[0];
 
   const { data: posSales } = useQuery({
@@ -113,24 +112,23 @@ const Dashboard = () => {
       const { data, error } = await supabase
         .from('transactions')
         .select('id, transaction_number, total_amount, customer_id, created_at')
-        .gte('created_at', today + 'T00:00:00.000Z')
-        .lt('created_at', today + 'T23:59:59.999Z');
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
   });
 
-  // --- COD: Pendapatan COD hari ini (fixed date filtering for delivered orders) ---
+  // --- COD: Pendapatan COD & Transaksi COD hari ini (orders delivered hari ini) ---
   const { data: codSalesToday } = useQuery({
     queryKey: ['cod-revenue-today'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status, updated_at')
+        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status')
         .eq('status', 'delivered')
-        .eq('payment_method', 'cod')
-        .gte('updated_at', today + 'T00:00:00.000Z')
-        .lt('updated_at', today + 'T23:59:59.999Z');
+        .gte('order_date', today + 'T00:00:00')
+        .lte('order_date', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
