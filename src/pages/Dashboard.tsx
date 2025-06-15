@@ -103,29 +103,9 @@ const Dashboard = () => {
     }
   });
 
-  // Pendapatan COD (orders delivered dalam bulan ini)
-  const { data: codRevenue } = useQuery({
-    queryKey: ['cod-revenue'],
-    queryFn: async () => {
-      const today = new Date();
-      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select('total_amount, status')
-        .gte('order_date', firstDayOfMonth)
-        .lte('order_date', lastDayOfMonth)
-        .eq('status', 'delivered');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Modify today's orders and sales for POS and only COD with delivered status
+  // --- POS: Transaksi POS hari ini ---
   const today = new Date().toISOString().split('T')[0];
 
-  // Transaksi POS hari ini
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales'],
     queryFn: async () => {
@@ -139,13 +119,13 @@ const Dashboard = () => {
     }
   });
 
-  // Transaksi COD hari ini (orders dengan status delivered & tanggal hari ini)
-  const { data: codSales } = useQuery({
-    queryKey: ['cod-daily-sales'],
+  // --- COD: Pendapatan COD hari ini (orders delivered hari ini) ---
+  const { data: codSalesToday } = useQuery({
+    queryKey: ['cod-revenue-today'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, customer_name, created_at, status, order_date')
+        .select('total_amount, status, order_date')
         .eq('status', 'delivered')
         .gte('order_date', today + 'T00:00:00')
         .lte('order_date', today + 'T23:59:59');
@@ -154,29 +134,29 @@ const Dashboard = () => {
     }
   });
 
-  // --- Gabungkan semua transaksi hari ini ---
-  const todaySalesTable = [
-    ...(posSales?.map((trx) => ({
+  // --- Tabel transaksi penjualan hari ini (hanya POS) ---
+  const todaySalesTable = (posSales ?? []).map(trx => {
+    let customerName = 'Umum';
+    if (trx.customer_id) {
+      const matchCustomer = customers?.find((c) => c.id === trx.customer_id);
+      customerName = matchCustomer?.name || 'Umum';
+    }
+    return {
       id: trx.id,
       number: trx.transaction_number,
-      name: trx.customer_id ? `Pelanggan #${trx.customer_id.slice(-4)}` : 'Umum',
+      name: customerName,
       total: trx.total_amount,
       status: 'POS',
       created_at: trx.created_at,
-    })) ?? []),
-    ...(codSales?.map((ord) => ({
-      id: ord.id,
-      number: ord.order_number,
-      name: ord.customer_name ?? '-',
-      total: ord.total_amount,
-      status: 'COD',
-      created_at: ord.created_at,
-    })) ?? []),
-  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    };
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // --- Kalkulasi summary hari ini ---
+  // --- Penjualan hari ini (hanya POS) ---
   const todaySales = todaySalesTable.reduce((sum, trx) => sum + (Number(trx.total) || 0), 0);
   const todayTransactions = todaySalesTable.length;
+
+  // --- Pendapatan COD hari ini ---
+  const codIncomeToday = codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
 
   // Summary cards: calculate stats
   const totalProducts = products?.length || 0;
@@ -184,7 +164,6 @@ const Dashboard = () => {
   const totalCustomers = customers?.length || 0;
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
-  const codIncome = codRevenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -207,8 +186,6 @@ const Dashboard = () => {
     <Layout>
       <div className="space-y-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-blue-800 mb-2">Dashboard</h1>
-
-        {/* Cleaner, smaller summary card style */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="px-3 py-2">
             <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
@@ -244,27 +221,25 @@ const Dashboard = () => {
           </Card>
           <Card className="px-3 py-2">
             <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Pendapatan COD</CardTitle>
+              <CardTitle className="text-xs font-semibold">Pendapatan COD Hari Ini</CardTitle>
               <TrendingUp className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent className="pb-1">
               <div className="text-lg font-bold text-green-600">
-                Rp {codIncome?.toLocaleString('id-ID') || 0}
+                Rp {codIncomeToday?.toLocaleString('id-ID') || '0'}
               </div>
-              <p className="text-[10px] text-muted-foreground">COD delivered bulan ini</p>
+              <p className="text-[10px] text-muted-foreground">COD delivered hari ini</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Remove Garfik POS vs COD here! */}
-
-        {/* Today's Sales Activity, show POS vs COD */}
+        {/* Tabel Transaksi Penjualan Hari Ini (POS saja) */}
         <div className="grid grid-cols-1 gap-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <History className="h-5 w-5 text-blue-500" />
-                Transaksi Penjualan Hari Ini (POS & COD)
+                Transaksi Penjualan Hari Ini (POS)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -284,8 +259,8 @@ const Dashboard = () => {
                         <TableCell className="font-medium text-xs">{order.number}</TableCell>
                         <TableCell className="text-xs">{order.name}</TableCell>
                         <TableCell className="text-xs">
-                          <Badge variant={order.status === "POS" ? "secondary" : "default"}>
-                            {order.status}
+                          <Badge variant="secondary">
+                            POS
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right text-xs">
@@ -296,7 +271,7 @@ const Dashboard = () => {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="h-16 text-center text-xs">
-                        Tidak ada transaksi hari ini.
+                        Tidak ada transaksi POS hari ini.
                       </TableCell>
                     </TableRow>
                   )}
