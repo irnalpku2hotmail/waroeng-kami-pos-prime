@@ -1,6 +1,7 @@
 
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import POSSalesReports from '@/components/reports/POSSalesReports';
 import SalesReports from '@/components/reports/SalesReports';
 import CustomerReports from '@/components/reports/CustomerReports';
 import InventoryReports from '@/components/reports/InventoryReports';
@@ -13,16 +14,21 @@ const Reports = () => {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-blue-800">Laporan</h1>
 
-        <Tabs defaultValue="sales" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="sales">Penjualan</TabsTrigger>
+        <Tabs defaultValue="pos-sales" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="pos-sales">Penjualan POS</TabsTrigger>
+            <TabsTrigger value="cod-sales">Penjualan COD</TabsTrigger>
             <TabsTrigger value="customers">Customer</TabsTrigger>
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="expenses">Pengeluaran</TabsTrigger>
             <TabsTrigger value="cod">COD</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="sales" className="space-y-6">
+          <TabsContent value="pos-sales" className="space-y-6">
+            <POSSalesReports />
+          </TabsContent>
+
+          <TabsContent value="cod-sales" className="space-y-6">
             <SalesReports />
           </TabsContent>
 
@@ -48,3 +54,4 @@ const Reports = () => {
 };
 
 export default Reports;
+
