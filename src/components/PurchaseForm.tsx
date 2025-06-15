@@ -42,6 +42,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   );
   const [productConversions, setProductConversions] = useState<Record<string, any[]>>({});
   const [unitsMap, setUnitsMap] = useState<Record<string, any>>({});
+  const [autoUpdatePrice, setAutoUpdatePrice] = useState(false);
 
   // Auto-set due date when payment method changes to credit
   useEffect(() => {
