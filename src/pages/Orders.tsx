@@ -33,7 +33,7 @@ const Orders = () => {
           *,
           order_items(
             *,
-            products(name)
+            products(name, current_stock, min_stock)
           )
         `)
         .order('created_at', { ascending: false });
@@ -55,7 +55,7 @@ const Orders = () => {
           *,
           order_items(
             *,
-            products(name)
+            products(name, current_stock, min_stock)
           )
         `, { count: 'exact' });
       
@@ -138,14 +138,29 @@ const Orders = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getStockStatusColor = (currentStock: number, minStock: number) => {
-    if (currentStock <= minStock) {
-      return 'text-red-600 font-semibold'; // Critical/Low stock
-    } else if (currentStock <= minStock * 2) {
-      return 'text-yellow-600 font-semibold'; // Warning stock
+  const getStockStatus = (currentStock: number, orderQuantity: number, minStock: number, orderStatus: string) => {
+    let availableStock = currentStock;
+    let stockText = '';
+    let colorClass = '';
+    
+    // If order is not delivered yet, the stock is still committed
+    if (orderStatus !== 'delivered' && orderStatus !== 'cancelled') {
+      availableStock = currentStock; // Current stock already reflects pending orders
+      stockText = `${currentStock} tersedia`;
     } else {
-      return 'text-green-600 font-semibold'; // Good stock
+      stockText = `${currentStock} tersedia`;
     }
+    
+    // Determine color based on stock level
+    if (currentStock <= minStock) {
+      colorClass = 'text-red-600 font-semibold bg-red-50 px-2 py-1 rounded';
+    } else if (currentStock <= minStock * 2) {
+      colorClass = 'text-yellow-600 font-semibold bg-yellow-50 px-2 py-1 rounded';
+    } else {
+      colorClass = 'text-green-600 font-semibold bg-green-50 px-2 py-1 rounded';
+    }
+    
+    return { stockText, colorClass, availableStock };
   };
 
   const handleShowDetails = (order: any) => {
@@ -289,7 +304,7 @@ const Orders = () => {
                     <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Metode Bayar</TableHead>
-                    <TableHead>Stok Produk</TableHead>
+                    <TableHead>Status Stok</TableHead>
                     <TableHead>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -313,14 +328,30 @@ const Orders = () => {
                       <TableCell className="uppercase">{order.payment_method}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          {order.order_items?.map((item: any) => (
-                            <div key={item.id} className="text-xs">
-                              <span className="font-medium">{item.products?.name}:</span>
-                              <span className={`ml-1 ${getStockStatusColor(item.products?.current_stock || 0, item.products?.min_stock || 0)}`}>
-                                {item.products?.current_stock || 0} stok
-                              </span>
-                            </div>
-                          ))}
+                          {order.order_items?.map((item: any) => {
+                            const stockInfo = getStockStatus(
+                              item.products?.current_stock || 0,
+                              item.quantity,
+                              item.products?.min_stock || 0,
+                              order.status
+                            );
+                            return (
+                              <div key={item.id} className="text-xs">
+                                <div className="font-medium text-gray-700">{item.products?.name}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-600">Pesan: {item.quantity}</span>
+                                  <span className={stockInfo.colorClass}>
+                                    {stockInfo.stockText}
+                                  </span>
+                                </div>
+                                {stockInfo.availableStock < item.quantity && order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                  <div className="text-red-600 font-medium">
+                                    ⚠️ Stok tidak mencukupi
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </TableCell>
                       <TableCell>
