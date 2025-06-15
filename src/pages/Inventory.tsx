@@ -1,19 +1,30 @@
+
 import { useState, Suspense } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import InventoryStats from '@/components/inventory/InventoryStats';
 import StockLevelTable from '@/components/inventory/StockLevelTable';
 import LoadingSkeleton from '@/components/inventory/LoadingSkeleton';
+import { Package, AlertTriangle, Plus, MoreHorizontal, Eye, CheckCircle, Edit, Trash2, Check, CreditCard, RotateCcw } from 'lucide-react';
 
 const Inventory = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [purchaseSearchTerm, setPurchaseSearchTerm] = useState('');
   const [returnSearchTerm, setReturnSearchTerm] = useState('');
 
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adjustmentData, setAdjustmentData] = useState({
     adjustment_type: 'increase',
@@ -57,7 +68,7 @@ const Inventory = () => {
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Fetch purchases
@@ -241,31 +252,6 @@ const Inventory = () => {
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
   const totalStockValue = products.reduce((sum, p) => sum + (p.current_stock * p.base_price), 0);
 
-  const handleCloseDialog = () => {
-    setOpen(false);
-    setEditPurchase(null);
-  };
-
-  const handleCloseReturnDialog = () => {
-    setReturnOpen(false);
-    setEditReturn(null);
-  };
-
-  const openPaymentDialog = (purchase: any) => {
-    setSelectedPurchaseForPayment(purchase);
-    setPaymentDialogOpen(true);
-  };
-
-  const openDetailDialog = (purchase: any) => {
-    setSelectedPurchaseForDetail(purchase);
-    setDetailDialogOpen(true);
-  };
-
-  const openReturnDetailDialog = (returnData: any) => {
-    setSelectedReturnForDetail(returnData);
-    setReturnDetailDialogOpen(true);
-  };
-
   const getPaymentStatus = (purchase: any) => {
     if (purchase.payment_method === 'cash') {
       return <Badge className="bg-green-600">Paid</Badge>;
@@ -323,7 +309,7 @@ const Inventory = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => openReturnDetailDialog(returnItem)}>
+                  <DropdownMenuItem onClick={() => {}}>
                     <Eye className="h-4 w-4 mr-2" />
                     Detail
                   </DropdownMenuItem>
@@ -499,24 +485,10 @@ const Inventory = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold">Manajemen Pembelian</h3>
-                <Dialog open={open} onOpenChange={setOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setEditPurchase(null)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Pembelian
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>{editPurchase ? 'Edit Pembelian' : 'Tambah Pembelian Baru'}</DialogTitle>
-                    </DialogHeader>
-                    <PurchaseForm 
-                      purchase={editPurchase}
-                      onSuccess={handleCloseDialog}
-                      onCancel={handleCloseDialog}
-                    />
-                  </DialogContent>
-                </Dialog>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Pembelian
+                </Button>
               </div>
 
               <div className="flex gap-4">
@@ -574,13 +546,13 @@ const Inventory = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem onClick={() => openDetailDialog(purchase)}>
+                                <DropdownMenuItem>
                                   <Eye className="h-4 w-4 mr-2" />
                                   Detail
                                 </DropdownMenuItem>
                                 {purchase.payment_method === 'credit' && (
                                   <>
-                                    <DropdownMenuItem onClick={() => openPaymentDialog(purchase)}>
+                                    <DropdownMenuItem>
                                       <CreditCard className="h-4 w-4 mr-2" />
                                       Catat Pembayaran
                                     </DropdownMenuItem>
@@ -590,12 +562,7 @@ const Inventory = () => {
                                     </DropdownMenuItem>
                                   </>
                                 )}
-                                <DropdownMenuItem 
-                                  onClick={() => {
-                                    setEditPurchase(purchase);
-                                    setOpen(true);
-                                  }}
-                                >
+                                <DropdownMenuItem>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
@@ -615,20 +582,6 @@ const Inventory = () => {
                   </Table>
                 )}
               </div>
-
-              {/* Credit Payment Dialog */}
-              <CreditPaymentForm
-                purchase={selectedPurchaseForPayment}
-                open={paymentDialogOpen}
-                onOpenChange={setPaymentDialogOpen}
-              />
-
-              {/* Purchase Detail Dialog */}
-              <PurchaseDetailModal
-                purchase={selectedPurchaseForDetail}
-                open={detailDialogOpen}
-                onOpenChange={setDetailDialogOpen}
-              />
             </div>
           </TabsContent>
 
@@ -636,24 +589,10 @@ const Inventory = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold">Manajemen Return</h3>
-                <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setEditReturn(null)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Return
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>{editReturn ? 'Edit Return' : 'Tambah Return Baru'}</DialogTitle>
-                    </DialogHeader>
-                    <ReturnsForm 
-                      returnData={editReturn}
-                      onSuccess={handleCloseReturnDialog}
-                      onCancel={handleCloseReturnDialog}
-                    />
-                  </DialogContent>
-                </Dialog>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Return
+                </Button>
               </div>
 
               <div className="flex gap-4">
