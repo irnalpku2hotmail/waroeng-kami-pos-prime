@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,11 +8,9 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  AlertTriangle,
-  Calendar
+  AlertTriangle
 } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const Dashboard = () => {
   // Fetch total products
@@ -99,37 +96,6 @@ const Dashboard = () => {
     }
   });
 
-  // Fetch weekly sales
-  const { data: weekly } = useQuery({
-    queryKey: ['weekly-sales'],
-    queryFn: async () => {
-      const today = new Date();
-      const lastDay = new Date(today.setDate(today.getDate() - today.getDay() + 6));
-      const firstDay = new Date(today.setDate(today.getDate() - 6));
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select('total_amount, order_date')
-        .gte('order_date', firstDay.toISOString().split('T')[0])
-        .lte('order_date', lastDay.toISOString().split('T')[0]);
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch top categories
-  const { data: top } = useQuery({
-    queryKey: ['top-categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('order_items')
-        .select('products(category_id, categories(name))')
-        .limit(5);
-      if (error) throw error;
-      return data;
-    }
-  });
-
   // Fetch pending orders
   const { data: pending } = useQuery({
     queryKey: ['pending-orders'],
@@ -169,33 +135,6 @@ const Dashboard = () => {
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
   const monthlyRevenue = revenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
-
-  const weeklySales = weekly?.reduce((acc: any, order) => {
-    const day = new Date(order.order_date).toLocaleDateString('id-ID', { weekday: 'short' });
-    if (acc[day]) {
-      acc[day] += order.total_amount || 0;
-    } else {
-      acc[day] = order.total_amount || 0;
-    }
-    return acc;
-  }, {});
-
-  const weeklySalesData = Object.entries(weeklySales || {}).map(([day, sales]) => ({ day, sales }));
-
-  const topCategories = top?.reduce((acc: any, item) => {
-    const categoryName = item.products?.categories?.name || 'Tidak Diketahui';
-    const categoryId = item.products?.category_id || '0';
-    const existingCategory = acc.find((c: any) => c.name === categoryName);
-
-    if (existingCategory) {
-      existingCategory.count += 1;
-    } else {
-      acc.push({ name: categoryName, category_id: categoryId, count: 1 });
-    }
-    return acc;
-  }, []);
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   return (
     <Layout>
@@ -254,55 +193,6 @@ const Dashboard = () => {
                 Rp {monthlyExpenses?.toLocaleString('id-ID') || 0}
               </div>
               <p className="text-xs text-muted-foreground">Total bulan ini</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Penjualan Mingguan</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={weeklySalesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Penjualan']}
-                  />
-                  <Bar dataKey="sales" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Kategori Teratas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={topCategories}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {topCategories?.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
