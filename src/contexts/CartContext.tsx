@@ -11,6 +11,9 @@ export interface CartItem {
   unit_price: number;
   total_price: number;
   current_stock: number;
+  original_price?: number;
+  is_wholesale?: boolean;
+  wholesale_min_qty?: number;
 }
 
 interface CartContextType {
@@ -95,12 +98,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingItem = currentItems.find(i => i.product_id === item.product_id);
       
       if (existingItem) {
+        const newQuantity = existingItem.quantity + item.quantity;
         return currentItems.map(i =>
           i.product_id === item.product_id
             ? {
                 ...i,
-                quantity: i.quantity + item.quantity,
-                total_price: (i.quantity + item.quantity) * i.unit_price
+                quantity: newQuantity,
+                total_price: newQuantity * i.unit_price
               }
             : i
         );

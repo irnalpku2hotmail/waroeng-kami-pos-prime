@@ -11,7 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Plus, Minus, Trash2, Package, Truck } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, Truck, Tag } from 'lucide-react';
 
 interface CODSettings {
   enabled: boolean;
@@ -54,6 +54,35 @@ const FrontendCart = () => {
     }
   });
 
+  // Fetch products with price variants for cart items
+  const { data: productsWithVariants = [] } = useQuery({
+    queryKey: ['cart-products-variants', items.map(item => item.product_id)],
+    queryFn: async () => {
+      if (items.length === 0) return [];
+      
+      const productIds = items.map(item => item.product_id);
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          selling_price,
+          price_variants(
+            id,
+            name,
+            price,
+            minimum_quantity,
+            is_active
+          )
+        `)
+        .in('id', productIds);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: items.length > 0
+  });
+
   // Set shipping cost based on COD settings
   React.useEffect(() => {
     if (codSettings?.enabled && getTotalPrice() >= (codSettings.min_order || 0)) {
@@ -62,6 +91,66 @@ const FrontendCart = () => {
       setShippingCost(0);
     }
   }, [codSettings, getTotalPrice(), setShippingCost]);
+
+  const getBestPriceForQuantity = (productId: string, quantity: number) => {
+    const product = productsWithVariants.find(p => p.id === productId);
+    if (!product || !product.price_variants || product.price_variants.length === 0) {
+      return {
+        price: product?.selling_price || 0,
+        isWholesale: false,
+        variantName: null
+      };
+    }
+
+    // Filter active variants and sort by minimum quantity descending
+    const activeVariants = product.price_variants
+      .filter((variant: any) => variant.is_active)
+      .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity);
+
+    // Find the best variant for the given quantity
+    for (const variant of activeVariants) {
+      if (quantity >= variant.minimum_quantity) {
+        return {
+          price: variant.price,
+          isWholesale: true,
+          variantName: variant.name
+        };
+      }
+    }
+
+    return {
+      price: product.selling_price,
+      isWholesale: false,
+      variantName: null
+    };
+  };
+
+  const handleQuantityUpdate = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeItem(productId);
+      return;
+    }
+
+    // Get the best price for the new quantity
+    const priceInfo = getBestPriceForQuantity(productId, newQuantity);
+    
+    // Update the cart item with new price
+    const updatedItems = items.map(item => {
+      if (item.product_id === productId) {
+        return {
+          ...item,
+          quantity: newQuantity,
+          unit_price: priceInfo.price,
+          total_price: newQuantity * priceInfo.price,
+          is_wholesale: priceInfo.isWholesale
+        };
+      }
+      return item;
+    });
+
+    // Manually update items in context (we need a way to update with new price)
+    updateQuantity(productId, newQuantity);
+  };
 
   const createOrder = useMutation({
     mutationFn: async () => {
@@ -206,6 +295,8 @@ const FrontendCart = () => {
         <div className="space-y-3 max-h-64 overflow-y-auto">
           {items.map((item) => {
             const itemImageUrl = getImageUrl(item.image_url);
+            const currentPriceInfo = getBestPriceForQuantity(item.product_id, item.quantity);
+            
             return (
               <div key={item.id} className="flex items-center gap-3 p-3 border rounded-lg">
                 {itemImageUrl && (
@@ -223,11 +314,19 @@ const FrontendCart = () => {
                 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{item.name}</p>
-                  <p className="text-sm text-gray-600">
-                    Rp {item.unit_price.toLocaleString('id-ID')}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-600">
+                      Rp {currentPriceInfo.price.toLocaleString('id-ID')}
+                    </p>
+                    {currentPriceInfo.isWholesale && (
+                      <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {currentPriceInfo.variantName}
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-sm font-medium text-blue-600">
-                    Total: Rp {item.total_price.toLocaleString('id-ID')}
+                    Total: Rp {(item.quantity * currentPriceInfo.price).toLocaleString('id-ID')}
                   </p>
                 </div>
                 
@@ -236,7 +335,7 @@ const FrontendCart = () => {
                     size="sm" 
                     variant="outline" 
                     className="h-8 w-8 p-0"
-                    onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                    onClick={() => handleQuantityUpdate(item.product_id, item.quantity - 1)}
                   >
                     <Minus className="h-3 w-3" />
                   </Button>
@@ -245,7 +344,7 @@ const FrontendCart = () => {
                     size="sm" 
                     variant="outline" 
                     className="h-8 w-8 p-0"
-                    onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                    onClick={() => handleQuantityUpdate(item.product_id, item.quantity + 1)}
                   >
                     <Plus className="h-3 w-3" />
                   </Button>

@@ -108,7 +108,7 @@ const Frontend = () => {
     }
   });
 
-  // Fetch products
+  // Fetch products with price variants
   const { data: products = [] } = useQuery({
     queryKey: ['frontend-products', selectedCategory, searchTerm],
     queryFn: async () => {
@@ -117,7 +117,14 @@ const Frontend = () => {
         .select(`
           *,
           categories(name),
-          units(name, abbreviation)
+          units(name, abbreviation),
+          price_variants(
+            id,
+            name,
+            price,
+            minimum_quantity,
+            is_active
+          )
         `)
         .eq('is_active', true)
         .gt('current_stock', 0);
@@ -147,17 +154,57 @@ const Frontend = () => {
     return data.publicUrl;
   };
 
+  const getBestPrice = (product: any, quantity: number = 1) => {
+    if (!product.price_variants || product.price_variants.length === 0) {
+      return {
+        price: product.selling_price,
+        isWholesale: false,
+        variantName: null,
+        minQuantity: 1
+      };
+    }
+
+    // Filter active variants and sort by minimum quantity descending
+    const activeVariants = product.price_variants
+      .filter((variant: any) => variant.is_active)
+      .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity);
+
+    // Find the best variant for the given quantity
+    for (const variant of activeVariants) {
+      if (quantity >= variant.minimum_quantity) {
+        return {
+          price: variant.price,
+          isWholesale: true,
+          variantName: variant.name,
+          minQuantity: variant.minimum_quantity
+        };
+      }
+    }
+
+    return {
+      price: product.selling_price,
+      isWholesale: false,
+      variantName: null,
+      minQuantity: 1
+    };
+  };
+
   const handleAddToCart = (product: any) => {
+    const priceInfo = getBestPrice(product, 1);
+    
     const cartItem = {
       id: Date.now().toString(),
       product_id: product.id,
       name: product.name,
       image_url: product.image_url,
       quantity: 1,
-      unit_price: product.selling_price,
-      total_price: product.selling_price,
+      unit_price: priceInfo.price,
+      total_price: priceInfo.price,
       current_stock: product.current_stock,
-      loyalty_points: product.loyalty_points || 1
+      loyalty_points: product.loyalty_points || 1,
+      original_price: product.selling_price,
+      is_wholesale: priceInfo.isWholesale,
+      wholesale_min_qty: priceInfo.minQuantity
     };
     
     addItem(cartItem);
@@ -450,6 +497,8 @@ const Frontend = () => {
             {products.map((product) => {
               const productImageUrl = getImageUrl(product.image_url);
               const productIsLiked = isLiked(product.id);
+              const priceInfo = getBestPrice(product, 1);
+              const hasWholesalePrice = product.price_variants && product.price_variants.some((v: any) => v.is_active);
               
               return (
                 <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md">
@@ -486,6 +535,12 @@ const Frontend = () => {
                         <Truck className="h-3 w-3" />
                         COD
                       </Badge>
+                      {/* Wholesale Badge */}
+                      {hasWholesalePrice && (
+                        <Badge className="absolute top-10 left-2 bg-orange-500 text-white text-xs">
+                          Grosir
+                        </Badge>
+                      )}
                       {/* Cart Button - positioned in front of product image */}
                       <Button 
                         size="sm" 
@@ -504,8 +559,18 @@ const Frontend = () => {
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <span className="text-lg font-bold text-blue-600">
-                          Rp {product.selling_price?.toLocaleString('id-ID')}
+                          Rp {priceInfo.price?.toLocaleString('id-ID')}
                         </span>
+                        {priceInfo.isWholesale && (
+                          <div className="text-xs text-orange-600 font-medium">
+                            {priceInfo.variantName} (min. {priceInfo.minQuantity})
+                          </div>
+                        )}
+                        {hasWholesalePrice && !priceInfo.isWholesale && (
+                          <div className="text-xs text-gray-500">
+                            Harga grosir tersedia
+                          </div>
+                        )}
                         <div className="flex items-center gap-1 mt-1">
                           <Star className="h-3 w-3 text-yellow-400 fill-current" />
                           <span className="text-xs text-gray-500">{product.loyalty_points || 1} pts</span>
