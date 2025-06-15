@@ -5,6 +5,8 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Package, User, MapPin, Phone, Calendar, CreditCard, Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OrderDetailsModalProps {
   order: any;
@@ -13,6 +15,23 @@ interface OrderDetailsModalProps {
 }
 
 const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps) => {
+  // Fetch settings for receipt customization
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*');
+      if (error) throw error;
+      
+      const settingsObj: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsObj[setting.key] = setting.value;
+      });
+      return settingsObj;
+    }
+  });
+
   if (!order) return null;
 
   const getStatusBadge = (status: string) => {
@@ -37,11 +56,11 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
 
   const getStockStatusColor = (currentStock: number, minStock: number) => {
     if (currentStock <= minStock) {
-      return 'text-red-600 font-semibold'; // Critical/Low stock
+      return 'text-red-600 font-semibold';
     } else if (currentStock <= minStock * 2) {
-      return 'text-yellow-600 font-semibold'; // Warning stock
+      return 'text-yellow-600 font-semibold';
     } else {
-      return 'text-green-600 font-semibold'; // Good stock
+      return 'text-green-600 font-semibold';
     }
   };
 
@@ -66,6 +85,19 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
       return;
     }
 
+    // Get receipt settings
+    const receiptSettings = settings?.receipt_settings || {};
+    const storeInfo = {
+      name: settings?.store_name?.name || 'TOKO RETAIL',
+      address: settings?.store_address?.address || 'Jl. Contoh No. 123',
+      phone: settings?.store_phone?.phone || '(021) 1234-5678',
+      email: settings?.store_email?.email || 'email@toko.com'
+    };
+
+    const paperSize = receiptSettings.paper_size || '80mm';
+    const paperWidth = paperSize === '58mm' ? '58mm' : '80mm';
+    const contentWidth = paperSize === '58mm' ? '50mm' : '70mm';
+
     const receiptContent = `
       <!DOCTYPE html>
       <html>
@@ -73,53 +105,94 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
         <title>Kwitansi - ${order.order_number}</title>
         <style>
           @media print {
-            @page { margin: 0; size: 80mm auto; }
+            @page { 
+              margin: 0; 
+              size: ${paperWidth} auto; 
+            }
             body { margin: 0; }
           }
           body {
-            font-family: monospace;
-            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: ${paperSize === '58mm' ? '10px' : '12px'};
             line-height: 1.4;
             margin: 0;
             padding: 5mm;
-            width: 70mm;
+            width: ${contentWidth};
+            background: white;
           }
           .center { text-align: center; }
+          .left { text-align: left; }
+          .right { text-align: right; }
           .bold { font-weight: bold; }
-          .separator { border-bottom: 1px dashed #000; margin: 5px 0; }
-          .item { display: flex; justify-content: space-between; margin: 2px 0; }
-          .total { font-weight: bold; font-size: 14px; }
-          .header { margin-bottom: 10px; }
-          .footer { margin-top: 10px; text-align: center; font-size: 10px; }
+          .separator { border-bottom: 1px dashed #000; margin: 8px 0; }
+          .item { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 2px 0; 
+            font-size: ${paperSize === '58mm' ? '9px' : '11px'};
+          }
+          .total { 
+            font-weight: bold; 
+            font-size: ${paperSize === '58mm' ? '11px' : '14px'}; 
+          }
+          .header { 
+            margin-bottom: 15px; 
+          }
+          .footer { 
+            margin-top: 15px; 
+            text-align: center; 
+            font-size: ${paperSize === '58mm' ? '8px' : '10px'}; 
+          }
+          .product-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+          }
+          .item-details {
+            font-size: ${paperSize === '58mm' ? '8px' : '10px'};
+            color: #666;
+          }
         </style>
       </head>
       <body>
         <div class="header center">
-          <div class="bold">TOKO RETAIL</div>
-          <div>Jl. Contoh No. 123</div>
-          <div>Telp: (021) 1234-5678</div>
+          <div class="bold" style="font-size: ${paperSize === '58mm' ? '12px' : '14px'};">${storeInfo.name}</div>
+          <div>${storeInfo.address}</div>
+          <div>Telp: ${storeInfo.phone}</div>
+          ${storeInfo.email ? `<div>Email: ${storeInfo.email}</div>` : ''}
         </div>
+        
+        ${receiptSettings.header_text ? `
+          <div class="center" style="margin: 10px 0;">
+            <div style="font-style: italic;">${receiptSettings.header_text}</div>
+          </div>
+        ` : ''}
         
         <div class="separator"></div>
         
         <div>
-          <div>No. Pesanan: ${order.order_number}</div>
-          <div>Tanggal: ${new Date(order.order_date).toLocaleDateString('id-ID')}</div>
-          <div>Pelanggan: ${order.customer_name}</div>
-          ${order.customer_phone ? `<div>Telepon: ${order.customer_phone}</div>` : ''}
-          <div>Status: ${getStatusBadge(order.status).props.children}</div>
-          <div>Pembayaran: ${order.payment_method.toUpperCase()}</div>
+          <div><strong>No. Pesanan:</strong> ${order.order_number}</div>
+          <div><strong>Tanggal:</strong> ${new Date(order.order_date).toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</div>
+          <div><strong>Pelanggan:</strong> ${order.customer_name}</div>
+          ${order.customer_phone ? `<div><strong>Telepon:</strong> ${order.customer_phone}</div>` : ''}
+          <div><strong>Status:</strong> ${getStatusBadge(order.status).props.children}</div>
+          <div><strong>Pembayaran:</strong> ${order.payment_method.toUpperCase()}</div>
         </div>
         
         <div class="separator"></div>
         
-        <div class="bold">ITEM PESANAN:</div>
+        <div class="bold">DETAIL PESANAN:</div>
         ${order.order_items?.map((item: any) => `
-          <div>
-            <div class="bold">${item.products?.name}</div>
+          <div style="margin: 8px 0;">
+            <div class="product-name">${item.products?.name || 'Produk'}</div>
             <div class="item">
               <span>${item.quantity} x Rp ${Number(item.unit_price).toLocaleString('id-ID')}</span>
-              <span>Rp ${Number(item.total_price).toLocaleString('id-ID')}</span>
+              <span><strong>Rp ${Number(item.total_price).toLocaleString('id-ID')}</strong></span>
             </div>
           </div>
         `).join('') || ''}
@@ -131,12 +204,12 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           <span>Rp ${(Number(order.total_amount) - Number(order.delivery_fee)).toLocaleString('id-ID')}</span>
         </div>
         <div class="item">
-          <span>Ongkir:</span>
+          <span>Ongkos Kirim:</span>
           <span>Rp ${Number(order.delivery_fee).toLocaleString('id-ID')}</span>
         </div>
         <div class="separator"></div>
         <div class="item total">
-          <span>TOTAL:</span>
+          <span>TOTAL BAYAR:</span>
           <span>Rp ${Number(order.total_amount).toLocaleString('id-ID')}</span>
         </div>
         
@@ -144,7 +217,7 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           <div class="separator"></div>
           <div>
             <div class="bold">ALAMAT PENGIRIMAN:</div>
-            <div>${order.customer_address}</div>
+            <div style="margin-top: 5px;">${order.customer_address}</div>
           </div>
         ` : ''}
         
@@ -152,13 +225,25 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           <div class="separator"></div>
           <div>
             <div class="bold">CATATAN:</div>
-            <div>${order.notes}</div>
+            <div style="margin-top: 5px;">${order.notes}</div>
+          </div>
+        ` : ''}
+        
+        ${receiptSettings.footer_text ? `
+          <div class="separator"></div>
+          <div class="center">
+            <div style="font-style: italic;">${receiptSettings.footer_text}</div>
           </div>
         ` : ''}
         
         <div class="footer">
           <div>Terima kasih atas pesanan Anda!</div>
           <div>Dicetak: ${new Date().toLocaleString('id-ID')}</div>
+          ${receiptSettings.show_qr_code ? `
+            <div style="margin-top: 10px;">
+              <div>QR Code: ${order.order_number}</div>
+            </div>
+          ` : ''}
         </div>
         
         <script>
