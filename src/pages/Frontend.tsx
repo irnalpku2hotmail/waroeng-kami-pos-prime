@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +27,6 @@ interface FrontendSettings {
 }
 
 const Frontend = () => {
-  const navigate = useNavigate();
   const { addItem, items } = useCart();
   const { user, signOut } = useAuth();
   const { isLiked, toggleLike } = useProductLikes();
@@ -275,10 +273,6 @@ const Frontend = () => {
     }
   };
 
-  const handleProductClick = (productId: string) => {
-    navigate(`/product/${productId}`);
-  };
-
   const categoriesLimit = frontendSettings?.featured_categories_limit || 5;
   const featuredCategories = categories.slice(0, categoriesLimit);
   const storeName = storeSettings?.store_name?.name || 'SmartPOS';
@@ -471,15 +465,12 @@ const Frontend = () => {
                 {flashSales[0]?.flash_sale_items?.slice(0, 6).map((item: any) => (
                   <Card key={item.id} className="group hover:shadow-lg transition-all relative">
                     <div className="relative">
-                      <div 
-                        className="aspect-square bg-gray-100 cursor-pointer"
-                        onClick={() => handleProductClick(item.products.id)}
-                      >
+                      <div className="aspect-square bg-gray-100">
                         {item.products?.image_url ? (
                           <img 
                             src={getImageUrl(item.products.image_url)} 
                             alt={item.products.name}
-                            className="w-full h-full object-cover rounded-t-lg hover:scale-105 transition-transform"
+                            className="w-full h-full object-cover rounded-t-lg"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
@@ -553,10 +544,7 @@ const Frontend = () => {
               return (
                 <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md">
                   <div className="relative overflow-hidden rounded-t-lg">
-                    <div 
-                      className="aspect-square bg-gray-100 relative cursor-pointer"
-                      onClick={() => handleProductClick(product.id)}
-                    >
+                    <div className="aspect-square bg-gray-100 relative">
                       {productImageUrl ? (
                         <img 
                           src={productImageUrl} 
@@ -574,10 +562,7 @@ const Frontend = () => {
                       <Button 
                         size="sm" 
                         variant="secondary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLike(product.id);
-                        }}
+                        onClick={() => toggleLike(product.id)}
                         className={`absolute top-2 left-2 h-8 w-8 p-0 transition-colors ${
                           productIsLiked 
                             ? 'bg-red-500 hover:bg-red-600 text-white' 
@@ -600,10 +585,7 @@ const Frontend = () => {
                       {/* Cart Button - positioned in front of product image */}
                       <Button 
                         size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(product);
-                        }}
+                        onClick={() => handleAddToCart(product)}
                         className="absolute bottom-2 right-2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-white"
                         disabled={product.current_stock <= 0}
                       >
@@ -612,10 +594,7 @@ const Frontend = () => {
                     </div>
                   </div>
                   <CardContent className="p-4">
-                    <h3 
-                      className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer"
-                      onClick={() => handleProductClick(product.id)}
-                    >
+                    <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
                       {product.name}
                     </h3>
                     <div className="flex items-center justify-between mb-3">
