@@ -49,9 +49,17 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
   };
 
   const getImageUrl = (imageUrl: string | null | undefined) => {
-    if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return imageUrl;
+    if (!imageUrl) {
+        return '/placeholder.svg';
+    }
+    if (imageUrl.startsWith('http')) {
+        return imageUrl;
+    }
+    const { data } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(imageUrl);
+    
+    return data?.publicUrl || '/placeholder.svg';
   };
 
   const getStockStatusColor = (currentStock: number, minStock: number) => {

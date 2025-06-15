@@ -20,7 +20,7 @@ export const useOrdersData = () => {
           *,
           order_items(
             *,
-            products(name, current_stock, min_stock)
+            products(name, image_url, current_stock, min_stock)
           )
         `)
         .order('created_at', { ascending: false });
@@ -42,7 +42,7 @@ export const useOrdersData = () => {
           *,
           order_items(
             *,
-            products(name, current_stock, min_stock)
+            products(name, image_url, current_stock, min_stock)
           )
         `, { count: 'exact' });
       
