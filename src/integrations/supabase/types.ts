@@ -650,37 +650,31 @@ export type Database = {
       }
       purchase_items: {
         Row: {
-          conversion_factor: number | null
           created_at: string
           expiration_date: string | null
           id: string
           product_id: string
           purchase_id: string
-          purchase_unit_id: string | null
           quantity: number
           total_cost: number
           unit_cost: number
         }
         Insert: {
-          conversion_factor?: number | null
           created_at?: string
           expiration_date?: string | null
           id?: string
           product_id: string
           purchase_id: string
-          purchase_unit_id?: string | null
           quantity?: number
           total_cost?: number
           unit_cost?: number
         }
         Update: {
-          conversion_factor?: number | null
           created_at?: string
           expiration_date?: string | null
           id?: string
           product_id?: string
           purchase_id?: string
-          purchase_unit_id?: string | null
           quantity?: number
           total_cost?: number
           unit_cost?: number
@@ -698,13 +692,6 @@ export type Database = {
             columns: ["purchase_id"]
             isOneToOne: false
             referencedRelation: "purchases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_items_purchase_unit_id_fkey"
-            columns: ["purchase_unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -1204,27 +1191,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_unit_conversions_from_unit"
-            columns: ["from_unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_unit_conversions_product"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_unit_conversions_to_unit"
-            columns: ["to_unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "unit_conversions_from_unit_id_fkey"
             columns: ["from_unit_id"]
             isOneToOne: false
@@ -1346,14 +1312,6 @@ export type Database = {
           created_at: string
           items: Json
         }[]
-      }
-      get_unit_conversion_factor: {
-        Args: {
-          p_product_id: string
-          p_from_unit_id: string
-          p_to_unit_id: string
-        }
-        Returns: number
       }
       get_user_role: {
         Args: { user_id: string }
