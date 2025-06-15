@@ -8,25 +8,38 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import { Package, TrendingUp, AlertTriangle } from 'lucide-react';
+import PurchaseForm from '@/components/PurchaseForm';
+import CreditPaymentForm from '@/components/CreditPaymentForm';
+import PurchaseDetailModal from '@/components/PurchaseDetailModal';
+import { Package, TrendingUp, AlertTriangle, Plus, Edit, Trash2, Check, CreditCard, MoreHorizontal, Eye } from 'lucide-react';
 
 const Inventory = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [purchaseSearchTerm, setPurchaseSearchTerm] = useState('');
   const [adjustmentData, setAdjustmentData] = useState({
     adjustment_type: 'increase',
     quantity_change: 0,
     reason: ''
   });
+
+  // Purchase states
+  const [open, setOpen] = useState(false);
+  const [editPurchase, setEditPurchase] = useState<any>(null);
+  const [selectedPurchaseForPayment, setSelectedPurchaseForPayment] = useState<any>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPurchaseForDetail, setSelectedPurchaseForDetail] = useState<any>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   // Fetch products with stock info
   const { data: products = [] } = useQuery({
@@ -46,6 +59,31 @@ const Inventory = () => {
       }
       
       const { data, error } = await query.order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch purchases
+  const { data: purchases, isLoading: purchasesLoading } = useQuery({
+    queryKey: ['purchases', purchaseSearchTerm],
+    queryFn: async () => {
+      let query = supabase
+        .from('purchases')
+        .select(`
+          *,
+          suppliers(name),
+          profiles(full_name),
+          purchase_items(*,
+            products(name)
+          )
+        `);
+      
+      if (purchaseSearchTerm) {
+        query = query.or(`purchase_number.ilike.%${purchaseSearchTerm}%,invoice_number.ilike.%${purchaseSearchTerm}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -115,23 +153,74 @@ const Inventory = () => {
     }
   });
 
+  // Purchase mutations
+  const deletePurchase = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('purchases').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      toast({ title: 'Berhasil', description: 'Pembelian berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const markAsPaid = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('purchases')
+        .update({ payment_method: 'cash' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      toast({ title: 'Berhasil', description: 'Pembelian berhasil ditandai sebagai lunas' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
+
+  const handleCloseDialog = () => {
+    setOpen(false);
+    setEditPurchase(null);
+  };
+
+  const openPaymentDialog = (purchase: any) => {
+    setSelectedPurchaseForPayment(purchase);
+    setPaymentDialogOpen(true);
+  };
+
+  const openDetailDialog = (purchase: any) => {
+    setSelectedPurchaseForDetail(purchase);
+    setDetailDialogOpen(true);
+  };
+
+  const getPaymentStatus = (purchase: any) => {
+    if (purchase.payment_method === 'cash') {
+      return <Badge className="bg-green-600">Paid</Badge>;
+    } else if (purchase.payment_method === 'credit') {
+      const isOverdue = purchase.due_date && new Date(purchase.due_date) < new Date();
+      return (
+        <Badge className={isOverdue ? 'bg-red-600' : 'bg-orange-600'}>
+          {isOverdue ? 'Overdue' : 'Pending'}
+        </Badge>
+      );
+    }
+    return <Badge className="bg-gray-600">Unknown</Badge>;
+  };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Manajemen Inventori</h1>
-        </div>
-
-        {/* Search */}
-        <div className="flex gap-4">
-          <Input
-            placeholder="Cari produk..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
         </div>
 
         {/* Stats Cards */}
@@ -174,9 +263,18 @@ const Inventory = () => {
             <TabsTrigger value="products">Level Stok</TabsTrigger>
             <TabsTrigger value="adjustments">Penyesuaian</TabsTrigger>
             <TabsTrigger value="low-stock">Peringatan Stok Rendah</TabsTrigger>
+            <TabsTrigger value="purchases">Pembelian</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
+            <div className="flex gap-4 mb-4">
+              <Input
+                placeholder="Cari produk..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
             <Card>
               <CardHeader>
                 <CardTitle>Level Stok Saat Ini</CardTitle>
@@ -385,6 +483,143 @@ const Inventory = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="purchases">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">Manajemen Pembelian</h3>
+                <Dialog open={open} onOpenChange={setOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setEditPurchase(null)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tambah Pembelian
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editPurchase ? 'Edit Pembelian' : 'Tambah Pembelian Baru'}</DialogTitle>
+                    </DialogHeader>
+                    <PurchaseForm 
+                      purchase={editPurchase}
+                      onSuccess={handleCloseDialog}
+                      onCancel={handleCloseDialog}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="flex gap-4">
+                <Input
+                  placeholder="Cari nomor pembelian atau invoice..."
+                  value={purchaseSearchTerm}
+                  onChange={(e) => setPurchaseSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+
+              <div className="border rounded-lg">
+                {purchasesLoading ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : purchases?.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-500">Belum ada pembelian</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>No. Pembelian</TableHead>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Tanggal</TableHead>
+                        <TableHead>Jatuh Tempo</TableHead>
+                        <TableHead>Dibuat oleh</TableHead>
+                        <TableHead>Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {purchases?.map((purchase) => (
+                        <TableRow key={purchase.id}>
+                          <TableCell className="font-medium">{purchase.purchase_number}</TableCell>
+                          <TableCell>{purchase.invoice_number || '-'}</TableCell>
+                          <TableCell>{purchase.suppliers?.name || '-'}</TableCell>
+                          <TableCell>{getPaymentStatus(purchase)}</TableCell>
+                          <TableCell>Rp {purchase.total_amount?.toLocaleString('id-ID')}</TableCell>
+                          <TableCell>
+                            {new Date(purchase.purchase_date).toLocaleDateString('id-ID')}
+                          </TableCell>
+                          <TableCell>
+                            {purchase.due_date ? new Date(purchase.due_date).toLocaleDateString('id-ID') : '-'}
+                          </TableCell>
+                          <TableCell>{purchase.profiles?.full_name || 'Unknown'}</TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => openDetailDialog(purchase)}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Detail
+                                </DropdownMenuItem>
+                                {purchase.payment_method === 'credit' && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => openPaymentDialog(purchase)}>
+                                      <CreditCard className="h-4 w-4 mr-2" />
+                                      Catat Pembayaran
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => markAsPaid.mutate(purchase.id)}>
+                                      <Check className="h-4 w-4 mr-2" />
+                                      Tandai Lunas
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setEditPurchase(purchase);
+                                    setOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => deletePurchase.mutate(purchase.id)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Hapus
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+
+              {/* Credit Payment Dialog */}
+              <CreditPaymentForm
+                purchase={selectedPurchaseForPayment}
+                open={paymentDialogOpen}
+                onOpenChange={setPaymentDialogOpen}
+              />
+
+              {/* Purchase Detail Dialog */}
+              <PurchaseDetailModal
+                purchase={selectedPurchaseForDetail}
+                open={detailDialogOpen}
+                onOpenChange={setDetailDialogOpen}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

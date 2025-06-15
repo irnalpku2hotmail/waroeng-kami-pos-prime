@@ -20,7 +20,6 @@ const Orders = lazy(() => import('./pages/Orders'));
 const CategoriesUnits = lazy(() => import('./pages/CategoriesUnits'));
 const Customers = lazy(() => import('./pages/Customers'));
 const Suppliers = lazy(() => import('./pages/Suppliers'));
-const Purchases = lazy(() => import('./pages/Purchases'));
 const Returns = lazy(() => import('./pages/Returns'));
 const Expenses = lazy(() => import('./pages/Expenses'));
 const PointsRewards = lazy(() => import('./pages/PointsRewards'));
@@ -97,12 +96,6 @@ const App = () => (
                 <Route path="/suppliers" element={
                   <ProtectedRoute>
                     <Suppliers />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/purchases" element={
-                  <ProtectedRoute>
-                    <Purchases />
                   </ProtectedRoute>
                 } />
                 
