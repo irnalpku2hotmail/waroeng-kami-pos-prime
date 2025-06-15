@@ -297,7 +297,10 @@ const Frontend = () => {
   useEffect(() => {
     if (banners.length <= 1) return; // Don't autoplay if only one banner
 
-    // Interval next slide per 5 detik
+    // Bersihkan interval sebelumnya
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    // Interval next slide per 5 detik (5000ms)
     intervalRef.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % banners.length);
     }, 5000);
@@ -306,6 +309,14 @@ const Frontend = () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [banners.length]);
+
+  // Update currentSlide saat user mengklik CarouselNext/Previous
+  const handleNext = () => {
+    setCurrentSlide((prev) => (prev + 1) % banners.length);
+  };
+  const handlePrev = () => {
+    setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -431,20 +442,12 @@ const Frontend = () => {
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
-            
             {flashSales.length > 0 && (
               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-red-600">
                 <Zap className="h-4 w-4" />
                 Flash Sale
               </Button>
             )}
-            
-            <div className="flex space-x-6 text-sm">
-              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Official Store</a>
-              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Tiket & Hiburan</a>
-              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Pulsa & Data</a>
-              <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors">Travel</a>
-            </div>
           </div>
         </div>
       </nav>
@@ -457,44 +460,64 @@ const Frontend = () => {
             <img
               src={banners[0]}
               alt="Store Banner"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-all duration-700"
             />
           ) : (
-            <Carousel
-              opts={{
-                // snap: true,
-                startIndex: currentSlide,
-              }}
-            >
-              <CarouselContent>
-                {banners.map((url, idx) => (
-                  <CarouselItem key={url + idx}>
-                    <img
-                      src={url}
-                      alt={`Banner ${idx + 1}`}
-                      className="w-full h-80 object-cover rounded-none"
-                      draggable="false"
-                    />
-                  </CarouselItem>
+            // Custom carousel UI
+            <div className="relative h-80 w-full select-none">
+              {banners.map((url, idx) => (
+                <img
+                  key={url + idx}
+                  src={url}
+                  alt={`Banner ${idx + 1}`}
+                  draggable="false"
+                  style={{
+                    opacity: idx === currentSlide ? 1 : 0,
+                    zIndex: idx === currentSlide ? 2 : 1,
+                    transition: 'opacity 0.7s cubic-bezier(0.4,0,0.2,1)',
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                  className="rounded-none"
+                />
+              ))}
+              {/* Prev/Next controls */}
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={handlePrev}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/70 hover:bg-white/90 shadow"
+                aria-label="Sebelumnya"
+              >
+                <svg width="24" height="24" className="text-blue-600" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 18l-6-6 6-6" /></svg>
+              </Button>
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={handleNext}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/70 hover:bg-white/90 shadow"
+                aria-label="Berikutnya"
+              >
+                <svg width="24" height="24" className="text-blue-600" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 6l6 6-6 6" /></svg>
+              </Button>
+              {/* Dot indicators */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                {banners.map((_, idx) => (
+                  <button
+                    key={idx}
+                    className={`h-2 w-7 rounded-full transition-all duration-300 ${currentSlide === idx ? "bg-blue-600" : "bg-white/70"}`}
+                    style={{ border: "none" }}
+                    aria-label={`Pindah ke slide ${idx + 1}`}
+                    onClick={() => setCurrentSlide(idx)}
+                  />
                 ))}
-              </CarouselContent>
-              <CarouselPrevious className="z-10" />
-              <CarouselNext className="z-10" />
-            </Carousel>
-          )}
-          <div className="absolute inset-0 bg-black/30 flex items-center">
-            <div className="container mx-auto px-4">
-              <div className="text-white max-w-2xl">
-                <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                  {frontendSettings?.welcome_message || 'Selamat datang di toko kami'}
-                </h2>
-                <p className="text-xl mb-6">Produk berkualitas dengan harga terjangkau</p>
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
-                  Belanja Sekarang
-                </Button>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -517,31 +540,35 @@ const Frontend = () => {
             <div className="bg-white p-6 rounded-b-lg shadow-lg">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {flashSales[0]?.flash_sale_items?.slice(0, 6).map((item: any) => (
-                  <Card key={item.id} className="group hover:shadow-lg transition-all relative">
+                  <Card key={item.id} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
                     <div className="relative">
                       <div className="aspect-square bg-gray-100">
                         {item.products?.image_url ? (
-                          <img 
-                            src={getImageUrl(item.products.image_url)} 
-                            alt={item.products.name}
-                            className="w-full h-full object-cover rounded-t-lg"
-                          />
+                          <Link to={`/products/${item.products.id}`}>
+                            <img 
+                              src={getImageUrl(item.products.image_url)} 
+                              alt={item.products.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </Link>
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-12 w-12 text-gray-400" />
-                          </div>
+                          <Link to={`/products/${item.products.id}`}>
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="h-12 w-12 text-gray-400" />
+                            </div>
+                          </Link>
                         )}
+                        <Badge className="absolute top-2 right-2 bg-red-500">
+                          -{item.discount_percentage}%
+                        </Badge>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleAddFlashSaleToCart(item)}
+                          className="absolute top-2 right-2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Badge className="absolute top-2 left-2 bg-red-500">
-                        -{item.discount_percentage}%
-                      </Badge>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleAddFlashSaleToCart(item)}
-                        className="absolute top-2 right-2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                      </Button>
                     </div>
                     <CardContent className="p-3">
                       <h3 className="font-medium text-sm mb-2 line-clamp-2">
