@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -513,13 +512,7 @@ ${receiptFooter}
                     onClick={() => openProductDialog(product)}
                   >
                     <CardContent className="p-3">
-                      <div
-                        className="aspect-square mb-2 bg-gray-100 rounded flex items-center justify-center overflow-hidden"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(product, 1);
-                        }}
-                      >
+                      <div className="aspect-square mb-2 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
                         {productImageUrl ? (
                           <img 
                             src={productImageUrl} 
