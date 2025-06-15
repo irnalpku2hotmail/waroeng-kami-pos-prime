@@ -10,17 +10,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Zap, Calendar, DollarSign, TrendingUp, Package, Search } from 'lucide-react';
 import Layout from '@/components/Layout';
-import ProductSearchModal from '@/components/ProductSearchModal';
+import FlashSaleItemsManager from '@/components/FlashSaleItemsManager';
 
 const FlashSales = () => {
   const [open, setOpen] = useState(false);
   const [editFlashSale, setEditFlashSale] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showProductSearch, setShowProductSearch] = useState(false);
-  const [selectedFlashSale, setSelectedFlashSale] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const [flashSaleData, setFlashSaleData] = useState({
@@ -98,22 +97,36 @@ const FlashSales = () => {
           .update(data)
           .eq('id', editFlashSale.id);
         if (error) throw error;
+        return { id: editFlashSale.id };
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from('flash_sales')
-          .insert([data]);
+          .insert([data])
+          .select()
+          .single();
         if (error) throw error;
+        return result;
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
       queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
-      setOpen(false);
-      resetForm();
-      toast({ 
-        title: 'Berhasil', 
-        description: editFlashSale ? 'Flash sale berhasil diperbarui' : 'Flash sale berhasil dibuat' 
-      });
+      
+      // If creating a new flash sale, keep the dialog open and switch to items tab
+      if (!editFlashSale && result) {
+        setEditFlashSale(result);
+        toast({ 
+          title: 'Berhasil', 
+          description: 'Flash sale berhasil dibuat. Sekarang tambahkan produk.'
+        });
+      } else {
+        setOpen(false);
+        resetForm();
+        toast({ 
+          title: 'Berhasil', 
+          description: 'Flash sale berhasil diperbarui'
+        });
+      }
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -129,39 +142,6 @@ const FlashSales = () => {
       queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
       queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
       toast({ title: 'Berhasil', description: 'Flash sale berhasil dihapus' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
-  const addProductToFlashSale = useMutation({
-    mutationFn: async ({ flashSaleId, product }: { flashSaleId: string, product: any }) => {
-      // Calculate discount (default 10%)
-      const discountPercentage = 10;
-      const salePrice = product.selling_price * (1 - discountPercentage / 100);
-      
-      const { error } = await supabase
-        .from('flash_sale_items')
-        .insert([{
-          flash_sale_id: flashSaleId,
-          product_id: product.id,
-          original_price: product.selling_price,
-          sale_price: salePrice,
-          discount_percentage: discountPercentage,
-          stock_quantity: Math.min(product.current_stock, 50), // Default max 50 items
-          max_quantity_per_customer: 5,
-          sold_quantity: 0
-        }]);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
-      queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
-      toast({ 
-        title: 'Berhasil', 
-        description: 'Produk berhasil ditambahkan ke flash sale' 
-      });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -200,20 +180,6 @@ const FlashSales = () => {
     });
   };
 
-  const handleAddProduct = (flashSale: any) => {
-    setSelectedFlashSale(flashSale);
-    setShowProductSearch(true);
-  };
-
-  const handleSelectProduct = (product: any) => {
-    if (selectedFlashSale) {
-      addProductToFlashSale.mutate({
-        flashSaleId: selectedFlashSale.id,
-        product
-      });
-    }
-  };
-
   const getFlashSaleStatus = (flashSale: any) => {
     const now = new Date();
     const startDate = new Date(flashSale.start_date);
@@ -246,73 +212,94 @@ const FlashSales = () => {
                 Tambah Flash Sale
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>{editFlashSale ? 'Edit Flash Sale' : 'Tambah Flash Sale Baru'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nama Flash Sale *</Label>
-                  <Input
-                    id="name"
-                    value={flashSaleData.name}
-                    onChange={(e) => setFlashSaleData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Weekend Sale"
-                    required
-                  />
-                </div>
+              
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="basic">Informasi Dasar</TabsTrigger>
+                  <TabsTrigger value="items" disabled={!editFlashSale}>
+                    Produk ({editFlashSale?.flash_sale_items?.length || 0})
+                  </TabsTrigger>
+                </TabsList>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Deskripsi</Label>
-                  <Textarea
-                    id="description"
-                    value={flashSaleData.description}
-                    onChange={(e) => setFlashSaleData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Diskon besar-besaran untuk akhir pekan"
+                <TabsContent value="basic" className="space-y-4">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nama Flash Sale *</Label>
+                      <Input
+                        id="name"
+                        value={flashSaleData.name}
+                        onChange={(e) => setFlashSaleData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Weekend Sale"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Deskripsi</Label>
+                      <Textarea
+                        id="description"
+                        value={flashSaleData.description}
+                        onChange={(e) => setFlashSaleData(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Diskon besar-besaran untuk akhir pekan"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="start_date">Tanggal Mulai *</Label>
+                        <Input
+                          id="start_date"
+                          type="datetime-local"
+                          value={flashSaleData.start_date}
+                          onChange={(e) => setFlashSaleData(prev => ({ ...prev, start_date: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="end_date">Tanggal Berakhir *</Label>
+                        <Input
+                          id="end_date"
+                          type="datetime-local"
+                          value={flashSaleData.end_date}
+                          onChange={(e) => setFlashSaleData(prev => ({ ...prev, end_date: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="is_active"
+                        checked={flashSaleData.is_active}
+                        onCheckedChange={(checked) => setFlashSaleData(prev => ({ ...prev, is_active: checked }))}
+                      />
+                      <Label htmlFor="is_active">Aktif</Label>
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                        Batal
+                      </Button>
+                      <Button type="submit" disabled={!flashSaleData.name || !flashSaleData.start_date || !flashSaleData.end_date}>
+                        {editFlashSale ? 'Update Flash Sale' : 'Simpan & Tambah Produk'}
+                      </Button>
+                    </div>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="items" className="space-y-4 max-h-[60vh] overflow-y-auto">
+                  <FlashSaleItemsManager 
+                    flashSaleId={editFlashSale?.id}
+                    onItemsChange={() => {
+                      queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
+                    }}
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="start_date">Tanggal Mulai *</Label>
-                    <Input
-                      id="start_date"
-                      type="datetime-local"
-                      value={flashSaleData.start_date}
-                      onChange={(e) => setFlashSaleData(prev => ({ ...prev, start_date: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end_date">Tanggal Berakhir *</Label>
-                    <Input
-                      id="end_date"
-                      type="datetime-local"
-                      value={flashSaleData.end_date}
-                      onChange={(e) => setFlashSaleData(prev => ({ ...prev, end_date: e.target.value }))}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_active"
-                    checked={flashSaleData.is_active}
-                    onCheckedChange={(checked) => setFlashSaleData(prev => ({ ...prev, is_active: checked }))}
-                  />
-                  <Label htmlFor="is_active">Aktif</Label>
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button type="submit" disabled={!flashSaleData.name || !flashSaleData.start_date || !flashSaleData.end_date}>
-                    {editFlashSale ? 'Update Flash Sale' : 'Tambah Flash Sale'}
-                  </Button>
-                </div>
-              </form>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>
@@ -404,14 +391,6 @@ const FlashSales = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleAddProduct(flashSale)}
-                          title="Tambah Produk"
-                        >
-                          <Search className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
                           onClick={() => handleEdit(flashSale)}
                         >
                           <Edit className="h-4 w-4" />
@@ -431,14 +410,6 @@ const FlashSales = () => {
             </Table>
           )}
         </div>
-
-        {/* Product Search Modal */}
-        <ProductSearchModal
-          open={showProductSearch}
-          onOpenChange={setShowProductSearch}
-          onSelectProduct={handleSelectProduct}
-          flashSaleId={selectedFlashSale?.id}
-        />
       </div>
     </Layout>
   );
