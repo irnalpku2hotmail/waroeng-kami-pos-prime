@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus } from 'lucide-react';
+import { ShoppingCart, Package, Star, Search, Menu, User, Heart, Phone, Mail, Zap, Plus, Truck } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductLikes } from '@/hooks/useProductLikes';
@@ -481,6 +481,11 @@ const Frontend = () => {
                       >
                         <Heart className={`h-4 w-4 ${productIsLiked ? 'fill-current' : ''}`} />
                       </Button>
+                      {/* COD Badge */}
+                      <Badge className="absolute bottom-2 left-2 bg-blue-500 text-white flex items-center gap-1">
+                        <Truck className="h-3 w-3" />
+                        COD
+                      </Badge>
                     </div>
                   </div>
                   <CardContent className="p-4">
@@ -497,6 +502,10 @@ const Frontend = () => {
                           <span className="text-xs text-gray-500">{product.loyalty_points || 1} pts</span>
                         </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-1 mb-2 text-xs text-green-600">
+                      <Truck className="h-3 w-3" />
+                      <span>Bayar di Tempat (COD)</span>
                     </div>
                     <Button 
                       onClick={() => handleAddToCart(product)}

@@ -55,30 +55,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load cart from localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+    try {
+      const savedCart = localStorage.getItem('smartpos_cart');
+      if (savedCart) {
+        const parsedCart = JSON.parse(savedCart);
+        if (Array.isArray(parsedCart)) {
+          setItems(parsedCart);
+        }
       }
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
+      localStorage.removeItem('smartpos_cart');
     }
   }, []);
 
   // Save cart to localStorage whenever items change
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    try {
+      localStorage.setItem('smartpos_cart', JSON.stringify(items));
+    } catch (error) {
+      console.error('Error saving cart to localStorage:', error);
+    }
   }, [items]);
 
   // Sync customer info with profile when available
   useEffect(() => {
     if (profile) {
-      setCustomerInfo({
-        name: profile.full_name || '',
-        phone: profile.phone || '',
-        address: profile.address || '',
-        email: profile.email || ''
-      });
+      setCustomerInfo(prev => ({
+        name: profile.full_name || prev.name,
+        phone: profile.phone || prev.phone,
+        address: profile.address || prev.address,
+        email: profile.email || prev.email
+      }));
     }
   }, [profile]);
 
@@ -127,6 +135,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setItems([]);
+    localStorage.removeItem('smartpos_cart');
   };
 
   const getTotalItems = () => {

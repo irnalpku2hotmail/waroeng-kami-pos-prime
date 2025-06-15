@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, Truck } from 'lucide-react';
 
 interface CODSettings {
   enabled: boolean;
@@ -47,26 +48,11 @@ const FrontendCart = () => {
         .eq('key', 'cod_settings')
         .single();
       if (error) {
+        console.log('No COD settings found, using defaults');
         return { enabled: true, delivery_fee: 10000, min_order: 50000 } as CODSettings;
       }
       return data.value as unknown as CODSettings;
     }
-  });
-
-  // Fetch user profile to sync with customer info
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
   });
 
   // Set shipping cost based on COD settings
@@ -78,24 +64,29 @@ const FrontendCart = () => {
     }
   }, [codSettings, getTotalPrice(), setShippingCost]);
 
-  // Sync customer info with profile when available
-  React.useEffect(() => {
-    if (profile) {
-      setCustomerInfo({
-        name: profile.full_name || '',
-        phone: profile.phone || '',
-        address: profile.address || '',
-        email: profile.email || ''
-      });
-    }
-  }, [profile, setCustomerInfo]);
-
   const createOrder = useMutation({
     mutationFn: async () => {
       const totalAmount = getTotalPrice() + shippingCost;
       
+      // Validate required fields
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+        throw new Error('Nama, nomor telepon, dan alamat harus diisi');
+      }
+
+      if (items.length === 0) {
+        throw new Error('Keranjang tidak boleh kosong');
+      }
+      
       // Generate order number
-      const orderNumber = `ORD${Date.now()}`;
+      const timestamp = Date.now();
+      const orderNumber = `ORD${timestamp}`;
+      
+      console.log('Creating order with data:', {
+        orderNumber,
+        customerInfo,
+        totalAmount,
+        itemsCount: items.length
+      });
       
       // Create order
       const { data: order, error: orderError } = await supabase
@@ -109,12 +100,17 @@ const FrontendCart = () => {
           delivery_fee: shippingCost,
           payment_method: 'cod',
           status: 'pending',
-          notes: orderNotes
+          notes: orderNotes || null
         })
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order creation error:', orderError);
+        throw new Error(`Gagal membuat order: ${orderError.message}`);
+      }
+
+      console.log('Order created successfully:', order);
 
       // Create order items
       const orderItems = items.map(item => ({
@@ -125,12 +121,20 @@ const FrontendCart = () => {
         total_price: item.total_price
       }));
 
+      console.log('Creating order items:', orderItems);
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Order items creation error:', itemsError);
+        // Try to clean up the order if items insertion failed
+        await supabase.from('orders').delete().eq('id', order.id);
+        throw new Error(`Gagal membuat item order: ${itemsError.message}`);
+      }
 
+      console.log('Order items created successfully');
       return order;
     },
     onSuccess: (order) => {
@@ -143,9 +147,10 @@ const FrontendCart = () => {
       setIsCheckoutOpen(false);
     },
     onError: (error: any) => {
+      console.error('Order creation failed:', error);
       toast({
-        title: 'Error',
-        description: error.message,
+        title: 'Gagal Membuat Order',
+        description: error.message || 'Terjadi kesalahan saat membuat order',
         variant: 'destructive'
       });
     }
@@ -265,8 +270,11 @@ const FrontendCart = () => {
             <span>Subtotal:</span>
             <span className="font-medium">Rp {getTotalPrice().toLocaleString('id-ID')}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Ongkos Kirim:</span>
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1">
+              <Truck className="h-4 w-4" />
+              Ongkos Kirim:
+            </span>
             <span className="font-medium">
               {shippingCost === 0 ? (
                 <Badge variant="secondary" className="text-green-600">Free Shipping</Badge>
@@ -285,7 +293,8 @@ const FrontendCart = () => {
         <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
           <DialogTrigger asChild>
             <Button className="w-full" size="lg">
-              Checkout
+              <Truck className="h-4 w-4 mr-2" />
+              Checkout COD
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
@@ -300,6 +309,7 @@ const FrontendCart = () => {
                   value={customerInfo.name}
                   onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Masukkan nama lengkap"
+                  required
                 />
               </div>
               
@@ -310,6 +320,7 @@ const FrontendCart = () => {
                   value={customerInfo.phone}
                   onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="Masukkan nomor telepon"
+                  required
                 />
               </div>
               
@@ -332,6 +343,7 @@ const FrontendCart = () => {
                   onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
                   placeholder="Masukkan alamat lengkap"
                   rows={3}
+                  required
                 />
               </div>
               
@@ -351,7 +363,8 @@ const FrontendCart = () => {
                   <span>Total Pembayaran:</span>
                   <span>Rp {(getTotalPrice() + shippingCost).toLocaleString('id-ID')}</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                  <Truck className="h-4 w-4" />
                   Pembayaran dilakukan saat barang tiba (COD)
                 </p>
               </div>
@@ -362,7 +375,7 @@ const FrontendCart = () => {
                 className="w-full"
                 size="lg"
               >
-                {createOrder.isPending ? 'Memproses...' : 'Buat Pesanan'}
+                {createOrder.isPending ? 'Memproses...' : 'Buat Pesanan COD'}
               </Button>
             </div>
           </DialogContent>
