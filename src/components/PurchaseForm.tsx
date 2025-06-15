@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, Search } from 'lucide-react';
-import ProductSearchModal from "./ProductSearchModal";
+import { Plus, Search } from 'lucide-react';
+
+import { useProductConversions } from "./purchase/useProductConversions";
+import PurchaseItemsTable from "./purchase/PurchaseItemsTable";
 
 interface PurchaseFormProps {
   purchase?: any;
@@ -41,7 +42,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         }))
       : []
   );
-  const [productConversions, setProductConversions] = useState<Record<string, any[]>>({});
   const [unitsMap, setUnitsMap] = useState<Record<string, any>>({});
   const [autoUpdatePrice, setAutoUpdatePrice] = useState(false);
 
@@ -99,38 +99,8 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     setUnitsMap(map);
   }, [unitsData]);
 
-  // Fetch product unit conversions jika produk dipilih & belum tersimpan di state
-  const fetchConversions = async (productId: string) => {
-    if (!productId || productConversions[productId]) return;
-    const { data, error } = await supabase
-      .from('unit_conversions')
-      .select('*')
-      .eq('product_id', productId);
-    if (!error) {
-      setProductConversions((prev) => ({ ...prev, [productId]: data }));
-    }
-  };
-
-  // Helper baru: Hitung conversion factor berdasar unit_conversions (dari purchase_unit ke base_unit)
-  const getConversionFactor = (productId: string, purchaseUnitId: string, baseUnitId: string) => {
-    if (!productId || !purchaseUnitId || !baseUnitId || purchaseUnitId === baseUnitId) return 1;
-
-    const conversions = productConversions[productId] || [];
-    // direct: dari purchase_unit ke base_unit
-    const direct = conversions.find(
-      (conv: any) => conv.from_unit_id === purchaseUnitId && conv.to_unit_id === baseUnitId
-    );
-    if (direct && Number(direct.conversion_factor) > 0) return Number(direct.conversion_factor);
-
-    // reverse: dari base_unit ke purchase_unit
-    const reverse = conversions.find(
-      (conv: any) => conv.from_unit_id === baseUnitId && conv.to_unit_id === purchaseUnitId
-    );
-    if (reverse && Number(reverse.conversion_factor) > 0) return 1 / Number(reverse.conversion_factor);
-
-    // Jika tidak ditemukan konversi atau faktor tidak valid, default ke 1
-    return 1;
-  };
+  // product conversions/state moved to custom hook
+  const { productConversions, fetchConversions, getConversionFactor } = useProductConversions();
 
   // Ketika user memilih unit pembelian di row item
   const handlePurchaseUnitChange = async (index: number, unitId: string) => {
@@ -140,7 +110,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       await fetchConversions(productId);
       const selectedProduct = products?.find((p) => p.id === productId);
       const baseUnitId = selectedProduct?.unit_id;
-      // Pastikan conversions sudah ready di state, lanjut update
       const applyConversion = () => {
         const factor = (baseUnitId) ? getConversionFactor(productId, unitId, baseUnitId) : 1;
         newItems[index].purchase_unit_id = unitId;
@@ -160,7 +129,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     }
   };
 
-  // Ketika user memilih produk dari modal search
+  // When product is selected from search modal
   const handleProductSelected = async (product: any, rowIdx: number) => {
     const newItems = [...items];
     newItems[rowIdx].product_id = product.id;
@@ -168,7 +137,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     const baseUnitId = product.unit_id || "";
     const applyConversion = () => {
       newItems[rowIdx].purchase_unit_id = baseUnitId;
-      // -> Karena default pilihannya adalah unit dasar, maka conversion factor = 1
       newItems[rowIdx].conversion_factor = 1;
       newItems[rowIdx].unit_cost = product.base_price || 0;
       newItems[rowIdx].total_cost = newItems[rowIdx].quantity * newItems[rowIdx].unit_cost;
@@ -180,6 +148,30 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     } else {
       setTimeout(applyConversion, 60);
     }
+  };
+
+  // Update purchase item logic
+  const updateItem = async (index: number, field: string, value: any) => {
+    const newItems = [...items];
+    if (field !== "product_id") {
+      newItems[index] = { ...newItems[index], [field]: value };
+    }
+    if (field === 'purchase_unit_id') {
+      await handlePurchaseUnitChange(index, value);
+    }
+    if (field === 'quantity' || field === 'unit_cost') {
+      newItems[index].total_cost = newItems[index].quantity * newItems[index].unit_cost;
+    }
+    setItems(newItems);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    savePurchase.mutate(formData);
   };
 
   const savePurchase = useMutation({
@@ -265,31 +257,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         conversion_factor: 1
       },
     ]);
-  };
-
-  // Change updateItem: when 'product_id', do not show dropdown, just ignore (will be from modal)
-  const updateItem = async (index: number, field: string, value: any) => {
-    const newItems = [...items];
-    // Only set product_id via search modal!
-    if (field !== "product_id") {
-      newItems[index] = { ...newItems[index], [field]: value };
-    }
-    if (field === 'purchase_unit_id') {
-      await handlePurchaseUnitChange(index, value);
-    }
-    if (field === 'quantity' || field === 'unit_cost') {
-      newItems[index].total_cost = newItems[index].quantity * newItems[index].unit_cost;
-    }
-    setItems(newItems);
-  };
-
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    savePurchase.mutate(formData);
   };
 
   return (
@@ -392,144 +359,17 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           </Button>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Produk</TableHead>
-              <TableHead>Jumlah</TableHead>
-              <TableHead>Unit Pembelian</TableHead>
-              <TableHead>Harga Satuan</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Konversi</TableHead>
-              <TableHead>Tanggal Kedaluwarsa</TableHead>
-              <TableHead>Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item, index) => {
-              const selectedProduct = products?.find((p) => p.id === item.product_id);
-              const baseUnitId = selectedProduct?.unit_id;
-
-              // Find allowed units for this product.
-              let allowedUnits: string[] = [];
-              if (baseUnitId) allowedUnits.push(baseUnitId);
-              if (productConversions[item.product_id]) {
-                productConversions[item.product_id].forEach((conv: any) => {
-                  if (conv.from_unit_id && !allowedUnits.includes(conv.from_unit_id))
-                    allowedUnits.push(conv.from_unit_id);
-                  if (conv.to_unit_id && !allowedUnits.includes(conv.to_unit_id))
-                    allowedUnits.push(conv.to_unit_id);
-                });
-              }
-              allowedUnits = allowedUnits.filter(Boolean);
-
-              return (
-                <TableRow key={index}>
-                  <TableCell>
-                    <div className="flex gap-2 items-center">
-                      {selectedProduct ? (
-                        <>
-                          <span className="font-medium text-sm">{selectedProduct.name}</span>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setSearchModalOpenIdx(index)}
-                            title="Ganti Produk"
-                          >
-                            <Search className="h-4 w-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSearchModalOpenIdx(index)}
-                        >
-                          <Search className="h-4 w-4 mr-2" />
-                          Pilih Produk
-                        </Button>
-                      )}
-                    </div>
-                    {/* Product Search Modal for this row */}
-                    {searchModalOpenIdx === index && (
-                      <ProductSearchModal
-                        open={true}
-                        onOpenChange={(open) => {
-                          if (!open) setSearchModalOpenIdx(null);
-                        }}
-                        onSelectProduct={(product) => handleProductSelected(product, index)}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
-                      min="1"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={item.purchase_unit_id}
-                      onValueChange={(value) => updateItem(index, 'purchase_unit_id', value)}
-                      disabled={!item.product_id}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allowedUnits.map((uid) =>
-                          unitsMap[uid] ? (
-                            <SelectItem value={uid} key={uid}>
-                              {unitsMap[uid]?.name} ({unitsMap[uid]?.abbreviation})
-                              {uid === baseUnitId && ' (Dasar)'}
-                            </SelectItem>
-                          ) : null
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={item.unit_cost}
-                      onChange={(e) => updateItem(index, 'unit_cost', Number(e.target.value))}
-                      min="0"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    Rp {item.total_cost?.toLocaleString('id-ID') || 0}
-                  </TableCell>
-                  <TableCell>
-                    <span title={item.conversion_factor}>
-                      x{Number(item.conversion_factor).toLocaleString('id-ID', { maximumFractionDigits: 6 })}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="date"
-                      value={item.expiration_date}
-                      onChange={(e) => updateItem(index, 'expiration_date', e.target.value)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeItem(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <PurchaseItemsTable
+          items={items}
+          products={products || []}
+          unitsMap={unitsMap}
+          productConversions={productConversions}
+          searchModalOpenIdx={searchModalOpenIdx}
+          onUpdateItem={updateItem}
+          onRemoveItem={removeItem}
+          onOpenSearchModal={setSearchModalOpenIdx}
+          onSelectProduct={handleProductSelected}
+        />
 
         <div className="text-right">
           <p className="text-lg font-medium">
@@ -537,7 +377,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           </p>
         </div>
       </div>
-
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Batal
