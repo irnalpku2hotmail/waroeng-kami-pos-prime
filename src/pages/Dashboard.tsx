@@ -9,13 +9,17 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  History
+  History,
+  Wifi
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { usePresence } from '@/contexts/PresenceContext';
 
 const Dashboard = () => {
+  const { onlineUsers } = usePresence();
+
   // Fetch total products
   const { data: products } = useQuery({
     queryKey: ['products'],
@@ -233,7 +237,7 @@ const Dashboard = () => {
         </div>
 
         {/* Additional Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -276,6 +280,21 @@ const Dashboard = () => {
                 Rp {monthlyRevenue?.toLocaleString('id-ID') || 0}
               </div>
               <p className="text-sm text-gray-600">Total bulan ini</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wifi className="h-5 w-5 text-teal-500" />
+                Pengguna Online
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-teal-600 mb-2">
+                {onlineUsers}
+              </div>
+              <p className="text-sm text-gray-600">Pengguna aktif saat ini</p>
             </CardContent>
           </Card>
         </div>

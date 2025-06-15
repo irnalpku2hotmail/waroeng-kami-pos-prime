@@ -28,7 +28,8 @@ import {
   Receipt,
   Bell,
   Calendar,
-  Clock
+  Clock,
+  BarChart3
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -226,6 +227,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Package2, label: 'Inventory', href: '/inventory' },
     { icon: Users, label: 'Customers', href: '/customers' },
     { icon: Receipt, label: 'Orders', href: '/orders' },
+    { icon: BarChart3, label: 'Reports', href: '/reports' },
     { icon: CreditCard, label: 'Credit Management', href: '/credit-management' },
     { icon: TrendingDown, label: 'Expenses', href: '/expenses' },
     { icon: Gift, label: 'Rewards', href: '/points-rewards' },
