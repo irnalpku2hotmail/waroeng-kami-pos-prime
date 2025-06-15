@@ -320,31 +320,10 @@ const Frontend = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Bar */}
-      <div className="bg-blue-600 text-white py-2 px-4">
-        <div className="container mx-auto flex justify-between items-center text-sm">
-          <div className="flex items-center space-x-4">
-            <span className="flex items-center gap-1">
-              <Phone className="h-4 w-4" />
-              {storePhone}
-            </span>
-            <span className="flex items-center gap-1">
-              <Mail className="h-4 w-4" />
-              {storeEmail}
-            </span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span>Gratis ongkir se-Pekanbaru</span>
-            <span>•</span>
-            <span>Download App</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
+      {/* Navigation */}
+      <nav className="bg-white border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between py-3">
             {/* Logo */}
             <div className="flex items-center">
               <Link to="/dashboard">
@@ -404,12 +383,8 @@ const Frontend = () => {
               </Button>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Navigation */}
-      <nav className="bg-white border-b">
-        <div className="container mx-auto px-4">
+          {/* Categories and Flash Sale */}
           <div className="flex items-center space-x-8 py-3">
             <NavigationMenu>
               <NavigationMenuList>
@@ -615,7 +590,7 @@ const Frontend = () => {
             <span className="text-gray-600">{products.length} produk ditemukan</span>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {products.map((product) => {
               const productImageUrl = getImageUrl(product.image_url);
               const productIsLiked = isLiked(product.id);
@@ -637,77 +612,71 @@ const Frontend = () => {
                       ) : (
                         <Link to={`/products/${product.id}`}>
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-16 w-16 text-gray-400" />
+                            <Package className="h-12 w-12 text-gray-400" />
                           </div>
                         </Link>
                       )}
-                      <Badge className="absolute top-2 right-2 bg-green-500 text-white">
-                        Stok: {product.current_stock}
+                      <Badge className="absolute top-1 right-1 bg-green-500 text-white text-xs px-1 py-0">
+                        {product.current_stock}
                       </Badge>
                       <Button 
                         size="sm" 
                         variant="secondary"
                         onClick={() => toggleLike(product.id)}
-                        className={`absolute top-2 left-2 h-8 w-8 p-0 transition-colors ${
+                        className={`absolute top-1 left-1 h-6 w-6 p-0 transition-colors ${
                           productIsLiked 
                             ? 'bg-red-500 hover:bg-red-600 text-white' 
                             : 'bg-white/80 hover:bg-white'
                         }`}
                       >
-                        <Heart className={`h-4 w-4 ${productIsLiked ? 'fill-current' : ''}`} />
+                        <Heart className={`h-3 w-3 ${productIsLiked ? 'fill-current' : ''}`} />
                       </Button>
                       {/* COD Badge */}
-                      <Badge className="absolute bottom-2 left-2 bg-blue-500 text-white flex items-center gap-1">
-                        <Truck className="h-3 w-3" />
+                      <Badge className="absolute bottom-1 left-1 bg-blue-500 text-white flex items-center gap-1 text-xs px-1 py-0">
+                        <Truck className="h-2 w-2" />
                         COD
                       </Badge>
                       {/* Wholesale Badge */}
                       {hasWholesalePrice && (
-                        <Badge className="absolute top-10 left-2 bg-orange-500 text-white text-xs">
+                        <Badge className="absolute top-7 left-1 bg-orange-500 text-white text-xs px-1 py-0">
                           Grosir
                         </Badge>
                       )}
-                      {/* Cart Button - positioned in front of product image */}
+                      {/* Cart Button */}
                       <Button 
                         size="sm" 
                         onClick={() => handleAddToCart(product)}
-                        className="absolute bottom-2 right-2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-white"
+                        className="absolute bottom-1 right-1 h-6 w-6 p-0 bg-blue-600 hover:bg-blue-700 text-white"
                         disabled={product.current_stock <= 0}
                       >
                         <ShoppingCart className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                  <CardContent className="p-4">
+                  <CardContent className="p-2">
                     <Link to={`/products/${product.id}`}>
-                      <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-medium text-xs mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
                         {product.name}
                       </h3>
                     </Link>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <span className="text-lg font-bold text-blue-600">
-                          Rp {priceInfo.price?.toLocaleString('id-ID')}
-                        </span>
-                        {priceInfo.isWholesale && (
-                          <div className="text-xs text-orange-600 font-medium">
-                            {priceInfo.variantName} (min. {priceInfo.minQuantity})
-                          </div>
-                        )}
-                        {hasWholesalePrice && !priceInfo.isWholesale && (
-                          <div className="text-xs text-gray-500">
-                            Harga grosir tersedia
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                          <span className="text-xs text-gray-500">{product.loyalty_points || 1} pts</span>
+                    <div className="mb-2">
+                      <span className="text-sm font-bold text-blue-600">
+                        Rp {priceInfo.price?.toLocaleString('id-ID')}
+                      </span>
+                      {priceInfo.isWholesale && (
+                        <div className="text-xs text-orange-600 font-medium">
+                          {priceInfo.variantName} (min. {priceInfo.minQuantity})
                         </div>
+                      )}
+                      {hasWholesalePrice && !priceInfo.isWholesale && (
+                        <div className="text-xs text-gray-500">
+                          Harga grosir tersedia
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="h-2 w-2 text-yellow-400 fill-current" />
+                        <span className="text-xs text-gray-500">{product.loyalty_points || 1} pts</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1 mb-2 text-xs text-green-600">
-                      <Truck className="h-3 w-3" />
-                      <span>Bayar di Tempat (COD)</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -735,7 +704,9 @@ const Frontend = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">{storeName}</h3>
+              <Link to="/dashboard">
+                <h3 className="text-xl font-bold mb-4 hover:text-blue-400 transition-colors">{storeName}</h3>
+              </Link>
               <p className="text-gray-300 text-sm">
                 Platform e-commerce terpercaya dengan produk berkualitas dan harga terjangkau.
               </p>
