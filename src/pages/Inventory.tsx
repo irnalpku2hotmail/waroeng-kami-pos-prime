@@ -8,25 +8,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import { Package, Plus, TrendingUp, TrendingDown, AlertTriangle, Upload, Download, Edit, Trash2 } from 'lucide-react';
-import PurchaseForm from '@/components/PurchaseForm';
-import ReturnsForm from '@/components/ReturnsForm';
+import { Package, TrendingUp, AlertTriangle } from 'lucide-react';
 
 const Inventory = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
-  const [showReturnDialog, setShowReturnDialog] = useState(false);
-  const [editPurchase, setEditPurchase] = useState<any>(null);
-  const [editReturn, setEditReturn] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [adjustmentData, setAdjustmentData] = useState({
     adjustment_type: 'increase',
@@ -76,83 +70,6 @@ const Inventory = () => {
     }
   });
 
-  // Fetch purchases
-  const { data: purchases = [] } = useQuery({
-    queryKey: ['purchases', searchTerm],
-    queryFn: async () => {
-      let query = supabase
-        .from('purchases')
-        .select(`
-          *,
-          suppliers(name),
-          profiles(full_name),
-          purchase_items(*)
-        `);
-      
-      if (searchTerm) {
-        query = query.or(`purchase_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch returns
-  const { data: returns = [] } = useQuery({
-    queryKey: ['returns', searchTerm],
-    queryFn: async () => {
-      let query = supabase
-        .from('returns')
-        .select(`
-          *,
-          suppliers(name),
-          profiles(full_name),
-          return_items(*)
-        `);
-      
-      if (searchTerm) {
-        query = query.or(`return_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Delete mutations
-  const deletePurchase = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('purchases').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchases'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
-      toast({ title: 'Berhasil', description: 'Pembelian berhasil dihapus' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
-  const deleteReturn = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('returns').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['returns'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
-      toast({ title: 'Berhasil', description: 'Return berhasil dihapus' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
   // Stock adjustment mutation
   const adjustStockMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -199,69 +116,18 @@ const Inventory = () => {
   });
 
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
-  const processReturns = returns?.filter(r => r.status === 'process') || [];
-  const successReturns = returns?.filter(r => r.status === 'success') || [];
-
-  const handleClosePurchaseDialog = () => {
-    setShowPurchaseDialog(false);
-    setEditPurchase(null);
-  };
-
-  const handleCloseReturnDialog = () => {
-    setShowReturnDialog(false);
-    setEditReturn(null);
-  };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Manajemen Inventori</h1>
-          <div className="flex gap-2">
-            <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditPurchase(null)}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Tambah Pembelian
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editPurchase ? 'Edit Pembelian' : 'Tambah Pembelian Baru'}</DialogTitle>
-                </DialogHeader>
-                <PurchaseForm 
-                  purchase={editPurchase}
-                  onSuccess={handleClosePurchaseDialog}
-                  onCancel={handleClosePurchaseDialog}
-                />
-              </DialogContent>
-            </Dialog>
-            
-            <Dialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" onClick={() => setEditReturn(null)}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Tambah Return
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editReturn ? 'Edit Return' : 'Tambah Return Baru'}</DialogTitle>
-                </DialogHeader>
-                <ReturnsForm 
-                  returnData={editReturn}
-                  onSuccess={handleCloseReturnDialog}
-                  onCancel={handleCloseReturnDialog}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
         </div>
 
         {/* Search */}
         <div className="flex gap-4">
           <Input
-            placeholder="Cari produk, pembelian, atau return..."
+            placeholder="Cari produk..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
@@ -272,7 +138,7 @@ const Inventory = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Produk</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -282,7 +148,7 @@ const Inventory = () => {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+              <CardTitle className="text-sm font-medium">Produk Stok Rendah</CardTitle>
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
@@ -292,7 +158,7 @@ const Inventory = () => {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Stock Value</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Nilai Stok</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -305,28 +171,26 @@ const Inventory = () => {
 
         <Tabs defaultValue="products" className="w-full">
           <TabsList>
-            <TabsTrigger value="products">Stock Levels</TabsTrigger>
-            <TabsTrigger value="purchases">Purchases ({purchases.length})</TabsTrigger>
-            <TabsTrigger value="returns">Returns ({processReturns.length}/{successReturns.length})</TabsTrigger>
-            <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
-            <TabsTrigger value="low-stock">Low Stock Alert</TabsTrigger>
+            <TabsTrigger value="products">Level Stok</TabsTrigger>
+            <TabsTrigger value="adjustments">Penyesuaian</TabsTrigger>
+            <TabsTrigger value="low-stock">Peringatan Stok Rendah</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
             <Card>
               <CardHeader>
-                <CardTitle>Current Stock Levels</CardTitle>
+                <CardTitle>Level Stok Saat Ini</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Current Stock</TableHead>
-                      <TableHead>Min Stock</TableHead>
+                      <TableHead>Produk</TableHead>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead>Stok Saat Ini</TableHead>
+                      <TableHead>Stok Minimum</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -352,73 +216,73 @@ const Inventory = () => {
                         <TableCell>{product.min_stock}</TableCell>
                         <TableCell>
                           {product.current_stock <= product.min_stock ? (
-                            <Badge variant="destructive">Low Stock</Badge>
+                            <Badge variant="destructive">Stok Rendah</Badge>
                           ) : product.current_stock <= product.min_stock * 2 ? (
-                            <Badge variant="secondary">Warning</Badge>
+                            <Badge variant="secondary">Peringatan</Badge>
                           ) : (
-                            <Badge variant="default">Good</Badge>
+                            <Badge variant="default">Baik</Badge>
                           )}
                         </TableCell>
                         <TableCell>
                           <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => setSelectedProduct(product)}
-                              >
-                                Adjust
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Adjust Stock - {selectedProduct?.name}</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label>Current Stock: {selectedProduct?.current_stock} {selectedProduct?.units?.abbreviation}</Label>
-                                </div>
-                                <div>
-                                  <Label>Adjustment Type</Label>
-                                  <Select 
-                                    value={adjustmentData.adjustment_type} 
-                                    onValueChange={(value) => setAdjustmentData(prev => ({ ...prev, adjustment_type: value }))}
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setSelectedProduct(product)}
+                            >
+                              Sesuaikan
+                            </Button>
+                            {selectedProduct?.id === product.id && (
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Sesuaikan Stok - {selectedProduct?.name}</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label>Stok Saat Ini: {selectedProduct?.current_stock} {selectedProduct?.units?.abbreviation}</Label>
+                                  </div>
+                                  <div>
+                                    <Label>Jenis Penyesuaian</Label>
+                                    <Select 
+                                      value={adjustmentData.adjustment_type} 
+                                      onValueChange={(value) => setAdjustmentData(prev => ({ ...prev, adjustment_type: value }))}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="increase">Tambah</SelectItem>
+                                        <SelectItem value="decrease">Kurangi</SelectItem>
+                                        <SelectItem value="correction">Koreksi</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label>Jumlah</Label>
+                                    <Input
+                                      type="number"
+                                      value={adjustmentData.quantity_change}
+                                      onChange={(e) => setAdjustmentData(prev => ({ ...prev, quantity_change: parseInt(e.target.value) || 0 }))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Alasan</Label>
+                                    <Textarea
+                                      value={adjustmentData.reason}
+                                      onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
+                                      placeholder="Alasan penyesuaian..."
+                                    />
+                                  </div>
+                                  <Button 
+                                    className="w-full" 
+                                    onClick={() => adjustStockMutation.mutate(adjustmentData)}
+                                    disabled={adjustStockMutation.isPending}
                                   >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="increase">Increase</SelectItem>
-                                      <SelectItem value="decrease">Decrease</SelectItem>
-                                      <SelectItem value="correction">Correction</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                    {adjustStockMutation.isPending ? 'Menyesuaikan...' : 'Sesuaikan Stok'}
+                                  </Button>
                                 </div>
-                                <div>
-                                  <Label>Quantity</Label>
-                                  <Input
-                                    type="number"
-                                    value={adjustmentData.quantity_change}
-                                    onChange={(e) => setAdjustmentData(prev => ({ ...prev, quantity_change: parseInt(e.target.value) || 0 }))}
-                                  />
-                                </div>
-                                <div>
-                                  <Label>Reason</Label>
-                                  <Textarea
-                                    value={adjustmentData.reason}
-                                    onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
-                                    placeholder="Reason for adjustment..."
-                                  />
-                                </div>
-                                <Button 
-                                  className="w-full" 
-                                  onClick={() => adjustStockMutation.mutate(adjustmentData)}
-                                  disabled={adjustStockMutation.isPending}
-                                >
-                                  {adjustStockMutation.isPending ? 'Adjusting...' : 'Adjust Stock'}
-                                </Button>
-                              </div>
-                            </DialogContent>
+                              </DialogContent>
+                            )}
                           </Dialog>
                         </TableCell>
                       </TableRow>
@@ -429,216 +293,21 @@ const Inventory = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="purchases">
-            <Card>
-              <CardHeader>
-                <CardTitle>Purchase History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>No. Pembelian</TableHead>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Metode</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Jatuh Tempo</TableHead>
-                      <TableHead>Dibuat oleh</TableHead>
-                      <TableHead>Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {purchases.map((purchase) => (
-                      <TableRow key={purchase.id}>
-                        <TableCell className="font-medium">{purchase.purchase_number}</TableCell>
-                        <TableCell>{purchase.invoice_number || '-'}</TableCell>
-                        <TableCell>{purchase.suppliers?.name || '-'}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            purchase.payment_method === 'credit' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                          }`}>
-                            {purchase.payment_method === 'credit' ? 'Credit' : 'Cash'}
-                          </span>
-                        </TableCell>
-                        <TableCell>Rp {purchase.total_amount?.toLocaleString('id-ID')}</TableCell>
-                        <TableCell>
-                          {new Date(purchase.purchase_date).toLocaleDateString('id-ID')}
-                        </TableCell>
-                        <TableCell>
-                          {purchase.due_date ? new Date(purchase.due_date).toLocaleDateString('id-ID') : '-'}
-                        </TableCell>
-                        <TableCell>{purchase.profiles?.full_name || 'Unknown'}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditPurchase(purchase);
-                                setShowPurchaseDialog(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => deletePurchase.mutate(purchase.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="returns">
-            <Tabs defaultValue="process" className="w-full">
-              <TabsList>
-                <TabsTrigger value="process">Process ({processReturns.length})</TabsTrigger>
-                <TabsTrigger value="history">History ({successReturns.length})</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="process">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Returns in Process</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>No. Return</TableHead>
-                          <TableHead>Invoice</TableHead>
-                          <TableHead>Supplier</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Tanggal</TableHead>
-                          <TableHead>Dibuat oleh</TableHead>
-                          <TableHead>Aksi</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {processReturns.map((returnItem) => (
-                          <TableRow key={returnItem.id}>
-                            <TableCell className="font-medium">{returnItem.return_number}</TableCell>
-                            <TableCell>{returnItem.invoice_number || '-'}</TableCell>
-                            <TableCell>{returnItem.suppliers?.name || '-'}</TableCell>
-                            <TableCell>
-                              <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                                Process
-                              </span>
-                            </TableCell>
-                            <TableCell>Rp {returnItem.total_amount?.toLocaleString('id-ID')}</TableCell>
-                            <TableCell>
-                              {new Date(returnItem.return_date).toLocaleDateString('id-ID')}
-                            </TableCell>
-                            <TableCell>{returnItem.profiles?.full_name || 'Unknown'}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditReturn(returnItem);
-                                    setShowReturnDialog(true);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => deleteReturn.mutate(returnItem.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="history">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Completed Returns</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>No. Return</TableHead>
-                          <TableHead>Invoice</TableHead>
-                          <TableHead>Supplier</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Tanggal</TableHead>
-                          <TableHead>Dibuat oleh</TableHead>
-                          <TableHead>Aksi</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {successReturns.map((returnItem) => (
-                          <TableRow key={returnItem.id}>
-                            <TableCell className="font-medium">{returnItem.return_number}</TableCell>
-                            <TableCell>{returnItem.invoice_number || '-'}</TableCell>
-                            <TableCell>{returnItem.suppliers?.name || '-'}</TableCell>
-                            <TableCell>
-                              <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                Success
-                              </span>
-                            </TableCell>
-                            <TableCell>Rp {returnItem.total_amount?.toLocaleString('id-ID')}</TableCell>
-                            <TableCell>
-                              {new Date(returnItem.return_date).toLocaleDateString('id-ID')}
-                            </TableCell>
-                            <TableCell>{returnItem.profiles?.full_name || 'Unknown'}</TableCell>
-                            <TableCell>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => deleteReturn.mutate(returnItem.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
           <TabsContent value="adjustments">
             <Card>
               <CardHeader>
-                <CardTitle>Stock Adjustments History</CardTitle>
+                <CardTitle>Riwayat Penyesuaian Stok</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Reason</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Produk</TableHead>
+                      <TableHead>Jenis</TableHead>
+                      <TableHead>Jumlah</TableHead>
+                      <TableHead>Pengguna</TableHead>
+                      <TableHead>Alasan</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -648,7 +317,8 @@ const Inventory = () => {
                         <TableCell>{adjustment.products?.name}</TableCell>
                         <TableCell>
                           <Badge variant={adjustment.adjustment_type === 'increase' ? 'default' : 'destructive'}>
-                            {adjustment.adjustment_type}
+                            {adjustment.adjustment_type === 'increase' ? 'Tambah' : 
+                             adjustment.adjustment_type === 'decrease' ? 'Kurangi' : 'Koreksi'}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -669,21 +339,20 @@ const Inventory = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                  Low Stock Alert
+                  Peringatan Stok Rendah
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {lowStockProducts.length === 0 ? (
-                  <p className="text-center py-8 text-gray-500">No low stock items</p>
+                  <p className="text-center py-8 text-gray-500">Tidak ada produk dengan stok rendah</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Current Stock</TableHead>
-                        <TableHead>Min Stock</TableHead>
-                        <TableHead>Shortage</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>Produk</TableHead>
+                        <TableHead>Stok Saat Ini</TableHead>
+                        <TableHead>Stok Minimum</TableHead>
+                        <TableHead>Kekurangan</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -708,18 +377,6 @@ const Inventory = () => {
                           <TableCell>{product.min_stock}</TableCell>
                           <TableCell className="text-red-600">
                             {product.min_stock - product.current_stock}
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => {
-                                setShowPurchaseDialog(true);
-                                setEditPurchase(null);
-                              }}
-                            >
-                              Reorder
-                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}

@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,7 +171,7 @@ const Dashboard = () => {
   const monthlyRevenue = revenue?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
 
   const weeklySales = weekly?.reduce((acc: any, order) => {
-    const day = new Date(order.order_date).toLocaleDateString('en-US', { weekday: 'short' });
+    const day = new Date(order.order_date).toLocaleDateString('id-ID', { weekday: 'short' });
     if (acc[day]) {
       acc[day] += order.total_amount || 0;
     } else {
@@ -182,7 +183,7 @@ const Dashboard = () => {
   const weeklySalesData = Object.entries(weeklySales || {}).map(([day, sales]) => ({ day, sales }));
 
   const topCategories = top?.reduce((acc: any, item) => {
-    const categoryName = item.products?.categories?.name || 'Unknown';
+    const categoryName = item.products?.categories?.name || 'Tidak Diketahui';
     const categoryId = item.products?.category_id || '0';
     const existingCategory = acc.find((c: any) => c.name === categoryName);
 
@@ -207,7 +208,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Produk</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -215,44 +216,44 @@ const Dashboard = () => {
                 {totalProducts}
               </div>
               <p className="text-xs text-muted-foreground">
-                {lowStockProducts} low stock items
+                {lowStockProducts} produk stok rendah
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Pelanggan</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
                 {totalCustomers}
               </div>
-              <p className="text-xs text-muted-foreground">Registered customers</p>
+              <p className="text-xs text-muted-foreground">Pelanggan terdaftar</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
+              <CardTitle className="text-sm font-medium">Penjualan Hari Ini</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-600">
                 Rp {todaySales?.toLocaleString('id-ID') || 0}
               </div>
-              <p className="text-xs text-muted-foreground">From {todayTransactions} transactions</p>
+              <p className="text-xs text-muted-foreground">Dari {todayTransactions} transaksi</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
+              <CardTitle className="text-sm font-medium">Pengeluaran Bulanan</CardTitle>
               <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
                 Rp {monthlyExpenses?.toLocaleString('id-ID') || 0}
               </div>
-              <p className="text-xs text-muted-foreground">This month's total</p>
+              <p className="text-xs text-muted-foreground">Total bulan ini</p>
             </CardContent>
           </Card>
         </div>
@@ -261,7 +262,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Weekly Sales</CardTitle>
+              <CardTitle>Penjualan Mingguan</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -270,7 +271,7 @@ const Dashboard = () => {
                   <XAxis dataKey="day" />
                   <YAxis />
                   <Tooltip 
-                    formatter={(value) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Sales']}
+                    formatter={(value) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Penjualan']}
                   />
                   <Bar dataKey="sales" fill="#3b82f6" />
                 </BarChart>
@@ -280,7 +281,7 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Top Categories</CardTitle>
+              <CardTitle>Kategori Teratas</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -312,14 +313,14 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                Low Stock Alert
+                Peringatan Stok Rendah
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600 mb-2">
                 {lowStockProducts}
               </div>
-              <p className="text-sm text-gray-600">Products need restocking</p>
+              <p className="text-sm text-gray-600">Produk perlu diisi ulang</p>
             </CardContent>
           </Card>
 
@@ -327,14 +328,14 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-blue-500" />
-                Pending Orders
+                Pesanan Tertunda
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600 mb-2">
                 {pendingOrders}
               </div>
-              <p className="text-sm text-gray-600">Orders waiting processing</p>
+              <p className="text-sm text-gray-600">Pesanan menunggu diproses</p>
             </CardContent>
           </Card>
 
@@ -342,14 +343,14 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-500" />
-                Monthly Revenue
+                Pendapatan Bulanan
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600 mb-2">
                 Rp {monthlyRevenue?.toLocaleString('id-ID') || 0}
               </div>
-              <p className="text-sm text-gray-600">Current month total</p>
+              <p className="text-sm text-gray-600">Total bulan ini</p>
             </CardContent>
           </Card>
         </div>
@@ -357,7 +358,5 @@ const Dashboard = () => {
     </Layout>
   );
 };
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default Dashboard;
