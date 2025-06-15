@@ -1,11 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -29,7 +30,9 @@ import {
   Bell,
   Calendar,
   Clock,
-  BarChart3
+  BarChart3,
+  Check,
+  CheckCheck
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -62,8 +65,10 @@ const Layout = ({ children }: LayoutProps) => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
 
   // Update date and time every second
   useEffect(() => {
@@ -116,6 +121,7 @@ const Layout = ({ children }: LayoutProps) => {
 
         todayBirthdays.forEach(customer => {
           notifications.push({
+            id: `birthday-${customer.name}`,
             type: 'birthday',
             message: `🎂 ${customer.name} has a birthday today!`,
             priority: 'medium',
@@ -133,6 +139,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       if (lowStockProducts && lowStockProducts.length > 0) {
         notifications.push({
+          id: 'low-stock',
           type: 'low_stock',
           message: `📦 ${lowStockProducts.length} products have low stock`,
           priority: 'high',
@@ -151,6 +158,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       if (expiringProducts && expiringProducts.length > 0) {
         notifications.push({
+          id: 'expiring-products',
           type: 'expiring',
           message: `⚠️ ${expiringProducts.length} products expiring within a month`,
           priority: 'medium',
@@ -167,6 +175,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       if (newOrders && newOrders.length > 0) {
         notifications.push({
+          id: 'new-orders',
           type: 'new_order',
           message: `🛒 ${newOrders.length} new orders pending`,
           priority: 'high',
@@ -184,6 +193,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       if (overdueCredits && overdueCredits.length > 0) {
         notifications.push({
+          id: 'overdue-credits',
           type: 'overdue_credit',
           message: `💳 ${overdueCredits.length} credit payments overdue`,
           priority: 'high',
@@ -203,6 +213,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       if (newUsers && newUsers.length > 0) {
         notifications.push({
+          id: 'new-users',
           type: 'new_user',
           message: `👤 ${newUsers.length} new users registered`,
           priority: 'low',
@@ -249,17 +260,31 @@ const Layout = ({ children }: LayoutProps) => {
     return location.pathname.startsWith(href);
   };
 
+  const getUnreadNotifications = () => {
+    if (!notifications) return [];
+    return notifications.filter(n => !readNotifications.has(n.id));
+  };
+
   const getNotificationCount = () => {
-    if (!notifications) return 0;
-    return notifications.length;
+    return getUnreadNotifications().length;
   };
 
   const getHighPriorityCount = () => {
-    if (!notifications) return 0;
-    return notifications.filter(n => n.priority === 'high').length;
+    return getUnreadNotifications().filter(n => n.priority === 'high').length;
+  };
+
+  const markNotificationAsRead = (notificationId: string) => {
+    setReadNotifications(prev => new Set([...prev, notificationId]));
+  };
+
+  const markAllNotificationsAsRead = () => {
+    if (notifications) {
+      setReadNotifications(new Set(notifications.map(n => n.id)));
+    }
   };
 
   const handleNotificationClick = (notification: any) => {
+    markNotificationAsRead(notification.id);
     if (notification.link) {
       navigate(notification.link);
     }
@@ -368,31 +393,61 @@ const Layout = ({ children }: LayoutProps) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-80" align="end">
-                <div className="p-3 border-b">
+                <div className="p-3 border-b flex items-center justify-between">
                   <h3 className="font-semibold">Notifications</h3>
+                  {getNotificationCount() > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={markAllNotificationsAsRead}
+                      className="text-xs"
+                    >
+                      <CheckCheck className="h-3 w-3 mr-1" />
+                      Mark all read
+                    </Button>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications && notifications.length > 0 ? (
-                    notifications.map((notification, index) => (
-                      <DropdownMenuItem 
-                        key={index} 
-                        className="p-3 border-b cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        <div className="flex items-start gap-2 w-full">
-                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                            notification.priority === 'high' ? 'bg-red-500' :
-                            notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
-                          }`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-900 mb-1">{notification.message}</p>
-                            <p className="text-xs text-gray-500">
-                              {formatRelativeTime(notification.timestamp)}
-                            </p>
+                    notifications.map((notification, index) => {
+                      const isRead = readNotifications.has(notification.id);
+                      return (
+                        <DropdownMenuItem 
+                          key={index} 
+                          className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${isRead ? 'opacity-60' : ''}`}
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <div className="flex items-start gap-2 w-full">
+                            <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                              isRead ? 'bg-gray-300' :
+                              notification.priority === 'high' ? 'bg-red-500' :
+                              notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-900 mb-1">{notification.message}</p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">
+                                  {formatRelativeTime(notification.timestamp)}
+                                </p>
+                                {!isRead && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markNotificationAsRead(notification.id);
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </DropdownMenuItem>
-                    ))
+                        </DropdownMenuItem>
+                      );
+                    })
                   ) : (
                     <div className="p-3 text-center text-gray-500">
                       No notifications

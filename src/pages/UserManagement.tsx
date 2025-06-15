@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { 
   Pagination,
   PaginationContent,
@@ -23,7 +23,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import { Users, Plus, UserCheck, UserX, Shield, Settings, ShoppingBag, Briefcase } from 'lucide-react';
+import { Users, Plus, UserCheck, UserX, Shield, Settings, ShoppingBag, Briefcase, MoreHorizontal, Edit, Ban, Trash2 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'] | 'buyer';
@@ -34,6 +34,8 @@ const UserManagement = () => {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editRoleDialogOpen, setEditRoleDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [userData, setUserData] = useState({
     email: '',
@@ -159,6 +161,8 @@ const UserManagement = () => {
     onSuccess: () => {
       toast({ title: 'User role updated successfully' });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      setEditRoleDialogOpen(false);
+      setSelectedUser(null);
     },
     onError: (error: any) => {
       toast({ 
@@ -240,6 +244,20 @@ const UserManagement = () => {
     if (targetUser.id === user?.id) return false; // Can't manage self
     if (profile?.role === 'admin') return true;
     return false;
+  };
+
+  const handleEditRole = (userData: any) => {
+    setSelectedUser(userData);
+    setEditRoleDialogOpen(true);
+  };
+
+  const handleUpdateRole = (role: UserRole) => {
+    if (selectedUser) {
+      updateUserRoleMutation.mutate({ 
+        userId: selectedUser.id, 
+        role: role 
+      });
+    }
   };
 
   const renderPagination = () => {
@@ -531,75 +549,40 @@ const UserManagement = () => {
                     <TableCell>{new Date(userData.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>{new Date(userData.updated_at).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {canManageUser(userData) && (
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button size="sm" variant="outline">
-                                Edit Role
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Change User Role</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label>User: {userData.full_name}</Label>
-                                  <div className="text-sm text-gray-500">{userData.email}</div>
-                                </div>
-                                <div>
-                                  <Label>Current Role</Label>
-                                  <div className="mt-1">{getRoleBadge(userData.role)}</div>
-                                </div>
-                                <div>
-                                  <Label>New Role</Label>
-                                  <Select 
-                                    defaultValue={userData.role}
-                                    onValueChange={(value: UserRole) => {
-                                      updateUserRoleMutation.mutate({ 
-                                        userId: userData.id, 
-                                        role: value 
-                                      });
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="buyer">Buyer</SelectItem>
-                                      <SelectItem value="staff">Staff</SelectItem>
-                                      <SelectItem value="cashier">Cashier</SelectItem>
-                                      <SelectItem value="manager">Manager</SelectItem>
-                                      <SelectItem value="admin">Admin</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          
-                          {userData.id !== user?.id && (
-                            <>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => deactivateUserMutation.mutate(userData.id)}
-                              >
-                                Deactivate
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => deleteUserMutation.mutate(userData.id)}
-                              >
-                                Delete
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                      {userData.id === user?.id && (
+                      {canManageUser(userData) ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => handleEditRole(userData)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Role
+                            </DropdownMenuItem>
+                            {userData.id !== user?.id && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => deactivateUserMutation.mutate(userData.id)}
+                                  className="text-orange-600"
+                                >
+                                  <Ban className="mr-2 h-4 w-4" />
+                                  Deactivate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => deleteUserMutation.mutate(userData.id)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
                         <Badge variant="outline">Current User</Badge>
                       )}
                     </TableCell>
@@ -610,6 +593,45 @@ const UserManagement = () => {
             {renderPagination()}
           </CardContent>
         </Card>
+
+        {/* Edit Role Dialog */}
+        <Dialog open={editRoleDialogOpen} onOpenChange={setEditRoleDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change User Role</DialogTitle>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="space-y-4">
+                <div>
+                  <Label>User: {selectedUser.full_name}</Label>
+                  <div className="text-sm text-gray-500">{selectedUser.email}</div>
+                </div>
+                <div>
+                  <Label>Current Role</Label>
+                  <div className="mt-1">{getRoleBadge(selectedUser.role)}</div>
+                </div>
+                <div>
+                  <Label>New Role</Label>
+                  <Select 
+                    defaultValue={selectedUser.role}
+                    onValueChange={(value: UserRole) => handleUpdateRole(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="buyer">Buyer</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="cashier">Cashier</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
