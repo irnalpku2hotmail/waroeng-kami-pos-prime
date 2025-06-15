@@ -10,7 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Search } from 'lucide-react';
+import ProductSearchModal from "./ProductSearchModal";
 
 interface PurchaseFormProps {
   purchase?: any;
@@ -43,6 +44,9 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   const [productConversions, setProductConversions] = useState<Record<string, any[]>>({});
   const [unitsMap, setUnitsMap] = useState<Record<string, any>>({});
   const [autoUpdatePrice, setAutoUpdatePrice] = useState(false);
+
+  // For controlling which row is opening the search modal.
+  const [searchModalOpenIdx, setSearchModalOpenIdx] = useState<number | null>(null);
 
   // Auto-set due date when payment method changes to credit
   useEffect(() => {
@@ -138,6 +142,21 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     setItems(newItems);
   };
 
+  // Handler when a product is selected from the search modal
+  const handleProductSelected = async (product: any, rowIdx: number) => {
+    const newItems = [...items];
+    newItems[rowIdx].product_id = product.id;
+    // Fetch conversions for this product if needed
+    await fetchConversions(product.id);
+    // Default unit and conversion
+    newItems[rowIdx].purchase_unit_id = product.unit_id || "";
+    newItems[rowIdx].conversion_factor = 1;
+    newItems[rowIdx].unit_cost = product.base_price || 0;
+    newItems[rowIdx].total_cost = newItems[rowIdx].quantity * newItems[rowIdx].unit_cost;
+    setItems(newItems);
+    setSearchModalOpenIdx(null);
+  };
+
   const savePurchase = useMutation({
     mutationFn: async (data: any) => {
       if (purchase) {
@@ -223,21 +242,12 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     ]);
   };
 
+  // Change updateItem: when 'product_id', do not show dropdown, just ignore (will be from modal)
   const updateItem = async (index: number, field: string, value: any) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    if (field === 'product_id') {
-      // Fetch conversion jika belum ada, set ulang unit pembelian default ke unit dasar
-      await fetchConversions(value);
-      // Set purchase_unit_id = unit dasar, conversion_factor = 1
-      const selectedProduct = products?.find((p) => p.id === value);
-      newItems[index].purchase_unit_id = selectedProduct?.unit_id || '';
-      newItems[index].conversion_factor = 1;
-      // Set unit_cost dari base_price produk
-      if (selectedProduct) {
-        newItems[index].unit_cost = selectedProduct.base_price || 0;
-        newItems[index].total_cost = newItems[index].quantity * newItems[index].unit_cost;
-      }
+    // Only set product_id via search modal!
+    if (field !== "product_id") {
+      newItems[index] = { ...newItems[index], [field]: value };
     }
     if (field === 'purchase_unit_id') {
       await handlePurchaseUnitChange(index, value);
@@ -374,8 +384,9 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             {items.map((item, index) => {
               const selectedProduct = products?.find((p) => p.id === item.product_id);
               const baseUnitId = selectedProduct?.unit_id;
-              // Unit yang boleh dipilih = unit dasar + list konversi
-              let allowedUnits = [];
+
+              // Find allowed units for this product.
+              let allowedUnits: string[] = [];
               if (baseUnitId) allowedUnits.push(baseUnitId);
               if (productConversions[item.product_id]) {
                 productConversions[item.product_id].forEach((conv: any) => {
@@ -385,26 +396,47 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
                     allowedUnits.push(conv.to_unit_id);
                 });
               }
-              // Usir duplikat dan filter undefined
               allowedUnits = allowedUnits.filter(Boolean);
+
               return (
                 <TableRow key={index}>
                   <TableCell>
-                    <Select
-                      value={item.product_id}
-                      onValueChange={(value) => updateItem(index, 'product_id', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih produk" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products?.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} (Rp {product.base_price?.toLocaleString('id-ID')})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2 items-center">
+                      {selectedProduct ? (
+                        <>
+                          <span className="font-medium text-sm">{selectedProduct.name}</span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setSearchModalOpenIdx(index)}
+                            title="Ganti Produk"
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSearchModalOpenIdx(index)}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          Pilih Produk
+                        </Button>
+                      )}
+                    </div>
+                    {/* Product Search Modal for this row */}
+                    {searchModalOpenIdx === index && (
+                      <ProductSearchModal
+                        open={true}
+                        onOpenChange={(open) => {
+                          if (!open) setSearchModalOpenIdx(null);
+                        }}
+                        onSelectProduct={(product) => handleProductSelected(product, index)}
+                      />
+                    )}
                   </TableCell>
                   <TableCell>
                     <Input
