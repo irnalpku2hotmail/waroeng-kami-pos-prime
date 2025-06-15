@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Building2, Phone, Mail, User, Download, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Phone, Mail, User, Download, Eye, Users, Calendar, TrendingUp } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
 import { exportToExcel } from '@/utils/excelExport';
@@ -27,6 +27,11 @@ const Suppliers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
+  // Get current date ranges
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
+
   // Query for all suppliers for export
   const { data: allSuppliersData } = useQuery({
     queryKey: ['all-suppliers'],
@@ -38,6 +43,42 @@ const Suppliers = () => {
         
       if (error) throw error;
       return data;
+    }
+  });
+
+  // Query for supplier statistics
+  const { data: supplierStats } = useQuery({
+    queryKey: ['supplier-stats'],
+    queryFn: async () => {
+      // Total suppliers
+      const { data: totalSuppliers, error: totalError } = await supabase
+        .from('suppliers')
+        .select('id');
+      if (totalError) throw totalError;
+
+      // Active suppliers this month (suppliers who have purchases this month)
+      const { data: monthlyActive, error: monthlyError } = await supabase
+        .from('purchases')
+        .select('supplier_id')
+        .gte('created_at', startOfMonth);
+      if (monthlyError) throw monthlyError;
+
+      // Active suppliers this year (suppliers who have purchases this year)
+      const { data: yearlyActive, error: yearlyError } = await supabase
+        .from('purchases')
+        .select('supplier_id')
+        .gte('created_at', startOfYear);
+      if (yearlyError) throw yearlyError;
+
+      // Get unique supplier counts
+      const uniqueMonthly = new Set(monthlyActive?.map(p => p.supplier_id) || []);
+      const uniqueYearly = new Set(yearlyActive?.map(p => p.supplier_id) || []);
+
+      return {
+        total: totalSuppliers?.length || 0,
+        activeThisMonth: uniqueMonthly.size,
+        activeThisYear: uniqueYearly.size
+      };
     }
   });
 
@@ -73,6 +114,7 @@ const Suppliers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-stats'] });
       toast({ title: 'Berhasil', description: 'Supplier berhasil dihapus' });
     },
     onError: (error) => {
@@ -87,6 +129,7 @@ const Suppliers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-stats'] });
       setOpen(false);
       toast({ title: 'Berhasil', description: 'Supplier berhasil ditambahkan' });
     },
@@ -102,6 +145,7 @@ const Suppliers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-stats'] });
       setOpen(false);
       setEditSupplier(null);
       toast({ title: 'Berhasil', description: 'Supplier berhasil diupdate' });
@@ -237,6 +281,48 @@ const Suppliers = () => {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+
+        {/* Supplier Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Supplier</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{supplierStats?.total || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                Supplier terdaftar
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Aktif Bulan Ini</CardTitle>
+              <Calendar className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{supplierStats?.activeThisMonth || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                Supplier dengan transaksi
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Aktif Tahun Ini</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{supplierStats?.activeThisYear || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                Supplier dengan transaksi
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex gap-4">
