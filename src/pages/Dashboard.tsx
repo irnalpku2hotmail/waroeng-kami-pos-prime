@@ -175,7 +175,7 @@ const Dashboard = () => {
       case 'cancelled':
         return <Badge variant="destructive">Dibatalkan</Badge>;
       case 'processing':
-         return <Badge className="bg-blue-100 text-blue-800">Diproses</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800">Diproses</Badge>;
       case 'shipped':
         return <Badge className="bg-yellow-100 text-yellow-800">Dikirim</Badge>;
       default:
@@ -219,7 +219,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="pb-1">
               <div className="text-lg font-bold text-orange-600">{lowStockProducts}</div>
-              <p className="text-[10px] text-muted-foreground">Produk < 10 stok</p>
+              <p className="text-[10px] text-muted-foreground">Produk &lt; 10 stok</p>
             </CardContent>
           </Card>
           
