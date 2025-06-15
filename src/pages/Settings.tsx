@@ -12,6 +12,7 @@ import { Settings as SettingsIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CODSettings from '@/components/CODSettings';
 import FrontendSettings from '@/components/FrontendSettings';
+import SEOSettings from '@/components/SEOSettings';
 
 const Settings = () => {
   const queryClient = useQueryClient();
@@ -106,6 +107,7 @@ const Settings = () => {
             <TabsTrigger value="receipt">Pengaturan Struk</TabsTrigger>
             <TabsTrigger value="cod">COD Settings</TabsTrigger>
             <TabsTrigger value="frontend">Frontend</TabsTrigger>
+            <TabsTrigger value="seo">SEO Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="store-info">
@@ -240,6 +242,10 @@ const Settings = () => {
 
           <TabsContent value="frontend">
             <FrontendSettings />
+          </TabsContent>
+
+          <TabsContent value="seo">
+            <SEOSettings />
           </TabsContent>
         </Tabs>
       </div>

@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +27,8 @@ const Dashboard = () => {
   const todayString = today.toISOString().split('T')[0];
   const startOfToday = `${todayString}T00:00:00.000Z`;
   const endOfToday = `${todayString}T23:59:59.999Z`;
+
+  console.log('Today filter:', { todayString, startOfToday, endOfToday });
 
   // Total produk
   const { data: products } = useQuery({
@@ -96,16 +97,23 @@ const Dashboard = () => {
     }
   });
 
-  // Transaksi POS hari ini (fixed calculation)
+  // Transaksi POS hari ini (fixed calculation with better date filtering)
   const { data: posSales } = useQuery({
-    queryKey: ['pos-daily-sales'],
+    queryKey: ['pos-daily-sales', todayString],
     queryFn: async () => {
+      console.log('Fetching POS sales for date:', todayString);
       const { data, error } = await supabase
         .from('transactions')
         .select('id, transaction_number, total_amount, customer_id, created_at')
         .gte('created_at', startOfToday)
         .lte('created_at', endOfToday);
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error fetching POS sales:', error);
+        throw error;
+      }
+      
+      console.log('POS sales data:', data);
       return data;
     }
   });
@@ -132,9 +140,15 @@ const Dashboard = () => {
   const totalCustomers = customers?.length || 0;
   const todayOrdersCount = todayOrders?.length || 0;
 
-  // Calculate today's POS sales
-  const todaySales = posSales?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
+  // Calculate today's POS sales (improved calculation)
+  const todaySales = posSales?.reduce((sum, trx) => {
+    const amount = Number(trx.total_amount) || 0;
+    console.log('Adding transaction amount:', amount);
+    return sum + amount;
+  }, 0) || 0;
   const todayTransactions = posSales?.length || 0;
+
+  console.log('Today sales calculation:', { todaySales, todayTransactions, posSales });
 
   // Calculate COD income today
   const codIncomeToday = codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
