@@ -111,53 +111,47 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     }
   };
 
-  // Helper: get conversion factor dari product_conversions cache
-  const getConversionFactor = (
-    productId: string,
-    fromUnitId: string,
-    toUnitId: string
-  ): number => {
-    if (!productId || !fromUnitId || !toUnitId || fromUnitId === toUnitId) return 1;
+  // Helper baru: Hitung conversion factor berdasar unit_conversions (dari purchase_unit ke base_unit)
+  const getConversionFactor = (productId: string, purchaseUnitId: string, baseUnitId: string) => {
+    if (!productId || !purchaseUnitId || !baseUnitId || purchaseUnitId === baseUnitId) return 1;
 
     const conversions = productConversions[productId] || [];
-    // Cek direct conversion
+    // direct: dari purchase_unit ke base_unit
     const direct = conversions.find(
-      (conv: any) => conv.from_unit_id === fromUnitId && conv.to_unit_id === toUnitId
+      (conv: any) => conv.from_unit_id === purchaseUnitId && conv.to_unit_id === baseUnitId
     );
-    if (direct) return Number(direct.conversion_factor) || 1;
-    // Cek reverse
+    if (direct && Number(direct.conversion_factor) > 0) return Number(direct.conversion_factor);
+
+    // reverse: dari base_unit ke purchase_unit
     const reverse = conversions.find(
-      (conv: any) => conv.from_unit_id === toUnitId && conv.to_unit_id === fromUnitId
+      (conv: any) => conv.from_unit_id === baseUnitId && conv.to_unit_id === purchaseUnitId
     );
-    if (reverse && reverse.conversion_factor) return 1 / Number(reverse.conversion_factor);
-    // Tidak ada konversi => 1
+    if (reverse && Number(reverse.conversion_factor) > 0) return 1 / Number(reverse.conversion_factor);
+
+    // Jika tidak ditemukan konversi atau faktor tidak valid, default ke 1
     return 1;
   };
 
-  // Perbarui unit pembelian & conversion factor sesuai konversi supabase
+  // Ketika user memilih unit pembelian di row item
   const handlePurchaseUnitChange = async (index: number, unitId: string) => {
     const newItems = [...items];
-    const productId = newItems[index].product_id;
+    const productId = newItems[index]?.product_id;
     if (productId && unitId) {
       await fetchConversions(productId);
       const selectedProduct = products?.find((p) => p.id === productId);
       const baseUnitId = selectedProduct?.unit_id;
-      // Tunggu sampai conversions siap
-      const fn = () => {
-        const factor = baseUnitId
-          ? getConversionFactor(productId, unitId, baseUnitId)
-          : 1;
+      // Pastikan conversions sudah ready di state, lanjut update
+      const applyConversion = () => {
+        const factor = (baseUnitId) ? getConversionFactor(productId, unitId, baseUnitId) : 1;
         newItems[index].purchase_unit_id = unitId;
         newItems[index].conversion_factor = factor;
         setItems(newItems);
       };
 
-      // Jika conversions sudah ada, langsung set, else tunggu
       if (productConversions[productId]) {
-        fn();
+        applyConversion();
       } else {
-        // Karena setProductConversions async, beri delay microtask agar state updated
-        setTimeout(fn, 50);
+        setTimeout(applyConversion, 60);
       }
     } else {
       newItems[index].purchase_unit_id = unitId;
@@ -166,27 +160,25 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     }
   };
 
-  // Handler ketika produk dipilih dari modal, atur unit & conversion langsung
+  // Ketika user memilih produk dari modal search
   const handleProductSelected = async (product: any, rowIdx: number) => {
     const newItems = [...items];
     newItems[rowIdx].product_id = product.id;
     await fetchConversions(product.id);
-    // Tunggu conversions siap sebelum set conversion_factor
-    const fn = () => {
-      newItems[rowIdx].purchase_unit_id = product.unit_id || "";
-      const cf = product.unit_id
-        ? getConversionFactor(product.id, product.unit_id, product.unit_id)
-        : 1;
-      newItems[rowIdx].conversion_factor = cf;
+    const baseUnitId = product.unit_id || "";
+    const applyConversion = () => {
+      newItems[rowIdx].purchase_unit_id = baseUnitId;
+      // -> Karena default pilihannya adalah unit dasar, maka conversion factor = 1
+      newItems[rowIdx].conversion_factor = 1;
       newItems[rowIdx].unit_cost = product.base_price || 0;
       newItems[rowIdx].total_cost = newItems[rowIdx].quantity * newItems[rowIdx].unit_cost;
       setItems(newItems);
       setSearchModalOpenIdx(null);
     };
     if (productConversions[product.id]) {
-      fn();
+      applyConversion();
     } else {
-      setTimeout(fn, 50);
+      setTimeout(applyConversion, 60);
     }
   };
 
