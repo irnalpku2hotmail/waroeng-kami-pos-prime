@@ -59,14 +59,18 @@ const WebsiteFaviconUpload = ({ settings }: WebsiteFaviconUploadProps) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `favicon_${Date.now()}.${fileExt}`;
       
-      // Remove old favicon if exists
+      // Remove old favicon if exists, but don't fail the upload if it doesn't.
       if (settings?.favicon_url) {
-        const oldFileName = settings.favicon_url.split('/').pop();
-        if (oldFileName && oldFileName.startsWith('favicon_')) {
-          console.log('Removing old favicon:', oldFileName);
-          await supabase.storage
-            .from('website-assets')
-            .remove([oldFileName]);
+        try {
+          const oldFileName = settings.favicon_url.split('/').pop();
+          if (oldFileName && oldFileName.startsWith('favicon_')) {
+            console.log('Removing old favicon:', oldFileName);
+            await supabase.storage
+              .from('website-assets')
+              .remove([oldFileName]);
+          }
+        } catch (error) {
+          console.warn('Could not remove old favicon. Continuing with upload.', error);
         }
       }
       
@@ -90,7 +94,7 @@ const WebsiteFaviconUpload = ({ settings }: WebsiteFaviconUploadProps) => {
       console.log('Favicon uploaded successfully:', data.publicUrl);
       return data.publicUrl;
     },
-    onSuccess: async (faviconUrl) => {
+    onSuccess: async (faviconUrl, file: File) => {
       console.log('Updating settings with new favicon URL:', faviconUrl);
       await updateSettings.mutateAsync({ favicon_url: faviconUrl });
       
@@ -103,7 +107,7 @@ const WebsiteFaviconUpload = ({ settings }: WebsiteFaviconUploadProps) => {
       const link = document.createElement('link');
       link.setAttribute('rel', 'icon');
       link.setAttribute('href', faviconUrl);
-      link.setAttribute('type', 'image/png');
+      link.setAttribute('type', file.type); // Use correct file type
       document.head.appendChild(link);
 
       setFaviconFile(null);
