@@ -119,13 +119,13 @@ const Dashboard = () => {
     }
   });
 
-  // --- COD: Pendapatan COD hari ini (orders delivered hari ini) ---
+  // --- COD: Pendapatan COD & Transaksi COD hari ini (orders delivered hari ini) ---
   const { data: codSalesToday } = useQuery({
     queryKey: ['cod-revenue-today'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('total_amount, status, order_date')
+        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status')
         .eq('status', 'delivered')
         .gte('order_date', today + 'T00:00:00')
         .lte('order_date', today + 'T23:59:59');
@@ -157,6 +157,33 @@ const Dashboard = () => {
 
   // --- Pendapatan COD hari ini ---
   const codIncomeToday = codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
+
+  // --- COD Sales Table Hari Ini ---
+  const codSalesTable = (codSalesToday ?? []).map(trx => ({
+    id: trx.id,
+    number: trx.order_number,
+    name: trx.customer_name || 'Umum',
+    total: trx.total_amount,
+    status: trx.status,
+    created_at: trx.created_at,
+  })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const getOrderStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'delivered':
+        return <Badge className="bg-green-100 text-green-800">Selesai</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Dibatalkan</Badge>;
+      case 'processing':
+         return <Badge className="bg-blue-100 text-blue-800">Diproses</Badge>;
+      case 'shipped':
+        return <Badge className="bg-yellow-100 text-yellow-800">Dikirim</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
 
   // Summary cards: calculate stats
   const totalProducts = products?.length || 0;
@@ -272,6 +299,52 @@ const Dashboard = () => {
                     <TableRow>
                       <TableCell colSpan={4} className="h-16 text-center text-xs">
                         Tidak ada transaksi POS hari ini.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabel Transaksi COD Hari Ini */}
+        <div className="grid grid-cols-1 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-5 w-5 text-green-500" />
+                Transaksi COD Hari Ini (Selesai)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">No. Order</TableHead>
+                    <TableHead className="text-xs">Pelanggan</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {codSalesTable.length > 0 ? (
+                    codSalesTable.map(order => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium text-xs">{order.number}</TableCell>
+                        <TableCell className="text-xs">{order.name}</TableCell>
+                        <TableCell className="text-xs">
+                          {getOrderStatusBadge(order.status)}
+                        </TableCell>
+                        <TableCell className="text-right text-xs">
+                          Rp {Number(order.total)?.toLocaleString('id-ID') || 0}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-16 text-center text-xs">
+                        Tidak ada transaksi COD selesai hari ini.
                       </TableCell>
                     </TableRow>
                   )}
