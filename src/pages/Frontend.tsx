@@ -310,7 +310,9 @@ const Frontend = () => {
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-blue-600">{storeName}</h1>
+              <Link to="/dashboard">
+                <h1 className="text-2xl font-bold text-blue-600 hover:text-blue-800 transition-colors">{storeName}</h1>
+              </Link>
             </div>
 
             {/* Search Bar with Voice Search */}

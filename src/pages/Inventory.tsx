@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
@@ -21,6 +20,7 @@ const Inventory = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [adjustmentData, setAdjustmentData] = useState({
     adjustment_type: 'increase',
@@ -73,25 +73,36 @@ const Inventory = () => {
   // Stock adjustment mutation
   const adjustStockMutation = useMutation({
     mutationFn: async (data: any) => {
+      const currentStock = selectedProduct.current_stock;
+      const quantityChange = parseInt(data.quantity_change);
+      let newStock: number;
+      let quantityForRecord: number;
+      
+      if (data.adjustment_type === 'correction') {
+        newStock = quantityChange;
+        quantityForRecord = Math.abs(currentStock - newStock);
+      } else {
+        newStock = data.adjustment_type === 'increase' 
+          ? currentStock + quantityChange
+          : currentStock - quantityChange;
+        quantityForRecord = quantityChange;
+      }
+
       const { error } = await supabase
         .from('stock_adjustments')
         .insert({
           product_id: selectedProduct.id,
           user_id: user?.id,
           adjustment_type: data.adjustment_type,
-          quantity_change: parseInt(data.quantity_change),
-          previous_stock: selectedProduct.current_stock,
-          new_stock: selectedProduct.current_stock + (data.adjustment_type === 'increase' ? parseInt(data.quantity_change) : -parseInt(data.quantity_change)),
+          quantity_change: quantityForRecord,
+          previous_stock: currentStock,
+          new_stock: newStock,
           reason: data.reason
         });
 
       if (error) throw error;
 
       // Update product stock
-      const newStock = data.adjustment_type === 'increase' 
-        ? selectedProduct.current_stock + parseInt(data.quantity_change)
-        : selectedProduct.current_stock - parseInt(data.quantity_change);
-
       const { error: updateError } = await supabase
         .from('products')
         .update({ current_stock: newStock })
@@ -105,6 +116,7 @@ const Inventory = () => {
       queryClient.invalidateQueries({ queryKey: ['stock-adjustments'] });
       setSelectedProduct(null);
       setAdjustmentData({ adjustment_type: 'increase', quantity_change: 0, reason: '' });
+      setIsAdjustmentDialogOpen(false);
     },
     onError: (error: any) => {
       toast({ 
@@ -114,6 +126,12 @@ const Inventory = () => {
       });
     }
   });
+
+  const handleOpenAdjustDialog = (product: any) => {
+    setSelectedProduct(product);
+    setAdjustmentData({ adjustment_type: 'increase', quantity_change: 0, reason: '' });
+    setIsAdjustmentDialogOpen(true);
+  };
 
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
 
@@ -224,66 +242,13 @@ const Inventory = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Dialog>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => setSelectedProduct(product)}
-                            >
-                              Sesuaikan
-                            </Button>
-                            {selectedProduct?.id === product.id && (
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Sesuaikan Stok - {selectedProduct?.name}</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label>Stok Saat Ini: {selectedProduct?.current_stock} {selectedProduct?.units?.abbreviation}</Label>
-                                  </div>
-                                  <div>
-                                    <Label>Jenis Penyesuaian</Label>
-                                    <Select 
-                                      value={adjustmentData.adjustment_type} 
-                                      onValueChange={(value) => setAdjustmentData(prev => ({ ...prev, adjustment_type: value }))}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="increase">Tambah</SelectItem>
-                                        <SelectItem value="decrease">Kurangi</SelectItem>
-                                        <SelectItem value="correction">Koreksi</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label>Jumlah</Label>
-                                    <Input
-                                      type="number"
-                                      value={adjustmentData.quantity_change}
-                                      onChange={(e) => setAdjustmentData(prev => ({ ...prev, quantity_change: parseInt(e.target.value) || 0 }))}
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label>Alasan</Label>
-                                    <Textarea
-                                      value={adjustmentData.reason}
-                                      onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
-                                      placeholder="Alasan penyesuaian..."
-                                    />
-                                  </div>
-                                  <Button 
-                                    className="w-full" 
-                                    onClick={() => adjustStockMutation.mutate(adjustmentData)}
-                                    disabled={adjustStockMutation.isPending}
-                                  >
-                                    {adjustStockMutation.isPending ? 'Menyesuaikan...' : 'Sesuaikan Stok'}
-                                  </Button>
-                                </div>
-                              </DialogContent>
-                            )}
-                          </Dialog>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleOpenAdjustDialog(product)}
+                          >
+                            Sesuaikan
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -305,7 +270,7 @@ const Inventory = () => {
                       <TableHead>Tanggal</TableHead>
                       <TableHead>Produk</TableHead>
                       <TableHead>Jenis</TableHead>
-                      <TableHead>Jumlah</TableHead>
+                      <TableHead>Perubahan</TableHead>
                       <TableHead>Pengguna</TableHead>
                       <TableHead>Alasan</TableHead>
                     </TableRow>
@@ -316,13 +281,20 @@ const Inventory = () => {
                         <TableCell>{new Date(adjustment.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>{adjustment.products?.name}</TableCell>
                         <TableCell>
-                          <Badge variant={adjustment.adjustment_type === 'increase' ? 'default' : 'destructive'}>
+                          <Badge variant={
+                            adjustment.adjustment_type === 'increase' ? 'default' :
+                            adjustment.adjustment_type === 'decrease' ? 'destructive' : 'secondary'
+                          }>
                             {adjustment.adjustment_type === 'increase' ? 'Tambah' : 
                              adjustment.adjustment_type === 'decrease' ? 'Kurangi' : 'Koreksi'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {adjustment.adjustment_type === 'increase' ? '+' : '-'}{adjustment.quantity_change}
+                          {adjustment.adjustment_type === 'correction' ? (
+                            `${adjustment.previous_stock} → ${adjustment.new_stock}`
+                          ) : (
+                            `${adjustment.adjustment_type === 'increase' ? '+' : '-'}${adjustment.quantity_change}`
+                          )}
                         </TableCell>
                         <TableCell>{adjustment.profiles?.full_name}</TableCell>
                         <TableCell>{adjustment.reason}</TableCell>
@@ -387,6 +359,66 @@ const Inventory = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={isAdjustmentDialogOpen} onOpenChange={setIsAdjustmentDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Sesuaikan Stok - {selectedProduct?.name}</DialogTitle>
+              <DialogDescription>
+                Lakukan penyesuaian jumlah stok produk. Perubahan ini akan tercatat dalam riwayat.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedProduct && (
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label>Stok Saat Ini: {selectedProduct.current_stock} {selectedProduct.units?.abbreviation}</Label>
+                </div>
+                <div>
+                  <Label htmlFor="adjustment_type">Jenis Penyesuaian</Label>
+                  <Select
+                    name="adjustment_type"
+                    value={adjustmentData.adjustment_type} 
+                    onValueChange={(value) => setAdjustmentData(prev => ({ ...prev, adjustment_type: value }))}
+                  >
+                    <SelectTrigger id="adjustment_type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="increase">Tambah</SelectItem>
+                      <SelectItem value="decrease">Kurangi</SelectItem>
+                      <SelectItem value="correction">Koreksi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="quantity_change">Jumlah</Label>
+                  <Input
+                    id="quantity_change"
+                    type="number"
+                    value={adjustmentData.quantity_change}
+                    onChange={(e) => setAdjustmentData(prev => ({ ...prev, quantity_change: parseInt(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="reason">Alasan</Label>
+                  <Textarea
+                    id="reason"
+                    value={adjustmentData.reason}
+                    onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
+                    placeholder="Alasan penyesuaian..."
+                  />
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={() => adjustStockMutation.mutate(adjustmentData)}
+                  disabled={adjustStockMutation.isPending}
+                >
+                  {adjustStockMutation.isPending ? 'Menyesuaikan...' : 'Simpan Penyesuaian'}
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
