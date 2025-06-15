@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, DollarSign, Calendar, TrendingUp, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, Calendar, TrendingUp, Download, FileImage } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { exportToExcel } from '@/utils/excelExport';
@@ -22,13 +22,15 @@ const Expenses = () => {
   const [editExpense, setEditExpense] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const [expenseData, setExpenseData] = useState({
     title: '',
     amount: 0,
     category: 'operational' as const,
     expense_date: new Date().toISOString().split('T')[0],
-    description: ''
+    description: '',
+    receipt_url: ''
   });
 
   const { data: expenses, isLoading } = useQuery({
@@ -91,7 +93,7 @@ const Expenses = () => {
   }).reduce((total, expense) => total + Number(expense.amount), 0) || 0;
 
   const createExpense = useMutation({
-    mutationFn: async (data: typeof expenseData) => {
+    mutationFn: async (data: any) => {
       const { error } = await supabase
         .from('expenses')
         .insert([{
@@ -112,7 +114,7 @@ const Expenses = () => {
   });
 
   const updateExpense = useMutation({
-    mutationFn: async (data: typeof expenseData) => {
+    mutationFn: async (data: any) => {
       const { error } = await supabase
         .from('expenses')
         .update(data)
@@ -150,17 +152,59 @@ const Expenses = () => {
       amount: 0,
       category: 'operational',
       expense_date: new Date().toISOString().split('T')[0],
-      description: ''
+      description: '',
+      receipt_url: ''
     });
+    setReceiptFile(null);
     setEditExpense(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    let finalExpenseData: any = { ...expenseData };
+    delete finalExpenseData.id; // ensure id is not in the data for insert/update
+
+    if (receiptFile) {
+      if (!user) {
+        toast({ title: 'Error', description: 'Anda harus login untuk mengunggah file.', variant: 'destructive' });
+        return;
+      }
+
+      // Handle old file deletion if a new one is uploaded
+      if (editExpense && editExpense.receipt_url) {
+        try {
+          const oldFilePath = new URL(editExpense.receipt_url).pathname.split('/expense-receipts/')[1];
+          if (oldFilePath) {
+            await supabase.storage.from('expense-receipts').remove([oldFilePath]);
+          }
+        } catch(e) {
+          console.error("Could not parse old file URL to delete file", e);
+        }
+      }
+
+      const filePath = `${user.id}/${new Date().getTime()}-${receiptFile.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('expense-receipts')
+        .upload(filePath, receiptFile);
+
+      if (uploadError) {
+        toast({ title: 'Error Upload', description: uploadError.message, variant: 'destructive' });
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('expense-receipts')
+        .getPublicUrl(filePath);
+
+      finalExpenseData.receipt_url = urlData.publicUrl;
+    }
+
     if (editExpense) {
-      updateExpense.mutate(expenseData);
+      updateExpense.mutate(finalExpenseData);
     } else {
-      createExpense.mutate(expenseData);
+      createExpense.mutate(finalExpenseData);
     }
   };
 
@@ -171,8 +215,10 @@ const Expenses = () => {
       amount: expense.amount,
       category: expense.category,
       expense_date: expense.expense_date,
-      description: expense.description || ''
+      description: expense.description || '',
+      receipt_url: expense.receipt_url || ''
     });
+    setReceiptFile(null);
     setOpen(true);
   };
 
@@ -304,6 +350,24 @@ const Expenses = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="receipt" className="flex items-center gap-2">
+                      <FileImage className="h-4 w-4" />
+                      Bukti Pengeluaran (Opsional)
+                    </Label>
+                    <Input
+                      id="receipt"
+                      type="file"
+                      onChange={(e) => setReceiptFile(e.target.files ? e.target.files[0] : null)}
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                    />
+                     {expenseData.receipt_url && !receiptFile && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        File saat ini: <a href={expenseData.receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{expenseData.receipt_url.split('/').pop()}</a>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="description">Deskripsi</Label>
                     <Textarea
                       id="description"
@@ -408,6 +472,11 @@ const Expenses = () => {
                         <p className="font-medium">{expense.title}</p>
                         {expense.description && (
                           <p className="text-sm text-gray-500">{expense.description}</p>
+                        )}
+                        {expense.receipt_url && (
+                           <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                            Lihat Bukti
+                          </a>
                         )}
                       </div>
                     </TableCell>

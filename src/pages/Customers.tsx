@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users, Eye, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Eye, Download, Award, DollarSign } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
 import PaginationComponent from '@/components/PaginationComponent';
@@ -25,7 +26,7 @@ const Customers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  // Query for all customers for export
+  // Query for all customers for export and stats
   const { data: allCustomersData } = useQuery({
     queryKey: ['all-customers'],
     queryFn: async () => {
@@ -38,6 +39,10 @@ const Customers = () => {
       return data;
     }
   });
+
+  const totalCustomers = allCustomersData?.length || 0;
+  const totalPoints = allCustomersData?.reduce((sum, customer) => sum + (customer.total_points || 0), 0) || 0;
+  const totalSpent = allCustomersData?.reduce((sum, customer) => sum + (customer.total_spent || 0), 0) || 0;
 
   const { data: customersData, isLoading } = useQuery({
     queryKey: ['customers', searchTerm, currentPage],
@@ -220,6 +225,36 @@ const Customers = () => {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Customer</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalCustomers}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Poin</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalPoints.toLocaleString('id-ID')}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Belanja</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rp {totalSpent.toLocaleString('id-ID')}</div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex gap-4">
