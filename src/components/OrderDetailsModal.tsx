@@ -2,7 +2,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Package, User, MapPin, Phone, Calendar, CreditCard } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package, User, MapPin, Phone, Calendar, CreditCard, Printer } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface OrderDetailsModalProps {
   order: any;
@@ -53,13 +55,151 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
     }
   };
 
+  const handlePrintReceipt = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: 'Error',
+        description: 'Gagal membuka jendela print',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const receiptContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Kwitansi - ${order.order_number}</title>
+        <style>
+          @media print {
+            @page { margin: 0; size: 80mm auto; }
+            body { margin: 0; }
+          }
+          body {
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 5mm;
+            width: 70mm;
+          }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .separator { border-bottom: 1px dashed #000; margin: 5px 0; }
+          .item { display: flex; justify-content: space-between; margin: 2px 0; }
+          .total { font-weight: bold; font-size: 14px; }
+          .header { margin-bottom: 10px; }
+          .footer { margin-top: 10px; text-align: center; font-size: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header center">
+          <div class="bold">TOKO RETAIL</div>
+          <div>Jl. Contoh No. 123</div>
+          <div>Telp: (021) 1234-5678</div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        <div>
+          <div>No. Pesanan: ${order.order_number}</div>
+          <div>Tanggal: ${new Date(order.order_date).toLocaleDateString('id-ID')}</div>
+          <div>Pelanggan: ${order.customer_name}</div>
+          ${order.customer_phone ? `<div>Telepon: ${order.customer_phone}</div>` : ''}
+          <div>Status: ${getStatusBadge(order.status).props.children}</div>
+          <div>Pembayaran: ${order.payment_method.toUpperCase()}</div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        <div class="bold">ITEM PESANAN:</div>
+        ${order.order_items?.map((item: any) => `
+          <div>
+            <div class="bold">${item.products?.name}</div>
+            <div class="item">
+              <span>${item.quantity} x Rp ${Number(item.unit_price).toLocaleString('id-ID')}</span>
+              <span>Rp ${Number(item.total_price).toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+        `).join('') || ''}
+        
+        <div class="separator"></div>
+        
+        <div class="item">
+          <span>Subtotal:</span>
+          <span>Rp ${(Number(order.total_amount) - Number(order.delivery_fee)).toLocaleString('id-ID')}</span>
+        </div>
+        <div class="item">
+          <span>Ongkir:</span>
+          <span>Rp ${Number(order.delivery_fee).toLocaleString('id-ID')}</span>
+        </div>
+        <div class="separator"></div>
+        <div class="item total">
+          <span>TOTAL:</span>
+          <span>Rp ${Number(order.total_amount).toLocaleString('id-ID')}</span>
+        </div>
+        
+        ${order.customer_address ? `
+          <div class="separator"></div>
+          <div>
+            <div class="bold">ALAMAT PENGIRIMAN:</div>
+            <div>${order.customer_address}</div>
+          </div>
+        ` : ''}
+        
+        ${order.notes ? `
+          <div class="separator"></div>
+          <div>
+            <div class="bold">CATATAN:</div>
+            <div>${order.notes}</div>
+          </div>
+        ` : ''}
+        
+        <div class="footer">
+          <div>Terima kasih atas pesanan Anda!</div>
+          <div>Dicetak: ${new Date().toLocaleString('id-ID')}</div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(receiptContent);
+    printWindow.document.close();
+    
+    toast({
+      title: 'Berhasil',
+      description: 'Kwitansi siap dicetak'
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Detail Pesanan {order.order_number}
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Detail Pesanan {order.order_number}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePrintReceipt}
+              className="flex items-center gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Print Kwitansi
+            </Button>
           </DialogTitle>
         </DialogHeader>
 
