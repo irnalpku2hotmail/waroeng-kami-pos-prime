@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Package, Star, Eye, ChevronRight } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import FrontendCart from '@/components/FrontendCart';
+
+interface FrontendSettings {
+  banner_url: string;
+  welcome_message: string;
+  featured_categories_limit: number;
+}
 
 const Frontend = () => {
   const { addItem, items } = useCart();
@@ -28,9 +33,9 @@ const Frontend = () => {
           banner_url: '',
           welcome_message: 'Selamat datang di toko kami',
           featured_categories_limit: 5
-        };
+        } as FrontendSettings;
       }
-      return data.value;
+      return data.value as FrontendSettings;
     }
   });
 

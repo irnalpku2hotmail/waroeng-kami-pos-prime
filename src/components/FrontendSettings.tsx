@@ -9,6 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Settings, Upload, Image } from 'lucide-react';
 
+interface FrontendSettings {
+  banner_url: string;
+  welcome_message: string;
+  featured_categories_limit: number;
+}
+
 const FrontendSettings = () => {
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
@@ -28,15 +34,15 @@ const FrontendSettings = () => {
           banner_url: '',
           welcome_message: 'Selamat datang di toko kami',
           featured_categories_limit: 5
-        };
+        } as FrontendSettings;
       }
-      return data.value;
+      return data.value as FrontendSettings;
     }
   });
 
   // Update settings mutation
   const updateSettings = useMutation({
-    mutationFn: async (settingsData: any) => {
+    mutationFn: async (settingsData: FrontendSettings) => {
       const { error } = await supabase
         .from('settings')
         .upsert({
@@ -84,8 +90,8 @@ const FrontendSettings = () => {
       return data.publicUrl;
     },
     onSuccess: (bannerUrl) => {
-      const newSettings = {
-        ...settings,
+      const newSettings: FrontendSettings = {
+        ...(settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 }),
         banner_url: bannerUrl
       };
       updateSettings.mutate(newSettings);
@@ -117,8 +123,8 @@ const FrontendSettings = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const newSettings = {
-      ...settings,
+    const newSettings: FrontendSettings = {
+      ...(settings || { banner_url: '', welcome_message: 'Selamat datang di toko kami', featured_categories_limit: 5 }),
       welcome_message: formData.get('welcome_message') as string,
       featured_categories_limit: parseInt(formData.get('featured_categories_limit') as string) || 5
     };

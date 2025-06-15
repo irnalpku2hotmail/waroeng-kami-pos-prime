@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
+
+interface CODSettings {
+  enabled: boolean;
+  delivery_fee: number;
+  min_order: number;
+}
 
 const FrontendCart = () => {
   const { user } = useAuth();
@@ -42,9 +48,9 @@ const FrontendCart = () => {
         .eq('key', 'cod_settings')
         .single();
       if (error) {
-        return { enabled: true, delivery_fee: 10000, min_order: 50000 };
+        return { enabled: true, delivery_fee: 10000, min_order: 50000 } as CODSettings;
       }
-      return data.value;
+      return data.value as CODSettings;
     }
   });
 
