@@ -35,7 +35,8 @@ export const useProductLikes = () => {
         return;
       }
 
-      const likes = new Set(data?.map((like: any) => like.product_id as string) || []);
+      const productIds: string[] = data?.map((like: any) => like.product_id as string) || [];
+      const likes = new Set<string>(productIds);
       setLikedProducts(likes);
     } catch (error) {
       console.error('Error fetching user likes:', error);
