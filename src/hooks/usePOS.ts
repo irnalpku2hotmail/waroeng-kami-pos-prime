@@ -5,311 +5,325 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-const ITEMS_PER_PAGE = 8;
-
 export interface CartItem {
   id: string;
   product_id: string;
   name: string;
+  image_url?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
-  image_url?: string;
+  current_stock: number;
+  price_variant?: any;
   loyalty_points: number;
-  price_variant?: {
-    id: string;
-    name: string;
-    price: number;
-    minimum_quantity: number;
-  };
 }
 
-export const getImageUrl = (imageUrl?: string) => {
-  return imageUrl || null;
+export const getImageUrl = (imageUrl: string | null | undefined) => {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  
+  const { data } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(imageUrl);
+  
+  return data.publicUrl;
 };
 
 export const usePOS = () => {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [customerId, setCustomerId] = useState<string>('');
-  const [customerName, setCustomerName] = useState('');
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [pointsUsed, setPointsUsed] = useState(0);
-  const [paymentAmount, setPaymentAmount] = useState(0);
-  const [isListening, setIsListening] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentType, setPaymentType] = useState<'cash' | 'credit' | 'transfer'>('cash');
   const [transferReference, setTransferReference] = useState('');
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
-  const { data: productsData, isLoading } = useQuery({
-    queryKey: ['pos-products', searchTerm, currentPage],
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
     queryFn: async () => {
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
       
+      const settingsObj: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsObj[setting.key] = setting.value;
+      });
+      return settingsObj;
+    }
+  });
+
+  // Fetch products with stock and pricing info
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['pos-products', searchTerm],
+    queryFn: async () => {
       let query = supabase
         .from('products')
-        .select(`
-          *,
-          price_variants(*)
-        `, { count: 'exact' })
-        .eq('is_active', true)
-        .gt('current_stock', 0);
+        .select(`*, categories(name), units(name, abbreviation), price_variants(*)`)
+        .eq('is_active', true);
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
       }
       
-      const { data, error, count } = await query
-        .order('name')
-        .range(from, to);
-        
-      if (error) throw error;
-      return { data, count };
-    }
-  });
-
-  const products = productsData?.data || [];
-  const productsCount = productsData?.count || 0;
-  const totalPages = Math.ceil(productsCount / ITEMS_PER_PAGE);
-
-  const { data: customers } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*');
+      const { data, error } = await query.order('name');
       if (error) throw error;
       return data;
     }
   });
 
-  const processTransaction = useMutation({
-    mutationFn: async () => {
-      if (cart.length === 0) {
-        throw new Error('Keranjang belanja kosong');
-      }
-
-      const transactionNumber = `POS-${new Date().getTime()}`;
-      const transactionData = {
-        transaction_number: transactionNumber,
-        customer_id: selectedCustomer?.id || null,
-        total_amount: getTotalAmount(),
-        discount_amount: discountAmount,
-        points_used: pointsUsed,
-        payment_amount: paymentAmount,
-        cashier_id: user?.id,
-        payment_type: paymentType,
-        change_amount: getChangeAmount(),
-        points_earned: getTotalPointsEarned(),
-      };
-
-      const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
-        .insert([transactionData])
-        .select()
-        .single();
-
-      if (transactionError) {
-        throw transactionError;
-      }
-
-      const transactionId = transaction.id;
-
-      const cartItemsData = cart.map(item => ({
-        transaction_id: transactionId,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-      }));
-
-      const { error: cartItemsError } = await supabase
-        .from('transaction_items')
-        .insert(cartItemsData);
-
-      if (cartItemsError) {
-        throw cartItemsError;
-      }
-
-      // Update product stocks
-      for (const item of cart) {
-        const product = products.find(p => p.id === item.product_id);
-        if (product) {
-          const { error: updateStockError } = await supabase
-            .from('products')
-            .update({ current_stock: product.current_stock - item.quantity })
-            .eq('id', item.product_id);
-
-          if (updateStockError) {
-            throw updateStockError;
-          }
-        }
-      }
-
-      return transactionNumber;
-    },
-    onSuccess: (transactionNumber) => {
-      queryClient.invalidateQueries({ queryKey: ['pos-products'] });
-      clearCart();
-      toast({
-        title: 'Transaksi Berhasil',
-        description: `Transaksi dengan nomor ${transactionNumber} berhasil diproses`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Transaksi Gagal',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+  // Fetch customers
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('customers').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
   });
 
-  const addToCart = (product: any) => {
-    const existingItem = cart.find(item => item.product_id === product.id);
-    
-    if (existingItem) {
-      if (existingItem.quantity >= product.current_stock) {
-        toast({
-          title: 'Stok tidak mencukupi',
-          description: `Stok tersedia: ${product.current_stock}`,
-          variant: 'destructive'
-        });
-        return;
-      }
+  const getProductPrice = (product: any, quantity: number) => {
+    if (product.price_variants?.length > 0) {
+      const applicableVariants = product.price_variants
+        .filter((pv: any) => pv.is_active && quantity >= pv.minimum_quantity)
+        .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity);
       
-      setCart(cart.map(item =>
-        item.product_id === product.id
-          ? { ...item, quantity: item.quantity + 1, total_price: (item.quantity + 1) * item.unit_price }
+      if (applicableVariants.length > 0) {
+        return { price: applicableVariants[0].price, variant: applicableVariants[0] };
+      }
+    }
+    return { price: product.selling_price, variant: null };
+  };
+
+  const addToCart = (product: any, quantity: number = 1) => {
+    if (product.current_stock < quantity) {
+      toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${product.current_stock}`, variant: 'destructive' });
+      return;
+    }
+
+    const existingItem = cart.find(item => item.product_id === product.id);
+    const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
+    
+    if (product.current_stock < newQuantity) {
+      toast({ title: 'Stok Tidak Mencukupi', description: `Maksimal yang bisa ditambahkan: ${product.current_stock - (existingItem?.quantity || 0)}`, variant: 'destructive' });
+      return;
+    }
+
+    const priceInfo = getProductPrice(product, newQuantity);
+
+    if (existingItem) {
+      setCart(cart.map(item => 
+        item.product_id === product.id 
+          ? { ...item, quantity: newQuantity, unit_price: priceInfo.price, total_price: newQuantity * priceInfo.price, price_variant: priceInfo.variant, loyalty_points: product.loyalty_points || 1 }
           : item
       ));
     } else {
-      const effectivePrice = getEffectivePrice(product, 1);
-      setCart([...cart, {
-        id: product.id,
+      const cartItem: CartItem = {
+        id: Date.now().toString(),
         product_id: product.id,
         name: product.name,
-        quantity: 1,
-        unit_price: effectivePrice,
-        total_price: effectivePrice,
         image_url: product.image_url,
-        loyalty_points: product.loyalty_points,
-      }]);
+        quantity: quantity,
+        unit_price: priceInfo.price,
+        total_price: quantity * priceInfo.price,
+        current_stock: product.current_stock,
+        price_variant: priceInfo.variant,
+        loyalty_points: product.loyalty_points || 1
+      };
+      setCart([...cart, cartItem]);
     }
+
+    toast({ title: 'Produk Ditambahkan', description: `${product.name} ditambahkan ke keranjang` });
+  };
+
+  const updateCartQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+
+    const cartItem = cart.find(item => item.product_id === productId);
+    if (!cartItem) return;
+
+    if (cartItem.current_stock < newQuantity) {
+      toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${cartItem.current_stock}`, variant: 'destructive' });
+      return;
+    }
+
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const priceInfo = getProductPrice(product, newQuantity);
+
+    setCart(cart.map(item => 
+      item.product_id === productId 
+        ? { ...item, quantity: newQuantity, unit_price: priceInfo.price, total_price: newQuantity * priceInfo.price, price_variant: priceInfo.variant }
+        : item
+    ));
   };
 
   const removeFromCart = (productId: string) => {
     setCart(cart.filter(item => item.product_id !== productId));
   };
 
-  const updateCartQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
-      return;
-    }
+  const getTotalAmount = () => cart.reduce((total, item) => total + item.total_price, 0);
+  const getTotalPointsEarned = () => cart.reduce((total, item) => total + (item.loyalty_points * item.quantity), 0);
+  const getChangeAmount = () => Math.max(0, paymentAmount - getTotalAmount());
 
-    const product = products.find(p => p.id === productId);
-    if (product && quantity > product.current_stock) {
-      toast({
-        title: 'Stok tidak mencukupi',
-        description: `Stok tersedia: ${product.current_stock}`,
-        variant: 'destructive'
-      });
-      return;
-    }
+  const printReceipt = async (transaction: any) => {
+    try {
+      const storeName = settings?.store_name?.name || 'SmartPOS';
+      const storePhone = settings?.store_phone?.phone || '';
+      const storeAddress = settings?.store_address?.address || '';
+      const receiptSettings = settings?.receipt_settings || {};
+      const receiptHeader = receiptSettings.header_text || 'Terima kasih telah berbelanja';
+      const receiptFooter = receiptSettings.footer_text || 'Barang yang sudah dibeli tidak dapat dikembalikan';
+      const showQrCode = receiptSettings.show_qr_code !== false;
 
-    setCart(cart.map(item =>
-      item.product_id === productId
-        ? { ...item, quantity, total_price: quantity * item.unit_price }
-        : item
-    ));
+      const qrCodeUrl = showQrCode ? `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${transaction.transaction_number}` : '';
+
+      const receiptContent = `
+========================================
+           ${storeName}
+========================================
+${storePhone ? `Tel: ${storePhone}` : ''}
+${storeAddress ? `${storeAddress}` : ''}
+========================================
+${receiptHeader}
+========================================
+Transaction: ${transaction.transaction_number}
+Date: ${new Date().toLocaleString('id-ID')}
+Cashier: ${user?.email}
+${selectedCustomer ? `Customer: ${selectedCustomer.name}` : ''}
+----------------------------------------
+${cart.map(item => `
+${item.name}
+${item.quantity} x Rp ${item.unit_price.toLocaleString('id-ID')}
+                    Rp ${item.total_price.toLocaleString('id-ID')}
+`).join('')}
+----------------------------------------
+Total: Rp ${getTotalAmount().toLocaleString('id-ID')}
+Payment: ${paymentType === 'cash' ? 'Cash' : paymentType === 'credit' ? 'Credit' : 'Transfer'}
+${paymentType === 'cash' ? `Paid: Rp ${paymentAmount.toLocaleString('id-ID')}` : ''}
+${paymentType === 'cash' ? `Change: Rp ${getChangeAmount().toLocaleString('id-ID')}` : ''}
+${paymentType === 'transfer' ? `Ref: ${transferReference}` : ''}
+${selectedCustomer ? `Points Earned: ${getTotalPointsEarned()}` : ''}
+${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}` : ''}
+========================================
+${receiptFooter}
+========================================
+      `;
+
+      if (window.print) {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`<html><head><title>Receipt</title><style>body { font-family: monospace; font-size: 12px; margin: 0; padding: 10px; text-align: center; } pre { white-space: pre-wrap; margin: 0; } .qr-code { margin: 10px 0; }</style></head><body><pre>${receiptContent}</pre>${showQrCode ? `<div class="qr-code"><img src="${qrCodeUrl}" alt="QR Code" /></div>` : ''}<script>window.onload = function() { window.print(); window.close(); }</script></body></html>`);
+          printWindow.document.close();
+        }
+      }
+    } catch (error) {
+      console.error('Printing error:', error);
+      toast({ title: 'Printing Error', description: 'Unable to print receipt', variant: 'destructive' });
+    }
   };
 
-  const getEffectivePrice = (product: any, quantity: number) => {
-    if (product.price_variants && product.price_variants.length > 0) {
-      const applicableVariant = product.price_variants
-        .filter((variant: any) => quantity >= variant.minimum_quantity && variant.is_active)
-        .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity)[0];
+  const processTransaction = useMutation({
+    mutationFn: async () => {
+      const totalAmount = getTotalAmount();
       
-      return applicableVariant ? applicableVariant.price : product.selling_price;
+      if (paymentType === 'cash' && paymentAmount < totalAmount) throw new Error('Pembayaran tidak mencukupi');
+      if (paymentType === 'transfer' && !transferReference) throw new Error('Nomor referensi transfer harus diisi');
+
+      const transactionNumber = `TRX${Date.now()}`;
+      const pointsEarned = selectedCustomer ? getTotalPointsEarned() : 0;
+
+      const { data: transaction, error: transactionError } = await supabase.from('transactions').insert({
+        transaction_number: transactionNumber,
+        total_amount: totalAmount,
+        cashier_id: user?.id,
+        customer_id: selectedCustomer?.id,
+        payment_type: paymentType,
+        payment_amount: paymentType === 'cash' ? paymentAmount : totalAmount,
+        change_amount: paymentType === 'cash' ? getChangeAmount() : 0,
+        is_credit: paymentType === 'credit',
+        points_earned: pointsEarned,
+        due_date: paymentType === 'credit' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
+        notes: paymentType === 'transfer' ? `Transfer Ref: ${transferReference}` : null
+      }).select().single();
+
+      if (transactionError) throw transactionError;
+
+      const transactionItems = cart.map(item => ({ transaction_id: transaction.id, product_id: item.product_id, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price }));
+      const { error: itemsError } = await supabase.from('transaction_items').insert(transactionItems);
+      if (itemsError) throw itemsError;
+
+      if (selectedCustomer && pointsEarned > 0) {
+        const { error: customerError } = await supabase.from('customers').update({ total_points: selectedCustomer.total_points + pointsEarned, total_spent: (selectedCustomer.total_spent || 0) + totalAmount }).eq('id', selectedCustomer.id);
+        if (customerError) throw customerError;
+        await supabase.from('point_transactions').insert({ customer_id: selectedCustomer.id, transaction_id: transaction.id, points_change: pointsEarned, description: `Pembelian ${transactionNumber}` });
+      }
+      return transaction;
+    },
+    onSuccess: (transaction) => {
+      toast({ title: 'Transaksi Berhasil', description: `Transaksi ${transaction.transaction_number} berhasil diproses` });
+      printReceipt(transaction);
+      setCart([]);
+      setSelectedCustomer(null);
+      setPaymentAmount(0);
+      setPaymentType('cash');
+      setTransferReference('');
+      queryClient.invalidateQueries({ queryKey: ['pos-products'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
-    return product.selling_price;
-  };
-
-  const getTotalAmount = () => {
-    const subtotal = cart.reduce((sum, item) => sum + item.total_price, 0);
-    return Math.max(0, subtotal - discountAmount);
-  };
-
-  const getChangeAmount = () => {
-    if (paymentType !== 'cash') return 0;
-    return Math.max(0, paymentAmount - getTotalAmount());
-  };
-
-  const getTotalPointsEarned = () => {
-    if (!selectedCustomer) return 0;
-    return cart.reduce((sum, item) => sum + (item.loyalty_points * item.quantity), 0);
-  };
-
-  const clearCart = () => {
-    setCart([]);
-    setSelectedCustomer(null);
-    setCustomerId('');
-    setCustomerName('');
-    setDiscountAmount(0);
-    setPointsUsed(0);
-    setPaymentAmount(0);
-    setPaymentType('cash');
-    setTransferReference('');
-  };
+  });
 
   const handleVoiceSearch = (text: string) => {
-    setSearchTerm(text);
-    setCurrentPage(1);
+    const foundProduct = products.find(p => p.name.toLowerCase().includes(text.toLowerCase()) || (p.barcode && p.barcode.includes(text)));
+    if (foundProduct) {
+      addToCart(foundProduct, 1);
+      toast({ title: 'Produk Ditemukan', description: `${foundProduct.name} ditambahkan ke keranjang melalui voice search` });
+    } else {
+      setSearchTerm(text);
+      toast({ title: 'Produk Tidak Ditemukan', description: `Mencari produk: ${text}` });
+    }
   };
 
+  useEffect(() => {
+    if (paymentType !== 'transfer') {
+      setTransferReference('');
+    }
+  }, [paymentType]);
+
   return {
-    products,
-    isLoading,
-    cart,
+    user,
     searchTerm,
     setSearchTerm,
-    currentPage,
-    totalPages,
-    setCurrentPage: (page: number) => setCurrentPage(page),
-    itemsPerPage: ITEMS_PER_PAGE,
-    totalItems: productsCount,
-    customers: customers || [],
+    cart,
+    setCart,
     selectedCustomer,
     setSelectedCustomer,
-    customerId,
-    setCustomerId,
-    customerName,
-    setCustomerName,
-    discountAmount,
-    setDiscountAmount,
-    pointsUsed,
-    setPointsUsed,
     paymentAmount,
     setPaymentAmount,
     paymentType,
     setPaymentType,
     transferReference,
     setTransferReference,
-    getTotalAmount,
-    getChangeAmount,
-    getTotalPointsEarned,
+    settings,
+    products,
+    isLoading,
+    customers,
     addToCart,
-    removeFromCart,
     updateCartQuantity,
-    clearCart,
+    removeFromCart,
+    getTotalAmount,
+    getTotalPointsEarned,
+    getChangeAmount,
     processTransaction,
     handleVoiceSearch,
-    isListening,
-    getEffectivePrice
   };
 };
+

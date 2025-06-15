@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,14 +10,27 @@ import {
   TrendingDown,
   AlertTriangle,
   History,
-  Wifi,
-  Calendar,
-  Clock
+  Wifi
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { usePresence } from '@/contexts/PresenceContext';
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+// Fetching helper
+const getDateRange = (type: string) => {
+  const today = new Date();
+  if (type === "month") {
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return {
+      from: firstDay.toISOString().split('T')[0],
+      to: lastDay.toISOString().split('T')[0]
+    };
+  }
+  return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+};
 
 const Dashboard = () => {
   const { onlineUsers } = usePresence();
@@ -91,43 +103,8 @@ const Dashboard = () => {
     }
   });
 
-  // Produk kadaluarsa (dari purchase_items)
-  const { data: expiredProducts } = useQuery({
-    queryKey: ['expired-products'],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('purchase_items')
-        .select('*')
-        .lte('expiration_date', today)
-        .not('expiration_date', 'is', null);
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Pesanan masuk hari ini
-  const { data: todayOrders } = useQuery({
-    queryKey: ['today-orders'],
-    queryFn: async () => {
-      const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id')
-        .gte('created_at', todayStart)
-        .lt('created_at', todayEnd);
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // --- POS: Transaksi POS hari ini (fixed date filtering) ---
-  const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-  const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+  // --- POS: Transaksi POS hari ini ---
+  const today = new Date().toISOString().split('T')[0];
 
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales'],
@@ -135,8 +112,8 @@ const Dashboard = () => {
       const { data, error } = await supabase
         .from('transactions')
         .select('id, transaction_number, total_amount, customer_id, created_at')
-        .gte('created_at', todayStart)
-        .lt('created_at', todayEnd);
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
@@ -148,10 +125,10 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status, order_date')
+        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status')
         .eq('status', 'delivered')
-        .gte('order_date', todayStart)
-        .lt('order_date', todayEnd);
+        .gte('order_date', today + 'T00:00:00')
+        .lte('order_date', today + 'T23:59:59');
       if (error) throw error;
       return data;
     }
@@ -214,15 +191,28 @@ const Dashboard = () => {
   const totalCustomers = customers?.length || 0;
   const monthlyExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
   const pendingOrders = pending?.length || 0;
-  const expiredProductsCount = expiredProducts?.length || 0;
-  const todayOrdersCount = todayOrders?.length || 0;
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'delivered':
+        return <Badge className="bg-green-100 text-green-800">Delivered</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>;
+      case 'processing':
+         return <Badge className="bg-blue-100 text-blue-800">Processing</Badge>;
+      case 'shipped':
+        return <Badge className="bg-yellow-100 text-yellow-800">Shipped</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
 
   return (
     <Layout>
       <div className="space-y-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-blue-800 mb-2">Dashboard</h1>
-        
-        {/* Main Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="px-3 py-2">
             <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
@@ -234,43 +224,6 @@ const Dashboard = () => {
               <p className="text-[10px] text-muted-foreground">{lowStockProducts} produk stok rendah</p>
             </CardContent>
           </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">User Online</CardTitle>
-              <Wifi className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-green-600">{onlineUsers}</div>
-              <p className="text-[10px] text-muted-foreground">User aktif sekarang</p>
-            </CardContent>
-          </Card>
-
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Stok Menipis</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-orange-600">{lowStockProducts}</div>
-              <p className="text-[10px] text-muted-foreground">Produk di bawah 10 unit</p>
-            </CardContent>
-          </Card>
-
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Produk Kadaluarsa</CardTitle>
-              <Clock className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-red-600">{expiredProductsCount}</div>
-              <p className="text-[10px] text-muted-foreground">Sudah melewati tanggal</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Secondary Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="px-3 py-2">
             <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
               <CardTitle className="text-xs font-semibold">Total Pelanggan</CardTitle>
@@ -281,18 +234,6 @@ const Dashboard = () => {
               <p className="text-[10px] text-muted-foreground">Pelanggan terdaftar</p>
             </CardContent>
           </Card>
-
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Pesanan Hari Ini</CardTitle>
-              <Calendar className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-blue-600">{todayOrdersCount}</div>
-              <p className="text-[10px] text-muted-foreground">Pesanan masuk hari ini</p>
-            </CardContent>
-          </Card>
-
           <Card className="px-3 py-2">
             <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
               <CardTitle className="text-xs font-semibold">Penjualan Hari Ini</CardTitle>
@@ -305,7 +246,6 @@ const Dashboard = () => {
               <p className="text-[10px] text-muted-foreground">Dari {todayTransactions} transaksi</p>
             </CardContent>
           </Card>
-
           <Card className="px-3 py-2">
             <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
               <CardTitle className="text-xs font-semibold">Pendapatan COD Hari Ini</CardTitle>
