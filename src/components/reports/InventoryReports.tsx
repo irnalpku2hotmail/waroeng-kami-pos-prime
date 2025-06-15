@@ -10,7 +10,8 @@ import { addDays, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } fro
 
 const InventoryReports = () => {
   const [bestFilter, setBestFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly' | 'range'>('monthly');
-  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  // 1. Change initial value from null to both fields present
+  const [range, setRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
   // Low stock products
   const { data: lowStockProducts, isLoading: isLoadingLowStock } = useQuery({
@@ -143,13 +144,27 @@ const InventoryReports = () => {
               </Select>
               {bestFilter === "range" && (
                 <>
-                  <input type="date" className="border p-1 rounded text-xs"
-                    value={range?.from || ''}
-                    onChange={e => setRange(r => ({ ...(r || {}), from: e.target.value }))} />
+                  <input
+                    type="date"
+                    className="border p-1 rounded text-xs"
+                    value={range.from}
+                    // 2. Update handler: always supply both from and to
+                    onChange={e => setRange(r => ({
+                      from: e.target.value,
+                      to: r.to
+                    }))}
+                  />
                   <span>s/d</span>
-                  <input type="date" className="border p-1 rounded text-xs"
-                    value={range?.to || ''}
-                    onChange={e => setRange(r => ({ ...(r || {}), to: e.target.value }))} />
+                  <input
+                    type="date"
+                    className="border p-1 rounded text-xs"
+                    value={range.to}
+                    // 2. Update handler: always supply both from and to
+                    onChange={e => setRange(r => ({
+                      from: r.from,
+                      to: e.target.value
+                    }))}
+                  />
                 </>
               )}
             </div>
