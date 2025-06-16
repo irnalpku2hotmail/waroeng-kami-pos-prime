@@ -89,7 +89,7 @@ const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
       <td>
         <Input
           type="number"
-          value={item.quantity}
+          value={item.quantity.toString()}
           onChange={(e) => onUpdate(index, "quantity", Number(e.target.value))}
           min="1"
         />
@@ -118,7 +118,7 @@ const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
       <td>
         <Input
           type="number"
-          value={item.unit_cost}
+          value={item.unit_cost.toString()}
           onChange={(e) => onUpdate(index, "unit_cost", Number(e.target.value))}
           min="0"
         />
@@ -127,14 +127,14 @@ const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
         Rp {item.total_cost?.toLocaleString("id-ID") || 0}
       </td>
       <td>
-        <span title={item.conversion_factor}>
+        <span title={item.conversion_factor.toString()}>
           x{Number(item.conversion_factor).toLocaleString("id-ID", { maximumFractionDigits: 6 })}
         </span>
       </td>
       <td>
         <Input
           type="date"
-          value={item.expiration_date}
+          value={item.expiration_date || ""}
           onChange={(e) => onUpdate(index, "expiration_date", e.target.value)}
         />
       </td>
