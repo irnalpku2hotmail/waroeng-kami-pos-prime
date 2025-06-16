@@ -102,6 +102,11 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   // product conversions/state moved to custom hook
   const { productConversions, fetchConversions, getConversionFactor } = useProductConversions();
 
+  // Helper function to calculate total cost with conversion factor
+  const calculateTotalCost = (quantity: number, unitCost: number, conversionFactor: number) => {
+    return quantity * unitCost * conversionFactor;
+  };
+
   // Ketika user memilih unit pembelian di row item
   const handlePurchaseUnitChange = async (index: number, unitId: string) => {
     const newItems = [...items];
@@ -110,10 +115,17 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       await fetchConversions(productId);
       const selectedProduct = products?.find((p) => p.id === productId);
       const baseUnitId = selectedProduct?.unit_id;
+      
       const applyConversion = () => {
         const factor = (baseUnitId) ? getConversionFactor(productId, unitId, baseUnitId) : 1;
         newItems[index].purchase_unit_id = unitId;
         newItems[index].conversion_factor = factor;
+        // Recalculate total_cost with conversion factor
+        newItems[index].total_cost = calculateTotalCost(
+          newItems[index].quantity,
+          newItems[index].unit_cost,
+          factor
+        );
         setItems(newItems);
       };
 
@@ -125,6 +137,12 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     } else {
       newItems[index].purchase_unit_id = unitId;
       newItems[index].conversion_factor = 1;
+      // Recalculate total_cost
+      newItems[index].total_cost = calculateTotalCost(
+        newItems[index].quantity,
+        newItems[index].unit_cost,
+        1
+      );
       setItems(newItems);
     }
   };
@@ -135,14 +153,21 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     newItems[rowIdx].product_id = product.id;
     await fetchConversions(product.id);
     const baseUnitId = product.unit_id || "";
+    
     const applyConversion = () => {
       newItems[rowIdx].purchase_unit_id = baseUnitId;
       newItems[rowIdx].conversion_factor = 1;
       newItems[rowIdx].unit_cost = product.base_price || 0;
-      newItems[rowIdx].total_cost = newItems[rowIdx].quantity * newItems[rowIdx].unit_cost;
+      // Calculate total_cost with conversion factor
+      newItems[rowIdx].total_cost = calculateTotalCost(
+        newItems[rowIdx].quantity,
+        newItems[rowIdx].unit_cost,
+        1
+      );
       setItems(newItems);
       setSearchModalOpenIdx(null);
     };
+    
     if (productConversions[product.id]) {
       applyConversion();
     } else {
@@ -156,12 +181,21 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     if (field !== "product_id") {
       newItems[index] = { ...newItems[index], [field]: value };
     }
+    
     if (field === 'purchase_unit_id') {
       await handlePurchaseUnitChange(index, value);
+      return; // handlePurchaseUnitChange already updates the items
     }
+    
     if (field === 'quantity' || field === 'unit_cost') {
-      newItems[index].total_cost = newItems[index].quantity * newItems[index].unit_cost;
+      // Recalculate total_cost with conversion factor
+      newItems[index].total_cost = calculateTotalCost(
+        field === 'quantity' ? value : newItems[index].quantity,
+        field === 'unit_cost' ? value : newItems[index].unit_cost,
+        newItems[index].conversion_factor || 1
+      );
     }
+    
     setItems(newItems);
   };
 
