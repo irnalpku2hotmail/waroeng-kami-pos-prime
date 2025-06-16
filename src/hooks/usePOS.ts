@@ -36,7 +36,6 @@ export const usePOS = () => {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentType, setPaymentType] = useState<'cash' | 'credit' | 'transfer'>('cash');
   const [transferReference, setTransferReference] = useState('');
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch store settings
@@ -416,8 +415,6 @@ ${receiptFooter}
     setPaymentType,
     transferReference,
     setTransferReference,
-    isVoiceActive,
-    setIsVoiceActive,
     settings,
     products,
     isLoading,

@@ -8,17 +8,9 @@ interface ProductSearchProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
   handleVoiceSearch: (text: string) => void;
-  isVoiceActive: boolean;
-  setIsVoiceActive: (active: boolean) => void;
 }
 
-const ProductSearch: React.FC<ProductSearchProps> = ({ 
-  searchTerm, 
-  setSearchTerm, 
-  handleVoiceSearch,
-  isVoiceActive,
-  setIsVoiceActive
-}) => {
+const ProductSearch: React.FC<ProductSearchProps> = ({ searchTerm, setSearchTerm, handleVoiceSearch }) => {
   return (
     <div className="flex items-center gap-4">
       <div className="relative flex-1">
@@ -30,11 +22,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
           className="pl-10"
         />
       </div>
-      <VoiceSearch 
-        onVoiceResult={handleVoiceSearch} 
-        isActive={isVoiceActive}
-        onActiveChange={setIsVoiceActive}
-      />
+      <VoiceSearch onVoiceResult={handleVoiceSearch} />
     </div>
   );
 };

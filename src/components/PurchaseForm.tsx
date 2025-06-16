@@ -104,9 +104,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
 
   // Helper function to calculate total cost with conversion factor
   const calculateTotalCost = (quantity: number, unitCost: number, conversionFactor: number) => {
-    // Fixed: Don't apply conversion factor to cost calculation
-    // The conversion factor is for stock management, not pricing
-    return quantity * unitCost;
+    return quantity * unitCost * conversionFactor;
   };
 
   // Ketika user memilih unit pembelian di row item
@@ -122,11 +120,11 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         const factor = (baseUnitId) ? getConversionFactor(productId, unitId, baseUnitId) : 1;
         newItems[index].purchase_unit_id = unitId;
         newItems[index].conversion_factor = factor;
-        // Fixed: Recalculate total_cost without conversion factor
+        // Recalculate total_cost with conversion factor
         newItems[index].total_cost = calculateTotalCost(
           newItems[index].quantity,
           newItems[index].unit_cost,
-          1 // Don't use conversion factor for cost calculation
+          factor
         );
         setItems(newItems);
       };
@@ -139,7 +137,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     } else {
       newItems[index].purchase_unit_id = unitId;
       newItems[index].conversion_factor = 1;
-      // Fixed: Recalculate total_cost without conversion factor
+      // Recalculate total_cost
       newItems[index].total_cost = calculateTotalCost(
         newItems[index].quantity,
         newItems[index].unit_cost,
@@ -160,7 +158,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       newItems[rowIdx].purchase_unit_id = baseUnitId;
       newItems[rowIdx].conversion_factor = 1;
       newItems[rowIdx].unit_cost = product.base_price || 0;
-      // Fixed: Calculate total_cost without conversion factor
+      // Calculate total_cost with conversion factor
       newItems[rowIdx].total_cost = calculateTotalCost(
         newItems[rowIdx].quantity,
         newItems[rowIdx].unit_cost,
@@ -190,11 +188,11 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     }
     
     if (field === 'quantity' || field === 'unit_cost') {
-      // Fixed: Recalculate total_cost without conversion factor
+      // Recalculate total_cost with conversion factor
       newItems[index].total_cost = calculateTotalCost(
         field === 'quantity' ? value : newItems[index].quantity,
         field === 'unit_cost' ? value : newItems[index].unit_cost,
-        1 // Don't use conversion factor for cost calculation
+        newItems[index].conversion_factor || 1
       );
     }
     
