@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, RotateCcw } from 'lucide-react';
@@ -7,12 +8,18 @@ import { toast } from '@/hooks/use-toast';
 
 interface VoiceSearchProps {
   onVoiceResult: (text: string) => void;
+  isActive?: boolean;
+  onActiveChange?: (active: boolean) => void;
 }
 
-const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
+const VoiceSearch = ({ onVoiceResult, isActive = false, onActiveChange }: VoiceSearchProps) => {
   const [isListening, setIsListening] = useState(false);
-  const [isContinuousMode, setIsContinuousMode] = useState(false);
+  const [isContinuousMode, setIsContinuousMode] = useState(isActive);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    setIsContinuousMode(isActive);
+  }, [isActive]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -21,7 +28,7 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
       if (SpeechRecognitionAPI) {
         const recognitionInstance = new SpeechRecognitionAPI();
         
-        recognitionInstance.continuous = true; // Enable continuous recognition
+        recognitionInstance.continuous = true;
         recognitionInstance.interimResults = false;
         recognitionInstance.lang = 'id-ID';
 
@@ -35,7 +42,6 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
           console.log('Voice result:', transcript);
           onVoiceResult(transcript);
           
-          // Show feedback toast
           toast({
             title: 'Perintah Suara Diterima',
             description: `"${transcript}"`,
@@ -51,7 +57,6 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
         recognitionInstance.onerror = (event) => {
           console.error('Speech recognition error:', event.error);
           
-          // Handle specific errors
           if (event.error === 'no-speech') {
             toast({
               title: 'Tidak Ada Suara',
@@ -138,6 +143,7 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
   const toggleContinuousMode = () => {
     const newMode = !isContinuousMode;
     setIsContinuousMode(newMode);
+    onActiveChange?.(newMode);
     
     // If switching to continuous mode and currently listening, restart with new settings
     if (newMode && isListening) {
@@ -150,6 +156,19 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
       description: newMode ? 'Voice search akan tetap aktif' : 'Voice search akan berhenti setelah sekali pakai',
       duration: 2000
     });
+  };
+
+  const handleVoiceToggle = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      // When starting voice search, automatically enable continuous mode
+      if (!isContinuousMode) {
+        setIsContinuousMode(true);
+        onActiveChange?.(true);
+      }
+      startListening();
+    }
   };
 
   return (
@@ -169,13 +188,13 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
       <Button
         variant={isListening ? "destructive" : "outline"}
         size="sm"
-        onClick={isListening ? stopListening : startListening}
+        onClick={handleVoiceToggle}
         className="flex items-center gap-2"
       >
         {isListening ? (
           <>
             <MicOff className="h-4 w-4" />
-            {isContinuousMode ? 'Stop' : 'Berhenti'}
+            Stop
           </>
         ) : (
           <>

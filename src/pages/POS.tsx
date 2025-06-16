@@ -17,6 +17,8 @@ const POS = () => {
             searchTerm={pos.searchTerm}
             setSearchTerm={pos.setSearchTerm}
             handleVoiceSearch={pos.handleVoiceSearch}
+            isVoiceActive={pos.isVoiceActive}
+            setIsVoiceActive={pos.setIsVoiceActive}
           />
           <ProductGrid
             products={pos.products}
