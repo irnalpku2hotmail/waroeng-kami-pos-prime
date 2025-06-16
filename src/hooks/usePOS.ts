@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -134,7 +133,11 @@ export const usePOS = () => {
       setCart([...cart, cartItem]);
     }
 
-    toast({ title: 'Produk Ditambahkan', description: `${product.name} ditambahkan ke keranjang` });
+    toast({ 
+      title: 'Produk Ditambahkan', 
+      description: `${quantity}x ${product.name} ditambahkan ke keranjang`,
+      duration: 2000 
+    });
   };
 
   const updateCartQuantity = (productId: string, newQuantity: number) => {
@@ -282,13 +285,113 @@ ${receiptFooter}
   });
 
   const handleVoiceSearch = (text: string) => {
-    const foundProduct = products.find(p => p.name.toLowerCase().includes(text.toLowerCase()) || (p.barcode && p.barcode.includes(text)));
+    console.log('Handling voice search:', text);
+    
+    // Import parser function
+    const parseVoiceCommand = (text: string) => {
+      const cleanText = text.toLowerCase().trim();
+      let quantity = 1;
+      let productName = cleanText;
+
+      // Check for numeric digits at the start
+      const words = cleanText.split(' ');
+      const firstWord = words[0];
+      const numericMatch = firstWord.match(/^(\d+)/);
+      
+      if (numericMatch) {
+        quantity = parseInt(numericMatch[1]);
+        productName = words.slice(1).join(' ').trim();
+      } else {
+        // Check for number words in Indonesian
+        const numberWords: Record<string, number> = {
+          'satu': 1, 'dua': 2, 'tiga': 3, 'empat': 4, 'lima': 5,
+          'enam': 6, 'tujuh': 7, 'delapan': 8, 'sembilan': 9, 'sepuluh': 10,
+          'sebelas': 11, 'dua belas': 12, 'tiga belas': 13, 'empat belas': 14, 'lima belas': 15,
+          'enam belas': 16, 'tujuh belas': 17, 'delapan belas': 18, 'sembilan belas': 19,
+          'dua puluh': 20, 'tiga puluh': 30, 'empat puluh': 40, 'lima puluh': 50
+        };
+        
+        // Check single word numbers
+        if (numberWords[firstWord]) {
+          quantity = numberWords[firstWord];
+          productName = words.slice(1).join(' ').trim();
+        } else if (words.length >= 2) {
+          // Check two-word numbers
+          const twoWordNumber = `${words[0]} ${words[1]}`;
+          if (numberWords[twoWordNumber]) {
+            quantity = numberWords[twoWordNumber];
+            productName = words.slice(2).join(' ').trim();
+          }
+        }
+      }
+
+      // Clean up product name
+      productName = productName
+        .replace(/^(beli|ambil|tambah|mau|ingin)\s+/i, '')
+        .replace(/\s+(dong|ya|aja|saja)$/i, '')
+        .trim();
+
+      return { quantity: Math.max(1, quantity), productName, originalText: text };
+    };
+
+    const findBestProductMatch = (productName: string, products: any[]) => {
+      const cleanInput = productName.toLowerCase().trim();
+      
+      // Direct name match
+      let bestMatch = products.find(product => 
+        product.name.toLowerCase() === cleanInput
+      );
+      
+      if (bestMatch) return bestMatch;
+      
+      // Partial name match
+      bestMatch = products.find(product => 
+        product.name.toLowerCase().includes(cleanInput) || 
+        cleanInput.includes(product.name.toLowerCase())
+      );
+      
+      if (bestMatch) return bestMatch;
+      
+      // Barcode match
+      bestMatch = products.find(product => 
+        product.barcode && product.barcode.includes(cleanInput)
+      );
+      
+      return bestMatch || null;
+    };
+
+    const parsed = parseVoiceCommand(text);
+    console.log('Parsed voice command:', parsed);
+    
+    const foundProduct = findBestProductMatch(parsed.productName, products || []);
+    
     if (foundProduct) {
-      addToCart(foundProduct, 1);
-      toast({ title: 'Produk Ditemukan', description: `${foundProduct.name} ditambahkan ke keranjang melalui voice search` });
+      // Check stock availability
+      if (foundProduct.current_stock < parsed.quantity) {
+        toast({ 
+          title: 'Stok Tidak Mencukupi', 
+          description: `${foundProduct.name} - Stok tersedia: ${foundProduct.current_stock}, diminta: ${parsed.quantity}`,
+          variant: 'destructive',
+          duration: 3000
+        });
+        return;
+      }
+      
+      addToCart(foundProduct, parsed.quantity);
+      toast({ 
+        title: 'Produk Ditemukan', 
+        description: `${parsed.quantity}x ${foundProduct.name} ditambahkan ke keranjang`,
+        duration: 3000
+      });
     } else {
-      setSearchTerm(text);
-      toast({ title: 'Produk Tidak Ditemukan', description: `Mencari produk: ${text}` });
+      // If no product found, set search term for manual search
+      setSearchTerm(parsed.productName);
+      toast({ 
+        title: 'Produk Tidak Ditemukan', 
+        description: `Mencari: "${parsed.productName}"${parsed.quantity > 1 ? ` (${parsed.quantity}x)` : ''}`,
+        variant: 'default',
+        duration: 3000
+      });
     }
   };
 
@@ -326,4 +429,3 @@ ${receiptFooter}
     handleVoiceSearch,
   };
 };
-
