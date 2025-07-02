@@ -78,16 +78,6 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
 
   const createCategory = useMutation({
     mutationFn: async (data: { name: string; description?: string; icon_url?: string }) => {
-      // Check for duplicate name
-      const { data: existing, error: checkError } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('name', data.name)
-        .single();
-      
-      if (checkError && checkError.code !== 'PGRST116') throw checkError;
-      if (existing) throw new Error('Nama kategori sudah ada');
-
       const { error } = await supabase
         .from('categories')
         .insert(data);
@@ -105,17 +95,6 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
 
   const updateCategory = useMutation({
     mutationFn: async (data: { name: string; description?: string; icon_url?: string }) => {
-      // Check for duplicate name (excluding current category)
-      const { data: existing, error: checkError } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('name', data.name)
-        .neq('id', category.id)
-        .single();
-      
-      if (checkError && checkError.code !== 'PGRST116') throw checkError;
-      if (existing) throw new Error('Nama kategori sudah ada');
-
       const { error } = await supabase
         .from('categories')
         .update(data)

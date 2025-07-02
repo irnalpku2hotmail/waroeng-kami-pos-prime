@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarDays, CreditCard, Gift, History, Printer, QrCode, Filter } from 'lucide-react';
+import { CalendarDays, CreditCard, Gift, History, Printer, QrCode } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface CustomerDetailsProps {
@@ -19,8 +17,6 @@ interface CustomerDetailsProps {
 }
 
 const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps) => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-
   // Fetch store settings
   const { data: storeSettings } = useQuery({
     queryKey: ['store-settings'],
@@ -42,47 +38,16 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     }
   });
 
-  // Fetch purchase history with year filter
+  // Fetch purchase history
   const { data: purchaseHistory = [] } = useQuery({
-    queryKey: ['customer-purchase-history', customer?.id, selectedYear],
+    queryKey: ['customer-purchase-history', customer?.id],
     queryFn: async () => {
       if (!customer?.id) return [];
-      
-      const startDate = `${selectedYear}-01-01`;
-      const endDate = `${selectedYear}-12-31`;
-      
       const { data, error } = await supabase.rpc('get_customer_purchase_history', {
         customer_uuid: customer.id
       });
-      
       if (error) throw error;
-      
-      // Filter by year on client side since RPC doesn't support date filtering
-      return data.filter((transaction: any) => {
-        const transactionYear = new Date(transaction.created_at).getFullYear().toString();
-        return transactionYear === selectedYear;
-      });
-    },
-    enabled: !!customer?.id && open
-  });
-
-  // Get available years from purchase history
-  const { data: availableYears = [] } = useQuery({
-    queryKey: ['customer-purchase-years', customer?.id],
-    queryFn: async () => {
-      if (!customer?.id) return [];
-      
-      const { data, error } = await supabase.rpc('get_customer_purchase_history', {
-        customer_uuid: customer.id
-      });
-      
-      if (error) throw error;
-      
-      const years = [...new Set(data.map((transaction: any) => 
-        new Date(transaction.created_at).getFullYear().toString()
-      ))].sort((a, b) => b.localeCompare(a));
-      
-      return years;
+      return data;
     },
     enabled: !!customer?.id && open
   });
@@ -158,7 +123,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Kartu Member - ${customer.name}</title>
+          <title>Member Card - ${customer.name}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             .card { 
@@ -181,11 +146,11 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
             .qr-code img { width: 50px; height: 50px; }
           </style>
         </head>
-        <body onload="window.print()">
+        <body>
           <div class="card">
             <div class="card-header">
               <div class="store-name">${storeName}</div>
-              <div style="font-size: 12px;">KARTU MEMBER</div>
+              <div style="font-size: 12px;">MEMBER CARD</div>
               ${storePhone ? `<div class="store-info">${storePhone}</div>` : ''}
               ${storeAddress ? `<div class="store-info">${storeAddress}</div>` : ''}
             </div>
@@ -206,6 +171,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
 
     printWindow.document.write(memberCardHTML);
     printWindow.document.close();
+    printWindow.print();
   };
 
   if (!customer) return null;
@@ -228,7 +194,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                 <div className="flex items-center gap-2">
                   <Gift className="h-4 w-4 text-blue-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Total Poin</p>
+                    <p className="text-sm text-gray-600">Total Points</p>
                     <p className="text-2xl font-bold text-blue-600">{customer.total_points}</p>
                   </div>
                 </div>
@@ -268,7 +234,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
-                  Kartu Member
+                  Member Card
                 </span>
                 <div className="flex gap-2">
                   {!customer.qr_code_url && (
@@ -279,7 +245,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   )}
                   <Button size="sm" onClick={printMemberCard}>
                     <Printer className="h-4 w-4 mr-2" />
-                    Cetak Kartu
+                    Print Card
                   </Button>
                 </div>
               </CardTitle>
@@ -293,7 +259,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   <div className="relative z-10">
                     <div className="text-center mb-4">
                       <h3 className="text-xl font-bold">{storeSettings?.store_name || 'SmartPOS'}</h3>
-                      <p className="text-sm opacity-90">KARTU MEMBER</p>
+                      <p className="text-sm opacity-90">MEMBER CARD</p>
                       {storeSettings?.phone && (
                         <p className="text-xs opacity-75">{storeSettings.phone}</p>
                       )}
@@ -326,37 +292,18 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
           <Tabs defaultValue="purchases" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="purchases">Riwayat Pembelian</TabsTrigger>
-              <TabsTrigger value="points">Riwayat Poin</TabsTrigger>
+              <TabsTrigger value="points">Riwayat Point</TabsTrigger>
               <TabsTrigger value="redemptions">Riwayat Redeem</TabsTrigger>
             </TabsList>
             
             <TabsContent value="purchases" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Riwayat Pembelian</span>
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Pilih Tahun" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableYears.map((year) => (
-                            <SelectItem key={year} value={year}>
-                              {year}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardTitle>
+                  <CardTitle>Riwayat Pembelian</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {purchaseHistory.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">
-                      Belum ada riwayat pembelian di tahun {selectedYear}
-                    </p>
+                    <p className="text-center text-gray-500 py-8">Belum ada riwayat pembelian</p>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -364,8 +311,8 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                           <TableHead>No. Transaksi</TableHead>
                           <TableHead>Tanggal</TableHead>
                           <TableHead>Total</TableHead>
-                          <TableHead>Poin</TableHead>
-                          <TableHead>Item</TableHead>
+                          <TableHead>Points</TableHead>
+                          <TableHead>Items</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -415,18 +362,18 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
             <TabsContent value="points" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Riwayat Poin</CardTitle>
+                  <CardTitle>Riwayat Point</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {pointHistory.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">Belum ada riwayat poin</p>
+                    <p className="text-center text-gray-500 py-8">Belum ada riwayat point</p>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanggal</TableHead>
                           <TableHead>Deskripsi</TableHead>
-                          <TableHead>Perubahan Poin</TableHead>
+                          <TableHead>Perubahan Point</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -455,19 +402,19 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
             <TabsContent value="redemptions" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Riwayat Redeem Poin</CardTitle>
+                  <CardTitle>Riwayat Redeem Point</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {pointExchanges.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">Belum ada riwayat redeem poin</p>
+                    <p className="text-center text-gray-500 py-8">Belum ada riwayat redeem point</p>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanggal</TableHead>
                           <TableHead>Reward</TableHead>
-                          <TableHead>Kuantitas</TableHead>
-                          <TableHead>Poin Digunakan</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Points Digunakan</TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
