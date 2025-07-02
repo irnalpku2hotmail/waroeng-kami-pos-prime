@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Search } from 'lucide-react';
+import ProductSearchModal from '@/components/ProductSearchModal';
 
 interface ReturnsFormProps {
   returnData?: any;
@@ -31,6 +32,7 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
   });
 
   const [items, setItems] = useState(returnData?.return_items || []);
+  const [searchModalOpen, setSearchModalOpen] = useState<number | null>(null);
 
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
@@ -118,15 +120,6 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     
-    // Auto-fill unit cost from product base price
-    if (field === 'product_id' && value && products) {
-      const selectedProduct = products.find(p => p.id === value);
-      if (selectedProduct) {
-        newItems[index].unit_cost = selectedProduct.base_price || 0;
-        newItems[index].total_cost = newItems[index].quantity * (selectedProduct.base_price || 0);
-      }
-    }
-    
     if (field === 'quantity' || field === 'unit_cost') {
       newItems[index].total_cost = newItems[index].quantity * newItems[index].unit_cost;
     }
@@ -141,6 +134,15 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     saveReturn.mutate(formData);
+  };
+
+  const handleProductSelect = (product: any, index: number) => {
+    const newItems = [...items];
+    newItems[index].product_id = product.id;
+    newItems[index].unit_cost = product.base_price || 0;
+    newItems[index].total_cost = newItems[index].quantity * (product.base_price || 0);
+    setItems(newItems);
+    setSearchModalOpen(null);
   };
 
   return (
@@ -234,56 +236,70 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <Select
-                    value={item.product_id}
-                    onValueChange={(value) => updateItem(index, 'product_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih produk" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products?.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} (Rp {product.base_price?.toLocaleString('id-ID')})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
-                    min="1"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.unit_cost}
-                    onChange={(e) => updateItem(index, 'unit_cost', Number(e.target.value))}
-                    min="0"
-                  />
-                </TableCell>
-                <TableCell>
-                  Rp {item.total_cost?.toLocaleString('id-ID') || 0}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeItem(index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {items.map((item, index) => {
+              const selectedProduct = products?.find(p => p.id === item.product_id);
+              return (
+                <TableRow key={index}>
+                  <TableCell>
+                    <div className="flex gap-2 items-center">
+                      {selectedProduct ? (
+                        <>
+                          <span className="font-medium text-sm">{selectedProduct.name}</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSearchModalOpen(index)}
+                            title="Ganti Produk"
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSearchModalOpen(index)}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          Pilih Produk
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+                      min="1"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      value={item.unit_cost}
+                      onChange={(e) => updateItem(index, 'unit_cost', Number(e.target.value))}
+                      min="0"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    Rp {item.total_cost?.toLocaleString('id-ID') || 0}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
 
@@ -302,6 +318,17 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
           {returnData ? 'Update Return' : 'Simpan Return'}
         </Button>
       </div>
+
+      {/* Product Search Modal */}
+      {searchModalOpen !== null && (
+        <ProductSearchModal
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setSearchModalOpen(null);
+          }}
+          onSelectProduct={(product) => handleProductSelect(product, searchModalOpen)}
+        />
+      )}
     </form>
   );
 };

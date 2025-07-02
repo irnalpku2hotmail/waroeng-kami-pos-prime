@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +25,7 @@ const Expenses = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [userFilter, setUserFilter] = useState('all');
   const queryClient = useQueryClient();
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
@@ -36,8 +38,21 @@ const Expenses = () => {
     receipt_url: ''
   });
 
+  // Fetch all users for filter
+  const { data: users } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .order('full_name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: expenses, isLoading } = useQuery({
-    queryKey: ['expenses', searchTerm],
+    queryKey: ['expenses', searchTerm, userFilter],
     queryFn: async () => {
       let query = supabase
         .from('expenses')
@@ -48,6 +63,10 @@ const Expenses = () => {
       
       if (searchTerm) {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+
+      if (userFilter !== 'all') {
+        query = query.eq('user_id', userFilter);
       }
       
       const { data, error } = await query.order('expense_date', { ascending: false });
@@ -450,6 +469,19 @@ const Expenses = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
+          <Select value={userFilter} onValueChange={setUserFilter}>
+            <SelectTrigger className="max-w-sm">
+              <SelectValue placeholder="Filter berdasarkan user" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua User</SelectItem>
+              {users?.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="border rounded-lg">

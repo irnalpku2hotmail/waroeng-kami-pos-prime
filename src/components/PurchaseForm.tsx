@@ -218,7 +218,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             supplier_id: data.supplier_id,
             payment_method: data.payment_method,
             purchase_date: data.purchase_date,
-            due_date: data.due_date,
+            due_date: data.due_date || null, // Fix: Allow null for cash payments
             notes: data.notes,
             total_amount: items.reduce((sum, item) => sum + (item.total_cost || 0), 0)
           })
@@ -232,6 +232,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             ...data,
             user_id: user?.id,
             purchase_number: `PUR-${Date.now()}`,
+            due_date: data.due_date || null, // Fix: Allow null for cash payments
             total_amount: items.reduce((sum, item) => sum + (item.total_cost || 0), 0)
           }])
           .select()
