@@ -1,278 +1,183 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Bell, Check, CheckCheck } from 'lucide-react';
-
-// Helper function to format relative time
-const formatRelativeTime = (date: string | Date) => {
-  const now = new Date();
-  const targetDate = new Date(date);
-  const diffInMs = now.getTime() - targetDate.getTime();
-  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-  if (diffInMinutes < 1) {
-    return 'Baru saja';
-  } else if (diffInMinutes < 60) {
-    return `${diffInMinutes} menit lalu`;
-  } else if (diffInHours < 24) {
-    return `${diffInHours} jam lalu`;
-  } else if (diffInDays < 7) {
-    return `${diffInDays} hari lalu`;
-  } else {
-    return targetDate.toLocaleDateString('id-ID');
-  }
-};
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Bell, Package, AlertTriangle, Calendar } from 'lucide-react';
 
 const NotificationDropdown = () => {
-  const navigate = useNavigate();
-  const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch notifications with enhanced data
-  const { data: notifications } = useQuery({
-    queryKey: ['notifications'],
+  // Query untuk produk dengan stok rendah
+  const { data: lowStockProducts = [] } = useQuery({
+    queryKey: ['low-stock-notifications'],
     queryFn: async () => {
-      const today = new Date();
-      const oneMonthFromNow = new Date();
-      oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
-
-      const notifications = [];
-
-      // Customer birthdays (today)
-      const { data: birthdayCustomers } = await supabase
-        .from('customers')
-        .select('name, date_of_birth, created_at')
-        .not('date_of_birth', 'is', null);
-
-      if (birthdayCustomers) {
-        const todayBirthdays = birthdayCustomers.filter(customer => {
-          if (!customer.date_of_birth) return false;
-          const birthday = new Date(customer.date_of_birth);
-          return birthday.getMonth() === today.getMonth() && birthday.getDate() === today.getDate();
-        });
-
-        todayBirthdays.forEach(customer => {
-          notifications.push({
-            id: `birthday-${customer.name}`,
-            type: 'birthday',
-            message: `🎂 ${customer.name} has a birthday today!`,
-            priority: 'medium',
-            link: '/customers',
-            timestamp: today.toISOString()
-          });
-        });
-      }
-
-      // Low stock products
-      const { data: lowStockProducts } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select('name, current_stock, min_stock, updated_at')
-        .lt('current_stock', 10);
-
-      if (lowStockProducts && lowStockProducts.length > 0) {
-        notifications.push({
-          id: 'low-stock',
-          type: 'low_stock',
-          message: `📦 ${lowStockProducts.length} products have low stock`,
-          priority: 'high',
-          link: '/products',
-          timestamp: lowStockProducts[0].updated_at || today.toISOString()
-        });
-      }
-
-      // Product expiration (1 month before)
-      const { data: expiringProducts } = await supabase
-        .from('purchase_items')
-        .select('expiration_date, products(name), created_at')
-        .not('expiration_date', 'is', null)
-        .lte('expiration_date', oneMonthFromNow.toISOString().split('T')[0])
-        .gte('expiration_date', today.toISOString().split('T')[0]);
-
-      if (expiringProducts && expiringProducts.length > 0) {
-        notifications.push({
-          id: 'expiring-products',
-          type: 'expiring',
-          message: `⚠️ ${expiringProducts.length} products expiring within a month`,
-          priority: 'medium',
-          link: '/inventory',
-          timestamp: expiringProducts[0].created_at || today.toISOString()
-        });
-      }
-
-      // New orders (pending status)
-      const { data: newOrders } = await supabase
-        .from('orders')
-        .select('id, created_at')
-        .eq('status', 'pending');
-
-      if (newOrders && newOrders.length > 0) {
-        notifications.push({
-          id: 'new-orders',
-          type: 'new_order',
-          message: `🛒 ${newOrders.length} new orders pending`,
-          priority: 'high',
-          link: '/orders',
-          timestamp: newOrders[0].created_at
-        });
-      }
-
-      // Overdue credit purchases
-      const { data: overdueCredits } = await supabase
-        .from('purchases')
-        .select('id, suppliers(name), due_date, created_at')
-        .eq('payment_method', 'credit')
-        .lt('due_date', today.toISOString().split('T')[0]);
-
-      if (overdueCredits && overdueCredits.length > 0) {
-        notifications.push({
-          id: 'overdue-credits',
-          type: 'overdue_credit',
-          message: `💳 ${overdueCredits.length} credit payments overdue`,
-          priority: 'high',
-          link: '/credit-management',
-          timestamp: overdueCredits[0].created_at
-        });
-      }
-
-      // New user registrations (last 24 hours)
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      const { data: newUsers } = await supabase
-        .from('profiles')
-        .select('id, created_at')
-        .gte('created_at', yesterday.toISOString());
-
-      if (newUsers && newUsers.length > 0) {
-        notifications.push({
-          id: 'new-users',
-          type: 'new_user',
-          message: `👤 ${newUsers.length} new users registered`,
-          priority: 'low',
-          link: '/user-management',
-          timestamp: newUsers[0].created_at
-        });
-      }
-
-      // Sort notifications by timestamp (newest first)
-      return notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }
+        .select('id, name, current_stock, min_stock')
+        .lt('current_stock', 'min_stock')
+        .eq('is_active', true)
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 300000, // Refresh setiap 5 menit
   });
 
-  const getUnreadNotifications = () => {
-    if (!notifications) return [];
-    return notifications.filter(n => !readNotifications.has(n.id));
-  };
+  // Query untuk pesanan baru
+  const { data: newOrders = [] } = useQuery({
+    queryKey: ['new-orders-notifications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, customer_name, status, created_at')
+        .eq('status', 'pending')
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 60000, // Refresh setiap 1 menit
+  });
 
-  const getNotificationCount = () => {
-    return getUnreadNotifications().length;
-  };
+  // Query untuk transaksi kredit yang jatuh tempo
+  const { data: overdueCredits = [] } = useQuery({
+    queryKey: ['overdue-credits-notifications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          id, 
+          transaction_number, 
+          total_amount, 
+          due_date,
+          customers(name)
+        `)
+        .eq('is_credit', true)
+        .lt('due_date', new Date().toISOString().split('T')[0])
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 300000, // Refresh setiap 5 menit
+  });
 
-  const getHighPriorityCount = () => {
-    return getUnreadNotifications().filter(n => n.priority === 'high').length;
-  };
+  const totalNotifications = lowStockProducts.length + newOrders.length + overdueCredits.length;
 
-  const markNotificationAsRead = (notificationId: string) => {
-    setReadNotifications(prev => new Set([...prev, notificationId]));
-  };
-
-  const markAllNotificationsAsRead = () => {
-    if (notifications) {
-      setReadNotifications(new Set(notifications.map(n => n.id)));
-    }
-  };
-
-  const handleNotificationClick = (notification: any) => {
-    markNotificationAsRead(notification.id);
-    if (notification.link) {
-      navigate(notification.link);
-    }
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Baru saja';
+    if (diffInHours < 24) return `${diffInHours} jam yang lalu`;
+    return `${Math.floor(diffInHours / 24)} hari yang lalu`;
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5" />
-          {getNotificationCount() > 0 && (
+          {totalNotifications > 0 && (
             <Badge 
-              className={`absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs ${
-                getHighPriorityCount() > 0 ? 'bg-red-500' : 'bg-blue-500'
-              }`}
+              variant="destructive" 
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
-              {getNotificationCount()}
+              {totalNotifications > 9 ? '9+' : totalNotifications}
             </Badge>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80" align="end">
-        <div className="p-3 border-b flex items-center justify-between">
-          <h3 className="font-semibold">Notifications</h3>
-          {getNotificationCount() > 0 && (
+      <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto bg-white">
+        <div className="p-3 border-b">
+          <h3 className="font-semibold text-sm">Notifikasi</h3>
+          {totalNotifications > 0 && (
+            <p className="text-xs text-gray-500">{totalNotifications} notifikasi baru</p>
+          )}
+        </div>
+
+        {totalNotifications === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Tidak ada notifikasi baru</p>
+          </div>
+        ) : (
+          <div className="max-h-64 overflow-y-auto">
+            {/* Notifikasi Stok Rendah */}
+            {lowStockProducts.map((product) => (
+              <DropdownMenuItem key={`stock-${product.id}`} className="p-3 cursor-pointer hover:bg-gray-50">
+                <div className="flex items-start gap-3 w-full">
+                  <div className="bg-orange-100 p-2 rounded-full">
+                    <Package className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Stok Hampir Habis</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {product.name} - Sisa {product.current_stock} dari minimal {product.min_stock}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">Peringatan stok</p>
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            ))}
+
+            {/* Notifikasi Pesanan Baru */}
+            {newOrders.map((order) => (
+              <DropdownMenuItem key={`order-${order.id}`} className="p-3 cursor-pointer hover:bg-gray-50">
+                <div className="flex items-start gap-3 w-full">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <AlertTriangle className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Pesanan Baru</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {order.order_number} dari {order.customer_name}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {formatTimeAgo(order.created_at)}
+                    </p>
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            ))}
+
+            {/* Notifikasi Kredit Jatuh Tempo */}
+            {overdueCredits.map((credit) => (
+              <DropdownMenuItem key={`credit-${credit.id}`} className="p-3 cursor-pointer hover:bg-gray-50">
+                <div className="flex items-start gap-3 w-full">
+                  <div className="bg-red-100 p-2 rounded-full">
+                    <Calendar className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Kredit Jatuh Tempo</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {credit.transaction_number} - {credit.customers?.name || 'Customer'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Jatuh tempo: {new Date(credit.due_date).toLocaleDateString('id-ID')}
+                    </p>
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </div>
+        )}
+
+        {totalNotifications > 0 && (
+          <div className="p-3 border-t">
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={markAllNotificationsAsRead}
-              className="text-xs"
+              className="w-full text-center text-xs"
+              onClick={() => setIsOpen(false)}
             >
-              <CheckCheck className="h-3 w-3 mr-1" />
-              Mark all read
+              Lihat Semua Notifikasi
             </Button>
-          )}
-        </div>
-        <div className="max-h-96 overflow-y-auto">
-          {notifications && notifications.length > 0 ? (
-            notifications.map((notification, index) => {
-              const isRead = readNotifications.has(notification.id);
-              return (
-                <DropdownMenuItem 
-                  key={index} 
-                  className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${isRead ? 'opacity-60' : ''}`}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start gap-2 w-full">
-                    <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                      isRead ? 'bg-gray-300' :
-                      notification.priority === 'high' ? 'bg-red-500' :
-                      notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 mb-1">{notification.message}</p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-500">
-                          {formatRelativeTime(notification.timestamp)}
-                        </p>
-                        {!isRead && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markNotificationAsRead(notification.id);
-                            }}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Check className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </DropdownMenuItem>
-              );
-            })
-          ) : (
-            <div className="p-3 text-center text-gray-500">
-              No notifications
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
