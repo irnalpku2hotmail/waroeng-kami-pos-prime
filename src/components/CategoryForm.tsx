@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -76,8 +75,29 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
     return data.publicUrl;
   };
 
+  const checkDuplicateName = async (name: string, excludeId?: string) => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id')
+      .ilike('name', name);
+    
+    if (error) throw error;
+    
+    if (excludeId) {
+      return data.some(cat => cat.id !== excludeId);
+    }
+    
+    return data.length > 0;
+  };
+
   const createCategory = useMutation({
     mutationFn: async (data: { name: string; description?: string; icon_url?: string }) => {
+      // Check for duplicate name
+      const isDuplicate = await checkDuplicateName(data.name);
+      if (isDuplicate) {
+        throw new Error('Nama kategori sudah ada, silakan gunakan nama lain');
+      }
+
       const { error } = await supabase
         .from('categories')
         .insert(data);
@@ -95,6 +115,12 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
 
   const updateCategory = useMutation({
     mutationFn: async (data: { name: string; description?: string; icon_url?: string }) => {
+      // Check for duplicate name (excluding current category)
+      const isDuplicate = await checkDuplicateName(data.name, category.id);
+      if (isDuplicate) {
+        throw new Error('Nama kategori sudah ada, silakan gunakan nama lain');
+      }
+
       const { error } = await supabase
         .from('categories')
         .update(data)

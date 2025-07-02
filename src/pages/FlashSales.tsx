@@ -16,6 +16,7 @@ import { Plus, Edit, Trash2, Zap, Calendar, DollarSign, TrendingUp, Package, Sea
 import Layout from '@/components/Layout';
 import FlashSaleItemsManager from '@/components/FlashSaleItemsManager';
 import FlashSaleDetailsModal from '@/components/FlashSaleDetailsModal';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 const FlashSales = () => {
   const [open, setOpen] = useState(false);
@@ -23,6 +24,7 @@ const FlashSales = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedFlashSale, setSelectedFlashSale] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const queryClient = useQueryClient();
 
   const [flashSaleData, setFlashSaleData] = useState({
@@ -70,7 +72,7 @@ const FlashSales = () => {
   });
 
   const { data: flashSales, isLoading } = useQuery({
-    queryKey: ['flash-sales', searchTerm],
+    queryKey: ['flash-sales', searchTerm, statusFilter],
     queryFn: async () => {
       let query = supabase
         .from('flash_sales')
@@ -84,6 +86,25 @@ const FlashSales = () => {
       
       if (searchTerm) {
         query = query.ilike('name', `%${searchTerm}%`);
+      }
+
+      if (statusFilter !== 'all') {
+        const now = new Date().toISOString();
+        
+        if (statusFilter === 'active') {
+          query = query
+            .eq('is_active', true)
+            .lte('start_date', now)
+            .gte('end_date', now);
+        } else if (statusFilter === 'upcoming') {
+          query = query
+            .eq('is_active', true)
+            .gt('start_date', now);
+        } else if (statusFilter === 'expired') {
+          query = query.lt('end_date', now);
+        } else if (statusFilter === 'inactive') {
+          query = query.eq('is_active', false);
+        }
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -358,6 +379,18 @@ const FlashSales = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filter Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="active">Aktif</SelectItem>
+              <SelectItem value="upcoming">Akan Datang</SelectItem>
+              <SelectItem value="expired">Berakhir</SelectItem>
+              <SelectItem value="inactive">Tidak Aktif</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="border rounded-lg">

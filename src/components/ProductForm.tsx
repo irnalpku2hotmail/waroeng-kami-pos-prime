@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Minus, X, Upload } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 interface PriceVariant {
   id?: string;
@@ -431,6 +432,15 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+              <Label htmlFor="is_active">Produk Aktif</Label>
             </div>
           </CardContent>
         </Card>

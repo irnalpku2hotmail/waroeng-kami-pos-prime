@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, CreditCard, Gift, History, Printer, QrCode } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 interface CustomerDetailsProps {
   customer: any;
@@ -17,6 +18,8 @@ interface CustomerDetailsProps {
 }
 
 const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps) => {
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+
   // Fetch store settings
   const { data: storeSettings } = useQuery({
     queryKey: ['store-settings'],
@@ -38,15 +41,27 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     }
   });
 
-  // Fetch purchase history
+  // Fetch purchase history with year filter
   const { data: purchaseHistory = [] } = useQuery({
-    queryKey: ['customer-purchase-history', customer?.id],
+    queryKey: ['customer-purchase-history', customer?.id, selectedYear],
     queryFn: async () => {
       if (!customer?.id) return [];
-      const { data, error } = await supabase.rpc('get_customer_purchase_history', {
+      
+      let query = supabase.rpc('get_customer_purchase_history', {
         customer_uuid: customer.id
       });
+      
+      const { data, error } = await query;
       if (error) throw error;
+      
+      // Filter by year if selected
+      if (selectedYear !== 'all') {
+        return data.filter((transaction: any) => {
+          const year = new Date(transaction.created_at).getFullYear().toString();
+          return year === selectedYear;
+        });
+      }
+      
       return data;
     },
     enabled: !!customer?.id && open
@@ -86,6 +101,19 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     },
     enabled: !!customer?.id && open
   });
+
+  // Get available years for filter
+  const availableYears = React.useMemo(() => {
+    if (!purchaseHistory || purchaseHistory.length === 0) return [];
+    
+    const years = new Set<string>();
+    purchaseHistory.forEach((transaction: any) => {
+      const year = new Date(transaction.created_at).getFullYear().toString();
+      years.add(year);
+    });
+    
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [purchaseHistory]);
 
   const generateQRCode = async () => {
     if (!customer) return;
@@ -234,7 +262,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
-                  Member Card
+                  Kartu Member
                 </span>
                 <div className="flex gap-2">
                   {!customer.qr_code_url && (
@@ -245,7 +273,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   )}
                   <Button size="sm" onClick={printMemberCard}>
                     <Printer className="h-4 w-4 mr-2" />
-                    Print Card
+                    Print Kartu
                   </Button>
                 </div>
               </CardTitle>
@@ -259,7 +287,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   <div className="relative z-10">
                     <div className="text-center mb-4">
                       <h3 className="text-xl font-bold">{storeSettings?.store_name || 'SmartPOS'}</h3>
-                      <p className="text-sm opacity-90">MEMBER CARD</p>
+                      <p className="text-sm opacity-90">KARTU MEMBER</p>
                       {storeSettings?.phone && (
                         <p className="text-xs opacity-75">{storeSettings.phone}</p>
                       )}
@@ -299,7 +327,24 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
             <TabsContent value="purchases" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Riwayat Pembelian</CardTitle>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Riwayat Pembelian</span>
+                    <div className="flex gap-2">
+                      <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Pilih Tahun" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Tahun</SelectItem>
+                          {availableYears.map(year => (
+                            <SelectItem key={year} value={year}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {purchaseHistory.length === 0 ? (

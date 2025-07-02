@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -61,7 +60,7 @@ const NotificationDropdown = () => {
           notifications.push({
             id: `birthday-${customer.name}`,
             type: 'birthday',
-            message: `🎂 ${customer.name} has a birthday today!`,
+            message: `🎂 ${customer.name} berulang tahun hari ini!`,
             priority: 'medium',
             link: '/customers',
             timestamp: today.toISOString()
@@ -79,7 +78,7 @@ const NotificationDropdown = () => {
         notifications.push({
           id: 'low-stock',
           type: 'low_stock',
-          message: `📦 ${lowStockProducts.length} products have low stock`,
+          message: `📦 ${lowStockProducts.length} produk stok menipis`,
           priority: 'high',
           link: '/products',
           timestamp: lowStockProducts[0].updated_at || today.toISOString()
@@ -98,7 +97,7 @@ const NotificationDropdown = () => {
         notifications.push({
           id: 'expiring-products',
           type: 'expiring',
-          message: `⚠️ ${expiringProducts.length} products expiring within a month`,
+          message: `⚠️ ${expiringProducts.length} produk akan kedaluwarsa dalam sebulan`,
           priority: 'medium',
           link: '/inventory',
           timestamp: expiringProducts[0].created_at || today.toISOString()
@@ -115,7 +114,7 @@ const NotificationDropdown = () => {
         notifications.push({
           id: 'new-orders',
           type: 'new_order',
-          message: `🛒 ${newOrders.length} new orders pending`,
+          message: `🛒 ${newOrders.length} pesanan baru menunggu`,
           priority: 'high',
           link: '/orders',
           timestamp: newOrders[0].created_at
@@ -133,7 +132,7 @@ const NotificationDropdown = () => {
         notifications.push({
           id: 'overdue-credits',
           type: 'overdue_credit',
-          message: `💳 ${overdueCredits.length} credit payments overdue`,
+          message: `💳 ${overdueCredits.length} pembayaran kredit terlambat`,
           priority: 'high',
           link: '/credit-management',
           timestamp: overdueCredits[0].created_at
@@ -153,7 +152,7 @@ const NotificationDropdown = () => {
         notifications.push({
           id: 'new-users',
           type: 'new_user',
-          message: `👤 ${newUsers.length} new users registered`,
+          message: `👤 ${newUsers.length} pengguna baru terdaftar`,
           priority: 'low',
           link: '/user-management',
           timestamp: newUsers[0].created_at
@@ -213,22 +212,32 @@ const NotificationDropdown = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-80" align="end">
         <div className="p-3 border-b flex items-center justify-between">
-          <h3 className="font-semibold">Notifications</h3>
-          {getNotificationCount() > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={markAllNotificationsAsRead}
+          <h3 className="font-semibold">Notifikasi</h3>
+          <div className="flex gap-2">
+            {getNotificationCount() > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={markAllNotificationsAsRead}
+                className="text-xs"
+              >
+                <CheckCheck className="h-3 w-3 mr-1" />
+                Tandai dibaca
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/notifications')}
               className="text-xs"
             >
-              <CheckCheck className="h-3 w-3 mr-1" />
-              Mark all read
+              Lihat Semua
             </Button>
-          )}
+          </div>
         </div>
         <div className="max-h-96 overflow-y-auto">
           {notifications && notifications.length > 0 ? (
-            notifications.map((notification, index) => {
+            notifications.slice(0, 5).map((notification, index) => {
               const isRead = readNotifications.has(notification.id);
               return (
                 <DropdownMenuItem 
@@ -269,7 +278,19 @@ const NotificationDropdown = () => {
             })
           ) : (
             <div className="p-3 text-center text-gray-500">
-              No notifications
+              Tidak ada notifikasi
+            </div>
+          )}
+          {notifications && notifications.length > 5 && (
+            <div className="p-3 border-t text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/notifications')}
+                className="text-xs"
+              >
+                Lihat {notifications.length - 5} notifikasi lainnya
+              </Button>
             </div>
           )}
         </div>
