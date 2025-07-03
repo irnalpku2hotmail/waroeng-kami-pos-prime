@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Building2, ShoppingCart, RotateCcw } from 'lucide-react';
 
 interface SupplierDetailsProps {
@@ -16,8 +18,14 @@ interface SupplierDetailsProps {
 }
 
 const SupplierDetails = ({ supplier, open, onOpenChange }: SupplierDetailsProps) => {
+  const [purchaseHistoryYear, setPurchaseHistoryYear] = useState<string>('all');
+  const [returnHistoryYear, setReturnHistoryYear] = useState<string>('all');
+
+  // Get available years for filters
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
   // Fetch purchase history using the database function
-  const { data: purchaseHistory = [] } = useQuery({
+  const { data: allPurchaseHistory = [] } = useQuery({
     queryKey: ['supplier-purchase-history', supplier?.id],
     queryFn: async () => {
       if (!supplier?.id) return [];
@@ -30,8 +38,15 @@ const SupplierDetails = ({ supplier, open, onOpenChange }: SupplierDetailsProps)
     enabled: !!supplier?.id
   });
 
+  // Filter purchase history by year
+  const purchaseHistory = allPurchaseHistory.filter(purchase => {
+    if (purchaseHistoryYear === 'all') return true;
+    const purchaseYear = new Date(purchase.purchase_date).getFullYear();
+    return purchaseYear.toString() === purchaseHistoryYear;
+  });
+
   // Fetch return history using the database function
-  const { data: returnHistory = [] } = useQuery({
+  const { data: allReturnHistory = [] } = useQuery({
     queryKey: ['supplier-return-history', supplier?.id],
     queryFn: async () => {
       if (!supplier?.id) return [];
@@ -42,6 +57,13 @@ const SupplierDetails = ({ supplier, open, onOpenChange }: SupplierDetailsProps)
       return data;
     },
     enabled: !!supplier?.id
+  });
+
+  // Filter return history by year
+  const returnHistory = allReturnHistory.filter(returnItem => {
+    if (returnHistoryYear === 'all') return true;
+    const returnYear = new Date(returnItem.return_date).getFullYear();
+    return returnYear.toString() === returnHistoryYear;
   });
 
   if (!supplier) return null;
@@ -171,9 +193,32 @@ const SupplierDetails = ({ supplier, open, onOpenChange }: SupplierDetailsProps)
           <TabsContent value="purchases" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5" />
-                  Purchase History ({purchaseHistory.length})
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5" />
+                    Purchase History ({purchaseHistory.length})
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="purchase-year-filter" className="text-sm font-normal">
+                      Filter Tahun:
+                    </Label>
+                    <Select
+                      value={purchaseHistoryYear}
+                      onValueChange={setPurchaseHistoryYear}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua</SelectItem>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -245,9 +290,32 @@ const SupplierDetails = ({ supplier, open, onOpenChange }: SupplierDetailsProps)
           <TabsContent value="returns" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RotateCcw className="h-5 w-5" />
-                  Return History ({returnHistory.length})
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <RotateCcw className="h-5 w-5" />
+                    Return History ({returnHistory.length})
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="return-year-filter" className="text-sm font-normal">
+                      Filter Tahun:
+                    </Label>
+                    <Select
+                      value={returnHistoryYear}
+                      onValueChange={setReturnHistoryYear}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua</SelectItem>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>

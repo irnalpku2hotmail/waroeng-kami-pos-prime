@@ -34,6 +34,7 @@ import Purchases from '@/pages/Purchases';
 import NotFound from '@/pages/NotFound';
 import ProductDetails from '@/pages/ProductDetails';
 import Reports from '@/pages/Reports';
+import Notifications from '@/pages/Notifications';
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ function App() {
                 <Route path="/returns" element={<ProtectedRoute><Returns /></ProtectedRoute>} />
                 <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
 
                 {/* Catch all route */}
                 <Route path="*" element={<NotFound />} />

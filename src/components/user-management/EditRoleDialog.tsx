@@ -35,9 +35,12 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
   // Update user role mutation
   const updateUserRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string, role: UserRole }) => {
+      // Remove 'buyer' as it's not a valid role in the database
+      const validRole = role === 'buyer' ? 'staff' : role;
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ role })
+        .update({ role: validRole })
         .eq('id', userId);
 
       if (error) throw error;
@@ -92,7 +95,6 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="buyer">Buyer</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                   <SelectItem value="cashier">Cashier</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
