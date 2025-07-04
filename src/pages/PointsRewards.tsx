@@ -14,6 +14,9 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Gift, Search, X, Star, Package, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import RewardDetailsModal from '@/components/RewardDetailsModal';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const PointsRewards = () => {
   const [open, setOpen] = useState(false);
@@ -23,6 +26,7 @@ const PointsRewards = () => {
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   const [rewardData, setRewardData] = useState({
@@ -50,10 +54,12 @@ const PointsRewards = () => {
     enabled: productSearch.length > 0
   });
 
-  const { data: rewards, isLoading } = useQuery({
-    queryKey: ['rewards'],
+  const { data: rewardsData, isLoading } = useQuery({
+    queryKey: ['rewards', currentPage],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      const { data, error, count } = await supabase
         .from('rewards')
         .select(`
           *,
@@ -68,12 +74,17 @@ const PointsRewards = () => {
               image_url
             )
           )
-        `)
-        .order('created_at', { ascending: false });
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data;
+      return { data, count };
     }
   });
+
+  const rewards = rewardsData?.data || [];
+  const rewardsCount = rewardsData?.count || 0;
+  const totalPages = Math.ceil(rewardsCount / ITEMS_PER_PAGE);
 
   // Get total available points from all customers
   const { data: customerStats } = useQuery({
@@ -522,6 +533,16 @@ const PointsRewards = () => {
                 ))}
               </TableBody>
             </Table>
+          )}
+          
+          {totalPages > 1 && (
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={rewardsCount}
+            />
           )}
         </div>
       </div>

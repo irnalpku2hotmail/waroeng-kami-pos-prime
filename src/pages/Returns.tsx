@@ -13,6 +13,9 @@ import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye, CheckCircle } from 
 import Layout from '@/components/Layout';
 import ReturnsForm from '@/components/ReturnsForm';
 import ReturnDetailModal from '@/components/ReturnDetailModal';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const Returns = () => {
   const [open, setOpen] = useState(false);
@@ -20,11 +23,14 @@ const Returns = () => {
   const [selectedReturnForDetail, setSelectedReturnForDetail] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const { data: returns, isLoading } = useQuery({
-    queryKey: ['returns', searchTerm],
+  const { data: returnsData, isLoading } = useQuery({
+    queryKey: ['returns', searchTerm, currentPage],
     queryFn: async () => {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
       let query = supabase
         .from('returns')
         .select(`
@@ -34,17 +40,23 @@ const Returns = () => {
           return_items(*,
             products(name)
           )
-        `);
+        `, { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`return_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data;
+      return { data, count };
     }
   });
+
+  const returns = returnsData?.data || [];
+  const returnsCount = returnsData?.count || 0;
+  const totalPages = Math.ceil(returnsCount / ITEMS_PER_PAGE);
 
   const deleteReturn = useMutation({
     mutationFn: async (id: string) => {
@@ -238,6 +250,16 @@ const Returns = () => {
             </div>
           </TabsContent>
         </Tabs>
+        
+        {totalPages > 1 && (
+          <PaginationComponent
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={ITEMS_PER_PAGE}
+            totalItems={returnsCount}
+          />
+        )}
 
         {/* Return Detail Dialog */}
         <ReturnDetailModal

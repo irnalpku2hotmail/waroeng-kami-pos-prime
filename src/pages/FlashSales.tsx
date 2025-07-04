@@ -17,6 +17,9 @@ import Layout from '@/components/Layout';
 import FlashSaleItemsManager from '@/components/FlashSaleItemsManager';
 import FlashSaleDetailsModal from '@/components/FlashSaleDetailsModal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const FlashSales = () => {
   const [open, setOpen] = useState(false);
@@ -25,6 +28,7 @@ const FlashSales = () => {
   const [selectedFlashSale, setSelectedFlashSale] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   const [flashSaleData, setFlashSaleData] = useState({
@@ -71,9 +75,11 @@ const FlashSales = () => {
     }
   });
 
-  const { data: flashSales, isLoading } = useQuery({
-    queryKey: ['flash-sales', searchTerm, statusFilter],
+  const { data: flashSalesData, isLoading } = useQuery({
+    queryKey: ['flash-sales', searchTerm, statusFilter, currentPage],
     queryFn: async () => {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
       let query = supabase
         .from('flash_sales')
         .select(`
@@ -82,7 +88,7 @@ const FlashSales = () => {
             *,
             products(name, selling_price)
           )
-        `);
+        `, { count: 'exact' });
       
       if (searchTerm) {
         query = query.ilike('name', `%${searchTerm}%`);
@@ -107,11 +113,17 @@ const FlashSales = () => {
         }
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data;
+      return { data, count };
     }
   });
+
+  const flashSales = flashSalesData?.data || [];
+  const flashSalesCount = flashSalesData?.count || 0;
+  const totalPages = Math.ceil(flashSalesCount / ITEMS_PER_PAGE);
 
   const createFlashSale = useMutation({
     mutationFn: async (data: any) => {
@@ -456,6 +468,16 @@ const FlashSales = () => {
                 ))}
               </TableBody>
             </Table>
+          )}
+          
+          {totalPages > 1 && (
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={flashSalesCount}
+            />
           )}
         </div>
       </div>

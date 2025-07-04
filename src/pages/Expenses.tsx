@@ -17,6 +17,9 @@ import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { exportToExcel } from '@/utils/excelExport';
 import ExpenseDetailsModal from '@/components/ExpenseDetailsModal';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const Expenses = () => {
   const { user } = useAuth();
@@ -26,6 +29,7 @@ const Expenses = () => {
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [userFilter, setUserFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
@@ -51,15 +55,17 @@ const Expenses = () => {
     }
   });
 
-  const { data: expenses, isLoading } = useQuery({
-    queryKey: ['expenses', searchTerm, userFilter],
+  const { data: expensesData, isLoading } = useQuery({
+    queryKey: ['expenses', searchTerm, userFilter, currentPage],
     queryFn: async () => {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
       let query = supabase
         .from('expenses')
         .select(`
           *,
           profiles(full_name)
-        `);
+        `, { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -69,11 +75,17 @@ const Expenses = () => {
         query = query.eq('user_id', userFilter);
       }
       
-      const { data, error } = await query.order('expense_date', { ascending: false });
+      const { data, error, count } = await query
+        .order('expense_date', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data;
+      return { data, count };
     }
   });
+
+  const expenses = expensesData?.data || [];
+  const expensesCount = expensesData?.count || 0;
+  const totalPages = Math.ceil(expensesCount / ITEMS_PER_PAGE);
 
   // Query for all expenses for export
   const { data: allExpensesData } = useQuery({
@@ -557,6 +569,16 @@ const Expenses = () => {
                 ))}
               </TableBody>
             </Table>
+          )}
+          
+          {totalPages > 1 && (
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={expensesCount}
+            />
           )}
         </div>
       </div>

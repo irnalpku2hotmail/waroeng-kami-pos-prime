@@ -13,6 +13,9 @@ import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
 import CreditPaymentForm from '@/components/CreditPaymentForm';
 import PurchaseDetailModal from '@/components/PurchaseDetailModal';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const Purchases = () => {
   const [open, setOpen] = useState(false);
@@ -22,11 +25,14 @@ const Purchases = () => {
   const [selectedPurchaseForDetail, setSelectedPurchaseForDetail] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const { data: purchases, isLoading } = useQuery({
-    queryKey: ['purchases', searchTerm],
+  const { data: purchasesData, isLoading } = useQuery({
+    queryKey: ['purchases', searchTerm, currentPage],
     queryFn: async () => {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
       let query = supabase
         .from('purchases')
         .select(`
@@ -36,17 +42,23 @@ const Purchases = () => {
           purchase_items(*,
             products(name)
           )
-        `);
+        `, { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`purchase_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data;
+      return { data, count };
     }
   });
+
+  const purchases = purchasesData?.data || [];
+  const purchasesCount = purchasesData?.count || 0;
+  const totalPages = Math.ceil(purchasesCount / ITEMS_PER_PAGE);
 
   const deletePurchase = useMutation({
     mutationFn: async (id: string) => {
@@ -227,6 +239,16 @@ const Purchases = () => {
                 ))}
               </TableBody>
             </Table>
+          )}
+          
+          {totalPages > 1 && (
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={purchasesCount}
+            />
           )}
         </div>
 
