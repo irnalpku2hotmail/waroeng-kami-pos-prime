@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import PurchaseItemsTable from '@/components/purchase/PurchaseItemsTable';
 import { useProductConversions } from '@/components/purchase/useProductConversions';
+import AddItemButton from '@/components/purchase/AddItemButton';
 
 interface PurchaseFormProps {
   purchase?: any;
@@ -70,6 +71,13 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
 
   const savePurchase = useMutation({
     mutationFn: async (data: any) => {
+      // Validate items to prevent duplicates
+      const productIds = items.map(item => item.product_id);
+      const uniqueProductIds = new Set(productIds);
+      if (productIds.length !== uniqueProductIds.size) {
+        throw new Error('Duplicate products found. Please remove duplicate items.');
+      }
+
       if (purchase) {
         const { error } = await supabase
           .from('purchases')
@@ -107,7 +115,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           await supabase.from('purchase_items').delete().eq('purchase_id', purchase.id);
         }
         
-        // Insert purchase items - Let the trigger handle stock updates
+        // Insert purchase items - Let the trigger handle stock updates automatically
         const { error } = await supabase
           .from('purchase_items')
           .insert(items.map(item => ({
@@ -134,6 +142,16 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       return;
     }
     savePurchase.mutate(formData);
+  };
+
+  const handleAddItem = (newItem: any) => {
+    // Check for duplicates
+    const existingItem = items.find(item => item.product_id === newItem.product_id);
+    if (existingItem) {
+      toast({ title: 'Warning', description: 'Produk sudah ada dalam daftar', variant: 'destructive' });
+      return;
+    }
+    setItems([...items, newItem]);
   };
 
   const handleUpdateItem = (index: number, field: string, value: any) => {
@@ -248,17 +266,30 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         />
       </div>
 
-      <PurchaseItemsTable
-        items={items}
-        products={products || []}
-        unitsMap={unitsMap}
-        productConversions={productConversions}
-        searchModalOpenIdx={searchModalOpenIdx}
-        onUpdateItem={handleUpdateItem}
-        onRemoveItem={handleRemoveItem}
-        onOpenSearchModal={handleOpenSearchModal}
-        onSelectProduct={handleSelectProduct}
-      />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Item Pembelian</h3>
+          <AddItemButton onAddItem={handleAddItem} />
+        </div>
+
+        <PurchaseItemsTable
+          items={items}
+          products={products || []}
+          unitsMap={unitsMap}
+          productConversions={productConversions}
+          searchModalOpenIdx={searchModalOpenIdx}
+          onUpdateItem={handleUpdateItem}
+          onRemoveItem={handleRemoveItem}
+          onOpenSearchModal={handleOpenSearchModal}
+          onSelectProduct={handleSelectProduct}
+        />
+
+        <div className="text-right">
+          <p className="text-lg font-medium">
+            Total: Rp {items.reduce((sum, item) => sum + (item.total_cost || 0), 0).toLocaleString('id-ID')}
+          </p>
+        </div>
+      </div>
 
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="outline" onClick={onCancel}>
