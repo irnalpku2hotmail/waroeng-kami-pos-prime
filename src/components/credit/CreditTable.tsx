@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, Phone, Mail, MessageSquare } from 'lucide-react';
 
 interface CreditTableProps {
-  creditTransactions: any[];
-  isLoading: boolean;
-  onPayCredit: (transaction: any) => void;
-  onSendReminder: (transaction: any) => void;
+  transactions: any[];
+  isLoading?: boolean;
+  onPayCredit?: (transaction: any) => void;
+  onSendReminder?: (transaction: any) => void;
 }
 
-const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminder }: CreditTableProps) => {
+const CreditTable = ({ transactions, isLoading = false, onPayCredit, onSendReminder }: CreditTableProps) => {
   const getPaymentStatus = (transaction: any) => {
     const today = new Date();
     const dueDate = new Date(transaction.due_date);
@@ -47,7 +47,7 @@ const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminde
     );
   }
 
-  if (creditTransactions?.length === 0) {
+  if (transactions?.length === 0) {
     return (
       <div className="border rounded-lg">
         <div className="text-center py-8">
@@ -73,7 +73,7 @@ const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminde
           </TableRow>
         </TableHeader>
         <TableBody>
-          {creditTransactions?.map((transaction) => {
+          {transactions?.map((transaction) => {
             const paymentStatus = getPaymentStatus(transaction);
             
             return (
@@ -113,16 +113,18 @@ const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminde
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onPayCredit(transaction)}
-                      className="text-green-600 hover:bg-green-50"
-                    >
-                      <CreditCard className="h-4 w-4 mr-1" />
-                      Bayar
-                    </Button>
-                    {transaction.customers && (
+                    {onPayCredit && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onPayCredit(transaction)}
+                        className="text-green-600 hover:bg-green-50"
+                      >
+                        <CreditCard className="h-4 w-4 mr-1" />
+                        Bayar
+                      </Button>
+                    )}
+                    {onSendReminder && transaction.customers && (
                       <Button
                         size="sm"
                         variant="outline"

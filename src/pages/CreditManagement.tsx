@@ -1,8 +1,8 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download } from 'lucide-react';
 import Layout from '@/components/Layout';
@@ -22,7 +22,7 @@ const CreditManagement = () => {
         .from('transactions')
         .select(`
           *,
-          customers(name, customer_code),
+          customers(name, customer_code, phone, email),
           profiles(full_name)
         `)
         .eq('is_credit', true)
@@ -68,15 +68,11 @@ const CreditManagement = () => {
 
         <CreditStats transactions={creditTransactions || []} />
 
-        <div className="flex gap-4">
-          <Input
-            placeholder="Search by transaction number or customer name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <CreditSearch onDateRangeChange={setDateRange} />
-        </div>
+        <CreditSearch 
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onDateRangeChange={setDateRange}
+        />
 
         <Tabs defaultValue="active" className="w-full">
           <TabsList>
@@ -86,15 +82,15 @@ const CreditManagement = () => {
           </TabsList>
           
           <TabsContent value="active">
-            <CreditTable transactions={activeCredits} />
+            <CreditTable transactions={activeCredits} isLoading={isLoading} />
           </TabsContent>
           
           <TabsContent value="overdue">
-            <CreditTable transactions={overdueCredits} />
+            <CreditTable transactions={overdueCredits} isLoading={isLoading} />
           </TabsContent>
 
           <TabsContent value="paid">
-            <CreditTable transactions={paidCredits} />
+            <CreditTable transactions={paidCredits} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </div>
