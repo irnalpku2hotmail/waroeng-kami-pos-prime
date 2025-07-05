@@ -8,9 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye, CheckCircle, TrendingUp, CheckCheck } from 'lucide-react';
+import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye, CheckCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ReturnsForm from '@/components/ReturnsForm';
 import ReturnDetailModal from '@/components/ReturnDetailModal';
@@ -55,28 +54,6 @@ const Returns = () => {
     }
   });
 
-  // Query for return statistics
-  const { data: returnStats } = useQuery({
-    queryKey: ['return-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('returns')
-        .select('status, total_amount');
-      
-      if (error) throw error;
-      
-      const processReturns = data.filter(r => r.status === 'process');
-      const successReturns = data.filter(r => r.status === 'success');
-      
-      return {
-        totalProcessReturns: processReturns.reduce((sum, r) => sum + (r.total_amount || 0), 0),
-        totalSuccessReturns: successReturns.reduce((sum, r) => sum + (r.total_amount || 0), 0),
-        countProcessReturns: processReturns.length,
-        countSuccessReturns: successReturns.length
-      };
-    }
-  });
-
   const returns = returnsData?.data || [];
   const returnsCount = returnsData?.count || 0;
   const totalPages = Math.ceil(returnsCount / ITEMS_PER_PAGE);
@@ -88,7 +65,6 @@ const Returns = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
-      queryClient.invalidateQueries({ queryKey: ['return-stats'] });
       toast({ title: 'Berhasil', description: 'Return berhasil dihapus' });
     },
     onError: (error) => {
@@ -106,7 +82,6 @@ const Returns = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
-      queryClient.invalidateQueries({ queryKey: ['return-stats'] });
       toast({ title: 'Berhasil', description: 'Status return berhasil diubah ke Success' });
     },
     onError: (error) => {
@@ -117,7 +92,6 @@ const Returns = () => {
   const handleCloseDialog = () => {
     setOpen(false);
     setEditReturn(null);
-    queryClient.invalidateQueries({ queryKey: ['return-stats'] });
   };
 
   const openDetailDialog = (returnData: any) => {
@@ -229,42 +203,6 @@ const Returns = () => {
               />
             </DialogContent>
           </Dialog>
-        </div>
-
-        {/* Return Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Return Dalam Proses
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                Rp {returnStats?.totalProcessReturns?.toLocaleString('id-ID') || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {returnStats?.countProcessReturns || 0} return dalam proses
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Return Berhasil
-              </CardTitle>
-              <CheckCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                Rp {returnStats?.totalSuccessReturns?.toLocaleString('id-ID') || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {returnStats?.countSuccessReturns || 0} return berhasil
-              </p>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="flex gap-4">

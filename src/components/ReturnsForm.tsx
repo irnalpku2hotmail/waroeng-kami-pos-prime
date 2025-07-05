@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -88,7 +89,6 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
           await supabase.from('return_items').delete().eq('return_id', returnData.id);
         }
         
-        // Insert return items - stock will be handled by trigger based on status
         const { error } = await supabase
           .from('return_items')
           .insert(items.map(item => ({
@@ -99,11 +99,7 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
       }
       
       queryClient.invalidateQueries({ queryKey: ['returns'] });
-      queryClient.invalidateQueries({ queryKey: ['return-stats'] });
-      toast({ 
-        title: 'Berhasil', 
-        description: returnData ? 'Return berhasil diperbarui' : 'Return berhasil ditambahkan'
-      });
+      toast({ title: 'Berhasil', description: returnData ? 'Return berhasil diperbarui' : 'Return berhasil ditambahkan' });
       onSuccess();
     },
     onError: (error) => {
@@ -197,9 +193,6 @@ const ReturnsForm = ({ returnData, onSuccess, onCancel }: ReturnsFormProps) => {
               <SelectItem value="success">Success</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-gray-500">
-            Stock hanya akan berkurang ketika status "Success"
-          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="return_date">Tanggal Return *</Label>

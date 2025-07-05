@@ -5,12 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-type UserRole = Database['public']['Enums']['user_role'];
+type UserRole = Database['public']['Enums']['user_role'] | 'buyer';
 
 interface EditRoleDialogProps {
   open: boolean;
@@ -21,7 +20,6 @@ interface EditRoleDialogProps {
 
 const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: EditRoleDialogProps) => {
   const queryClient = useQueryClient();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
   const getRoleBadge = (role: string) => {
     const colors: Record<string, string> = {
@@ -34,11 +32,15 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
     return <Badge className={colors[role] || 'bg-gray-600'}>{role}</Badge>;
   };
 
+  // Update user role mutation
   const updateUserRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string, role: UserRole }) => {
+      // Remove 'buyer' as it's not a valid role in the database
+      const validRole = role === 'buyer' ? 'staff' : role;
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ role: role })
+        .update({ role: validRole })
         .eq('id', userId);
 
       if (error) throw error;
@@ -46,9 +48,8 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
     onSuccess: () => {
       toast({ title: 'User role updated successfully' });
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      onUserUpdated();
       onOpenChange(false);
-      setSelectedRole(null);
+      onUserUpdated();
     },
     onError: (error: any) => {
       toast({ 
@@ -59,11 +60,11 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
     }
   });
 
-  const handleUpdateRole = () => {
-    if (selectedUser && selectedRole) {
+  const handleUpdateRole = (role: UserRole) => {
+    if (selectedUser) {
       updateUserRoleMutation.mutate({ 
         userId: selectedUser.id, 
-        role: selectedRole 
+        role: role 
       });
     }
   };
@@ -87,8 +88,8 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
             <div>
               <Label>New Role</Label>
               <Select 
-                value={selectedRole || selectedUser.role}
-                onValueChange={(value: UserRole) => setSelectedRole(value)}
+                defaultValue={selectedUser.role}
+                onValueChange={(value: UserRole) => handleUpdateRole(value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -100,17 +101,6 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleUpdateRole}
-                disabled={!selectedRole || selectedRole === selectedUser.role}
-              >
-                Update Role
-              </Button>
             </div>
           </div>
         )}
