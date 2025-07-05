@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import PurchaseItemsTable from '@/components/purchase/PurchaseItemsTable';
+import { useProductConversions } from '@/components/purchase/useProductConversions';
 
 interface PurchaseFormProps {
   purchase?: any;
@@ -31,6 +31,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
   });
 
   const [items, setItems] = useState(purchase?.purchase_items || []);
+  const [searchModalOpenIdx, setSearchModalOpenIdx] = useState<number | null>(null);
 
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
@@ -40,6 +41,32 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       return data;
     }
   });
+
+  const { data: products } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('*, categories(name), units(name, abbreviation)');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: units } = useQuery({
+    queryKey: ['units'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('units').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { productConversions } = useProductConversions();
+
+  // Create units map for easier lookup
+  const unitsMap = units?.reduce((acc, unit) => {
+    acc[unit.id] = unit;
+    return acc;
+  }, {} as Record<string, any>) || {};
 
   const savePurchase = useMutation({
     mutationFn: async (data: any) => {
@@ -107,6 +134,37 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       return;
     }
     savePurchase.mutate(formData);
+  };
+
+  const handleUpdateItem = (index: number, field: string, value: any) => {
+    const updatedItems = [...items];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // Recalculate total cost
+    if (field === 'quantity' || field === 'unit_cost') {
+      updatedItems[index].total_cost = (updatedItems[index].quantity || 0) * (updatedItems[index].unit_cost || 0);
+    }
+    
+    setItems(updatedItems);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleOpenSearchModal = (index: number) => {
+    setSearchModalOpenIdx(index);
+  };
+
+  const handleSelectProduct = (product: any, rowIdx: number) => {
+    const updatedItems = [...items];
+    updatedItems[rowIdx] = {
+      ...updatedItems[rowIdx],
+      product_id: product.id,
+      product_name: product.name
+    };
+    setItems(updatedItems);
+    setSearchModalOpenIdx(null);
   };
 
   return (
@@ -190,7 +248,17 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         />
       </div>
 
-      <PurchaseItemsTable items={items} setItems={setItems} />
+      <PurchaseItemsTable
+        items={items}
+        products={products || []}
+        unitsMap={unitsMap}
+        productConversions={productConversions}
+        searchModalOpenIdx={searchModalOpenIdx}
+        onUpdateItem={handleUpdateItem}
+        onRemoveItem={handleRemoveItem}
+        onOpenSearchModal={handleOpenSearchModal}
+        onSelectProduct={handleSelectProduct}
+      />
 
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="outline" onClick={onCancel}>
