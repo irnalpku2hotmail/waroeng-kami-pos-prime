@@ -13,6 +13,7 @@ import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye, CheckCircle } from 
 import Layout from '@/components/Layout';
 import ReturnsForm from '@/components/ReturnsForm';
 import ReturnDetailModal from '@/components/ReturnDetailModal';
+import ReturnStats from '@/components/returns/ReturnStats';
 import PaginationComponent from '@/components/PaginationComponent';
 
 const ITEMS_PER_PAGE = 10;
@@ -204,6 +205,8 @@ const Returns = () => {
             </DialogContent>
           </Dialog>
         </div>
+
+        <ReturnStats />
 
         <div className="flex gap-4">
           <Input
