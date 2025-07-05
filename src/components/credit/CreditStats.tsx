@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditCard, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
