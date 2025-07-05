@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, Check, CreditCard, MoreHorizontal, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Check, CreditCard, MoreHorizontal, Eye, DollarSign, Wallet, CreditCard as CreditCardIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
 import CreditPaymentForm from '@/components/CreditPaymentForm';
@@ -56,6 +58,30 @@ const Purchases = () => {
     }
   });
 
+  // Query for purchase statistics
+  const { data: purchaseStats } = useQuery({
+    queryKey: ['purchase-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('payment_method, total_amount');
+      
+      if (error) throw error;
+      
+      const totalPurchases = data.reduce((sum, p) => sum + (p.total_amount || 0), 0);
+      const creditPurchases = data.filter(p => p.payment_method === 'credit');
+      const cashPurchases = data.filter(p => p.payment_method === 'cash');
+      
+      return {
+        totalPurchases,
+        totalCreditPurchases: creditPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+        totalCashPurchases: cashPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+        countCreditPurchases: creditPurchases.length,
+        countCashPurchases: cashPurchases.length
+      };
+    }
+  });
+
   const purchases = purchasesData?.data || [];
   const purchasesCount = purchasesData?.count || 0;
   const totalPages = Math.ceil(purchasesCount / ITEMS_PER_PAGE);
@@ -67,6 +93,7 @@ const Purchases = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-stats'] });
       toast({ title: 'Berhasil', description: 'Pembelian berhasil dihapus' });
     },
     onError: (error) => {
@@ -84,6 +111,7 @@ const Purchases = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-stats'] });
       toast({ title: 'Berhasil', description: 'Pembelian berhasil ditandai sebagai lunas' });
     },
     onError: (error) => {
@@ -94,6 +122,7 @@ const Purchases = () => {
   const handleCloseDialog = () => {
     setOpen(false);
     setEditPurchase(null);
+    queryClient.invalidateQueries({ queryKey: ['purchase-stats'] });
   };
 
   const openPaymentDialog = (purchase: any) => {
@@ -143,6 +172,58 @@ const Purchases = () => {
               />
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Purchase Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Seluruh Pembelian
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                Rp {purchaseStats?.totalPurchases?.toLocaleString('id-ID') || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Semua metode pembayaran
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Pembelian Kredit
+              </CardTitle>
+              <CreditCardIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                Rp {purchaseStats?.totalCreditPurchases?.toLocaleString('id-ID') || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {purchaseStats?.countCreditPurchases || 0} pembelian kredit
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Pembelian Cash
+              </CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                Rp {purchaseStats?.totalCashPurchases?.toLocaleString('id-ID') || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {purchaseStats?.countCashPurchases || 0} pembelian cash
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex gap-4">
