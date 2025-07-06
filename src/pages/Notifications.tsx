@@ -12,11 +12,11 @@ const Notifications = () => {
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       
-      // Low stock products
+      // Low stock products - compare current_stock with min_stock
       const { data: lowStockProducts } = await supabase
         .from('products')
         .select('name, current_stock, min_stock')
-        .lte('current_stock', supabase.rpc('current_stock'));
+        .filter('current_stock', 'lte', 'min_stock');
 
       // Overdue credit transactions
       const { data: overdueCredits } = await supabase
