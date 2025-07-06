@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
@@ -119,8 +118,8 @@ const Inventory = () => {
         </Tabs>
 
         <StockAdjustmentDialog 
-          isOpen={isAdjustmentDialogOpen}
-          onClose={handleCloseAdjustDialog}
+          open={isAdjustmentDialogOpen}
+          onOpenChange={setIsAdjustmentDialogOpen}
           product={selectedProduct}
         />
       </div>
