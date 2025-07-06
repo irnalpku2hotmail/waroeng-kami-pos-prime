@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,11 @@ const Inventory = () => {
           *,
           categories(name),
           units(name, abbreviation),
-          suppliers(name)
+          suppliers:purchase_items(
+            purchases!inner(
+              suppliers(name)
+            )
+          )
         `);
       
       if (searchTerm) {
@@ -33,8 +38,11 @@ const Inventory = () => {
       }
       
       const { data, error } = await query.order('name');
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+      return data || [];
     }
   });
 
@@ -50,21 +58,19 @@ const Inventory = () => {
           profiles(full_name)
         `)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
       
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching adjustments:', error);
+        throw error;
+      }
+      return data || [];
     }
   });
 
   const handleOpenAdjustDialog = (product: any) => {
     setSelectedProduct(product);
     setIsAdjustmentDialogOpen(true);
-  };
-
-  const handleCloseAdjustDialog = () => {
-    setSelectedProduct(null);
-    setIsAdjustmentDialogOpen(false);
   };
 
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);

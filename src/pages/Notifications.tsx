@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Package, AlertTriangle, TrendingDown, Calendar } from 'lucide-react';
+import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, CheckCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
 
@@ -16,16 +16,12 @@ const Notifications = () => {
   const { data: notificationsData } = useQuery({
     queryKey: ['notifications', currentPage],
     queryFn: async () => {
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-
       // Get low stock products
       const { data: lowStockProducts } = await supabase
         .from('products')
         .select('*')
-        .filter('current_stock', 'lt', 'min_stock')
-        .eq('is_active', true)
-        .range(from, to);
+        .lte('current_stock', supabase.raw('min_stock'))
+        .eq('is_active', true);
 
       // Get overdue credit transactions
       const { data: overdueCredits } = await supabase
@@ -33,8 +29,7 @@ const Notifications = () => {
         .select('*, customers(name)')
         .eq('is_credit', true)
         .lt('due_date', new Date().toISOString().split('T')[0])
-        .gt('paid_amount', 0)
-        .range(from, to);
+        .gt('total_amount', supabase.raw('paid_amount'));
 
       // Get overdue purchase payments
       const { data: overduePurchases } = await supabase
@@ -42,8 +37,7 @@ const Notifications = () => {
         .select('*, suppliers(name)')
         .eq('payment_method', 'credit')
         .neq('payment_status', 'paid')
-        .lt('due_date', new Date().toISOString().split('T')[0])
-        .range(from, to);
+        .lt('due_date', new Date().toISOString().split('T')[0]);
 
       // Get recent orders that need attention
       const { data: pendingOrders } = await supabase
@@ -51,7 +45,7 @@ const Notifications = () => {
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .limit(10);
 
       // Get returns that need processing
       const { data: pendingReturns } = await supabase
@@ -59,7 +53,7 @@ const Notifications = () => {
         .select('*, suppliers(name)')
         .eq('status', 'process')
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .limit(10);
 
       const notifications = [
         ...(lowStockProducts?.map(product => ({
@@ -109,18 +103,24 @@ const Notifications = () => {
         })) || [])
       ];
 
+      // Sort by priority and time
+      const sortedNotifications = notifications.sort((a, b) => {
+        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
+                            (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        return new Date(b.time).getTime() - new Date(a.time).getTime();
+      });
+
+      // Pagination
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE;
+      const paginatedNotifications = sortedNotifications.slice(from, to);
+
       return {
-        data: notifications.sort((a, b) => {
-          // Sort by priority first (urgent > high > medium > low)
-          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-          const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
-                              (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
-          if (priorityDiff !== 0) return priorityDiff;
-          
-          // Then sort by time (newest first)
-          return new Date(b.time).getTime() - new Date(a.time).getTime();
-        }),
-        count: notifications.length
+        data: paginatedNotifications,
+        count: sortedNotifications.length
       };
     }
   });

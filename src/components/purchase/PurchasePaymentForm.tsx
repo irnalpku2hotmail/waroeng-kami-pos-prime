@@ -42,6 +42,7 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-stats'] });
       toast({ 
         title: 'Berhasil', 
         description: 'Pembayaran berhasil dicatat' 

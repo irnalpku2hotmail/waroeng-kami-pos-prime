@@ -5,11 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-type UserRole = Database['public']['Enums']['user_role'] | 'buyer';
+type UserRole = Database['public']['Enums']['user_role'];
 
 interface EditRoleDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface EditRoleDialogProps {
 
 const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: EditRoleDialogProps) => {
   const queryClient = useQueryClient();
+  const [selectedRole, setSelectedRole] = useState<UserRole | ''>('');
 
   const getRoleBadge = (role: string) => {
     const colors: Record<string, string> = {
@@ -35,12 +37,9 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
   // Update user role mutation
   const updateUserRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string, role: UserRole }) => {
-      // Remove 'buyer' as it's not a valid role in the database
-      const validRole = role === 'buyer' ? 'staff' : role;
-      
       const { error } = await supabase
         .from('profiles')
-        .update({ role: validRole })
+        .update({ role: role })
         .eq('id', userId);
 
       if (error) throw error;
@@ -50,6 +49,7 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
       queryClient.invalidateQueries({ queryKey: ['users'] });
       onOpenChange(false);
       onUserUpdated();
+      setSelectedRole('');
     },
     onError: (error: any) => {
       toast({ 
@@ -60,11 +60,11 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
     }
   });
 
-  const handleUpdateRole = (role: UserRole) => {
-    if (selectedUser) {
+  const handleUpdateRole = () => {
+    if (selectedUser && selectedRole) {
       updateUserRoleMutation.mutate({ 
         userId: selectedUser.id, 
-        role: role 
+        role: selectedRole as UserRole
       });
     }
   };
@@ -88,11 +88,11 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
             <div>
               <Label>New Role</Label>
               <Select 
-                defaultValue={selectedUser.role}
-                onValueChange={(value: UserRole) => handleUpdateRole(value)}
+                value={selectedRole}
+                onValueChange={(value: UserRole) => setSelectedRole(value)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select new role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="staff">Staff</SelectItem>
@@ -101,6 +101,17 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateRole}
+                disabled={!selectedRole || selectedRole === selectedUser.role}
+              >
+                Update Role
+              </Button>
             </div>
           </div>
         )}

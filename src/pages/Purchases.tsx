@@ -56,20 +56,49 @@ const Purchases = () => {
     }
   });
 
-  // Query untuk statistik
+  // Query untuk statistik yang diperbaiki
   const { data: statsData } = useQuery({
     queryKey: ['purchase-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get all purchases
+      const { data: allPurchases, error: purchasesError } = await supabase
         .from('purchases')
-        .select('total_amount, payment_method');
+        .select('id, total_amount, payment_method, payment_status');
       
-      if (error) throw error;
+      if (purchasesError) throw purchasesError;
+
+      // Get all payments made
+      const { data: allPayments, error: paymentsError } = await supabase
+        .from('purchase_payments')
+        .select('purchase_id, payment_amount');
       
-      const totalPurchases = data.length;
-      const totalAmount = data.reduce((sum, p) => sum + Number(p.total_amount), 0);
-      const cashAmount = data.filter(p => p.payment_method === 'cash').reduce((sum, p) => sum + Number(p.total_amount), 0);
-      const creditAmount = data.filter(p => p.payment_method === 'credit').reduce((sum, p) => sum + Number(p.total_amount), 0);
+      if (paymentsError) throw paymentsError;
+
+      // Calculate paid amounts per purchase
+      const paidAmounts = allPayments?.reduce((acc, payment) => {
+        acc[payment.purchase_id] = (acc[payment.purchase_id] || 0) + Number(payment.payment_amount);
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const totalPurchases = allPurchases?.length || 0;
+      const totalAmount = allPurchases?.reduce((sum, p) => sum + Number(p.total_amount), 0) || 0;
+      
+      // Cash amount = fully paid purchases + partial payments made
+      let cashAmount = 0;
+      let creditAmount = 0;
+
+      allPurchases?.forEach(purchase => {
+        const paidAmount = paidAmounts[purchase.id] || 0;
+        const totalPurchaseAmount = Number(purchase.total_amount);
+        
+        if (purchase.payment_method === 'cash' || purchase.payment_status === 'paid') {
+          cashAmount += totalPurchaseAmount;
+        } else {
+          // For credit purchases, cash is what's been paid, credit is what's remaining
+          cashAmount += paidAmount;
+          creditAmount += totalPurchaseAmount - paidAmount;
+        }
+      });
       
       return { totalPurchases, totalAmount, cashAmount, creditAmount };
     }
