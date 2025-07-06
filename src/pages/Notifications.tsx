@@ -16,20 +16,24 @@ const Notifications = () => {
   const { data: notificationsData } = useQuery({
     queryKey: ['notifications', currentPage],
     queryFn: async () => {
-      // Get low stock products
+      // Get low stock products - compare current_stock with min_stock directly
       const { data: lowStockProducts } = await supabase
         .from('products')
         .select('*')
-        .lte('current_stock', supabase.raw('min_stock'))
         .eq('is_active', true);
 
-      // Get overdue credit transactions
+      // Filter low stock products in JavaScript
+      const filteredLowStock = lowStockProducts?.filter(p => p.current_stock <= p.min_stock) || [];
+
+      // Get overdue credit transactions - compare total_amount with paid_amount directly
       const { data: overdueCredits } = await supabase
         .from('transactions')
         .select('*, customers(name)')
         .eq('is_credit', true)
-        .lt('due_date', new Date().toISOString().split('T')[0])
-        .gt('total_amount', supabase.raw('paid_amount'));
+        .lt('due_date', new Date().toISOString().split('T')[0]);
+
+      // Filter overdue credits in JavaScript
+      const filteredOverdueCredits = overdueCredits?.filter(t => t.total_amount > t.paid_amount) || [];
 
       // Get overdue purchase payments
       const { data: overduePurchases } = await supabase
@@ -56,7 +60,7 @@ const Notifications = () => {
         .limit(10);
 
       const notifications = [
-        ...(lowStockProducts?.map(product => ({
+        ...(filteredLowStock?.map(product => ({
           id: `low-stock-${product.id}`,
           type: 'low_stock',
           title: 'Stok Rendah',
@@ -65,7 +69,7 @@ const Notifications = () => {
           priority: 'high',
           icon: Package
         })) || []),
-        ...(overdueCredits?.map(credit => ({
+        ...(filteredOverdueCredits?.map(credit => ({
           id: `overdue-credit-${credit.id}`,
           type: 'overdue_payment',
           title: 'Piutang Terlambat',
