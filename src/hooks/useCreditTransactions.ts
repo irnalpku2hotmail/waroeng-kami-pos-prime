@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useCreditTransactions = (searchTerm: string = '') => {
+export const useCreditTransactions = (searchTerm: string) => {
   return useQuery({
     queryKey: ['credit-transactions', searchTerm],
     queryFn: async () => {
@@ -11,11 +11,7 @@ export const useCreditTransactions = (searchTerm: string = '') => {
         .select(`
           *,
           customers(name, phone, email),
-          profiles(full_name),
-          transaction_items(
-            *,
-            products(name)
-          )
+          profiles(full_name)
         `)
         .eq('is_credit', true);
       
@@ -23,8 +19,7 @@ export const useCreditTransactions = (searchTerm: string = '') => {
         query = query.or(`transaction_number.ilike.%${searchTerm}%`);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
+      const { data, error } = await query.order('due_date', { ascending: true });
       if (error) throw error;
       return data;
     }

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,9 +11,8 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Package, Check, CreditCard, MoreHorizontal, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
-import PurchasePaymentForm from '@/components/PurchasePaymentForm';
+import CreditPaymentForm from '@/components/CreditPaymentForm';
 import PurchaseDetailModal from '@/components/PurchaseDetailModal';
-import PurchaseStats from '@/components/purchase/PurchaseStats';
 import PaginationComponent from '@/components/PaginationComponent';
 
 const ITEMS_PER_PAGE = 10;
@@ -80,7 +78,7 @@ const Purchases = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('purchases')
-        .update({ payment_status: 'paid' })
+        .update({ payment_method: 'cash' })
         .eq('id', id);
       if (error) throw error;
     },
@@ -109,19 +107,17 @@ const Purchases = () => {
   };
 
   const getPaymentStatus = (purchase: any) => {
-    switch (purchase.payment_status) {
-      case 'paid':
-        return <Badge className="bg-green-600">Lunas</Badge>;
-      case 'partial':
-        return <Badge className="bg-yellow-600">Sebagian</Badge>;
-      case 'unpaid':
-        const isOverdue = purchase.due_date && new Date(purchase.due_date) < new Date();
-        return <Badge className={isOverdue ? 'bg-red-600' : 'bg-orange-600'}>
-          {isOverdue ? 'Overdue' : 'Belum Lunas'}
-        </Badge>;
-      default:
-        return <Badge className="bg-gray-600">Unknown</Badge>;
+    if (purchase.payment_method === 'cash') {
+      return <Badge className="bg-green-600">Paid</Badge>;
+    } else if (purchase.payment_method === 'credit') {
+      const isOverdue = purchase.due_date && new Date(purchase.due_date) < new Date();
+      return (
+        <Badge className={isOverdue ? 'bg-red-600' : 'bg-orange-600'}>
+          {isOverdue ? 'Overdue' : 'Pending'}
+        </Badge>
+      );
     }
+    return <Badge className="bg-gray-600">Unknown</Badge>;
   };
 
   return (
@@ -148,8 +144,6 @@ const Purchases = () => {
             </DialogContent>
           </Dialog>
         </div>
-
-        <PurchaseStats />
 
         <div className="flex gap-4">
           <Input
@@ -210,7 +204,7 @@ const Purchases = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             Detail
                           </DropdownMenuItem>
-                          {purchase.payment_status !== 'paid' && (
+                          {purchase.payment_method === 'credit' && (
                             <>
                               <DropdownMenuItem onClick={() => openPaymentDialog(purchase)}>
                                 <CreditCard className="h-4 w-4 mr-2" />
@@ -258,8 +252,8 @@ const Purchases = () => {
           )}
         </div>
 
-        {/* Purchase Payment Dialog */}
-        <PurchasePaymentForm
+        {/* Credit Payment Dialog */}
+        <CreditPaymentForm
           purchase={selectedPurchaseForPayment}
           open={paymentDialogOpen}
           onOpenChange={setPaymentDialogOpen}

@@ -28,11 +28,11 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
 
   const createPayment = useMutation({
     mutationFn: async (data: any) => {
-      // Record the payment in purchase_payments table
+      // Record the payment in credit_payments table
       const { error: paymentError } = await supabase
-        .from('purchase_payments')
+        .from('credit_payments')
         .insert([{
-          purchase_id: purchase.id,
+          transaction_id: purchase.id,
           payment_amount: data.payment_amount,
           payment_date: new Date().toISOString().split('T')[0],
           notes: data.notes,
@@ -41,13 +41,19 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
       
       if (paymentError) throw paymentError;
 
-      // The trigger will automatically update the purchase payment_status
+      // Update purchase status to paid if fully paid
+      const { error: updateError } = await supabase
+        .from('purchases')
+        .update({ payment_method: 'cash' })
+        .eq('id', purchase.id);
+      
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       toast({ 
         title: 'Berhasil', 
-        description: 'Pembayaran berhasil dicatat' 
+        description: 'Pembayaran berhasil dicatat dan status pembelian diperbarui' 
       });
       onOpenChange(false);
       setPaymentData({ payment_amount: 0, notes: '' });
@@ -85,16 +91,6 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
             </p>
             <p className="text-sm text-gray-600">
               Supplier: {purchase?.suppliers?.name}
-            </p>
-            <p className="text-sm text-gray-600">
-              Status: <span className={`px-2 py-1 rounded text-xs ${
-                purchase?.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
-                purchase?.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-red-100 text-red-700'
-              }`}>
-                {purchase?.payment_status === 'paid' ? 'Lunas' :
-                 purchase?.payment_status === 'partial' ? 'Sebagian' : 'Belum Lunas'}
-              </span>
             </p>
           </div>
 

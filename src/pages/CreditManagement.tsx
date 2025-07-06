@@ -41,7 +41,7 @@ const CreditManagement = () => {
         />
 
         <CreditTable
-          creditTransactions={creditTransactions || []}
+          creditTransactions={creditTransactions}
           isLoading={isLoading}
           onPayCredit={handlePayCredit}
           onSendReminder={handleSendReminder}
