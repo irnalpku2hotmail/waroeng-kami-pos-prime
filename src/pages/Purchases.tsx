@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,11 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, Check, CreditCard, MoreHorizontal, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, CreditCard, MoreHorizontal, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PurchaseForm from '@/components/PurchaseForm';
-import CreditPaymentForm from '@/components/CreditPaymentForm';
+import PurchasePaymentForm from '@/components/purchase/PurchasePaymentForm';
 import PurchaseDetailModal from '@/components/PurchaseDetailModal';
+import PurchaseStats from '@/components/purchase/PurchaseStats';
 import PaginationComponent from '@/components/PaginationComponent';
 
 const ITEMS_PER_PAGE = 10;
@@ -48,11 +50,28 @@ const Purchases = () => {
         query = query.or(`purchase_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
       }
       
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
       if (error) throw error;
       return { data, count };
+    }
+  });
+
+  // Query untuk statistik
+  const { data: statsData } = useQuery({
+    queryKey: ['purchase-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('total_amount, payment_method');
+      
+      if (error) throw error;
+      
+      const totalPurchases = data.length;
+      const totalAmount = data.reduce((sum, p) => sum + Number(p.total_amount), 0);
+      const cashAmount = data.filter(p => p.payment_method === 'cash').reduce((sum, p) => sum + Number(p.total_amount), 0);
+      const creditAmount = data.filter(p => p.payment_method === 'credit').reduce((sum, p) => sum + Number(p.total_amount), 0);
+      
+      return { totalPurchases, totalAmount, cashAmount, creditAmount };
     }
   });
 
@@ -67,24 +86,8 @@ const Purchases = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-stats'] });
       toast({ title: 'Berhasil', description: 'Pembelian berhasil dihapus' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
-  const markAsPaid = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('purchases')
-        .update({ payment_method: 'cash' })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchases'] });
-      toast({ title: 'Berhasil', description: 'Pembelian berhasil ditandai sebagai lunas' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -107,17 +110,13 @@ const Purchases = () => {
   };
 
   const getPaymentStatus = (purchase: any) => {
-    if (purchase.payment_method === 'cash') {
-      return <Badge className="bg-green-600">Paid</Badge>;
-    } else if (purchase.payment_method === 'credit') {
-      const isOverdue = purchase.due_date && new Date(purchase.due_date) < new Date();
-      return (
-        <Badge className={isOverdue ? 'bg-red-600' : 'bg-orange-600'}>
-          {isOverdue ? 'Overdue' : 'Pending'}
-        </Badge>
-      );
+    if (purchase.payment_status === 'paid') {
+      return <Badge className="bg-green-600">Lunas</Badge>;
+    } else if (purchase.payment_status === 'partial') {
+      return <Badge className="bg-yellow-600">Sebagian</Badge>;
+    } else {
+      return <Badge className="bg-red-600">Belum Bayar</Badge>;
     }
-    return <Badge className="bg-gray-600">Unknown</Badge>;
   };
 
   return (
@@ -144,6 +143,16 @@ const Purchases = () => {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Stats Cards */}
+        {statsData && (
+          <PurchaseStats 
+            totalPurchases={statsData.totalPurchases}
+            totalAmount={statsData.totalAmount}
+            cashAmount={statsData.cashAmount}
+            creditAmount={statsData.creditAmount}
+          />
+        )}
 
         <div className="flex gap-4">
           <Input
@@ -204,17 +213,11 @@ const Purchases = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             Detail
                           </DropdownMenuItem>
-                          {purchase.payment_method === 'credit' && (
-                            <>
-                              <DropdownMenuItem onClick={() => openPaymentDialog(purchase)}>
-                                <CreditCard className="h-4 w-4 mr-2" />
-                                Catat Pembayaran
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => markAsPaid.mutate(purchase.id)}>
-                                <Check className="h-4 w-4 mr-2" />
-                                Tandai Lunas
-                              </DropdownMenuItem>
-                            </>
+                          {purchase.payment_status !== 'paid' && (
+                            <DropdownMenuItem onClick={() => openPaymentDialog(purchase)}>
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              Catat Pembayaran
+                            </DropdownMenuItem>
                           )}
                           <DropdownMenuItem 
                             onClick={() => {
@@ -252,8 +255,8 @@ const Purchases = () => {
           )}
         </div>
 
-        {/* Credit Payment Dialog */}
-        <CreditPaymentForm
+        {/* Purchase Payment Dialog */}
+        <PurchasePaymentForm
           purchase={selectedPurchaseForPayment}
           open={paymentDialogOpen}
           onOpenChange={setPaymentDialogOpen}

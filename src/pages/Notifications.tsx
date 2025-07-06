@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,7 +23,7 @@ const Notifications = () => {
       const { data: lowStockProducts } = await supabase
         .from('products')
         .select('*')
-        .lt('current_stock', 'min_stock')
+        .filter('current_stock', 'lt', 'min_stock')
         .eq('is_active', true)
         .range(from, to);
 
@@ -35,6 +36,15 @@ const Notifications = () => {
         .gt('paid_amount', 0)
         .range(from, to);
 
+      // Get overdue purchase payments
+      const { data: overduePurchases } = await supabase
+        .from('purchases')
+        .select('*, suppliers(name)')
+        .eq('payment_method', 'credit')
+        .neq('payment_status', 'paid')
+        .lt('due_date', new Date().toISOString().split('T')[0])
+        .range(from, to);
+
       // Get recent orders that need attention
       const { data: pendingOrders } = await supabase
         .from('orders')
@@ -43,24 +53,41 @@ const Notifications = () => {
         .order('created_at', { ascending: false })
         .range(from, to);
 
+      // Get returns that need processing
+      const { data: pendingReturns } = await supabase
+        .from('returns')
+        .select('*, suppliers(name)')
+        .eq('status', 'process')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
       const notifications = [
         ...(lowStockProducts?.map(product => ({
           id: `low-stock-${product.id}`,
           type: 'low_stock',
           title: 'Stok Rendah',
-          message: `${product.name} tersisa ${product.current_stock} unit`,
+          message: `${product.name} tersisa ${product.current_stock} unit (minimum: ${product.min_stock})`,
           time: new Date().toISOString(),
           priority: 'high',
           icon: Package
         })) || []),
         ...(overdueCredits?.map(credit => ({
-          id: `overdue-${credit.id}`,
+          id: `overdue-credit-${credit.id}`,
           type: 'overdue_payment',
-          title: 'Pembayaran Terlambat',
+          title: 'Piutang Terlambat',
           message: `${credit.customers?.name || 'Customer'} - Rp ${credit.total_amount.toLocaleString('id-ID')}`,
           time: credit.due_date,
           priority: 'urgent',
           icon: AlertTriangle
+        })) || []),
+        ...(overduePurchases?.map(purchase => ({
+          id: `overdue-purchase-${purchase.id}`,
+          type: 'overdue_purchase',
+          title: 'Hutang Terlambat',
+          message: `${purchase.suppliers?.name || 'Supplier'} - ${purchase.purchase_number} - Rp ${purchase.total_amount.toLocaleString('id-ID')}`,
+          time: purchase.due_date,
+          priority: 'urgent',
+          icon: TrendingDown
         })) || []),
         ...(pendingOrders?.map(order => ({
           id: `pending-order-${order.id}`,
@@ -70,11 +97,29 @@ const Notifications = () => {
           time: order.created_at,
           priority: 'medium',
           icon: Bell
+        })) || []),
+        ...(pendingReturns?.map(returnItem => ({
+          id: `pending-return-${returnItem.id}`,
+          type: 'pending_return',
+          title: 'Return Menunggu Proses',
+          message: `${returnItem.suppliers?.name || 'Supplier'} - ${returnItem.return_number}`,
+          time: returnItem.created_at,
+          priority: 'medium',
+          icon: TrendingDown
         })) || [])
       ];
 
       return {
-        data: notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()),
+        data: notifications.sort((a, b) => {
+          // Sort by priority first (urgent > high > medium > low)
+          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+          const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
+                              (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+          if (priorityDiff !== 0) return priorityDiff;
+          
+          // Then sort by time (newest first)
+          return new Date(b.time).getTime() - new Date(a.time).getTime();
+        }),
         count: notifications.length
       };
     }
@@ -103,11 +148,21 @@ const Notifications = () => {
     return colors[priority as keyof typeof colors] || 'secondary';
   };
 
+  const getPriorityLabel = (priority: string) => {
+    const labels = {
+      urgent: 'Mendesak',
+      high: 'Tinggi',
+      medium: 'Sedang',
+      low: 'Rendah'
+    };
+    return labels[priority as keyof typeof labels] || priority;
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Notifikasi</h1>
+          <h1 className="text-3xl font-bold">Notifikasi & Peringatan</h1>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
@@ -139,7 +194,7 @@ const Notifications = () => {
                           <div className="flex items-center justify-between">
                             <h3 className="text-sm font-medium">{notification.title}</h3>
                             <Badge variant={getPriorityBadge(notification.priority) as "default" | "destructive" | "outline" | "secondary"}>
-                              {notification.priority}
+                              {getPriorityLabel(notification.priority)}
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
