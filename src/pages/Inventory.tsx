@@ -9,11 +9,8 @@ import InventoryStats from '@/components/inventory/InventoryStats';
 import StockLevelTab from '@/components/inventory/StockLevelTab';
 import StockAdjustmentsTab from '@/components/inventory/StockAdjustmentsTab';
 import LowStockTab from '@/components/inventory/LowStockTab';
-import StockAdjustmentDialog from '@/components/inventory/StockAdjustmentDialog';
 
 const Inventory = () => {
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch products with stock info
@@ -68,11 +65,6 @@ const Inventory = () => {
     }
   });
 
-  const handleOpenAdjustDialog = (product: any) => {
-    setSelectedProduct(product);
-    setIsAdjustmentDialogOpen(true);
-  };
-
   const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
   const totalStockValue = products.reduce((sum, p) => sum + (p.current_stock * p.base_price), 0);
 
@@ -108,10 +100,7 @@ const Inventory = () => {
           </TabsList>
 
           <TabsContent value="products">
-            <StockLevelTab 
-              products={products}
-              onAdjustStock={handleOpenAdjustDialog}
-            />
+            <StockLevelTab products={products} />
           </TabsContent>
 
           <TabsContent value="adjustments">
@@ -122,12 +111,6 @@ const Inventory = () => {
             <LowStockTab lowStockProducts={lowStockProducts} />
           </TabsContent>
         </Tabs>
-
-        <StockAdjustmentDialog 
-          open={isAdjustmentDialogOpen}
-          onOpenChange={setIsAdjustmentDialogOpen}
-          product={selectedProduct}
-        />
       </div>
     </Layout>
   );
