@@ -131,8 +131,10 @@ const Purchases = () => {
     return purchase.total_amount;
   };
 
-  // Calculate statistics
+  // Calculate statistics - Fixed logic for cash and credit totals
   const totalPurchases = purchases.reduce((sum, p) => sum + p.total_amount, 0);
+  
+  // Total cash includes: all cash purchases + all credit payments made
   const totalCashPurchases = purchases
     .filter(p => p.payment_method === 'cash')
     .reduce((sum, p) => sum + p.total_amount, 0);
@@ -144,6 +146,10 @@ const Purchases = () => {
       return sum + totalPaid;
     }, 0);
 
+  // Total cash is cash purchases + credit payments made
+  const totalCash = totalCashPurchases + totalCreditPaid;
+
+  // Total credit remaining is only unpaid credit amounts
   const totalCreditRemaining = purchases
     .filter(p => p.payment_method === 'credit')
     .reduce((sum, p) => {
@@ -171,7 +177,7 @@ const Purchases = () => {
               <PurchaseForm 
                 purchase={editPurchase}
                 onSuccess={handleCloseDialog}
-                onClose={handleCloseDialog}
+                onCancel={handleCloseDialog}
               />
             </DialogContent>
           </Dialog>
@@ -196,9 +202,9 @@ const Purchases = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                Rp {(totalCashPurchases + totalCreditPaid).toLocaleString('id-ID')}
+                Rp {totalCash.toLocaleString('id-ID')}
               </div>
-              <p className="text-xs text-muted-foreground">Termasuk pembayaran kredit</p>
+              <p className="text-xs text-muted-foreground">Cash + Pembayaran Kredit</p>
             </CardContent>
           </Card>
           
