@@ -1,167 +1,172 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
-import ProductForm from '@/components/ProductForm';
 import ProductsHeader from '@/components/products/ProductsHeader';
 import ProductsFilters from '@/components/products/ProductsFilters';
 import ProductsTable from '@/components/products/ProductsTable';
 import ProductsLoading from '@/components/products/ProductsLoading';
 import ProductsEmptyState from '@/components/products/ProductsEmptyState';
-import ProductsPagination from '@/components/products/ProductsPagination';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
-import { exportToExcel } from '@/utils/excelExport';
+import ProductForm from '@/components/ProductForm';
+import ProductDetails from '@/pages/ProductDetails';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
 
 const Products = () => {
-  const [open, setOpen] = useState(false);
-  const [editProduct, setEditProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [stockFilter, setStockFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const queryClient = useQueryClient();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
+  // Fetch products with pagination
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', searchTerm, currentPage],
+    queryKey: ['products', searchTerm, selectedCategory, stockFilter, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
+      
       let query = supabase
         .from('products')
         .select(`
           *,
-          categories(name),
-          units(name),
-          price_variants(*)
-        `, { count: 'exact' });
+          categories(id, name),
+          units(id, name, abbreviation)
+        `, { count: 'exact' })
+        .range(from, to)
+        .order('created_at', { ascending: false });
+
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
       }
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
+
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+
+      // Stock filter
+      if (stockFilter === 'in_stock') {
+        query = query.gt('current_stock', 0);
+      } else if (stockFilter === 'low_stock') {
+        query = query.filter('current_stock', 'lte', 'min_stock');
+      } else if (stockFilter === 'out_of_stock') {
+        query = query.eq('current_stock', 0);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return { data, count };
+
+      return {
+        data: data || [],
+        count: count || 0
+      };
     }
   });
 
-  // Query for all products for export
-  const { data: allProductsData } = useQuery({
-    queryKey: ['all-products'],
+  // Fetch categories for filter
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories(name),
-          units(name)
-        `)
-        .order('created_at', { ascending: false });
+        .from('categories')
+        .select('*')
+        .order('name');
+      
       if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
   const products = productsData?.data || [];
-  const productsCount = productsData?.count || 0;
-  const totalPages = Math.ceil(productsCount / ITEMS_PER_PAGE);
+  const totalItems = productsData?.count || 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
-  const deleteProduct = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({ title: 'Berhasil', description: 'Produk berhasil dihapus' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
-  const handleExportToExcel = () => {
-    if (!allProductsData || allProductsData.length === 0) {
-      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
-      return;
-    }
-    const exportData = allProductsData.map(product => ({
-      'Nama Produk': product.name,
-      'Barcode': product.barcode || '-',
-      'Kategori': product.categories?.name || '-',
-      'Unit': product.units?.name || '-',
-      'Harga Jual': product.selling_price,
-      'Stok Saat Ini': product.current_stock,
-      'Stok Minimum': product.min_stock,
-      'Status': product.is_active ? 'Aktif' : 'Nonaktif',
-      'Tanggal Dibuat': new Date(product.created_at).toLocaleDateString('id-ID')
-    }));
-    exportToExcel(exportData, 'Data_Produk', 'Produk');
-    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
+  const handleEdit = (product: any) => {
+    setSelectedProduct(product);
+    setIsFormOpen(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpen(false);
-    setEditProduct(null);
+  const handleViewDetails = (product: any) => {
+    setSelectedProduct(product);
+    setIsDetailsOpen(true);
   };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const handleCloseDetails = () => {
+    setIsDetailsOpen(false);
+    setSelectedProduct(null);
+  };
+
+  // Reset page when filters change
+  const handleFilterChange = (filters: any) => {
+    setCurrentPage(1);
+    if (filters.searchTerm !== undefined) setSearchTerm(filters.searchTerm);
+    if (filters.selectedCategory !== undefined) setSelectedCategory(filters.selectedCategory);
+    if (filters.stockFilter !== undefined) setStockFilter(filters.stockFilter);
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <ProductsLoading />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
       <div className="space-y-6">
-        <ProductsHeader
-          onExport={handleExportToExcel}
-          open={open}
-          setOpen={setOpen}
-          setEditProduct={setEditProduct}
-          editProduct={editProduct}
-        >
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <button onClick={() => setEditProduct(null)} className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md">
-                <Plus className="h-4 w-4 mr-2" /> Tambah Produk
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
-              </DialogHeader>
-              <ProductForm 
-                product={editProduct}
-                onSuccess={handleCloseDialog}
-                onClose={handleCloseDialog}
-              />
-            </DialogContent>
-          </Dialog>
-        </ProductsHeader>
+        <ProductsHeader 
+          onAddProduct={() => setIsFormOpen(true)}
+          totalProducts={totalItems}
+        />
+        
+        <ProductsFilters
+          searchTerm={searchTerm}
+          selectedCategory={selectedCategory}
+          stockFilter={stockFilter}
+          categories={categories}
+          onFiltersChange={handleFilterChange}
+        />
 
-        <ProductsFilters searchTerm={searchTerm} setSearchTerm={v => {setSearchTerm(v); setCurrentPage(1)}} />
+        {products.length === 0 ? (
+          <ProductsEmptyState 
+            hasFilters={!!(searchTerm || selectedCategory || stockFilter !== 'all')}
+            onAddProduct={() => setIsFormOpen(true)}
+          />
+        ) : (
+          <ProductsTable
+            products={products}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+            onEdit={handleEdit}
+            onViewDetails={handleViewDetails}
+          />
+        )}
 
-        <div className="border rounded-lg overflow-hidden">
-          {isLoading ? (
-            <ProductsLoading />
-          ) : products?.length === 0 ? (
-            <ProductsEmptyState />
-          ) : (
-            <>
-              <ProductsTable
-                products={products}
-                onEdit={product => {
-                  setEditProduct(product);
-                  setOpen(true);
-                }}
-                onDelete={id => deleteProduct.mutate(id)}
-              />
-              <ProductsPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                setCurrentPage={setCurrentPage}
-              />
-            </>
-          )}
-        </div>
+        <ProductForm
+          open={isFormOpen}
+          onClose={handleCloseForm}
+          product={selectedProduct}
+        />
+
+        {selectedProduct && (
+          <ProductDetails
+            open={isDetailsOpen}
+            onClose={handleCloseDetails}
+            product={selectedProduct}
+          />
+        )}
       </div>
     </Layout>
   );
