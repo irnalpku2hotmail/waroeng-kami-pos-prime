@@ -5,27 +5,34 @@ import { useAuth } from './AuthContext';
 export interface CartItem {
   id: string;
   product_id: string;
-  product: {
-    id: string;
-    name: string;
-    image_url?: string;
-    selling_price: number;
-    current_stock: number;
-  };
+  name: string;
+  image_url?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
+  current_stock: number;
+  original_price?: number;
+  is_wholesale?: boolean;
+  wholesale_min_qty?: number;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: any) => void;
+  addItem: (item: CartItem) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
-  getTotalAmount: () => number; // Alias for getTotalPrice
+  customerInfo: {
+    name: string;
+    phone: string;
+    address: string;
+    email: string;
+  };
+  setCustomerInfo: (info: any) => void;
+  shippingCost: number;
+  setShippingCost: (cost: number) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -41,6 +48,13 @@ export const useCart = () => {
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
+  const [shippingCost, setShippingCost] = useState(0);
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    email: ''
+  });
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -67,14 +81,26 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [items]);
 
-  const addItem = (product: any) => {
+  // Sync customer info with profile when available
+  useEffect(() => {
+    if (profile) {
+      setCustomerInfo(prev => ({
+        name: profile.full_name || prev.name,
+        phone: profile.phone || prev.phone,
+        address: profile.address || prev.address,
+        email: profile.email || prev.email
+      }));
+    }
+  }, [profile]);
+
+  const addItem = (item: CartItem) => {
     setItems(currentItems => {
-      const existingItem = currentItems.find(i => i.product_id === product.id);
+      const existingItem = currentItems.find(i => i.product_id === item.product_id);
       
       if (existingItem) {
-        const newQuantity = existingItem.quantity + 1;
+        const newQuantity = existingItem.quantity + item.quantity;
         return currentItems.map(i =>
-          i.product_id === product.id
+          i.product_id === item.product_id
             ? {
                 ...i,
                 quantity: newQuantity,
@@ -84,22 +110,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
       
-      const newItem: CartItem = {
-        id: `cart_${product.id}_${Date.now()}`,
-        product_id: product.id,
-        product: {
-          id: product.id,
-          name: product.name,
-          image_url: product.image_url,
-          selling_price: product.selling_price,
-          current_stock: product.current_stock
-        },
-        quantity: 1,
-        unit_price: product.selling_price,
-        total_price: product.selling_price
-      };
-      
-      return [...currentItems, newItem];
+      return [...currentItems, item];
     });
   };
 
@@ -139,10 +150,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return items.reduce((total, item) => total + item.total_price, 0);
   };
 
-  const getTotalAmount = () => {
-    return getTotalPrice(); // Alias for compatibility
-  };
-
   const value: CartContextType = {
     items,
     addItem,
@@ -151,7 +158,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCart,
     getTotalItems,
     getTotalPrice,
-    getTotalAmount
+    customerInfo,
+    setCustomerInfo,
+    shippingCost,
+    setShippingCost
   };
 
   return (
