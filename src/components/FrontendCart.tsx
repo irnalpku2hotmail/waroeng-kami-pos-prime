@@ -28,15 +28,18 @@ const FrontendCart = () => {
     removeItem, 
     clearCart, 
     getTotalItems, 
-    getTotalPrice,
-    customerInfo,
-    setCustomerInfo,
-    shippingCost,
-    setShippingCost
+    getTotalPrice
   } = useCart();
   
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [orderNotes, setOrderNotes] = useState('');
+  const [shippingCost, setShippingCost] = useState(0);
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    email: ''
+  });
 
   // Fetch COD settings
   const { data: codSettings } = useQuery({
@@ -96,7 +99,7 @@ const FrontendCart = () => {
     } else {
       setShippingCost(0);
     }
-  }, [codSettings, getTotalPrice(), items.length, setShippingCost]);
+  }, [codSettings, getTotalPrice(), items.length]);
 
   const getBestPriceForQuantity = (productId: string, quantity: number) => {
     const product = productsWithVariants.find(p => p.id === productId);
@@ -289,7 +292,7 @@ const FrontendCart = () => {
         {/* Cart Items */}
         <div className="space-y-3 max-h-64 overflow-y-auto">
           {items.map((item) => {
-            const itemImageUrl = getImageUrl(item.image_url);
+            const itemImageUrl = getImageUrl(item.product.image_url);
             const currentPriceInfo = getBestPriceForQuantity(item.product_id, item.quantity);
             
             return (
@@ -297,7 +300,7 @@ const FrontendCart = () => {
                 {itemImageUrl && (
                   <img 
                     src={itemImageUrl} 
-                    alt={item.name} 
+                    alt={item.product.name} 
                     className="w-12 h-12 object-cover rounded"
                   />
                 )}
@@ -308,7 +311,7 @@ const FrontendCart = () => {
                 )}
                 
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{item.name}</p>
+                  <p className="font-medium text-sm truncate">{item.product.name}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-sm text-gray-600">
                       Rp {currentPriceInfo.price.toLocaleString('id-ID')}
