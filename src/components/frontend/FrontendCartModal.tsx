@@ -55,9 +55,14 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
       const deliveryFee = settings?.delivery_fee?.amount || 10000;
       const totalAmount = getTotalAmount() + deliveryFee;
 
+      // Generate order number
+      const timestamp = Date.now();
+      const orderNumber = `ORD-${timestamp}`;
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert([{
+        .insert({
+          order_number: orderNumber,
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
@@ -66,7 +71,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
           delivery_fee: deliveryFee,
           payment_method: 'cod',
           status: 'pending'
-        }])
+        })
         .select()
         .single();
 
@@ -156,7 +161,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
             {/* Cart Items */}
             <div className="space-y-4">
               {items.map((item) => (
-                <Card key={item.product.id}>
+                <Card key={item.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       <img
