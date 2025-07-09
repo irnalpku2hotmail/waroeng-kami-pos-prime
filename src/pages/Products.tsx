@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -187,8 +186,6 @@ const Products = () => {
             {selectedProduct && (
               <ProductDetails 
                 product={selectedProduct}
-                open={detailsOpen}
-                onOpenChange={setDetailsOpen}
               />
             )}
           </DialogContent>
