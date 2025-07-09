@@ -10,12 +10,40 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, MoreHorizontal, Eye, Gift, User } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreHorizontal, Eye, User } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
 import PaginationComponent from '@/components/PaginationComponent';
 
 const ITEMS_PER_PAGE = 10;
+
+// Function to generate customer code
+const generateCustomerCode = async () => {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('customer_code')
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error('Error generating customer code:', error);
+    return `CUST${Date.now().toString().slice(-6)}`;
+  }
+
+  if (!data || data.length === 0) {
+    return 'CUST000001';
+  }
+
+  const lastCode = data[0].customer_code;
+  const match = lastCode.match(/CUST(\d+)/);
+  
+  if (match) {
+    const nextNumber = parseInt(match[1]) + 1;
+    return `CUST${nextNumber.toString().padStart(6, '0')}`;
+  }
+
+  return `CUST${Date.now().toString().slice(-6)}`;
+};
 
 const Customers = () => {
   const [open, setOpen] = useState(false);
@@ -63,6 +91,11 @@ const Customers = () => {
 
   const saveCustomer = useMutation({
     mutationFn: async (data: any) => {
+      // Generate customer code if creating new customer
+      if (!editCustomer) {
+        data.customer_code = await generateCustomerCode();
+      }
+
       if (editCustomer) {
         const { error } = await supabase
           .from('customers')
@@ -318,16 +351,11 @@ const Customers = () => {
         )}
 
         {/* Customer Details Dialog */}
-        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Detail Customer</DialogTitle>
-            </DialogHeader>
-            {selectedCustomer && (
-              <CustomerDetails customer={selectedCustomer} />
-            )}
-          </DialogContent>
-        </Dialog>
+        <CustomerDetails 
+          customer={selectedCustomer}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+        />
       </div>
     </Layout>
   );

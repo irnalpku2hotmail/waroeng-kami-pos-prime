@@ -2,10 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Layout from '@/components/Layout';
 import ProductsTable from '@/components/products/ProductsTable';
 import ProductsFilters from '@/components/products/ProductsFilters';
@@ -15,7 +12,6 @@ import ProductsEmptyState from '@/components/products/ProductsEmptyState';
 import ProductsPagination from '@/components/products/ProductsPagination';
 import ProductForm from '@/components/ProductForm';
 import ProductDetails from '@/components/ProductDetails';
-import { Plus } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -103,6 +99,19 @@ const Products = () => {
     setSelectedProduct(null);
   };
 
+  const handleFiltersChange = (filters: {
+    searchTerm?: string;
+    selectedCategory?: string;
+    stockFilter?: string;
+  }) => {
+    if (filters.searchTerm !== undefined) setSearchTerm(filters.searchTerm);
+    if (filters.selectedCategory !== undefined) setCategoryFilter(filters.selectedCategory);
+    if (filters.stockFilter !== undefined) setStatusFilter(filters.stockFilter);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const hasFilters = searchTerm || categoryFilter || statusFilter;
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -111,25 +120,35 @@ const Products = () => {
             setEditProduct(null);
             setOpen(true);
           }}
+          totalProducts={productsCount}
         />
 
         <ProductsFilters
           searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          categoryFilter={categoryFilter}
-          onCategoryChange={setCategoryFilter}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
+          selectedCategory={categoryFilter}
+          stockFilter={statusFilter}
           categories={categories || []}
+          onFiltersChange={handleFiltersChange}
         />
 
         {isLoading ? (
           <ProductsLoading />
         ) : products.length === 0 ? (
-          <ProductsEmptyState />
+          <ProductsEmptyState 
+            hasFilters={hasFilters}
+            onAddProduct={() => {
+              setEditProduct(null);
+              setOpen(true);
+            }}
+          />
         ) : (
           <ProductsTable
             products={products}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={productsCount}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
             onEdit={handleEdit}
             onViewDetails={handleViewDetails}
           />
@@ -139,9 +158,7 @@ const Products = () => {
           <ProductsPagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={ITEMS_PER_PAGE}
-            totalItems={productsCount}
+            setCurrentPage={setCurrentPage}
           />
         )}
 
@@ -156,7 +173,6 @@ const Products = () => {
             <ProductForm
               product={editProduct}
               onSuccess={handleSuccess}
-              onCancel={handleCloseDialog}
             />
           </DialogContent>
         </Dialog>
