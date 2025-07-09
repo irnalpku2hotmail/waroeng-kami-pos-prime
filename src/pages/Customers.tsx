@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -159,16 +158,13 @@ const Customers = () => {
         <CustomerRanking />
 
         {/* Customer Details Dialog */}
-        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Detail Customer</DialogTitle>
-            </DialogHeader>
-            {selectedCustomer && (
-              <CustomerDetails customer={selectedCustomer} />
-            )}
-          </DialogContent>
-        </Dialog>
+        {selectedCustomer && (
+          <CustomerDetails 
+            customer={selectedCustomer} 
+            open={detailsOpen} 
+            onOpenChange={setDetailsOpen}
+          />
+        )}
       </div>
     </Layout>
   );

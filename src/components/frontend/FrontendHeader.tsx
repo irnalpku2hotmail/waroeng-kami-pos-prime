@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ShoppingCart, Search, User, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -119,14 +118,7 @@ const FrontendHeader = ({ searchTerm, setSearchTerm }: FrontendHeaderProps) => {
       </header>
 
       {/* Auth Modal */}
-      <Dialog open={authModalOpen} onOpenChange={setAuthModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Login / Register</DialogTitle>
-          </DialogHeader>
-          <AuthModal onClose={() => setAuthModalOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
 
       {/* Cart Modal */}
       <CartModal open={cartModalOpen} onClose={() => setCartModalOpen(false)} />
