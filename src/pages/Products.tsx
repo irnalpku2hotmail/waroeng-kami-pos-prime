@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -105,6 +104,11 @@ const Products = () => {
     setSelectedProduct(null);
   };
 
+  const handleFormSuccess = () => {
+    // Refresh the products data when form is successfully submitted
+    // The query will automatically refetch due to query invalidation in ProductForm
+  };
+
   // Reset page when filters change
   const handleFilterChange = (filters: any) => {
     setCurrentPage(1);
@@ -165,6 +169,7 @@ const Products = () => {
             <ProductForm
               product={selectedProduct}
               onClose={handleCloseForm}
+              onSuccess={handleFormSuccess}
             />
           </DialogContent>
         </Dialog>
@@ -176,7 +181,6 @@ const Products = () => {
             </DialogHeader>
             {selectedProduct && (
               <ProductDetails
-                product={selectedProduct}
                 onClose={handleCloseDetails}
               />
             )}

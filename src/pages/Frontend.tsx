@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -113,10 +113,13 @@ const Frontend = () => {
 
     addItem({
       id: product.id,
+      product_id: product.id,
       name: product.name,
-      selling_price: product.selling_price,
+      image_url: product.image_url,
       quantity: 1,
-      image: product.image_url
+      unit_price: product.selling_price,
+      total_price: product.selling_price,
+      current_stock: product.current_stock
     });
 
     toast({
