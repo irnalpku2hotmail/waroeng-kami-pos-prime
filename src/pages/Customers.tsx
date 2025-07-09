@@ -1,170 +1,292 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Eye, Phone, Mail, MapPin, Calendar, Gift } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { Search, Plus, MoreHorizontal, Eye, Edit, Users, TrendingUp, Calendar } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
-import CustomerStats from '@/components/customers/CustomerStats';
-import CustomerRanking from '@/components/customers/CustomerRanking';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 20;
 
 const Customers = () => {
-  const [open, setOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const { data: customers, isLoading } = useQuery({
-    queryKey: ['customers', searchTerm],
+  // Fetch customers with pagination
+  const { data: customersData } = useQuery({
+    queryKey: ['customers', searchTerm, currentPage],
     queryFn: async () => {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
       let query = supabase
         .from('customers')
-        .select('*')
-        .order('total_points', { ascending: false });
-      
+        .select('*', { count: 'exact' })
+        .range(from, to)
+        .order('created_at', { ascending: false });
+
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
-      
-      const { data, error } = await query;
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data || [];
+
+      return {
+        data: data || [],
+        count: count || 0
+      };
     }
   });
 
+  // Fetch customer stats
+  const { data: customerStats } = useQuery({
+    queryKey: ['customer-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('total_spent, total_points, created_at');
+      
+      if (error) throw error;
+
+      const totalCustomers = data.length;
+      const totalSpent = data.reduce((sum, customer) => sum + customer.total_spent, 0);
+      const totalPoints = data.reduce((sum, customer) => sum + customer.total_points, 0);
+      
+      // Calculate new customers this month
+      const thisMonth = new Date();
+      thisMonth.setDate(1); // First day of current month
+      const newThisMonth = data.filter(customer => 
+        new Date(customer.created_at) >= thisMonth
+      ).length;
+
+      return {
+        totalCustomers,
+        totalSpent,
+        totalPoints,
+        newThisMonth
+      };
+    }
+  });
+
+  const customers = customersData?.data || [];
+  const totalCustomers = customersData?.count || 0;
+  const totalPages = Math.ceil(totalCustomers / ITEMS_PER_PAGE);
+
   const handleViewDetails = (customer: any) => {
     setSelectedCustomer(customer);
-    setDetailsOpen(true);
+    setIsDetailsOpen(true);
   };
 
-  const handleCloseDetails = () => {
-    setDetailsOpen(false);
-    setSelectedCustomer(null);
+  const handleEdit = (customer: any) => {
+    setSelectedCustomer(customer);
+    setIsFormOpen(true);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
   };
 
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Stats Cards */}
-        <CustomerStats />
-
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Manajemen Customer</h1>
-            <p className="text-gray-600">Kelola data customer dan program loyalitas</p>
-          </div>
-          <Button onClick={() => setOpen(true)}>
+          <h1 className="text-3xl font-bold">Customers</h1>
+          <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Tambah Customer
+            Add Customer
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Cari customer..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{customerStats?.totalCustomers || 0}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                Rp {(customerStats?.totalSpent || 0).toLocaleString('id-ID')}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Points</CardTitle>
+              <Badge className="h-4 w-4 rounded-full" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {(customerStats?.totalPoints || 0).toLocaleString('id-ID')}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">New This Month</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{customerStats?.newThisMonth || 0}</div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Customers Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                    <div className="h-3 bg-gray-200 rounded w-5/6"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Search */}
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search customers by name, code, phone, or email..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {customers?.map((customer) => (
-              <Card key={customer.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{customer.name}</CardTitle>
-                      <CardDescription>{customer.customer_code}</CardDescription>
-                    </div>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      {customer.total_points} pts
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    {customer.phone && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone className="h-4 w-4" />
-                        {customer.phone}
-                      </div>
-                    )}
-                    {customer.email && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Mail className="h-4 w-4" />
-                        {customer.email}
-                      </div>
-                    )}
-                    {customer.address && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <MapPin className="h-4 w-4" />
-                        <span className="line-clamp-1">{customer.address}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Gift className="h-4 w-4" />
-                      Spent: Rp {customer.total_spent.toLocaleString('id-ID')}
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(customer.created_at).toLocaleDateString('id-ID')}
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDetails(customer)}
-                      className="w-full"
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      Lihat Detail
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        </div>
 
-        {/* Customer Ranking - Moved to bottom */}
-        <CustomerRanking />
+        {/* Customers Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>All Customers ({totalCustomers})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Total Spent</TableHead>
+                      <TableHead>Points</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{customer.name}</div>
+                            <div className="text-sm text-gray-500">{customer.customer_code}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="text-sm">{customer.phone || '-'}</div>
+                            <div className="text-sm text-gray-500">{customer.email || '-'}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">
+                            Rp {customer.total_spent.toLocaleString('id-ID')}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {customer.total_points} points
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(customer.created_at).toLocaleDateString('id-ID')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewDetails(customer)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(customer)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalPages > 1 && (
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  totalItems={totalCustomers}
+                />
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Customer Details Dialog */}
-        {selectedCustomer && (
-          <CustomerDetails 
-            customer={selectedCustomer} 
-            open={detailsOpen} 
-            onOpenChange={setDetailsOpen}
-          />
-        )}
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Customer Details</DialogTitle>
+              <DialogDescription>
+                View detailed information about {selectedCustomer?.name}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedCustomer && (
+              <CustomerDetails 
+                customerId={selectedCustomer.id} 
+                customer={selectedCustomer}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Customer Form Dialog */}
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedCustomer ? 'Edit Customer' : 'Add New Customer'}
+              </DialogTitle>
+            </DialogHeader>
+            {/* Customer form component would go here */}
+            <div className="p-4 text-center text-gray-500">
+              Customer form component to be implemented
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
