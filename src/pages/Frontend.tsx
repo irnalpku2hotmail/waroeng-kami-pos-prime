@@ -1,460 +1,342 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Heart, ShoppingCart, Star, Package, Eye } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Search, ShoppingCart, Package, Heart, Star, ArrowRight } from 'lucide-react';
-import Autoplay from 'embla-carousel-autoplay';
+import FrontendNavbar from '@/components/frontend/FrontendNavbar';
+import FrontendHero from '@/components/frontend/FrontendHero';
+import FrontendCategories from '@/components/frontend/FrontendCategories';
+import FrontendFlashSale from '@/components/frontend/FrontendFlashSale';
+import FrontendFooter from '@/components/frontend/FrontendFooter';
 
 const Frontend = () => {
   const { user } = useAuth();
-  const { addItem, items } = useCart();
+  const { addItem } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 12;
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [likedProducts, setLikedProducts] = useState<string[]>([]);
 
-  // Fetch categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ['frontend-categories'],
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
+      const { data, error } = await supabase.from('settings').select('*');
       if (error) throw error;
-      return data || [];
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
     }
   });
 
-  // Fetch products with pagination
-  const { data: productsData } = useQuery({
-    queryKey: ['frontend-products', searchTerm, selectedCategory, currentPage],
+  // Fetch products with filtering
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['frontend-products', searchTerm, selectedCategory],
     queryFn: async () => {
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      
       let query = supabase
         .from('products')
         .select(`
           *,
-          categories(name, icon_url),
+          categories(name),
           units(name, abbreviation)
-        `, { count: 'exact' })
-        .eq('is_active', true)
-        .range(from, to)
-        .order('name');
-      
+        `);
+
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
       }
-      
+
       if (selectedCategory) {
         query = query.eq('category_id', selectedCategory);
       }
-      
-      const { data, error, count } = await query;
-      if (error) throw error;
-      
-      return { data: data || [], count: count || 0 };
-    }
-  });
 
-  const products = productsData?.data || [];
-  const totalProducts = productsData?.count || 0;
-  const totalPages = Math.ceil(totalProducts / ITEMS_PER_PAGE);
-
-  // Fetch featured products for carousel
-  const { data: featuredProducts = [] } = useQuery({
-    queryKey: ['featured-products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories(name),
-          units(abbreviation)
-        `)
+      const { data, error } = await query
         .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(8);
-      
+        .order('name');
+
       if (error) throw error;
       return data || [];
     }
   });
 
+  const handleProductClick = (product: any) => {
+    setSelectedProduct(product);
+    setDetailModalOpen(true);
+  };
+
   const handleAddToCart = (product: any) => {
     if (!user) {
       toast({
-        title: 'Login Required',
-        description: 'Please login to add items to cart',
+        title: 'Login Diperlukan',
+        description: 'Silakan login terlebih dahulu untuk menambah produk ke keranjang.',
         variant: 'destructive'
       });
       return;
     }
 
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      quantity: 1,
-      image: product.image_url
-    });
+    if (product.current_stock <= 0) {
+      toast({
+        title: 'Stok Habis',
+        description: 'Produk ini sedang tidak tersedia.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
+    addItem(product);
     toast({
-      title: 'Added to Cart',
-      description: `${product.name} has been added to your cart`
+      title: 'Berhasil',
+      description: `${product.name} ditambahkan ke keranjang.`
     });
   };
 
-  const isProductInCart = (productId: string) => {
-    return items.some(item => item.id === productId);
+  const handleToggleLike = (productId: string) => {
+    if (!user) {
+      toast({
+        title: 'Login Diperlukan',
+        description: 'Silakan login untuk menyukai produk.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLikedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
   };
+
+  const storeInfo = settings?.store_info || {};
+  const storeName = storeInfo.name || 'Toko Online';
+  const storeDescription = storeInfo.description;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Package className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-gray-900">Waroeng Kami</h1>
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <FrontendNavbar
+        storeName={storeName}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        likedProducts={likedProducts}
+        onToggleLike={handleToggleLike}
+      />
+
+      {/* Hero Section */}
+      <FrontendHero 
+        storeName={storeName}
+        storeDescription={storeDescription}
+      />
+
+      {/* Flash Sale Section */}
+      <FrontendFlashSale onProductClick={handleProductClick} />
+
+      {/* Categories */}
+      <FrontendCategories
+        selectedCategory={selectedCategory}
+        onCategorySelect={setSelectedCategory}
+      />
+
+      {/* Products Section */}
+      <div className="px-4 py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {selectedCategory ? 'Produk Kategori' : 'Semua Produk'}
+            </h2>
+            <p className="text-gray-600">
+              {searchTerm && `Hasil pencarian "${searchTerm}"`}
+            </p>
+          </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="h-48 bg-gray-200 rounded-t-lg" />
+                  <CardContent className="p-4">
+                    <div className="h-4 bg-gray-200 rounded mb-2" />
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-            
-            <div className="flex items-center space-x-4">
-              {!user ? (
-                <div className="flex space-x-2">
-                  <Button variant="outline" onClick={() => window.location.href = '/auth/login'}>
-                    Login
-                  </Button>
-                  <Button onClick={() => window.location.href = '/auth/register'}>
-                    Register
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
-                    Dashboard
-                  </Button>
-                  <Button variant="outline" size="icon" className="relative">
-                    <ShoppingCart className="h-4 w-4" />
-                    {items.length > 0 && (
-                      <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                        {items.length}
+          ) : products.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 text-lg">
+                {searchTerm ? 'Tidak ada produk yang ditemukan' : 'Belum ada produk tersedia'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <Card 
+                  key={product.id}
+                  className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                  onClick={() => handleProductClick(product)}
+                >
+                  <div className="relative">
+                    <img
+                      src={product.image_url || '/placeholder.svg'}
+                      alt={product.name}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    {product.current_stock <= 0 && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <Badge variant="destructive" className="text-sm">
+                          Stok Habis
+                        </Badge>
+                      </div>
+                    )}
+                    {product.current_stock <= product.min_stock && product.current_stock > 0 && (
+                      <Badge className="absolute top-2 left-2 bg-orange-500">
+                        Stok Terbatas
                       </Badge>
                     )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Hero Carousel */}
-      <div className="container mx-auto px-4 py-8">
-        <Carousel 
-          className="w-full max-w-6xl mx-auto"
-          plugins={[
-            Autoplay({
-              delay: 4000,
-            }),
-          ]}
-        >
-          <CarouselContent>
-            {featuredProducts.map((product) => (
-              <CarouselItem key={product.id}>
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white">
-                  <div className="absolute inset-0 bg-black/20"></div>
-                  <div className="relative flex items-center justify-between p-12 min-h-[400px]">
-                    <div className="flex-1 space-y-6">
-                      <div className="space-y-2">
-                        <Badge className="bg-white/20 text-white border-white/30">
-                          Featured Product
-                        </Badge>
-                        <h2 className="text-4xl font-bold leading-tight">
-                          {product.name}
-                        </h2>
+                  </div>
+                  
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-2 text-sm line-clamp-2">
+                      {product.name}
+                    </h3>
+                    
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold text-blue-600">
+                        Rp {product.selling_price.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                      <div className="flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        <span>Stok: {product.current_stock}</span>
                       </div>
-                      
-                      <p className="text-xl text-white/90 max-w-md">
-                        {product.description || 'Premium quality product at the best price'}
-                      </p>
-                      
-                      <div className="flex items-center space-x-4">
-                        <div className="text-3xl font-bold">
-                          Rp {product.selling_price.toLocaleString('id-ID')}
-                        </div>
-                        {product.current_stock <= 0 && (
-                          <Badge variant="destructive">Out of Stock</Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex space-x-4">
-                        <Button 
-                          size="lg" 
-                          className="bg-white text-gray-900 hover:bg-gray-100"
-                          onClick={() => handleAddToCart(product)}
-                          disabled={product.current_stock <= 0 || !user}
-                        >
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          Add to Cart
-                        </Button>
-                        <Button 
-                          size="lg" 
-                          variant="outline" 
-                          className="border-white text-white hover:bg-white/10"
-                        >
-                          <Heart className="mr-2 h-4 w-4" />
-                          Wishlist
-                        </Button>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 text-yellow-500" />
+                        <span>4.5</span>
                       </div>
                     </div>
                     
-                    <div className="flex-1 flex justify-end">
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="w-80 h-80 object-cover rounded-xl shadow-2xl"
-                        />
-                      ) : (
-                        <div className="w-80 h-80 bg-white/20 rounded-xl flex items-center justify-center">
-                          <Package className="h-32 w-32 text-white/50" />
-                        </div>
-                      )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProductClick(product);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Detail
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleLike(product.id);
+                        }}
+                        className={likedProducts.includes(product.id) ? 'text-red-500' : ''}
+                      >
+                        <Heart className={`h-4 w-4 ${likedProducts.includes(product.id) ? 'fill-current' : ''}`} />
+                      </Button>
                     </div>
-                  </div>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className="left-4" />
-          <CarouselNext className="right-4" />
-        </Carousel>
-      </div>
-
-      {/* Search and Categories */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Search */}
-          <div className="relative max-w-md mx-auto">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12 text-lg"
-            />
-          </div>
-
-          {/* Categories */}
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-center text-gray-900">Shop by Categories</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              <Button
-                variant={selectedCategory === null ? "default" : "outline"}
-                onClick={() => setSelectedCategory(null)}
-                className="h-20 flex-col space-y-2 hover:shadow-lg transition-all"
-              >
-                <Package className="h-6 w-6" />
-                <span className="text-sm font-medium">All Products</span>
-              </Button>
-              
-              {categories.map((category) => (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === category.id ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className="h-20 flex-col space-y-2 hover:shadow-lg transition-all"
-                >
-                  {category.icon_url ? (
-                    <img src={category.icon_url} alt={category.name} className="h-6 w-6" />
-                  ) : (
-                    <Package className="h-6 w-6" />
-                  )}
-                  <span className="text-sm font-medium text-center">{category.name}</span>
-                </Button>
+                  </CardContent>
+                </Card>
               ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Products Grid */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {selectedCategory ? 
-                `${categories.find(c => c.id === selectedCategory)?.name} Products` : 
-                'All Products'
-              }
-            </h2>
-            <div className="text-gray-600">
-              Showing {products.length} of {totalProducts} products
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-                <div className="relative">
-                  {product.image_url ? (
-                    <img 
-                      src={product.image_url} 
-                      alt={product.name}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                      <Package className="h-16 w-16 text-gray-400" />
-                    </div>
-                  )}
-                  
-                  {product.current_stock <= 0 && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <Badge variant="destructive" className="text-white">
-                        Out of Stock
-                      </Badge>
-                    </div>
-                  )}
-                  
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-                  >
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <CardContent className="p-4 space-y-3">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                      {product.name}
-                    </h3>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className="text-xs">
-                        {product.categories?.name}
-                      </Badge>
-                      {product.current_stock > 0 && (
-                        <div className="flex items-center space-x-1">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs text-gray-600">4.5</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-900">
-                        Rp {product.selling_price.toLocaleString('id-ID')}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        Stock: {product.current_stock} {product.units?.abbreviation}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    className="w-full"
-                    onClick={() => handleAddToCart(product)}
-                    disabled={product.current_stock <= 0 || !user}
-                    variant={isProductInCart(product.id) ? "outline" : "default"}
-                  >
-                    {product.current_stock <= 0 ? (
-                      'Out of Stock'
-                    ) : !user ? (
-                      'Login to Purchase'
-                    ) : isProductInCart(product.id) ? (
-                      'In Cart'
-                    ) : (
-                      <>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Add to Cart
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-8 space-x-2">
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(page => 
-                  page === 1 || 
-                  page === totalPages || 
-                  (page >= currentPage - 2 && page <= currentPage + 2)
-                )
-                .map((page, index, array) => (
-                  <div key={page} className="flex items-center">
-                    {index > 0 && array[index - 1] !== page - 1 && (
-                      <span className="px-2 text-gray-400">...</span>
-                    )}
-                    <Button
-                      variant={currentPage === page ? "default" : "outline"}
-                      onClick={() => setCurrentPage(page)}
-                      className="w-10"
-                    >
-                      {page}
-                    </Button>
-                  </div>
-                ))}
-              
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
             </div>
           )}
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 mt-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto text-center space-y-4">
-            <div className="flex items-center justify-center space-x-2">
-              <Package className="h-8 w-8 text-blue-400" />
-              <h3 className="text-2xl font-bold">Waroeng Kami</h3>
-            </div>
-            <p className="text-gray-400">
-              Your trusted marketplace for quality products at the best prices
-            </p>
-            <div className="text-sm text-gray-500">
-              © 2024 Waroeng Kami. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
+      <FrontendFooter />
+
+      {/* Product Detail Modal */}
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="max-w-2xl">
+          {selectedProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedProduct.name}</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <img
+                    src={selectedProduct.image_url || '/placeholder.svg'}
+                    alt={selectedProduct.name}
+                    className="w-full h-64 object-cover rounded-lg"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-2xl font-bold text-blue-600">
+                      Rp {selectedProduct.selling_price.toLocaleString('id-ID')}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Kategori: {selectedProduct.categories?.name || 'Tidak ada kategori'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">Stok: {selectedProduct.current_stock}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm">4.5 (120 ulasan)</span>
+                    </div>
+                  </div>
+                  
+                  {selectedProduct.description && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Deskripsi</h4>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {selectedProduct.description}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => handleToggleLike(selectedProduct.id)}
+                      variant="outline"
+                      className={`flex-1 ${likedProducts.includes(selectedProduct.id) ? 'text-red-500 border-red-500' : ''}`}
+                    >
+                      <Heart className={`h-4 w-4 mr-2 ${likedProducts.includes(selectedProduct.id) ? 'fill-current' : ''}`} />
+                      {likedProducts.includes(selectedProduct.id) ? 'Disukai' : 'Suka'}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleAddToCart(selectedProduct);
+                        setDetailModalOpen(false);
+                      }}
+                      disabled={selectedProduct.current_stock <= 0}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {selectedProduct.current_stock <= 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

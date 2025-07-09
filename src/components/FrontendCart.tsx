@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -139,21 +140,7 @@ const FrontendCart = () => {
     // Get the best price for the new quantity
     const priceInfo = getBestPriceForQuantity(productId, newQuantity);
     
-    // Update the cart item with new price
-    const updatedItems = items.map(item => {
-      if (item.product_id === productId) {
-        return {
-          ...item,
-          quantity: newQuantity,
-          unit_price: priceInfo.price,
-          total_price: newQuantity * priceInfo.price,
-          is_wholesale: priceInfo.isWholesale
-        };
-      }
-      return item;
-    });
-
-    // Manually update items in context (we need a way to update with new price)
+    // Update the cart item with new price - this only affects the cart, not product stock
     updateQuantity(productId, newQuantity);
   };
 
@@ -181,7 +168,7 @@ const FrontendCart = () => {
         itemsCount: items.length
       });
       
-      // Create order
+      // Create order - this does NOT affect product stock
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -192,7 +179,7 @@ const FrontendCart = () => {
           total_amount: totalAmount,
           delivery_fee: shippingCost,
           payment_method: 'cod',
-          status: 'pending',
+          status: 'pending', // Stock is only affected when status changes to 'delivered'
           notes: orderNotes || null
         })
         .select()
@@ -205,7 +192,7 @@ const FrontendCart = () => {
 
       console.log('Order created successfully:', order);
 
-      // Create order items
+      // Create order items - this does NOT affect product stock
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.product_id,
@@ -233,7 +220,7 @@ const FrontendCart = () => {
     onSuccess: (order) => {
       toast({
         title: 'Order Berhasil Dibuat',
-        description: `Order ${order.order_number} telah dibuat. Tim kami akan segera menghubungi Anda.`
+        description: `Order ${order.order_number} telah dibuat. Tim kami akan segera menghubungi Anda. Stok produk akan dikurangi saat pesanan dikirim.`
       });
       clearCart();
       setOrderNotes('');
@@ -476,7 +463,7 @@ const FrontendCart = () => {
                 </div>
                 <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                   <Truck className="h-4 w-4" />
-                  Pembayaran dilakukan saat barang tiba (COD)
+                  Pembayaran dilakukan saat barang tiba (COD). Stok akan dikurangi saat pesanan dikirim.
                 </p>
               </div>
               
