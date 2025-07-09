@@ -180,9 +180,7 @@ const Products = () => {
               <DialogTitle>Product Details</DialogTitle>
             </DialogHeader>
             {selectedProduct && (
-              <ProductDetails
-                onClose={handleCloseDetails}
-              />
+              <ProductDetails />
             )}
           </DialogContent>
         </Dialog>
