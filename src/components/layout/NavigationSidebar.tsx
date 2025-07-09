@@ -16,7 +16,8 @@ import {
   UserCog,
   Building2,
   Receipt,
-  BarChart3
+  BarChart3,
+  Bell
 } from 'lucide-react';
 
 interface NavigationSidebarProps {
@@ -41,6 +42,7 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
     { icon: Gift, label: 'Rewards', href: '/points-rewards' },
     { icon: Star, label: 'Point Exchange', href: '/point-exchange' },
     { icon: Zap, label: 'Flash Sales', href: '/flash-sales' },
+    { icon: Bell, label: 'Notifications', href: '/notifications' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: UserCog, label: 'User Management', href: '/user-management' },
   ];

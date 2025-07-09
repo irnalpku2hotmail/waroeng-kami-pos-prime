@@ -543,7 +543,6 @@ export type Database = {
           min_stock: number
           name: string
           selling_price: number
-          supplier_id: string | null
           unit_id: string | null
           updated_at: string
         }
@@ -562,7 +561,6 @@ export type Database = {
           min_stock?: number
           name: string
           selling_price?: number
-          supplier_id?: string | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -581,7 +579,6 @@ export type Database = {
           min_stock?: number
           name?: string
           selling_price?: number
-          supplier_id?: string | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -591,13 +588,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
           {
@@ -709,6 +699,51 @@ export type Database = {
           },
         ]
       }
+      purchase_payments: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          payment_amount: number
+          payment_date: string
+          purchase_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_amount?: number
+          payment_date?: string
+          purchase_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_amount?: number
+          payment_date?: string
+          purchase_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_payments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchases: {
         Row: {
           created_at: string
@@ -717,6 +752,7 @@ export type Database = {
           invoice_number: string | null
           notes: string | null
           payment_method: string | null
+          payment_status: string | null
           purchase_date: string
           purchase_number: string
           supplier_id: string
@@ -731,6 +767,7 @@ export type Database = {
           invoice_number?: string | null
           notes?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           purchase_date?: string
           purchase_number: string
           supplier_id: string
@@ -745,6 +782,7 @@ export type Database = {
           invoice_number?: string | null
           notes?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           purchase_date?: string
           purchase_number?: string
           supplier_id?: string
