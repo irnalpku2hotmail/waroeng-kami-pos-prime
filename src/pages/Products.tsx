@@ -135,7 +135,7 @@ const Products = () => {
           <ProductsLoading />
         ) : products.length === 0 ? (
           <ProductsEmptyState 
-            hasFilters={hasFilters}
+            hasFilters={!!hasFilters}
             onAddProduct={() => {
               setEditProduct(null);
               setOpen(true);
@@ -173,6 +173,7 @@ const Products = () => {
             <ProductForm
               product={editProduct}
               onSuccess={handleSuccess}
+              onClose={handleCloseDialog}
             />
           </DialogContent>
         </Dialog>
@@ -184,7 +185,11 @@ const Products = () => {
               <DialogTitle>Detail Produk</DialogTitle>
             </DialogHeader>
             {selectedProduct && (
-              <ProductDetails product={selectedProduct} />
+              <ProductDetails 
+                product={selectedProduct}
+                open={detailsOpen}
+                onOpenChange={setDetailsOpen}
+              />
             )}
           </DialogContent>
         </Dialog>
