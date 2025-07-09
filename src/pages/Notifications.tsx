@@ -1,10 +1,9 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { Bell, Package, AlertTriangle, TrendingDown, Calendar } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
 
@@ -16,32 +15,25 @@ const Notifications = () => {
   const { data: notificationsData } = useQuery({
     queryKey: ['notifications', currentPage],
     queryFn: async () => {
-      // Get low stock products - compare current_stock with min_stock directly
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      // Get low stock products
       const { data: lowStockProducts } = await supabase
         .from('products')
         .select('*')
-        .eq('is_active', true);
+        .lt('current_stock', 'min_stock')
+        .eq('is_active', true)
+        .range(from, to);
 
-      // Filter low stock products in JavaScript
-      const filteredLowStock = lowStockProducts?.filter(p => p.current_stock <= p.min_stock) || [];
-
-      // Get overdue credit transactions - compare total_amount with paid_amount directly
+      // Get overdue credit transactions
       const { data: overdueCredits } = await supabase
         .from('transactions')
         .select('*, customers(name)')
         .eq('is_credit', true)
-        .lt('due_date', new Date().toISOString().split('T')[0]);
-
-      // Filter overdue credits in JavaScript
-      const filteredOverdueCredits = overdueCredits?.filter(t => t.total_amount > t.paid_amount) || [];
-
-      // Get overdue purchase payments
-      const { data: overduePurchases } = await supabase
-        .from('purchases')
-        .select('*, suppliers(name)')
-        .eq('payment_method', 'credit')
-        .neq('payment_status', 'paid')
-        .lt('due_date', new Date().toISOString().split('T')[0]);
+        .lt('due_date', new Date().toISOString().split('T')[0])
+        .gt('paid_amount', 0)
+        .range(from, to);
 
       // Get recent orders that need attention
       const { data: pendingOrders } = await supabase
@@ -49,43 +41,26 @@ const Notifications = () => {
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
-        .limit(10);
-
-      // Get returns that need processing
-      const { data: pendingReturns } = await supabase
-        .from('returns')
-        .select('*, suppliers(name)')
-        .eq('status', 'process')
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .range(from, to);
 
       const notifications = [
-        ...(filteredLowStock?.map(product => ({
+        ...(lowStockProducts?.map(product => ({
           id: `low-stock-${product.id}`,
           type: 'low_stock',
           title: 'Stok Rendah',
-          message: `${product.name} tersisa ${product.current_stock} unit (minimum: ${product.min_stock})`,
+          message: `${product.name} tersisa ${product.current_stock} unit`,
           time: new Date().toISOString(),
           priority: 'high',
           icon: Package
         })) || []),
-        ...(filteredOverdueCredits?.map(credit => ({
-          id: `overdue-credit-${credit.id}`,
+        ...(overdueCredits?.map(credit => ({
+          id: `overdue-${credit.id}`,
           type: 'overdue_payment',
-          title: 'Piutang Terlambat',
+          title: 'Pembayaran Terlambat',
           message: `${credit.customers?.name || 'Customer'} - Rp ${credit.total_amount.toLocaleString('id-ID')}`,
           time: credit.due_date,
           priority: 'urgent',
           icon: AlertTriangle
-        })) || []),
-        ...(overduePurchases?.map(purchase => ({
-          id: `overdue-purchase-${purchase.id}`,
-          type: 'overdue_purchase',
-          title: 'Hutang Terlambat',
-          message: `${purchase.suppliers?.name || 'Supplier'} - ${purchase.purchase_number} - Rp ${purchase.total_amount.toLocaleString('id-ID')}`,
-          time: purchase.due_date,
-          priority: 'urgent',
-          icon: TrendingDown
         })) || []),
         ...(pendingOrders?.map(order => ({
           id: `pending-order-${order.id}`,
@@ -95,36 +70,12 @@ const Notifications = () => {
           time: order.created_at,
           priority: 'medium',
           icon: Bell
-        })) || []),
-        ...(pendingReturns?.map(returnItem => ({
-          id: `pending-return-${returnItem.id}`,
-          type: 'pending_return',
-          title: 'Return Menunggu Proses',
-          message: `${returnItem.suppliers?.name || 'Supplier'} - ${returnItem.return_number}`,
-          time: returnItem.created_at,
-          priority: 'medium',
-          icon: TrendingDown
         })) || [])
       ];
 
-      // Sort by priority and time
-      const sortedNotifications = notifications.sort((a, b) => {
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
-                            (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
-        if (priorityDiff !== 0) return priorityDiff;
-        
-        return new Date(b.time).getTime() - new Date(a.time).getTime();
-      });
-
-      // Pagination
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE;
-      const paginatedNotifications = sortedNotifications.slice(from, to);
-
       return {
-        data: paginatedNotifications,
-        count: sortedNotifications.length
+        data: notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()),
+        count: notifications.length
       };
     }
   });
@@ -152,21 +103,11 @@ const Notifications = () => {
     return colors[priority as keyof typeof colors] || 'secondary';
   };
 
-  const getPriorityLabel = (priority: string) => {
-    const labels = {
-      urgent: 'Mendesak',
-      high: 'Tinggi',
-      medium: 'Sedang',
-      low: 'Rendah'
-    };
-    return labels[priority as keyof typeof labels] || priority;
-  };
-
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Notifikasi & Peringatan</h1>
+          <h1 className="text-3xl font-bold">Notifikasi</h1>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
@@ -198,7 +139,7 @@ const Notifications = () => {
                           <div className="flex items-center justify-between">
                             <h3 className="text-sm font-medium">{notification.title}</h3>
                             <Badge variant={getPriorityBadge(notification.priority) as "default" | "destructive" | "outline" | "secondary"}>
-                              {getPriorityLabel(notification.priority)}
+                              {notification.priority}
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">{notification.message}</p>

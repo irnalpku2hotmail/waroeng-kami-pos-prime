@@ -28,24 +28,32 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
 
   const createPayment = useMutation({
     mutationFn: async (data: any) => {
-      const { error } = await supabase
-        .from('purchase_payments')
+      // Record the payment in credit_payments table
+      const { error: paymentError } = await supabase
+        .from('credit_payments')
         .insert([{
-          purchase_id: purchase.id,
+          transaction_id: purchase.id,
           payment_amount: data.payment_amount,
           payment_date: new Date().toISOString().split('T')[0],
           notes: data.notes,
           user_id: user?.id
         }]);
       
-      if (error) throw error;
+      if (paymentError) throw paymentError;
+
+      // Update purchase status to paid if fully paid
+      const { error: updateError } = await supabase
+        .from('purchases')
+        .update({ payment_method: 'cash' })
+        .eq('id', purchase.id);
+      
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
-      queryClient.invalidateQueries({ queryKey: ['purchase-stats'] });
       toast({ 
         title: 'Berhasil', 
-        description: 'Pembayaran berhasil dicatat' 
+        description: 'Pembayaran berhasil dicatat dan status pembelian diperbarui' 
       });
       onOpenChange(false);
       setPaymentData({ payment_amount: 0, notes: '' });
@@ -83,15 +91,6 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
             </p>
             <p className="text-sm text-gray-600">
               Supplier: {purchase?.suppliers?.name}
-            </p>
-            <p className="text-sm text-gray-600">
-              Status: <span className={`font-medium ${
-                purchase?.payment_status === 'paid' ? 'text-green-600' :
-                purchase?.payment_status === 'partial' ? 'text-yellow-600' : 'text-red-600'
-              }`}>
-                {purchase?.payment_status === 'paid' ? 'Lunas' :
-                 purchase?.payment_status === 'partial' ? 'Sebagian' : 'Belum Bayar'}
-              </span>
             </p>
           </div>
 

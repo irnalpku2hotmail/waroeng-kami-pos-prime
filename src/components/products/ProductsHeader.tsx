@@ -1,23 +1,32 @@
 
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Download } from 'lucide-react';
 
 interface ProductsHeaderProps {
-  onAddProduct: () => void;
-  totalProducts: number;
+  onExport: () => void;
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  setEditProduct: (v: any) => void;
+  editProduct: any;
+  children: React.ReactNode;
 }
 
-const ProductsHeader = ({ onAddProduct, totalProducts }: ProductsHeaderProps) => (
+const ProductsHeader = ({
+  onExport,
+  open,
+  setOpen,
+  setEditProduct,
+  editProduct,
+  children
+}: ProductsHeaderProps) => (
   <div className="flex items-center justify-between">
     <h1 className="text-3xl font-bold text-blue-800">Manajemen Produk</h1>
-    <div className="flex gap-2 items-center">
-      <div className="text-sm text-gray-600">
-        Total: {totalProducts} produk
-      </div>
-      <Button onClick={onAddProduct}>
-        <Plus className="h-4 w-4 mr-2" />
-        Tambah Produk
+    <div className="flex gap-2">
+      <Button variant="outline" onClick={onExport}>
+        <Download className="h-4 w-4 mr-2" /> Export Excel
       </Button>
+      {children}
     </div>
   </div>
 );
