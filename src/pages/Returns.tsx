@@ -47,11 +47,28 @@ const Returns = () => {
         query = query.or(`return_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
       }
       
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
       if (error) throw error;
       return { data, count };
+    }
+  });
+
+  // Query untuk statistik
+  const { data: statsData } = useQuery({
+    queryKey: ['return-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('returns')
+        .select('status, total_amount');
+      
+      if (error) throw error;
+      
+      const totalReturns = data.length;
+      const processReturns = data.filter(r => r.status === 'process').length;
+      const successReturns = data.filter(r => r.status === 'success').length;
+      const totalAmount = data.reduce((sum, r) => sum + Number(r.total_amount), 0);
+      
+      return { totalReturns, processReturns, successReturns, totalAmount };
     }
   });
 
@@ -66,6 +83,7 @@ const Returns = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
+      queryClient.invalidateQueries({ queryKey: ['return-stats'] });
       toast({ title: 'Berhasil', description: 'Return berhasil dihapus' });
     },
     onError: (error) => {
@@ -83,6 +101,7 @@ const Returns = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
+      queryClient.invalidateQueries({ queryKey: ['return-stats'] });
       toast({ title: 'Berhasil', description: 'Status return berhasil diubah ke Success' });
     },
     onError: (error) => {
@@ -206,7 +225,15 @@ const Returns = () => {
           </Dialog>
         </div>
 
-        <ReturnStats />
+        {/* Stats Cards */}
+        {statsData && (
+          <ReturnStats 
+            totalReturns={statsData.totalReturns}
+            processReturns={statsData.processReturns}
+            successReturns={statsData.successReturns}
+            totalAmount={statsData.totalAmount}
+          />
+        )}
 
         <div className="flex gap-4">
           <Input

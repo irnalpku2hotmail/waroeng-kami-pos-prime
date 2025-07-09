@@ -1,65 +1,89 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-import CategoriesUnits from "./pages/CategoriesUnits";
-import Suppliers from "./pages/Suppliers";
-import POS from "./pages/POS";
-import Inventory from "./pages/Inventory";
-import Customers from "./pages/Customers";
-import Purchases from "./pages/Purchases";
-import Returns from "./pages/Returns";
-import Expenses from "./pages/Expenses";
-import PointsRewards from "./pages/PointsRewards";
-import PointExchange from "./pages/PointExchange";
-import FlashSales from "./pages/FlashSales";
-import Settings from "./pages/Settings";
-import UserManagement from "./pages/UserManagement";
-import Orders from "./pages/Orders";
-import Reports from "./pages/Reports";
-import CreditManagement from "./pages/CreditManagement";
-import Notifications from "./pages/Notifications";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
+import { PresenceProvider } from '@/contexts/PresenceContext';
+import { Toaster } from '@/components/ui/toaster';
+import ProtectedRoute from '@/components/ProtectedRoute';
+
+// Auth pages
+import Login from '@/pages/auth/Login';
+import Register from '@/pages/auth/Register';
+
+// Main pages
+import Dashboard from '@/pages/Dashboard';
+import Products from '@/pages/Products';
+import CategoriesUnits from '@/pages/CategoriesUnits';
+import Suppliers from '@/pages/Suppliers';
+import POS from '@/pages/POS';
+import Inventory from '@/pages/Inventory';
+import Customers from '@/pages/Customers';
+import Orders from '@/pages/Orders';
+import CreditManagement from '@/pages/CreditManagement';
+import Expenses from '@/pages/Expenses';
+import PointsRewards from '@/pages/PointsRewards';
+import PointExchange from '@/pages/PointExchange';
+import FlashSales from '@/pages/FlashSales';
+import Settings from '@/pages/Settings';
+import UserManagement from '@/pages/UserManagement';
+import Profile from '@/pages/Profile';
+import Frontend from '@/pages/Frontend';
+import Returns from '@/pages/Returns';
+import Purchases from '@/pages/Purchases';
+import NotFound from '@/pages/NotFound';
+import ProductDetails from '@/pages/ProductDetails';
+import Reports from '@/pages/Reports';
+import Notifications from '@/pages/Notifications';
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/categories-units" element={<CategoriesUnits />} />
-            <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/pos" element={<POS />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/purchases" element={<Purchases />} />
-            <Route path="/returns" element={<Returns />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/points-rewards" element={<PointsRewards />} />
-            <Route path="/point-exchange" element={<PointExchange />} />
-            <Route path="/flash-sales" element={<FlashSales />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/user-management" element={<UserManagement />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/credit-management" element={<CreditManagement />} />
-            <Route path="/notifications" element={<Notifications />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <PresenceProvider>
+          <CartProvider>
+            <Router>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Frontend />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/products/:productId" element={<ProductDetails />} />
+
+                {/* Protected routes */}
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+                <Route path="/categories-units" element={<ProtectedRoute><CategoriesUnits /></ProtectedRoute>} />
+                <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
+                <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+                <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/credit-management" element={<ProtectedRoute><CreditManagement /></ProtectedRoute>} />
+                <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+                <Route path="/points-rewards" element={<ProtectedRoute><PointsRewards /></ProtectedRoute>} />
+                <Route path="/point-exchange" element={<ProtectedRoute><PointExchange /></ProtectedRoute>} />
+                <Route path="/flash-sales" element={<ProtectedRoute><FlashSales /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/returns" element={<ProtectedRoute><Returns /></ProtectedRoute>} />
+                <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+
+                {/* Catch all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Router>
+            <Toaster />
+          </CartProvider>
+        </PresenceProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

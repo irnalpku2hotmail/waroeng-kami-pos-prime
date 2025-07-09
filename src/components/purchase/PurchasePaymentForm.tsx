@@ -28,8 +28,7 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
 
   const createPayment = useMutation({
     mutationFn: async (data: any) => {
-      // Record the payment in purchase_payments table
-      const { error: paymentError } = await supabase
+      const { error } = await supabase
         .from('purchase_payments')
         .insert([{
           purchase_id: purchase.id,
@@ -39,12 +38,11 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
           user_id: user?.id
         }]);
       
-      if (paymentError) throw paymentError;
-
-      // The trigger will automatically update the purchase payment_status
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-stats'] });
       toast({ 
         title: 'Berhasil', 
         description: 'Pembayaran berhasil dicatat' 
@@ -87,13 +85,12 @@ const PurchasePaymentForm = ({ purchase, open, onOpenChange }: PurchasePaymentFo
               Supplier: {purchase?.suppliers?.name}
             </p>
             <p className="text-sm text-gray-600">
-              Status: <span className={`px-2 py-1 rounded text-xs ${
-                purchase?.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
-                purchase?.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-red-100 text-red-700'
+              Status: <span className={`font-medium ${
+                purchase?.payment_status === 'paid' ? 'text-green-600' :
+                purchase?.payment_status === 'partial' ? 'text-yellow-600' : 'text-red-600'
               }`}>
                 {purchase?.payment_status === 'paid' ? 'Lunas' :
-                 purchase?.payment_status === 'partial' ? 'Sebagian' : 'Belum Lunas'}
+                 purchase?.payment_status === 'partial' ? 'Sebagian' : 'Belum Bayar'}
               </span>
             </p>
           </div>

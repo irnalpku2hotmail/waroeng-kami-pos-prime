@@ -1,157 +1,247 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Product {
-  id: string;
-  name: string;
-  current_stock: number;
-  units?: { abbreviation: string };
-}
+import { AlertTriangle, Info } from 'lucide-react';
 
 interface StockAdjustmentDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  product: Product | null;
+  product: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const StockAdjustmentDialog = ({ isOpen, onClose, product }: StockAdjustmentDialogProps) => {
+const StockAdjustmentDialog = ({ product, open, onOpenChange }: StockAdjustmentDialogProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  
   const [adjustmentData, setAdjustmentData] = useState({
-    adjustment_type: 'increase',
+    adjustment_type: 'manual_add',
     quantity_change: 0,
     reason: ''
   });
 
-  const adjustStockMutation = useMutation({
+  const createAdjustment = useMutation({
     mutationFn: async (data: any) => {
-      if (!product) return;
+      const newStock = product.current_stock + data.quantity_change;
       
-      const currentStock = product.current_stock;
-      const quantityChange = parseInt(data.quantity_change);
-      let newStock: number;
-      let quantityForRecord: number;
-      
-      if (data.adjustment_type === 'correction') {
-        newStock = quantityChange;
-        quantityForRecord = Math.abs(currentStock - newStock);
-      } else {
-        newStock = data.adjustment_type === 'increase' 
-          ? currentStock + quantityChange
-          : currentStock - quantityChange;
-        quantityForRecord = quantityChange;
+      if (newStock < 0) {
+        throw new Error('Stok tidak boleh negatif');
       }
-
-      const { error } = await supabase
+      
+      // Insert stock adjustment record
+      const { error: adjustmentError } = await supabase
         .from('stock_adjustments')
-        .insert({
+        .insert([{
           product_id: product.id,
           user_id: user?.id,
           adjustment_type: data.adjustment_type,
-          quantity_change: quantityForRecord,
-          previous_stock: currentStock,
+          quantity_change: data.quantity_change,
+          previous_stock: product.current_stock,
           new_stock: newStock,
           reason: data.reason
-        });
-
-      if (error) throw error;
+        }]);
+      
+      if (adjustmentError) throw adjustmentError;
 
       // Update product stock
       const { error: updateError } = await supabase
         .from('products')
         .update({ current_stock: newStock })
         .eq('id', product.id);
-
+      
       if (updateError) throw updateError;
     },
     onSuccess: () => {
-      toast({ title: 'Stok berhasil disesuaikan' });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-adjustments'] });
-      setAdjustmentData({ adjustment_type: 'increase', quantity_change: 0, reason: '' });
-      onClose();
-    },
-    onError: (error: any) => {
       toast({ 
-        title: 'Error adjusting stock', 
-        description: error.message,
-        variant: 'destructive' 
+        title: 'Berhasil', 
+        description: 'Stok berhasil disesuaikan' 
       });
+      onOpenChange(false);
+      setAdjustmentData({ adjustment_type: 'manual_add', quantity_change: 0, reason: '' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
-  const handleSubmit = () => {
-    adjustStockMutation.mutate(adjustmentData);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!adjustmentData.reason.trim()) {
+      toast({ 
+        title: 'Error', 
+        description: 'Alasan penyesuaian harus diisi untuk dokumentasi',
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (adjustmentData.quantity_change === 0) {
+      toast({ 
+        title: 'Error', 
+        description: 'Jumlah perubahan tidak boleh kosong',
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    createAdjustment.mutate(adjustmentData);
+  };
+
+  const adjustmentTypes = [
+    { value: 'manual_add', label: 'Koreksi Manual - Tambah' },
+    { value: 'manual_reduce', label: 'Koreksi Manual - Kurangi' },
+    { value: 'damaged', label: 'Barang Rusak' },
+    { value: 'expired', label: 'Barang Kadaluarsa' },
+    { value: 'lost', label: 'Barang Hilang' },
+    { value: 'found', label: 'Barang Ditemukan' }
+  ];
+
+  const handleQuantityChange = (value: string) => {
+    const numValue = Number(value);
+    let adjustedValue = numValue;
+
+    if (adjustmentData.adjustment_type.includes('reduce') || 
+        adjustmentData.adjustment_type === 'damaged' ||
+        adjustmentData.adjustment_type === 'expired' ||
+        adjustmentData.adjustment_type === 'lost') {
+      adjustedValue = -Math.abs(numValue);
+    } else {
+      adjustedValue = Math.abs(numValue);
+    }
+
+    setAdjustmentData(prev => ({ 
+      ...prev, 
+      quantity_change: adjustedValue
+    }));
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Sesuaikan Stok - {product?.name}</DialogTitle>
-          <DialogDescription>
-            Lakukan penyesuaian jumlah stok produk. Perubahan ini akan tercatat dalam riwayat.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Penyesuaian Stok Manual
+          </DialogTitle>
         </DialogHeader>
-        {product && (
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Stok Saat Ini: {product.current_stock} {product.units?.abbreviation}</Label>
-            </div>
-            <div>
-              <Label htmlFor="adjustment_type">Jenis Penyesuaian</Label>
-              <Select
-                name="adjustment_type"
-                value={adjustmentData.adjustment_type} 
-                onValueChange={(value) => setAdjustmentData(prev => ({ ...prev, adjustment_type: value }))}
-              >
-                <SelectTrigger id="adjustment_type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="increase">Tambah</SelectItem>
-                  <SelectItem value="decrease">Kurangi</SelectItem>
-                  <SelectItem value="correction">Koreksi</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="quantity_change">Jumlah</Label>
-              <Input
-                id="quantity_change"
-                type="number"
-                value={adjustmentData.quantity_change}
-                onChange={(e) => setAdjustmentData(prev => ({ ...prev, quantity_change: parseInt(e.target.value) || 0 }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="reason">Alasan</Label>
-              <Textarea
-                id="reason"
-                value={adjustmentData.reason}
-                onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="Alasan penyesuaian..."
-              />
-            </div>
-            <Button 
-              className="w-full" 
-              onClick={handleSubmit}
-              disabled={adjustStockMutation.isPending}
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2 text-blue-800">
+            <Info className="h-4 w-4" />
+            <span className="text-sm font-medium">Informasi Penting</span>
+          </div>
+          <p className="text-xs text-blue-700 mt-1">
+            Fitur ini hanya untuk koreksi manual stok (kerusakan, kehilangan, dll). 
+            Stok otomatis bertambah saat pembelian dan berkurang saat penjualan/return.
+          </p>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2 text-yellow-800">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="text-sm font-medium">Peringatan</span>
+          </div>
+          <p className="text-xs text-yellow-700 mt-1">
+            JANGAN gunakan fitur ini untuk mencatat pembelian atau penjualan. 
+            Gunakan form pembelian/penjualan yang sesuai untuk menghindari duplikasi stok.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">
+              Produk: <span className="font-medium">{product?.name}</span>
+            </p>
+            <p className="text-sm text-gray-600">
+              Stok Saat Ini: <span className="font-medium">{product?.current_stock} unit</span>
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adjustment_type">Jenis Penyesuaian *</Label>
+            <Select
+              value={adjustmentData.adjustment_type}
+              onValueChange={(value) => setAdjustmentData(prev => ({ 
+                ...prev, 
+                adjustment_type: value,
+                quantity_change: 0 // Reset quantity when type changes
+              }))}
             >
-              {adjustStockMutation.isPending ? 'Menyesuaikan...' : 'Simpan Penyesuaian'}
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih jenis penyesuaian" />
+              </SelectTrigger>
+              <SelectContent>
+                {adjustmentTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="quantity_change">Jumlah Perubahan *</Label>
+            <Input
+              id="quantity_change"
+              type="number"
+              value={Math.abs(adjustmentData.quantity_change)}
+              onChange={(e) => handleQuantityChange(e.target.value)}
+              placeholder="0"
+              min="0"
+              required
+            />
+            <p className="text-xs text-gray-500">
+              Stok Setelah Penyesuaian: {Math.max(0, product?.current_stock + adjustmentData.quantity_change)} unit
+              {(product?.current_stock + adjustmentData.quantity_change) < 0 && (
+                <span className="text-red-600 ml-2">(Tidak valid - stok tidak boleh negatif)</span>
+              )}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reason">Alasan Penyesuaian *</Label>
+            <Textarea
+              id="reason"
+              value={adjustmentData.reason}
+              onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
+              placeholder="Jelaskan alasan penyesuaian stok ini secara detail..."
+              required
+              rows={3}
+            />
+            <p className="text-xs text-gray-500">
+              Wajib diisi untuk dokumentasi dan audit. Contoh: "10 unit rusak karena terjatuh", "Koreksi hasil opname fisik"
+            </p>
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Batal
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={
+                !adjustmentData.reason.trim() || 
+                adjustmentData.quantity_change === 0 ||
+                (product?.current_stock + adjustmentData.quantity_change) < 0
+              }
+            >
+              Sesuaikan Stok
             </Button>
           </div>
-        )}
+        </form>
       </DialogContent>
     </Dialog>
   );
