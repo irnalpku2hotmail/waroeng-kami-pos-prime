@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
@@ -6,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, MoreHorizontal, Eye, Edit, Users, TrendingUp, Calendar } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Eye, Edit, Users, TrendingUp, Calendar, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
 import PaginationComponent from '@/components/PaginationComponent';
+import { toast } from '@/hooks/use-toast';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -23,7 +24,7 @@ const Customers = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   // Fetch customers with pagination
-  const { data: customersData } = useQuery({
+  const { data: customersData, refetch } = useQuery({
     queryKey: ['customers', searchTerm, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -93,9 +94,42 @@ const Customers = () => {
     setIsFormOpen(true);
   };
 
+  const handleDelete = async (customer: any) => {
+    if (!confirm(`Are you sure you want to delete customer ${customer.name}?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', customer.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Customer deleted successfully',
+      });
+
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleCloseDetails = () => {
+    setIsDetailsOpen(false);
+    setSelectedCustomer(null);
   };
 
   return (
@@ -233,6 +267,13 @@ const Customers = () => {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(customer)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -255,35 +296,14 @@ const Customers = () => {
           </CardContent>
         </Card>
 
-        {/* Customer Details Dialog */}
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Customer Details</DialogTitle>
-              <DialogDescription>
-                View detailed information about {selectedCustomer?.name}
-              </DialogDescription>
-            </DialogHeader>
-            {selectedCustomer && (
-              <CustomerDetails customer={selectedCustomer} />
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Customer Form Dialog */}
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedCustomer ? 'Edit Customer' : 'Add New Customer'}
-              </DialogTitle>
-            </DialogHeader>
-            {/* Customer form component would go here */}
-            <div className="p-4 text-center text-gray-500">
-              Customer form component to be implemented
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Customer Details */}
+        {selectedCustomer && (
+          <CustomerDetails 
+            customer={selectedCustomer}
+            open={isDetailsOpen}
+            onOpenChange={handleCloseDetails}
+          />
+        )}
       </div>
     </Layout>
   );

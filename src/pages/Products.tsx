@@ -10,6 +10,7 @@ import ProductsLoading from '@/components/products/ProductsLoading';
 import ProductsEmptyState from '@/components/products/ProductsEmptyState';
 import ProductForm from '@/components/ProductForm';
 import ProductDetails from '@/pages/ProductDetails';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -124,8 +125,8 @@ const Products = () => {
     <Layout>
       <div className="space-y-6">
         <ProductsHeader 
-          onAddProduct={() => setIsFormOpen(true)}
           totalProducts={totalItems}
+          onAddProduct={() => setIsFormOpen(true)}
         />
         
         <ProductsFilters
@@ -154,19 +155,33 @@ const Products = () => {
           />
         )}
 
-        <ProductForm
-          open={isFormOpen}
-          onClose={handleCloseForm}
-          product={selectedProduct}
-        />
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedProduct ? 'Edit Product' : 'Add New Product'}
+              </DialogTitle>
+            </DialogHeader>
+            <ProductForm
+              product={selectedProduct}
+              onClose={handleCloseForm}
+            />
+          </DialogContent>
+        </Dialog>
 
-        {selectedProduct && (
-          <ProductDetails
-            open={isDetailsOpen}
-            onClose={handleCloseDetails}
-            product={selectedProduct}
-          />
-        )}
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Product Details</DialogTitle>
+            </DialogHeader>
+            {selectedProduct && (
+              <ProductDetails
+                product={selectedProduct}
+                onClose={handleCloseDetails}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

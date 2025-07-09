@@ -35,7 +35,7 @@ const Frontend = () => {
     }
   });
 
-  // Fetch products with pagination
+  // Fetch products with pagination (show all products including out of stock)
   const { data: productsData } = useQuery({
     queryKey: ['frontend-products', searchTerm, selectedCategory, currentPage],
     queryFn: async () => {
@@ -102,10 +102,19 @@ const Frontend = () => {
       return;
     }
 
+    if (product.current_stock <= 0) {
+      toast({
+        title: 'Out of Stock',
+        description: 'This product is currently out of stock',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     addItem({
       id: product.id,
       name: product.name,
-      price: product.selling_price,
+      selling_price: product.selling_price,
       quantity: 1,
       image: product.image_url
     });
@@ -169,7 +178,7 @@ const Frontend = () => {
           className="w-full max-w-6xl mx-auto"
           plugins={[
             Autoplay({
-              delay: 4000,
+              delay: 5000,
             }),
           ]}
         >
@@ -210,7 +219,7 @@ const Frontend = () => {
                           disabled={product.current_stock <= 0 || !user}
                         >
                           <ShoppingCart className="mr-2 h-4 w-4" />
-                          {!user ? 'Login to Add' : 'Add to Cart'}
+                          {!user ? 'Login to Add' : product.current_stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
                         </Button>
                         <Button 
                           size="lg" 
