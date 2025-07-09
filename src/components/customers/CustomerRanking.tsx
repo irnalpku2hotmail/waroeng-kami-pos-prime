@@ -1,38 +1,29 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Medal, Award } from 'lucide-react';
 
 const CustomerRanking = () => {
-  const { data: customers, isLoading } = useQuery({
-    queryKey: ['customer-ranking'],
+  const { data: topCustomers } = useQuery({
+    queryKey: ['top-customers'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('customers')
         .select('*')
-        .order('total_spent', { ascending: false })
+        .order('total_points', { ascending: false })
         .limit(10);
       
       if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-4 w-4 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
-    if (rank === 3) return <Award className="h-4 w-4 text-amber-600" />;
-    return <span className="text-sm font-medium">#{rank}</span>;
-  };
-
-  const getRankBadge = (rank: number) => {
-    if (rank === 1) return <Badge className="bg-yellow-500">TOP 1</Badge>;
-    if (rank === 2) return <Badge className="bg-gray-400">TOP 2</Badge>;
-    if (rank === 3) return <Badge className="bg-amber-600">TOP 3</Badge>;
-    return null;
+  const getRankIcon = (index: number) => {
+    if (index === 0) return <Trophy className="h-5 w-5 text-yellow-500" />;
+    if (index === 1) return <Medal className="h-5 w-5 text-gray-400" />;
+    if (index === 2) return <Award className="h-5 w-5 text-amber-600" />;
+    return <span className="w-5 h-5 flex items-center justify-center text-sm font-bold">{index + 1}</span>;
   };
 
   return (
@@ -44,59 +35,25 @@ const CustomerRanking = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Rank</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Total Belanja</TableHead>
-              <TableHead>Total Poin</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><div className="h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                </TableRow>
-              ))
-            ) : customers?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                  Belum ada data customer
-                </TableCell>
-              </TableRow>
-            ) : (
-              customers?.map((customer, index) => (
-                <TableRow key={customer.id}>
-                  <TableCell className="flex items-center gap-2">
-                    {getRankIcon(index + 1)}
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{customer.name}</div>
-                      <div className="text-sm text-gray-500">{customer.customer_code}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    Rp {customer.total_spent.toLocaleString('id-ID')}
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium text-blue-600">{customer.total_points}</span>
-                  </TableCell>
-                  <TableCell>
-                    {getRankBadge(index + 1)}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <div className="space-y-3">
+          {topCustomers?.map((customer, index) => (
+            <div key={customer.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                {getRankIcon(index)}
+                <div>
+                  <p className="font-medium">{customer.name}</p>
+                  <p className="text-sm text-muted-foreground">{customer.customer_code}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold">{customer.total_points} pts</p>
+                <p className="text-sm text-muted-foreground">
+                  Rp {customer.total_spent.toLocaleString('id-ID')}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

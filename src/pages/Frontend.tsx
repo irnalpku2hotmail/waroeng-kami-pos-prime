@@ -6,18 +6,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
+import { Package, Star, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { ShoppingCart, Package, Heart, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Autoplay from 'embla-carousel-autoplay';
 import FrontendHeader from '@/components/frontend/FrontendHeader';
 import FrontendSidebar from '@/components/frontend/FrontendSidebar';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
 
 const Frontend = () => {
-  const { user } = useAuth();
-  const { addItem, items } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -37,7 +34,7 @@ const Frontend = () => {
     }
   });
 
-  // Fetch products with pagination
+  // Fetch products with pagination - Remove authentication requirement
   const { data: productsData } = useQuery({
     queryKey: ['frontend-products', searchTerm, selectedCategory, currentPage],
     queryFn: async () => {
@@ -94,46 +91,6 @@ const Frontend = () => {
     }
   });
 
-  const handleAddToCart = (product: any) => {
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Silakan login untuk menambahkan produk ke keranjang',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (product.current_stock <= 0) {
-      toast({
-        title: 'Stok Habis',
-        description: 'Produk ini sedang tidak tersedia',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    addItem({
-      id: product.id,
-      product_id: product.id,
-      name: product.name,
-      image_url: product.image_url,
-      quantity: 1,
-      unit_price: product.selling_price,
-      total_price: product.selling_price,
-      current_stock: product.current_stock
-    });
-
-    toast({
-      title: 'Ditambahkan ke Keranjang',
-      description: `${product.name} berhasil ditambahkan ke keranjang`
-    });
-  };
-
-  const isProductInCart = (productId: string) => {
-    return items.some(item => item.id === productId);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
@@ -180,23 +137,15 @@ const Frontend = () => {
                         </div>
                         
                         <div className="flex space-x-4">
-                          <Button 
-                            size="lg" 
-                            className="bg-white text-gray-900 hover:bg-gray-100"
-                            onClick={() => handleAddToCart(product)}
-                            disabled={product.current_stock <= 0 || !user}
-                          >
-                            <ShoppingCart className="mr-2 h-4 w-4" />
-                            {!user ? 'Login untuk Beli' : product.current_stock <= 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
-                          </Button>
-                          <Button 
-                            size="lg" 
-                            variant="outline" 
-                            className="border-white text-white hover:bg-white/10"
-                          >
-                            <Heart className="mr-2 h-4 w-4" />
-                            Wishlist
-                          </Button>
+                          <Link to={`/product/${product.id}`}>
+                            <Button 
+                              size="lg" 
+                              className="bg-white text-gray-900 hover:bg-gray-100"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Lihat Detail
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                       
@@ -271,14 +220,6 @@ const Frontend = () => {
                         </Badge>
                       </div>
                     )}
-                    
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-                    >
-                      <Heart className="h-4 w-4" />
-                    </Button>
                   </div>
                   
                   <CardContent className="p-4 space-y-3">
@@ -310,25 +251,12 @@ const Frontend = () => {
                       </div>
                     </div>
                     
-                    <Button 
-                      className="w-full"
-                      onClick={() => handleAddToCart(product)}
-                      disabled={product.current_stock <= 0 || !user}
-                      variant={isProductInCart(product.id) ? "outline" : "default"}
-                    >
-                      {product.current_stock <= 0 ? (
-                        'Stok Habis'
-                      ) : !user ? (
-                        'Login untuk Beli'
-                      ) : isProductInCart(product.id) ? (
-                        'Sudah di Keranjang'
-                      ) : (
-                        <>
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          Tambah ke Keranjang
-                        </>
-                      )}
-                    </Button>
+                    <Link to={`/product/${product.id}`} className="w-full">
+                      <Button className="w-full">
+                        <Eye className="mr-2 h-4 w-4" />
+                        Lihat Detail
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
               ))}
