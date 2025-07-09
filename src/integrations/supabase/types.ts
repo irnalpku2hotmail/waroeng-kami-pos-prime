@@ -1365,6 +1365,14 @@ export type Database = {
           items: Json
         }[]
       }
+      get_customer_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_customers: number
+          active_customers_this_month: number
+          total_unredeemed_points: number
+        }[]
+      }
       get_supplier_purchase_history: {
         Args: { supplier_uuid: string }
         Returns: {

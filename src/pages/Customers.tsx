@@ -14,10 +14,12 @@ import { Plus, Edit, Trash2, MoreHorizontal, Eye, User } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
 import PaginationComponent from '@/components/PaginationComponent';
+import CustomerStats from '@/components/customers/CustomerStats';
+import CustomerRanking from '@/components/customers/CustomerRanking';
 
 const ITEMS_PER_PAGE = 10;
 
-// Function to generate customer code
+// Generate customer code function
 const generateCustomerCode = async () => {
   const { data, error } = await supabase
     .from('customers')
@@ -77,7 +79,7 @@ const Customers = () => {
       }
       
       const { data, error, count } = await query
-        .order('created_at', { ascending: false })
+        .order('total_spent', { ascending: false })
         .range(from, to);
       
       if (error) throw error;
@@ -91,7 +93,6 @@ const Customers = () => {
 
   const saveCustomer = useMutation({
     mutationFn: async (data: any) => {
-      // Generate customer code if creating new customer
       if (!editCustomer) {
         data.customer_code = await generateCustomerCode();
       }
@@ -111,6 +112,8 @@ const Customers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-ranking'] });
       toast({ 
         title: 'Berhasil', 
         description: editCustomer ? 'Customer berhasil diperbarui' : 'Customer berhasil ditambahkan' 
@@ -134,6 +137,8 @@ const Customers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-ranking'] });
       toast({ title: 'Berhasil', description: 'Customer berhasil dihapus' });
     },
     onError: (error) => {
@@ -262,6 +267,12 @@ const Customers = () => {
           </Dialog>
         </div>
 
+        {/* Customer Statistics */}
+        <CustomerStats />
+
+        {/* Customer Ranking */}
+        <CustomerRanking />
+
         <div className="flex gap-4">
           <Input
             placeholder="Cari customer..."
@@ -275,6 +286,7 @@ const Customers = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Rank</TableHead>
                 <TableHead>Kode Customer</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Telepon</TableHead>
@@ -287,26 +299,29 @@ const Customers = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                     <p className="text-gray-500">Belum ada customer</p>
                   </TableCell>
                 </TableRow>
               ) : (
-                customers.map((customer) => (
+                customers.map((customer, index) => (
                   <TableRow key={customer.id}>
+                    <TableCell className="font-medium">
+                      #{((currentPage - 1) * ITEMS_PER_PAGE) + index + 1}
+                    </TableCell>
                     <TableCell className="font-medium">{customer.customer_code}</TableCell>
                     <TableCell>{customer.name}</TableCell>
                     <TableCell>{customer.phone || '-'}</TableCell>
                     <TableCell>{customer.email || '-'}</TableCell>
-                    <TableCell>{customer.total_points}</TableCell>
-                    <TableCell>Rp {customer.total_spent.toLocaleString('id-ID')}</TableCell>
+                    <TableCell className="font-medium text-blue-600">{customer.total_points}</TableCell>
+                    <TableCell className="font-medium">Rp {customer.total_spent.toLocaleString('id-ID')}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
