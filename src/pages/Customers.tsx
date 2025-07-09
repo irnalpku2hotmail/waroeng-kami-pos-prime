@@ -265,10 +265,7 @@ const Customers = () => {
               </DialogDescription>
             </DialogHeader>
             {selectedCustomer && (
-              <CustomerDetails 
-                customerId={selectedCustomer.id} 
-                customer={selectedCustomer}
-              />
+              <CustomerDetails customer={selectedCustomer} />
             )}
           </DialogContent>
         </Dialog>

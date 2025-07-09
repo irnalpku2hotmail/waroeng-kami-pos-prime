@@ -210,7 +210,7 @@ const Frontend = () => {
                           disabled={product.current_stock <= 0 || !user}
                         >
                           <ShoppingCart className="mr-2 h-4 w-4" />
-                          Add to Cart
+                          {!user ? 'Login to Add' : 'Add to Cart'}
                         </Button>
                         <Button 
                           size="lg" 
