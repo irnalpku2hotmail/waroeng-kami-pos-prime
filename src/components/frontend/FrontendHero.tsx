@@ -10,6 +10,17 @@ interface FrontendHeroProps {
   storeDescription?: string;
 }
 
+interface CarouselImage {
+  title?: string;
+  subtitle?: string;
+  image_url: string;
+  cta_text?: string;
+}
+
+interface FrontendSettings {
+  carousel_images?: CarouselImage[];
+}
+
 const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -26,13 +37,13 @@ const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
         console.log('No frontend settings found');
         return null;
       }
-      return data.value;
+      return data.value as FrontendSettings;
     }
   });
 
-  const carouselImages = settings?.carousel_images || [];
+  const carouselImages = (settings as FrontendSettings)?.carousel_images || [];
 
-  const slides = carouselImages.length > 0 ? carouselImages.map((image: any, index: number) => ({
+  const slides = carouselImages.length > 0 ? carouselImages.map((image: CarouselImage, index: number) => ({
     id: index + 1,
     title: image.title || `Selamat Datang di ${storeName}`,
     subtitle: image.subtitle || storeDescription || "Temukan produk berkualitas dengan harga terbaik",
