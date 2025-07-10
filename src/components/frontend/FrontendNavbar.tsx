@@ -11,7 +11,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Search, ShoppingCart, User, LogOut, LogIn, UserCircle } from 'lucide-react';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
-import { useNavigate } from 'react-router-dom';
 
 interface FrontendNavbarProps {
   storeName: string;
@@ -28,7 +27,6 @@ const FrontendNavbar = ({
   const { getTotalItems } = useCart();
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const navigate = useNavigate();
 
   // Fetch store logo
   const { data: settings } = useQuery({
@@ -66,14 +64,6 @@ const FrontendNavbar = ({
 
   const handleSignOut = async () => {
     await signOut();
-  };
-
-  const handleProfileClick = () => {
-    if (user) {
-      navigate('/profile');
-    } else {
-      setAuthModalOpen(true);
-    }
   };
 
   return (
@@ -142,10 +132,6 @@ const FrontendNavbar = ({
                       <User className="h-4 w-4 mr-2" />
                       {profile?.full_name || user.email?.split('@')[0]}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleProfileClick}>
-                      <User className="h-4 w-4 mr-2" />
-                      Profil Saya
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="h-4 w-4 mr-2" />
                       Logout
@@ -153,16 +139,10 @@ const FrontendNavbar = ({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <>
-                  <Button variant="ghost" size="sm" onClick={handleProfileClick}>
-                    <User className="h-5 w-5 mr-2" />
-                    <span className="hidden md:inline">Profil</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setAuthModalOpen(true)}>
-                    <LogIn className="h-5 w-5 mr-2" />
-                    <span className="hidden md:inline">Login</span>
-                  </Button>
-                </>
+                <Button variant="ghost" size="sm" onClick={() => setAuthModalOpen(true)}>
+                  <LogIn className="h-5 w-5 mr-2" />
+                  <span className="hidden md:inline">Login</span>
+                </Button>
               )}
             </div>
           </div>

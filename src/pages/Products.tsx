@@ -1,61 +1,67 @@
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
+import ProductForm from '@/components/ProductForm';
 import ProductsHeader from '@/components/products/ProductsHeader';
 import ProductsFilters from '@/components/products/ProductsFilters';
 import ProductsTable from '@/components/products/ProductsTable';
 import ProductsLoading from '@/components/products/ProductsLoading';
 import ProductsEmptyState from '@/components/products/ProductsEmptyState';
 import ProductsPagination from '@/components/products/ProductsPagination';
-import ProductQRModal from '@/components/ProductQRModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Plus } from 'lucide-react';
+import { exportToExcel } from '@/utils/excelExport';
 
 const ITEMS_PER_PAGE = 10;
 
 const Products = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const queryClient = useQueryClient();
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', searchTerm, selectedCategory, selectedUnit, currentPage],
+    queryKey: ['products', searchTerm, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
-      
       let query = supabase
         .from('products')
         .select(`
           *,
           categories(name),
-          units(name, abbreviation)
+          units(name),
+          price_variants(*)
         `, { count: 'exact' });
-      
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
       }
-      
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
-      }
-      
-      if (selectedUnit) {
-        query = query.eq('unit_id', selectedUnit);
-      }
-      
       const { data, error, count } = await query
-        .order('name')
+        .order('created_at', { ascending: false })
         .range(from, to);
-      
       if (error) throw error;
       return { data, count };
+    }
+  });
+
+  // Query for all products for export
+  const { data: allProductsData } = useQuery({
+    queryKey: ['all-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          units(name)
+        `)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
     }
   });
 
@@ -63,80 +69,99 @@ const Products = () => {
   const productsCount = productsData?.count || 0;
   const totalPages = Math.ceil(productsCount / ITEMS_PER_PAGE);
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
+  const deleteProduct = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'Berhasil', description: 'Produk berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const handleExportToExcel = () => {
+    if (!allProductsData || allProductsData.length === 0) {
+      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
+      return;
+    }
+    const exportData = allProductsData.map(product => ({
+      'Nama Produk': product.name,
+      'Barcode': product.barcode || '-',
+      'Kategori': product.categories?.name || '-',
+      'Unit': product.units?.name || '-',
+      'Harga Jual': product.selling_price,
+      'Stok Saat Ini': product.current_stock,
+      'Stok Minimum': product.min_stock,
+      'Status': product.is_active ? 'Aktif' : 'Nonaktif',
+      'Tanggal Dibuat': new Date(product.created_at).toLocaleDateString('id-ID')
+    }));
+    exportToExcel(exportData, 'Data_Produk', 'Produk');
+    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
   };
 
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    setCurrentPage(1);
-  };
-
-  const handleUnitChange = (value: string) => {
-    setSelectedUnit(value);
-    setCurrentPage(1);
-  };
-
-  const handleShowQRCode = (product: any) => {
-    setSelectedProduct(product);  
-    setQrModalOpen(true);
-  };
-
-  const handleExport = () => {
-    console.log('Export products to Excel');
+  const handleCloseDialog = () => {
+    setOpen(false);
+    setEditProduct(null);
   };
 
   return (
     <Layout>
       <div className="space-y-6">
-        <ProductsHeader 
-          onExport={handleExport}
-          open={addDialogOpen}
-          setOpen={setAddDialogOpen}
+        <ProductsHeader
+          onExport={handleExportToExcel}
+          open={open}
+          setOpen={setOpen}
           setEditProduct={setEditProduct}
           editProduct={editProduct}
-          editDialogOpen={editDialogOpen}
-          setEditDialogOpen={setEditDialogOpen}
-        />
-        
-        <ProductsFilters
-          searchTerm={searchTerm}
-          selectedCategory={selectedCategory}
-          selectedUnit={selectedUnit}
-          onSearchChange={handleSearchChange}
-          onCategoryChange={handleCategoryChange}
-          onUnitChange={handleUnitChange}
-        />
+        >
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <button onClick={() => setEditProduct(null)} className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md">
+                <Plus className="h-4 w-4 mr-2" /> Tambah Produk
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
+              </DialogHeader>
+              <ProductForm 
+                product={editProduct}
+                onSuccess={handleCloseDialog}
+                onClose={handleCloseDialog}
+              />
+            </DialogContent>
+          </Dialog>
+        </ProductsHeader>
 
-        {isLoading ? (
-          <ProductsLoading />
-        ) : products.length === 0 ? (
-          <ProductsEmptyState />
-        ) : (
-          <>
-            <ProductsTable 
-              products={products} 
-              onShowQRCode={handleShowQRCode}
-            />
-            
-            {totalPages > 1 && (
+        <ProductsFilters searchTerm={searchTerm} setSearchTerm={v => {setSearchTerm(v); setCurrentPage(1)}} />
+
+        <div className="border rounded-lg overflow-hidden">
+          {isLoading ? (
+            <ProductsLoading />
+          ) : products?.length === 0 ? (
+            <ProductsEmptyState />
+          ) : (
+            <>
+              <ProductsTable
+                products={products}
+                onEdit={product => {
+                  setEditProduct(product);
+                  setOpen(true);
+                }}
+                onDelete={id => deleteProduct.mutate(id)}
+              />
               <ProductsPagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={(page: number) => setCurrentPage(page)}
-                itemsPerPage={ITEMS_PER_PAGE}
-                totalItems={productsCount}
+                setCurrentPage={setCurrentPage}
               />
-            )}
-          </>
-        )}
-
-        <ProductQRModal
-          product={selectedProduct}
-          open={qrModalOpen}
-          onOpenChange={setQrModalOpen}
-        />
+            </>
+          )}
+        </div>
       </div>
     </Layout>
   );

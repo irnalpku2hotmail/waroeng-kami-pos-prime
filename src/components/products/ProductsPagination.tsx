@@ -12,20 +12,11 @@ import {
 interface ProductsPaginationProps {
   currentPage: number;
   totalPages: number;
-  onPageChange: (page: number) => void;
-  itemsPerPage: number;
-  totalItems: number;
+  setCurrentPage: (n: number) => void;
 }
 
-const ProductsPagination = ({ 
-  currentPage, 
-  totalPages, 
-  onPageChange,
-  itemsPerPage,
-  totalItems
-}: ProductsPaginationProps) => {
+const ProductsPagination = ({ currentPage, totalPages, setCurrentPage }: ProductsPaginationProps) => {
   if (totalPages <= 1) return null;
-  
   const getVisiblePages = () => {
     const delta = 2;
     const range = [];
@@ -46,11 +37,10 @@ const ProductsPagination = ({
     }
     return rangeWithDots;
   };
-  
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <div className="text-sm text-muted-foreground">
-        Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} dari {totalItems} produk
+        Halaman {currentPage} dari {totalPages}
       </div>
       <Pagination>
         <PaginationContent>
@@ -59,7 +49,7 @@ const ProductsPagination = ({
               href="#"
               onClick={e => {
                 e.preventDefault();
-                if (currentPage > 1) onPageChange(currentPage - 1);
+                if (currentPage > 1) setCurrentPage(currentPage - 1);
               }}
               className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
             />
@@ -73,7 +63,7 @@ const ProductsPagination = ({
                   href="#"
                   onClick={e => {
                     e.preventDefault();
-                    onPageChange(page as number);
+                    setCurrentPage(page as number);
                   }}
                   isActive={currentPage === page}
                   className="hover:bg-accent"
@@ -88,7 +78,7 @@ const ProductsPagination = ({
               href="#"
               onClick={e => {
                 e.preventDefault();
-                if (currentPage < totalPages) onPageChange(currentPage + 1);
+                if (currentPage < totalPages) setCurrentPage(currentPage + 1);
               }}
               className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
             />
