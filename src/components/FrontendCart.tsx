@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -289,7 +288,7 @@ const FrontendCart = () => {
         {/* Cart Items */}
         <div className="space-y-3 max-h-64 overflow-y-auto">
           {items.map((item) => {
-            const itemImageUrl = getImageUrl(item.image_url);
+            const itemImageUrl = getImageUrl(item.product?.image_url);
             const currentPriceInfo = getBestPriceForQuantity(item.product_id, item.quantity);
             
             return (
@@ -297,7 +296,7 @@ const FrontendCart = () => {
                 {itemImageUrl && (
                   <img 
                     src={itemImageUrl} 
-                    alt={item.name} 
+                    alt={item.product?.name || 'Product'} 
                     className="w-12 h-12 object-cover rounded"
                   />
                 )}
@@ -308,7 +307,7 @@ const FrontendCart = () => {
                 )}
                 
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{item.name}</p>
+                  <p className="font-medium text-sm truncate">{item.product?.name || 'Product'}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-sm text-gray-600">
                       Rp {currentPriceInfo.price.toLocaleString('id-ID')}

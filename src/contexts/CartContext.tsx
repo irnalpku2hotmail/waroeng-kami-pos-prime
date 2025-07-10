@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
@@ -17,6 +16,13 @@ export interface CartItem {
   total_price: number;
 }
 
+interface CustomerInfo {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+}
+
 interface CartContextType {
   items: CartItem[];
   addItem: (product: any) => void;
@@ -26,6 +32,10 @@ interface CartContextType {
   getTotalItems: () => number;
   getTotalPrice: () => number;
   getTotalAmount: () => number; // Alias for getTotalPrice
+  customerInfo: CustomerInfo;
+  setCustomerInfo: React.Dispatch<React.SetStateAction<CustomerInfo>>;
+  shippingCost: number;
+  setShippingCost: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -41,6 +51,13 @@ export const useCart = () => {
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+    name: '',
+    phone: '',
+    email: '',
+    address: ''
+  });
+  const [shippingCost, setShippingCost] = useState<number>(0);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -151,7 +168,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCart,
     getTotalItems,
     getTotalPrice,
-    getTotalAmount
+    getTotalAmount,
+    customerInfo,
+    setCustomerInfo,
+    shippingCost,
+    setShippingCost
   };
 
   return (
