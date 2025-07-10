@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -95,9 +94,7 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
 
     setIsLoading(true);
     try {
-      const { error } = await signUp(formData.email, formData.password, {
-        full_name: formData.fullName
-      });
+      const { error } = await signUp(formData.email, formData.password, formData.fullName);
       
       if (error) {
         toast({

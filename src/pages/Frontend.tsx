@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +81,10 @@ const Frontend = () => {
   // Sync COD settings with cart
   useEffect(() => {
     if (codSettings && setShippingCost) {
-      setShippingCost(codSettings.delivery_fee || 10000);
+      const deliveryFee = typeof codSettings === 'object' && codSettings !== null && 'delivery_fee' in codSettings 
+        ? (codSettings as any).delivery_fee 
+        : 10000;
+      setShippingCost(deliveryFee);
     }
   }, [codSettings, setShippingCost]);
 
