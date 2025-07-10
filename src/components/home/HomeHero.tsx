@@ -187,7 +187,7 @@ const HomeHero = ({ storeName, storeDescription }: HomeHeroProps) => {
                         {slide.cta}
                       </Button>
                       
-                      {slide.type === 'product' && slide.product && (
+                      {slide.type === 'product' && 'product' in slide && (
                         <Button 
                           size="lg"
                           variant="outline"
