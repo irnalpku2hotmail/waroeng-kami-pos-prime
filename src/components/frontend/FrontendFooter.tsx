@@ -1,9 +1,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Twitter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Twitter, ArrowUp, Heart } from 'lucide-react';
 
 const FrontendFooter = () => {
   const { data: settings } = useQuery({
@@ -24,33 +25,95 @@ const FrontendFooter = () => {
   const contactInfo = settings?.contact_info || {};
   const socialMedia = settings?.social_media || {};
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-gray-900 text-white mt-12">
-      <div className="max-w-7xl mx-auto px-4 py-12">
+    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white mt-16 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-10 left-10 w-32 h-32 bg-blue-500 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 right-10 w-40 h-40 bg-purple-500 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Newsletter section */}
+      <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 py-12">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h3 className="text-2xl font-bold mb-4">Dapatkan Update Terbaru!</h3>
+          <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+            Berlangganan newsletter kami untuk mendapatkan informasi produk terbaru, penawaran spesial, dan tips belanja.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="Masukkan email Anda"
+              className="flex-1 px-4 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-white"
+            />
+            <Button className="bg-white text-blue-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-full">
+              Berlangganan
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Store Info */}
-          <div>
-            <h3 className="text-xl font-bold mb-4">
-              {storeInfo.name || 'Toko Online'}
-            </h3>
-            <p className="text-gray-400 mb-4 leading-relaxed">
-              {storeInfo.description || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda.'}
+          <div className="lg:col-span-2">
+            <div className="flex items-center space-x-3 mb-6">
+              {storeInfo.logo_url && (
+                <img 
+                  src={storeInfo.logo_url} 
+                  alt={storeInfo.name} 
+                  className="h-12 w-12 rounded-full object-cover ring-2 ring-blue-500" 
+                />
+              )}
+              <div>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  {storeInfo.name || 'Toko Online'}
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  {storeInfo.tagline || 'Toko Online Terpercaya'}
+                </p>
+              </div>
+            </div>
+            <p className="text-gray-300 mb-6 leading-relaxed text-justify">
+              {storeInfo.description || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda. Kami berkomitmen memberikan pengalaman belanja yang mudah, aman, dan menyenangkan.'}
             </p>
+            
             {/* Social Media */}
             <div className="flex space-x-4">
               {socialMedia.facebook && (
-                <a href={socialMedia.facebook} className="text-gray-400 hover:text-blue-500 transition-colors">
-                  <Facebook className="h-5 w-5" />
+                <a 
+                  href={socialMedia.facebook} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group bg-gray-800 hover:bg-blue-600 p-3 rounded-full transition-all duration-300 transform hover:scale-110"
+                >
+                  <Facebook className="h-5 w-5 group-hover:text-white" />
                 </a>
               )}
               {socialMedia.instagram && (
-                <a href={socialMedia.instagram} className="text-gray-400 hover:text-pink-500 transition-colors">
-                  <Instagram className="h-5 w-5" />
+                <a 
+                  href={socialMedia.instagram} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group bg-gray-800 hover:bg-pink-600 p-3 rounded-full transition-all duration-300 transform hover:scale-110"
+                >
+                  <Instagram className="h-5 w-5 group-hover:text-white" />
                 </a>
               )}
               {socialMedia.twitter && (
-                <a href={socialMedia.twitter} className="text-gray-400 hover:text-blue-400 transition-colors">
-                  <Twitter className="h-5 w-5" />
+                <a 
+                  href={socialMedia.twitter} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group bg-gray-800 hover:bg-blue-400 p-3 rounded-full transition-all duration-300 transform hover:scale-110"
+                >
+                  <Twitter className="h-5 w-5 group-hover:text-white" />
                 </a>
               )}
             </div>
@@ -58,77 +121,120 @@ const FrontendFooter = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Tautan Cepat</h3>
-            <ul className="space-y-2">
-              <li><a href="#home" className="text-gray-400 hover:text-white transition-colors">Beranda</a></li>
-              <li><a href="#products" className="text-gray-400 hover:text-white transition-colors">Produk</a></li>
-              <li><a href="#categories" className="text-gray-400 hover:text-white transition-colors">Kategori</a></li>
-              <li><a href="#flash-sale" className="text-gray-400 hover:text-white transition-colors">Flash Sale</a></li>
-              <li><a href="#about" className="text-gray-400 hover:text-white transition-colors">Tentang Kami</a></li>
-            </ul>
-          </div>
-
-          {/* Customer Service */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Layanan Pelanggan</h3>
-            <ul className="space-y-2">
-              <li><a href="#help" className="text-gray-400 hover:text-white transition-colors">Bantuan</a></li>
-              <li><a href="#faq" className="text-gray-400 hover:text-white transition-colors">FAQ</a></li>
-              <li><a href="#shipping" className="text-gray-400 hover:text-white transition-colors">Info Pengiriman</a></li>
-              <li><a href="#returns" className="text-gray-400 hover:text-white transition-colors">Kebijakan Return</a></li>
-              <li><a href="#privacy" className="text-gray-400 hover:text-white transition-colors">Kebijakan Privasi</a></li>
+            <h3 className="text-lg font-semibold mb-6 text-blue-400">Tautan Cepat</h3>
+            <ul className="space-y-3">
+              {[
+                { label: 'Beranda', href: '#home' },
+                { label: 'Produk', href: '#products' },
+                { label: 'Kategori', href: '#categories' },
+                { label: 'Flash Sale', href: '#flash-sale' },
+                { label: 'Tentang Kami', href: '#about' },
+                { label: 'Kontak', href: '#contact' }
+              ].map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    className="text-gray-300 hover:text-blue-400 transition-colors duration-200 flex items-center group"
+                  >
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Hubungi Kami</h3>
-            <div className="space-y-3">
+            <h3 className="text-lg font-semibold mb-6 text-blue-400">Hubungi Kami</h3>
+            <div className="space-y-4">
               {contactInfo.address && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-400 text-sm leading-relaxed">
-                    {contactInfo.address}
-                  </span>
+                <div className="flex items-start gap-3 group">
+                  <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-blue-600 transition-colors">
+                    <MapPin className="h-4 w-4 text-blue-400 group-hover:text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                      {contactInfo.address}
+                    </p>
+                  </div>
                 </div>
               )}
               
               {contactInfo.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                  <span className="text-gray-400 text-sm">
+                <div className="flex items-center gap-3 group">
+                  <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-green-600 transition-colors">
+                    <Phone className="h-4 w-4 text-green-400 group-hover:text-white" />
+                  </div>
+                  <a 
+                    href={`tel:${contactInfo.phone}`}
+                    className="text-gray-300 text-sm hover:text-green-400 transition-colors"
+                  >
                     {contactInfo.phone}
-                  </span>
+                  </a>
                 </div>
               )}
               
               {contactInfo.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                  <span className="text-gray-400 text-sm">
+                <div className="flex items-center gap-3 group">
+                  <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-purple-600 transition-colors">
+                    <Mail className="h-4 w-4 text-purple-400 group-hover:text-white" />
+                  </div>
+                  <a 
+                    href={`mailto:${contactInfo.email}`}
+                    className="text-gray-300 text-sm hover:text-purple-400 transition-colors"
+                  >
                     {contactInfo.email}
-                  </span>
+                  </a>
                 </div>
               )}
               
               {contactInfo.operating_hours && (
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-400 text-sm leading-relaxed">
-                    {contactInfo.operating_hours}
-                  </span>
+                <div className="flex items-start gap-3 group">
+                  <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-orange-600 transition-colors">
+                    <Clock className="h-4 w-4 text-orange-400 group-hover:text-white mt-0.5" />
+                  </div>
+                  <div>
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                      {contactInfo.operating_hours}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <Separator className="my-8 bg-gray-700" />
+        <Separator className="my-12 bg-gray-700" />
 
         {/* Bottom Footer */}
-        <div className="text-center text-gray-400 text-sm">
-          <p>&copy; {new Date().getFullYear()} {storeInfo.name || 'Toko Online'}. Semua hak dilindungi.</p>
-          <p className="mt-1">Dibuat dengan ❤️ untuk memberikan pengalaman belanja terbaik</p>
+        <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <div className="text-center md:text-left">
+            <p className="text-gray-400 text-sm">
+              &copy; {currentYear} {storeInfo.name || 'Toko Online'}. Semua hak dilindungi.
+            </p>
+            <p className="text-gray-500 text-xs mt-1 flex items-center justify-center md:justify-start">
+              Dibuat dengan <Heart className="h-3 w-3 mx-1 text-red-500" /> untuk memberikan pengalaman belanja terbaik
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-6">
+            <a href="#privacy" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">
+              Kebijakan Privasi
+            </a>
+            <a href="#terms" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">
+              Syarat & Ketentuan
+            </a>
+            <Button
+              onClick={scrollToTop}
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-gray-400 hover:bg-blue-600 hover:text-white hover:border-blue-600"
+            >
+              <ArrowUp className="h-4 w-4 mr-1" />
+              Ke Atas
+            </Button>
+          </div>
         </div>
       </div>
     </footer>
