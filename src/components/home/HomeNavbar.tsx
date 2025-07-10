@@ -70,14 +70,6 @@ const HomeNavbar = ({
     setMobileMenuOpen(false);
   };
 
-  const navLinks = [
-    { label: 'Beranda', href: '/' },
-    { label: 'Produk', href: '#products' },
-    { label: 'Kategori', href: '#categories' },
-    { label: 'Flash Sale', href: '#flash-sale' },
-    { label: 'Tentang', href: '#about' }
-  ];
-
   return (
     <>
       <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
@@ -93,7 +85,7 @@ const HomeNavbar = ({
               )}
             </div>
             <div className="flex items-center space-x-4">
-              <span>Selamat Datang di {storeName}!</span>
+              <span>Selamat Datang di TokoQu!</span>
               {user && (
                 <Link to="/dashboard" className="text-yellow-300 hover:text-yellow-100">
                   Dashboard
@@ -112,14 +104,14 @@ const HomeNavbar = ({
                 <div className="relative">
                   <img 
                     src={logoUrl} 
-                    alt={storeName} 
+                    alt="TokoQu" 
                     className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-500" 
                   />
                 </div>
               )}
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {storeName}
+                  TokoQu
                 </h1>
                 <p className="text-xs text-gray-500 hidden md:block">
                   {storeInfo.tagline || 'Toko Online Terpercaya'}
@@ -127,67 +119,55 @@ const HomeNavbar = ({
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center space-x-8">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
-                >
-                  {link.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
-                </a>
-              ))}
-            </div>
-
             {/* Search Bar */}
-            <div className="flex-1 max-w-lg mx-8 hidden md:block">
+            <div className="flex-1 max-w-2xl mx-8 hidden md:block">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <Input
                   type="text"
-                  placeholder="Cari produk, kategori..."
+                  placeholder="Cari produk favorit Anda..."
                   value={searchTerm}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-10 pr-4 border-2 border-gray-200 focus:border-blue-500 rounded-full"
+                  className="pl-12 pr-4 h-12 border-2 border-gray-200 focus:border-blue-500 rounded-full text-lg"
                 />
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
-              {/* Cart */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative hover:bg-blue-50"
-                onClick={() => setCartModalOpen(true)}
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {getTotalItems() > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
-                    {getTotalItems()}
-                  </Badge>
-                )}
-              </Button>
+              {/* Cart - Only show if user is logged in */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative hover:bg-blue-50 p-3"
+                  onClick={() => setCartModalOpen(true)}
+                >
+                  <ShoppingCart className="h-6 w-6" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600 rounded-full">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
 
               {/* User Menu - Desktop */}
               <div className="hidden md:block">
                 {user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50">
+                      <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 p-3">
                         {profile?.avatar_url ? (
                           <img 
                             src={profile.avatar_url} 
                             alt="Profile" 
-                            className="h-6 w-6 rounded-full object-cover"
+                            className="h-8 w-8 rounded-full object-cover"
                           />
                         ) : (
-                          <UserCircle className="h-6 w-6" />
+                          <UserCircle className="h-8 w-8" />
                         )}
-                        <span className="hidden lg:inline">
+                        <span className="hidden lg:inline font-medium">
                           {profile?.full_name || user.email?.split('@')[0]}
                         </span>
                       </Button>
@@ -214,7 +194,7 @@ const HomeNavbar = ({
                     variant="outline" 
                     size="sm" 
                     onClick={() => setAuthModalOpen(true)}
-                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50 px-6 py-2"
                   >
                     <LogIn className="h-4 w-4 mr-2" />
                     Masuk
@@ -253,17 +233,6 @@ const HomeNavbar = ({
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-t shadow-lg">
             <div className="px-4 py-4 space-y-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="block text-gray-700 hover:text-blue-600 font-medium py-2"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </a>
-              ))}
-              
               <div className="border-t pt-4">
                 {user ? (
                   <div className="space-y-2">
@@ -323,7 +292,7 @@ const HomeNavbar = ({
       </nav>
 
       {/* Modals */}
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+      {user && <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />}
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </>
   );
