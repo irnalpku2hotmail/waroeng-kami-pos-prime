@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,13 +12,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import FrontendHero from '@/components/frontend/FrontendHero';
-import FrontendCategories from '@/components/frontend/FrontendCategories';
+import FrontendCategoriesSlider from '@/components/frontend/FrontendCategoriesSlider';
 import FrontendFlashSale from '@/components/frontend/FrontendFlashSale';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
 
 const Frontend = () => {
   const { user } = useAuth();
-  const { addItem } = useCart();
+  const { addItem, setCustomerInfo, setShippingCost } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -39,6 +39,52 @@ const Frontend = () => {
       return settingsMap;
     }
   });
+
+  // Fetch COD settings and sync with cart
+  const { data: codSettings } = useQuery({
+    queryKey: ['cod-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'cod_settings')
+        .single();
+      if (error) {
+        console.log('No COD settings found, using defaults');
+        return { enabled: true, delivery_fee: 10000, min_order: 50000 };
+      }
+      return data.value;
+    }
+  });
+
+  // Sync user profile with cart customer info
+  useEffect(() => {
+    if (user && setCustomerInfo) {
+      // Fetch user profile for customer info
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            setCustomerInfo({
+              name: profile.full_name || '',
+              phone: profile.phone || '',
+              email: profile.email || user.email || '',
+              address: profile.address || ''
+            });
+          }
+        });
+    }
+  }, [user, setCustomerInfo]);
+
+  // Sync COD settings with cart
+  useEffect(() => {
+    if (codSettings && setShippingCost) {
+      setShippingCost(codSettings.delivery_fee || 10000);
+    }
+  }, [codSettings, setShippingCost]);
 
   // Fetch products with filtering
   const { data: products = [], isLoading } = useQuery({
@@ -141,8 +187,8 @@ const Frontend = () => {
       {/* Flash Sale Section */}
       <FrontendFlashSale onProductClick={handleProductClick} />
 
-      {/* Categories */}
-      <FrontendCategories
+      {/* Categories Slider */}
+      <FrontendCategoriesSlider
         selectedCategory={selectedCategory}
         onCategorySelect={setSelectedCategory}
       />

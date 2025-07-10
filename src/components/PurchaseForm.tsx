@@ -33,20 +33,52 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     notes: purchase?.notes || ''
   });
 
-  const [items, setItems] = useState(
-    purchase?.purchase_items
-      ? purchase.purchase_items.map((item: any) => ({
-          ...item,
-          purchase_unit_id: item.purchase_unit_id || '',
-          conversion_factor: item.conversion_factor || 1,
-        }))
-      : []
-  );
+  const [items, setItems] = useState<any[]>([]);
   const [unitsMap, setUnitsMap] = useState<Record<string, any>>({});
   const [autoUpdatePrice, setAutoUpdatePrice] = useState(false);
 
   // For controlling which row is opening the search modal.
   const [searchModalOpenIdx, setSearchModalOpenIdx] = useState<number | null>(null);
+
+  // Load detailed purchase data when editing
+  const { data: detailedPurchase } = useQuery({
+    queryKey: ['purchase-edit', purchase?.id],
+    queryFn: async () => {
+      if (!purchase?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('purchases')
+        .select(`
+          *,
+          purchase_items(
+            *,
+            products(name, unit_id),
+            units:purchase_unit_id(name, abbreviation)
+          )
+        `)
+        .eq('id', purchase.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!purchase?.id
+  });
+
+  // Initialize items when detailed purchase data is loaded
+  useEffect(() => {
+    if (detailedPurchase?.purchase_items) {
+      const processedItems = detailedPurchase.purchase_items.map((item: any) => ({
+        ...item,
+        purchase_unit_id: item.purchase_unit_id || item.products?.unit_id || '',
+        conversion_factor: item.conversion_factor || 1,
+      }));
+      setItems(processedItems);
+    } else if (!purchase) {
+      // New purchase - start with empty items
+      setItems([]);
+    }
+  }, [detailedPurchase, purchase]);
 
   // Auto-set due date when payment method changes to credit
   useEffect(() => {
@@ -251,7 +283,8 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           .from('purchase_items')
           .insert(items.map(item => ({
             ...item,
-            purchase_id: purchaseId
+            purchase_id: purchaseId,
+            id: undefined // Remove id for new inserts
           })));
         if (error) throw error;
 
@@ -267,6 +300,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       }
       
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-detail'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
       if (autoUpdatePrice) {
         queryClient.invalidateQueries({ queryKey: ['products'] });

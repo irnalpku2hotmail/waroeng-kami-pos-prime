@@ -1,11 +1,11 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -15,94 +15,109 @@ interface AuthModalProps {
 }
 
 const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
+  const { signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [signupData, setSignupData] = useState({ 
-    email: '', 
-    password: '', 
-    confirmPassword: '', 
-    fullName: '' 
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    fullName: ''
   });
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
-        password: loginData.password,
+    if (!formData.email || !formData.password) {
+      toast({
+        title: 'Error',
+        description: 'Email dan password harus diisi',
+        variant: 'destructive'
       });
+      return;
+    }
 
+    setIsLoading(true);
+    try {
+      const { error } = await signIn(formData.email, formData.password);
       if (error) {
         toast({
-          title: 'Login Failed',
+          title: 'Login Gagal',
           description: error.message,
-          variant: 'destructive',
+          variant: 'destructive'
         });
       } else {
         toast({
-          title: 'Login Successful',
-          description: 'Welcome back!',
+          title: 'Berhasil',
+          description: 'Login berhasil!'
         });
         onOpenChange(false);
+        setFormData({ email: '', password: '', confirmPassword: '', fullName: '' });
       }
     } catch (error: any) {
       toast({
-        title: 'Login Error',
+        title: 'Error',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (signupData.password !== signupData.confirmPassword) {
+    if (!formData.email || !formData.password || !formData.fullName) {
       toast({
-        title: 'Password Mismatch',
-        description: 'Passwords do not match',
-        variant: 'destructive',
+        title: 'Error',
+        description: 'Semua field harus diisi',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Password tidak cocok',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: 'Error',
+        description: 'Password minimal 6 karakter',
+        variant: 'destructive'
       });
       return;
     }
 
     setIsLoading(true);
-
     try {
-      const { error } = await supabase.auth.signUp({
-        email: signupData.email,
-        password: signupData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: signupData.fullName,
-          },
-        },
+      const { error } = await signUp(formData.email, formData.password, {
+        full_name: formData.fullName
       });
-
+      
       if (error) {
         toast({
-          title: 'Signup Failed',
+          title: 'Registrasi Gagal',
           description: error.message,
-          variant: 'destructive',
+          variant: 'destructive'
         });
       } else {
         toast({
-          title: 'Signup Successful',
-          description: 'Please check your email to verify your account.',
+          title: 'Berhasil',
+          description: 'Akun berhasil dibuat! Silakan login.'
         });
         onOpenChange(false);
+        setFormData({ email: '', password: '', confirmPassword: '', fullName: '' });
       }
     } catch (error: any) {
       toast({
-        title: 'Signup Error',
+        title: 'Error',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
@@ -111,40 +126,40 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Welcome to SmartPOS</DialogTitle>
+          <DialogTitle>Login / Register</DialogTitle>
         </DialogHeader>
-        
+
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="login" className="space-y-4">
-            <form onSubmit={handleLogin} className="space-y-4">
+
+          <TabsContent value="login">
+            <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="login-email">Email</Label>
                 <Input
-                  id="email"
+                  id="login-email"
                   type="email"
-                  value={loginData.email}
-                  onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Masukkan email Anda"
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="login-password">Password</Label>
                 <div className="relative">
                   <Input
-                    id="password"
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Masukkan password Anda"
                     required
                   />
                   <Button
@@ -162,49 +177,50 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                   </Button>
                 </div>
               </div>
-              
+
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Login'}
+                {isLoading ? 'Loading...' : 'Login'}
               </Button>
             </form>
           </TabsContent>
-          
-          <TabsContent value="signup" className="space-y-4">
-            <form onSubmit={handleSignup} className="space-y-4">
+
+          <TabsContent value="register">
+            <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="register-name">Nama Lengkap</Label>
                 <Input
-                  id="fullName"
+                  id="register-name"
                   type="text"
-                  value={signupData.fullName}
-                  onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                  placeholder="Enter your full name"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                  placeholder="Masukkan nama lengkap Anda"
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="signupEmail">Email</Label>
+                <Label htmlFor="register-email">Email</Label>
                 <Input
-                  id="signupEmail"
+                  id="register-email"
                   type="email"
-                  value={signupData.email}
-                  onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Masukkan email Anda"
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="signupPassword">Password</Label>
+                <Label htmlFor="register-password">Password</Label>
                 <div className="relative">
                   <Input
-                    id="signupPassword"
+                    id="register-password"
                     type={showPassword ? 'text' : 'password'}
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Masukkan password (min. 6 karakter)"
                     required
+                    minLength={6}
                   />
                   <Button
                     type="button"
@@ -221,21 +237,21 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="register-confirm-password">Konfirmasi Password</Label>
                 <Input
-                  id="confirmPassword"
+                  id="register-confirm-password"
                   type="password"
-                  value={signupData.confirmPassword}
-                  onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  placeholder="Konfirmasi password Anda"
                   required
                 />
               </div>
-              
+
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating account...' : 'Sign Up'}
+                {isLoading ? 'Loading...' : 'Register'}
               </Button>
             </form>
           </TabsContent>
