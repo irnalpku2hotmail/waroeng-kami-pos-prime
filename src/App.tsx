@@ -11,6 +11,9 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 
+// Public pages
+import Home from '@/pages/Home';
+
 // Main pages
 import Dashboard from '@/pages/Dashboard';
 import Products from '@/pages/Products';
@@ -28,7 +31,6 @@ import FlashSales from '@/pages/FlashSales';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
 import Profile from '@/pages/Profile';
-import Frontend from '@/pages/Frontend';
 import Returns from '@/pages/Returns';
 import Purchases from '@/pages/Purchases';
 import NotFound from '@/pages/NotFound';
@@ -47,7 +49,7 @@ function App() {
             <Router>
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Frontend />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/products/:productId" element={<ProductDetails />} />

@@ -17,7 +17,8 @@ import {
   Building2,
   Receipt,
   BarChart3,
-  RotateCcw
+  RotateCcw,
+  Globe
 } from 'lucide-react';
 
 interface NavigationSidebarProps {
@@ -28,6 +29,7 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
   const location = useLocation();
 
   const navigationItems = [
+    { icon: Globe, label: 'Home', href: '/' },
     { icon: Home, label: 'Dashboard', href: '/dashboard' },
     { icon: Package, label: 'Products', href: '/products' },
     { icon: Ruler, label: 'Categories & Units', href: '/categories-units' },
@@ -51,6 +53,9 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
   const isActiveRoute = (href: string) => {
     if (href === '/dashboard') {
       return location.pathname === '/dashboard';
+    }
+    if (href === '/') {
+      return location.pathname === '/';
     }
     return location.pathname.startsWith(href);
   };
