@@ -102,8 +102,8 @@ const Products = () => {
         
         <ProductsFilters
           searchTerm={searchTerm}
-          categoryFilter={selectedCategory}
-          unitFilter={selectedUnit}
+          selectedCategory={selectedCategory}
+          selectedUnit={selectedUnit}
           onSearchChange={handleSearchChange}
           onCategoryChange={handleCategoryChange}
           onUnitChange={handleUnitChange}
