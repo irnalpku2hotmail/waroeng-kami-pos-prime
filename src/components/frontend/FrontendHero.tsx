@@ -55,25 +55,9 @@ const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
       id: 1,
       title: `Selamat Datang di ${storeName}`,
       subtitle: storeDescription || "Temukan produk berkualitas dengan harga terbaik",
-      image: "/api/placeholder/800/400",
+      image: "/placeholder.svg",
       cta: "Belanja Sekarang",
       bgGradient: "from-blue-500 to-purple-600"
-    },
-    {
-      id: 2,
-      title: "Flash Sale Hari Ini!",
-      subtitle: "Dapatkan diskon hingga 50% untuk produk pilihan",
-      image: "/api/placeholder/800/400",
-      cta: "Lihat Penawaran",
-      bgGradient: "from-red-500 to-orange-500"
-    },
-    {
-      id: 3,
-      title: "Produk Terbaru",
-      subtitle: "Koleksi terlengkap dan terpercaya untuk kebutuhan Anda",
-      image: "/api/placeholder/800/400",
-      cta: "Jelajahi Produk",
-      bgGradient: "from-green-500 to-teal-500"
     }
   ];
 
@@ -102,14 +86,14 @@ const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
             index < currentSlide ? '-translate-x-full' : 'translate-x-full'
           }`}
         >
-          <div className={`h-full bg-gradient-to-r ${slide.bgGradient} relative`}>
-            {slide.image && slide.image !== "/api/placeholder/800/400" && (
+          <div className={`h-full ${slide.image === "/placeholder.svg" ? `bg-gradient-to-r ${slide.bgGradient}` : 'bg-black'} relative`}>
+            {slide.image && slide.image !== "/placeholder.svg" ? (
               <img
                 src={slide.image}
                 alt={slide.title}
                 className="absolute inset-0 w-full h-full object-cover"
               />
-            )}
+            ) : null}
             <div className="absolute inset-0 bg-black bg-opacity-40" />
             <div className="relative h-full flex items-center justify-center">
               <div className="text-center text-white px-6 max-w-4xl">

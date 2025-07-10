@@ -38,17 +38,17 @@ const FrontendFooter = () => {
             </p>
             {/* Social Media */}
             <div className="flex space-x-4">
-              {socialMedia.facebook && (
+              {socialMedia?.facebook && (
                 <a href={socialMedia.facebook} className="text-gray-400 hover:text-blue-500 transition-colors">
                   <Facebook className="h-5 w-5" />
                 </a>
               )}
-              {socialMedia.instagram && (
+              {socialMedia?.instagram && (
                 <a href={socialMedia.instagram} className="text-gray-400 hover:text-pink-500 transition-colors">
                   <Instagram className="h-5 w-5" />
                 </a>
               )}
-              {socialMedia.twitter && (
+              {socialMedia?.twitter && (
                 <a href={socialMedia.twitter} className="text-gray-400 hover:text-blue-400 transition-colors">
                   <Twitter className="h-5 w-5" />
                 </a>
@@ -80,38 +80,38 @@ const FrontendFooter = () => {
             </ul>
           </div>
 
-          {/* Contact Info */}
+          {/* Contact Info - using both store_info and contact_info */}
           <div>
             <h3 className="text-lg font-semibold mb-4">Hubungi Kami</h3>
             <div className="space-y-3">
-              {contactInfo.address && (
+              {(storeInfo?.address || contactInfo?.address) && (
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-400 text-sm leading-relaxed">
-                    {contactInfo.address}
+                    {storeInfo.address || contactInfo.address}
                   </span>
                 </div>
               )}
               
-              {contactInfo.phone && (
+              {(storeInfo?.phone || contactInfo?.phone) && (
                 <div className="flex items-center gap-3">
                   <Phone className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <span className="text-gray-400 text-sm">
-                    {contactInfo.phone}
+                    {storeInfo.phone || contactInfo.phone}
                   </span>
                 </div>
               )}
               
-              {contactInfo.email && (
+              {(storeInfo?.email || contactInfo?.email) && (
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <span className="text-gray-400 text-sm">
-                    {contactInfo.email}
+                    {storeInfo.email || contactInfo.email}
                   </span>
                 </div>
               )}
               
-              {contactInfo.operating_hours && (
+              {contactInfo?.operating_hours && (
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-400 text-sm leading-relaxed">

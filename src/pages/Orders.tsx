@@ -32,12 +32,13 @@ const Orders = () => {
     setSelectedOrder(order);
   };
 
-  const totalOrders = orders.length;
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const completedOrders = orders.filter(o => o.status === 'delivered').length;
-  const totalRevenue = orders
-    .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + Number(o.total_amount), 0);
+  // Calculate stats from all orders data (not just current page)
+  const totalOrders = allOrdersData?.length || 0;
+  const pendingOrders = allOrdersData?.filter(o => o.status === 'pending').length || 0;
+  const completedOrders = allOrdersData?.filter(o => o.status === 'delivered').length || 0;
+  const totalRevenue = allOrdersData
+    ?.filter(o => o.status === 'delivered')
+    .reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
 
   const handleExportToExcel = () => {
     if (!allOrdersData || allOrdersData.length === 0) {

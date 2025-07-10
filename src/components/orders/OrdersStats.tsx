@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package } from 'lucide-react';
+import { Package, Clock, CheckCircle, DollarSign } from 'lucide-react';
 
 interface OrdersStatsProps {
   totalOrders: number;
@@ -25,30 +25,30 @@ const OrdersStats = ({ totalOrders, pendingOrders, completedOrders, totalRevenue
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Menunggu Konfirmasi</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
+          <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{pendingOrders}</div>
+          <div className="text-2xl font-bold text-orange-600">{pendingOrders}</div>
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Selesai</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
+          <CheckCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{completedOrders}</div>
+          <div className="text-2xl font-bold text-green-600">{completedOrders}</div>
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">Rp {totalRevenue.toLocaleString('id-ID')}</div>
+          <div className="text-2xl font-bold text-blue-600">Rp {totalRevenue.toLocaleString('id-ID')}</div>
         </CardContent>
       </Card>
     </div>
