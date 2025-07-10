@@ -21,7 +21,7 @@ interface FrontendCartModalProps {
 }
 
 const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
-  const { items, updateQuantity, removeItem, clearCart, getTotalAmount } = useCart();
+  const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
@@ -46,6 +46,11 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
     }
   });
 
+  const generateOrderNumber = () => {
+    const timestamp = Date.now();
+    return `ORD-${timestamp}`;
+  };
+
   const createOrder = useMutation({
     mutationFn: async () => {
       if (!user) {
@@ -53,11 +58,8 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
       }
 
       const deliveryFee = settings?.delivery_fee?.amount || 10000;
-      const totalAmount = getTotalAmount() + deliveryFee;
-
-      // Generate order number
-      const timestamp = Date.now();
-      const orderNumber = `ORD-${timestamp}`;
+      const totalAmount = getTotalPrice() + deliveryFee;
+      const orderNumber = generateOrderNumber();
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -79,10 +81,10 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
 
       const orderItems = items.map(item => ({
         order_id: order.id,
-        product_id: item.product.id,
+        product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: item.product.selling_price,
-        total_price: item.quantity * item.product.selling_price
+        unit_price: item.unit_price,
+        total_price: item.total_price
       }));
 
       const { error: itemsError } = await supabase
@@ -112,8 +114,19 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
     }
   });
 
+  const getImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return '/placeholder.svg';
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(imageUrl);
+    
+    return data.publicUrl;
+  };
+
   const deliveryFee = settings?.delivery_fee?.amount || 10000;
-  const subtotal = getTotalAmount();
+  const subtotal = getTotalPrice();
   const total = subtotal + deliveryFee;
 
   if (!user) {
@@ -165,21 +178,21 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       <img
-                        src={item.product.image_url || '/placeholder.svg'}
-                        alt={item.product.name}
+                        src={getImageUrl(item.product?.image_url)}
+                        alt={item.product?.name || 'Product'}
                         className="w-16 h-16 object-cover rounded-md"
                       />
                       <div className="flex-1">
-                        <h4 className="font-medium">{item.product.name}</h4>
+                        <h4 className="font-medium">{item.product?.name || 'Product'}</h4>
                         <p className="text-sm text-gray-600">
-                          Rp {item.product.selling_price.toLocaleString('id-ID')}
+                          Rp {item.unit_price.toLocaleString('id-ID')}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
+                          onClick={() => updateQuantity(item.product_id, Math.max(1, item.quantity - 1))}
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
@@ -187,14 +200,14 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => removeItem(item.product.id)}
+                          onClick={() => removeItem(item.product_id)}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />

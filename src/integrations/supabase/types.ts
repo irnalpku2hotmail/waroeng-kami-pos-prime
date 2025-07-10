@@ -1345,6 +1345,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_customer_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1359,6 +1363,14 @@ export type Database = {
           points_used: number
           created_at: string
           items: Json
+        }[]
+      }
+      get_customer_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_customers: number
+          active_customers_this_month: number
+          total_unredeemed_points: number
         }[]
       }
       get_supplier_purchase_history: {
