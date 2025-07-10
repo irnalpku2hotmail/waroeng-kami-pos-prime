@@ -20,6 +20,9 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['products', searchTerm, selectedCategory, selectedUnit, currentPage],
@@ -81,19 +84,26 @@ const Products = () => {
   };
 
   const handleExport = () => {
-    // Export functionality implementation
     console.log('Export products to Excel');
   };
 
   return (
     <Layout>
       <div className="space-y-6">
-        <ProductsHeader onExport={handleExport} />
+        <ProductsHeader 
+          onExport={handleExport}
+          open={addDialogOpen}
+          setOpen={setAddDialogOpen}
+          setEditProduct={setEditProduct}
+          editProduct={editProduct}
+          editDialogOpen={editDialogOpen}
+          setEditDialogOpen={setEditDialogOpen}
+        />
         
         <ProductsFilters
           searchTerm={searchTerm}
-          selectedCategory={selectedCategory}
-          selectedUnit={selectedUnit}
+          categoryFilter={selectedCategory}
+          unitFilter={selectedUnit}
           onSearchChange={handleSearchChange}
           onCategoryChange={handleCategoryChange}
           onUnitChange={handleUnitChange}
@@ -114,7 +124,7 @@ const Products = () => {
               <ProductsPagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={setCurrentPage}
+                onPageChange={(page: number) => setCurrentPage(page)}
                 itemsPerPage={ITEMS_PER_PAGE}
                 totalItems={productsCount}
               />

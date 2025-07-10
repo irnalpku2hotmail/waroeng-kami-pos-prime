@@ -156,6 +156,7 @@ const ProductsTable = ({ products, onShowQRCode }: ProductsTableProps) => {
           </DialogHeader>
           <ProductForm 
             product={editProduct}
+            onClose={handleCloseEdit}
             onSuccess={handleCloseEdit}
           />
         </DialogContent>

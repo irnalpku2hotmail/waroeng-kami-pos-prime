@@ -3,19 +3,41 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Download } from 'lucide-react';
 import ProductForm from '@/components/ProductForm';
+import { useState } from 'react';
 
 interface ProductsHeaderProps {
-  onExport?: () => void;
+  onExport: () => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  setEditProduct: (product: any) => void;
+  editProduct: any;
+  editDialogOpen: boolean;
+  setEditDialogOpen: (open: boolean) => void;
 }
 
-const ProductsHeader = ({ onExport }: ProductsHeaderProps) => {
+const ProductsHeader = ({ 
+  onExport, 
+  open, 
+  setOpen, 
+  setEditProduct, 
+  editProduct, 
+  editDialogOpen, 
+  setEditDialogOpen 
+}: ProductsHeaderProps) => {
   const handleExport = () => {
     if (onExport) {
       onExport();
     } else {
-      // Default export functionality if needed
       console.log('Export functionality not implemented');
     }
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleSuccess = () => {
+    setOpen(false);
   };
 
   return (
@@ -25,7 +47,7 @@ const ProductsHeader = ({ onExport }: ProductsHeaderProps) => {
         <Button variant="outline" onClick={handleExport}>
           <Download className="h-4 w-4 mr-2" /> Export Excel
         </Button>
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" /> Tambah Produk
@@ -35,7 +57,10 @@ const ProductsHeader = ({ onExport }: ProductsHeaderProps) => {
             <DialogHeader>
               <DialogTitle>Tambah Produk Baru</DialogTitle>
             </DialogHeader>
-            <ProductForm />
+            <ProductForm 
+              onClose={handleClose}
+              onSuccess={handleSuccess}
+            />
           </DialogContent>
         </Dialog>
       </div>
