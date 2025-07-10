@@ -16,7 +16,8 @@ import {
   UserCog,
   Building2,
   Receipt,
-  BarChart3
+  BarChart3,
+  RotateCcw
 } from 'lucide-react';
 
 interface NavigationSidebarProps {
@@ -31,6 +32,8 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
     { icon: Package, label: 'Products', href: '/products' },
     { icon: Ruler, label: 'Categories & Units', href: '/categories-units' },
     { icon: Building2, label: 'Suppliers', href: '/suppliers' },
+    { icon: ShoppingCart, label: 'Purchases', href: '/purchases' },
+    { icon: RotateCcw, label: 'Returns', href: '/returns' },
     { icon: ShoppingCart, label: 'POS', href: '/pos' },
     { icon: Package2, label: 'Inventory', href: '/inventory' },
     { icon: Users, label: 'Customers', href: '/customers' },

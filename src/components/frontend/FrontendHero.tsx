@@ -1,5 +1,7 @@
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, ShoppingBag, Star, Zap } from 'lucide-react';
 
@@ -11,7 +13,33 @@ interface FrontendHeroProps {
 const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const slides = [
+  // Fetch frontend settings for carousel images
+  const { data: settings } = useQuery({
+    queryKey: ['frontend-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('key', 'frontend_settings')
+        .single();
+      if (error) {
+        console.log('No frontend settings found');
+        return null;
+      }
+      return data.value;
+    }
+  });
+
+  const carouselImages = settings?.carousel_images || [];
+
+  const slides = carouselImages.length > 0 ? carouselImages.map((image: any, index: number) => ({
+    id: index + 1,
+    title: image.title || `Selamat Datang di ${storeName}`,
+    subtitle: image.subtitle || storeDescription || "Temukan produk berkualitas dengan harga terbaik",
+    image: image.image_url,
+    cta: image.cta_text || "Belanja Sekarang",
+    bgGradient: index === 0 ? "from-blue-500 to-purple-600" : index === 1 ? "from-red-500 to-orange-500" : "from-green-500 to-teal-500"
+  })) : [
     {
       id: 1,
       title: `Selamat Datang di ${storeName}`,
@@ -54,7 +82,7 @@ const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
   };
 
   return (
-    <div className="relative h-96 md:h-[500px] overflow-hidden rounded-lg mx-4 my-6 shadow-2xl">
+    <div className="relative h-64 md:h-80 overflow-hidden rounded-lg mx-4 my-6 shadow-2xl">
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -64,23 +92,30 @@ const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
           }`}
         >
           <div className={`h-full bg-gradient-to-r ${slide.bgGradient} relative`}>
-            <div className="absolute inset-0 bg-black bg-opacity-20" />
+            {slide.image && slide.image !== "/api/placeholder/800/400" && (
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+            <div className="absolute inset-0 bg-black bg-opacity-40" />
             <div className="relative h-full flex items-center justify-center">
               <div className="text-center text-white px-6 max-w-4xl">
                 <div className="mb-4">
-                  {index === 1 && <Zap className="h-8 w-8 mx-auto mb-2 animate-pulse" />}
-                  {index === 2 && <Star className="h-8 w-8 mx-auto mb-2" />}
-                  {index === 0 && <ShoppingBag className="h-8 w-8 mx-auto mb-2" />}
+                  {index === 1 && <Zap className="h-6 w-6 mx-auto mb-2 animate-pulse" />}
+                  {index === 2 && <Star className="h-6 w-6 mx-auto mb-2" />}
+                  {index === 0 && <ShoppingBag className="h-6 w-6 mx-auto mb-2" />}
                 </div>
-                <h1 className="text-3xl md:text-5xl font-bold mb-4 animate-fade-in">
+                <h1 className="text-2xl md:text-4xl font-bold mb-3 animate-fade-in">
                   {slide.title}
                 </h1>
-                <p className="text-lg md:text-xl mb-8 opacity-90">
+                <p className="text-sm md:text-lg mb-6 opacity-90">
                   {slide.subtitle}
                 </p>
                 <Button 
-                  size="lg" 
-                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-8 py-3 text-lg shadow-lg transform hover:scale-105 transition-all duration-200"
+                  size="sm"
+                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 py-2 text-sm shadow-lg transform hover:scale-105 transition-all duration-200"
                 >
                   {slide.cta}
                 </Button>
@@ -95,13 +130,13 @@ const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
         onClick={prevSlide}
         className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
       >
-        <ChevronLeft className="h-6 w-6" />
+        <ChevronLeft className="h-4 w-4" />
       </button>
       <button
         onClick={nextSlide}
         className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
       >
-        <ChevronRight className="h-6 w-6" />
+        <ChevronRight className="h-4 w-4" />
       </button>
 
       {/* Slide Indicators */}
@@ -110,7 +145,7 @@ const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
           <button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
               index === currentSlide 
                 ? 'bg-white scale-110' 
                 : 'bg-white bg-opacity-50 hover:bg-opacity-75'

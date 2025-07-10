@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -250,7 +251,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             supplier_id: data.supplier_id,
             payment_method: data.payment_method,
             purchase_date: data.purchase_date,
-            due_date: data.due_date || null, // Fix: Allow null for cash payments
+            due_date: data.due_date || null,
             notes: data.notes,
             total_amount: items.reduce((sum, item) => sum + (item.total_cost || 0), 0)
           })
@@ -264,7 +265,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             ...data,
             user_id: user?.id,
             purchase_number: `PUR-${Date.now()}`,
-            due_date: data.due_date || null, // Fix: Allow null for cash payments
+            due_date: data.due_date || null,
             total_amount: items.reduce((sum, item) => sum + (item.total_cost || 0), 0)
           }])
           .select()
@@ -279,13 +280,18 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           await supabase.from('purchase_items').delete().eq('purchase_id', purchase.id);
         }
         
+        // Clean items data - remove id field to avoid null constraint violation
+        const cleanedItems = items.map(item => {
+          const { id, ...itemWithoutId } = item;
+          return {
+            ...itemWithoutId,
+            purchase_id: purchaseId
+          };
+        });
+        
         const { error } = await supabase
           .from('purchase_items')
-          .insert(items.map(item => ({
-            ...item,
-            purchase_id: purchaseId,
-            id: undefined // Remove id for new inserts
-          })));
+          .insert(cleanedItems);
         if (error) throw error;
 
         // Auto update product base price if enabled

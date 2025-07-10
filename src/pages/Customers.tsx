@@ -2,47 +2,36 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users, Eye, Download, Award, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Plus, User, Gift, Star, Edit, Trash2, Search } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
 import PaginationComponent from '@/components/PaginationComponent';
-import { exportToExcel } from '@/utils/excelExport';
 
 const ITEMS_PER_PAGE = 10;
 
 const Customers = () => {
   const [open, setOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<any>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  // Query for all customers for export and stats
-  const { data: allCustomersData } = useQuery({
-    queryKey: ['all-customers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      return data;
-    }
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    date_of_birth: ''
   });
-
-  const totalCustomers = allCustomersData?.length || 0;
-  const totalPoints = allCustomersData?.reduce((sum, customer) => sum + (customer.total_points || 0), 0) || 0;
-  const totalSpent = allCustomersData?.reduce((sum, customer) => sum + (customer.total_spent || 0), 0) || 0;
 
   const { data: customersData, isLoading } = useQuery({
     queryKey: ['customers', searchTerm, currentPage],
@@ -50,16 +39,18 @@ const Customers = () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
       
-      let query = supabase.from('customers').select('*', { count: 'exact' });
+      let query = supabase
+        .from('customers')
+        .select('*', { count: 'exact' });
       
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
       }
       
       const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
-        
+      
       if (error) throw error;
       return { data, count };
     }
@@ -69,31 +60,31 @@ const Customers = () => {
   const customersCount = customersData?.count || 0;
   const totalPages = Math.ceil(customersCount / ITEMS_PER_PAGE);
 
-  const createCustomer = useMutation({
-    mutationFn: async (customer: any) => {
-      const { error } = await supabase.from('customers').insert([customer]);
-      if (error) throw error;
+  const saveCustomer = useMutation({
+    mutationFn: async (customerData: any) => {
+      // Remove customer_code from data since it will be auto-generated
+      const { customer_code, ...dataToSave } = customerData;
+      
+      if (editCustomer) {
+        const { error } = await supabase
+          .from('customers')
+          .update(dataToSave)
+          .eq('id', editCustomer.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('customers')
+          .insert([dataToSave]);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      setOpen(false);
-      toast({ title: 'Berhasil', description: 'Customer berhasil ditambahkan' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
-  const updateCustomer = useMutation({
-    mutationFn: async ({ id, ...customer }: any) => {
-      const { error } = await supabase.from('customers').update(customer).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      setOpen(false);
-      setEditCustomer(null);
-      toast({ title: 'Berhasil', description: 'Customer berhasil diupdate' });
+      toast({ 
+        title: 'Berhasil', 
+        description: editCustomer ? 'Customer berhasil diperbarui' : 'Customer berhasil ditambahkan' 
+      });
+      handleCloseDialog();
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -114,249 +105,283 @@ const Customers = () => {
     }
   });
 
-  const handleCustomerSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const customerData = {
-      customer_code: formData.get('customer_code') as string,
-      name: formData.get('name') as string,
-      phone: formData.get('phone') as string,
-      address: formData.get('address') as string,
-    };
-
-    if (editCustomer) {
-      updateCustomer.mutate({ id: editCustomer.id, ...customerData });
-    } else {
-      createCustomer.mutate(customerData);
-    }
+    saveCustomer.mutate(formData);
   };
 
-  const handleExportToExcel = () => {
-    if (!allCustomersData || allCustomersData.length === 0) {
-      toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
-      return;
-    }
-
-    const exportData = allCustomersData.map(customer => ({
-      'Kode Customer': customer.customer_code,
-      'Nama Customer': customer.name,
-      'Telepon': customer.phone || '-',
-      'Email': customer.email || '-',
-      'Alamat': customer.address || '-',
-      'Total Poin': customer.total_points,
-      'Total Belanja': customer.total_spent,
-      'Tanggal Bergabung': new Date(customer.created_at).toLocaleDateString('id-ID')
-    }));
-
-    exportToExcel(exportData, 'Data_Customer', 'Customer');
-    toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
+  const handleCloseDialog = () => {
+    setOpen(false);
+    setEditCustomer(null);
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      address: '',
+      date_of_birth: ''
+    });
   };
+
+  const handleEditCustomer = (customer: any) => {
+    setEditCustomer(customer);
+    setFormData({
+      name: customer.name || '',
+      phone: customer.phone || '',
+      email: customer.email || '',
+      address: customer.address || '',
+      date_of_birth: customer.date_of_birth || ''
+    });
+    setOpen(true);
+  };
+
+  const handleViewDetail = (customer: any) => {
+    setSelectedCustomer(customer);
+    setDetailModalOpen(true);
+  };
+
+  const totalCustomers = customers.length;
+  const totalPoints = customers.reduce((sum, c) => sum + c.total_points, 0);
+  const totalSpent = customers.reduce((sum, c) => sum + c.total_spent, 0);
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Manajemen Customer</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportToExcel}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Excel
-            </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditCustomer(null)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tambah Customer
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{editCustomer ? 'Edit Customer' : 'Tambah Customer Baru'}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleCustomerSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="customer_code">Kode Customer *</Label>
-                    <Input
-                      id="customer_code"
-                      name="customer_code"
-                      defaultValue={editCustomer?.customer_code}
-                      placeholder="Contoh: C001"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nama Customer *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={editCustomer?.name}
-                      placeholder="Contoh: John Doe"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telepon</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      defaultValue={editCustomer?.phone}
-                      placeholder="Contoh: 081234567890"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Alamat</Label>
-                    <Input
-                      id="address"
-                      name="address"
-                      defaultValue={editCustomer?.address}
-                      placeholder="Contoh: Jl. Pahlawan No. 1"
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                      Batal
-                    </Button>
-                    <Button type="submit">
-                      {editCustomer ? 'Update' : 'Simpan'}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <h1 className="text-3xl font-bold">Manajemen Customer</h1>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setEditCustomer(null)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Customer
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editCustomer ? 'Edit Customer' : 'Tambah Customer Baru'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nama Lengkap *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Nama customer"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Nomor Telepon</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+62 xxx xxx xxx"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date_of_birth">Tanggal Lahir</Label>
+                  <Input
+                    id="date_of_birth"
+                    type="date"
+                    value={formData.date_of_birth}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Alamat</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Alamat lengkap"
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                    Batal
+                  </Button>
+                  <Button type="submit">
+                    {editCustomer ? 'Update Customer' : 'Simpan Customer'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Customer</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <User className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalCustomers}</div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Poin</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
+              <Star className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalPoints.toLocaleString('id-ID')}</div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Belanja</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
+              <Gift className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">Rp {totalSpent.toLocaleString('id-ID')}</div>
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Rata-rata per Customer</CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                Rp {totalCustomers > 0 ? (totalSpent / totalCustomers).toLocaleString('id-ID') : '0'}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
+        {/* Search */}
         <div className="flex gap-4">
-          <Input
-            placeholder="Cari nama, telepon, atau kode customer..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="max-w-sm"
-          />
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Cari customer..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10"
+            />
+          </div>
         </div>
 
+        {/* Table */}
         <div className="border rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="p-8 text-center">Loading...</div>
           ) : customers.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">Belum ada customer</p>
+            <div className="p-8 text-center text-gray-500">
+              Tidak ada data customer
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ranking</TableHead>
-                    <TableHead>Kode Customer</TableHead>
-                    <TableHead>Nama Customer</TableHead>
-                    <TableHead>Telepon</TableHead>
-                    <TableHead>Alamat</TableHead>
-                    <TableHead>Total Poin</TableHead>
-                    <TableHead>Total Belanja</TableHead>
-                    <TableHead>Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...customers]
-                    .sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0))
-                    .map((customer, idx) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{idx + 1}</TableCell>
-                      <TableCell className="font-medium">{customer.customer_code}</TableCell>
-                      <TableCell>{customer.name}</TableCell>
-                      <TableCell>{customer.phone || '-'}</TableCell>
-                      <TableCell>{customer.address || '-'}</TableCell>
-                      <TableCell>{customer.total_points?.toLocaleString('id-ID') || 0}</TableCell>
-                      <TableCell>Rp {customer.total_spent?.toLocaleString('id-ID') || 0}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditCustomer(customer);
-                              setOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => deleteCustomer.mutate(customer.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedCustomer(customer);
-                              setDetailOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <PaginationComponent 
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={ITEMS_PER_PAGE}
-                totalItems={customersCount}
-              />
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kode</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kontak</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal Lahir</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Poin</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Belanja</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {customers.map((customer) => (
+                      <tr key={customer.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                          <Badge variant="outline">{customer.customer_code}</Badge>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-gray-900">
+                          <div>
+                            <div className="font-medium">{customer.name}</div>
+                            <div className="text-xs text-gray-500">{customer.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-gray-500">
+                          {customer.phone || '-'}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-gray-500">
+                          {customer.date_of_birth ? new Date(customer.date_of_birth).toLocaleDateString('id-ID') : '-'}
+                        </td>
+                        <td className="px-4 py-4 text-sm">
+                          <Badge className="bg-blue-100 text-blue-800">
+                            {customer.total_points} poin
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-gray-900">
+                          Rp {customer.total_spent.toLocaleString('id-ID')}
+                        </td>
+                        <td className="px-4 py-4 text-sm">
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleViewDetail(customer)}
+                            >
+                              Detail
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditCustomer(customer)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteCustomer.mutate(customer.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="border-t px-4 py-3">
+                  <PaginationComponent
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={customersCount}
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
-      </div>
-      {selectedCustomer && (
-        <CustomerDetails 
-          customer={selectedCustomer} 
-          open={detailOpen} 
-          onOpenChange={setDetailOpen}
+
+        <CustomerDetails
+          customer={selectedCustomer}
+          open={detailModalOpen}
+          onOpenChange={setDetailModalOpen}
         />
-      )}
+      </div>
     </Layout>
   );
 };

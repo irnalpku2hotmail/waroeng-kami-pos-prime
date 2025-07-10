@@ -7,7 +7,8 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, ShoppingCart, Heart, User, LogOut, LogIn } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, ShoppingCart, User, LogOut, LogIn, UserCircle } from 'lucide-react';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 
@@ -15,16 +16,12 @@ interface FrontendNavbarProps {
   storeName: string;
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  likedProducts: string[];
-  onToggleLike: (productId: string) => void;
 }
 
 const FrontendNavbar = ({ 
   storeName, 
   searchTerm, 
-  onSearchChange, 
-  likedProducts, 
-  onToggleLike 
+  onSearchChange
 }: FrontendNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
@@ -46,6 +43,22 @@ const FrontendNavbar = ({
     }
   });
 
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
   const storeInfo = settings?.store_info || {};
   const logoUrl = storeInfo.logo_url;
 
@@ -61,7 +74,7 @@ const FrontendNavbar = ({
             {/* Logo & Store Name */}
             <div className="flex items-center space-x-3">
               {logoUrl && (
-                <img src={logoUrl} alt={storeName} className="h-8 w-8 rounded" />
+                <img src={logoUrl} alt={storeName} className="h-8 w-8 rounded object-cover" />
               )}
               <h1 className="text-xl font-bold text-blue-600">{storeName}</h1>
             </div>
@@ -82,16 +95,6 @@ const FrontendNavbar = ({
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
-              {/* Wishlist */}
-              <Button variant="ghost" size="sm" className="relative">
-                <Heart className="h-5 w-5" />
-                {likedProducts.length > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs">
-                    {likedProducts.length}
-                  </Badge>
-                )}
-              </Button>
-
               {/* Cart */}
               <Button
                 variant="ghost"
@@ -109,19 +112,36 @@ const FrontendNavbar = ({
 
               {/* User Menu */}
               {user ? (
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm">
-                    <User className="h-5 w-5 mr-2" />
-                    {user.email?.split('@')[0]}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Profile" 
+                          className="h-6 w-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle className="h-6 w-6" />
+                      )}
+                      <span className="hidden md:inline">Profile</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem disabled>
+                      <User className="h-4 w-4 mr-2" />
+                      {profile?.full_name || user.email?.split('@')[0]}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <Button variant="ghost" size="sm" onClick={() => setAuthModalOpen(true)}>
                   <LogIn className="h-5 w-5 mr-2" />
-                  Login
+                  <span className="hidden md:inline">Login</span>
                 </Button>
               )}
             </div>

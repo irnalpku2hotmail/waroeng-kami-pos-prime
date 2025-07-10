@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Heart, ShoppingCart, Star, Package, Eye } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Package, Eye, Truck } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -176,8 +177,6 @@ const Frontend = () => {
         storeName={storeName}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        likedProducts={likedProducts}
-        onToggleLike={handleToggleLike}
       />
 
       {/* Hero Section */}
@@ -208,13 +207,13 @@ const Frontend = () => {
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {[...Array(12)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
-                  <div className="h-48 bg-gray-200 rounded-t-lg" />
-                  <CardContent className="p-4">
-                    <div className="h-4 bg-gray-200 rounded mb-2" />
-                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-32 bg-gray-200 rounded-t-lg" />
+                  <CardContent className="p-3">
+                    <div className="h-3 bg-gray-200 rounded mb-2" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4" />
                   </CardContent>
                 </Card>
               ))}
@@ -227,7 +226,7 @@ const Frontend = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {products.map((product) => (
                 <Card 
                   key={product.id}
@@ -238,29 +237,34 @@ const Frontend = () => {
                     <img
                       src={product.image_url || '/placeholder.svg'}
                       alt={product.name}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                      className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                     {product.current_stock <= 0 && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                        <Badge variant="destructive" className="text-sm">
+                        <Badge variant="destructive" className="text-xs">
                           Stok Habis
                         </Badge>
                       </div>
                     )}
                     {product.current_stock <= product.min_stock && product.current_stock > 0 && (
-                      <Badge className="absolute top-2 left-2 bg-orange-500">
-                        Stok Terbatas
+                      <Badge className="absolute top-2 left-2 bg-orange-500 text-xs">
+                        Terbatas
                       </Badge>
                     )}
+                    {/* COD Badge */}
+                    <Badge className="absolute top-2 right-2 bg-green-500 text-xs flex items-center gap-1">
+                      <Truck className="h-3 w-3" />
+                      COD
+                    </Badge>
                   </div>
                   
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-2 text-sm line-clamp-2">
+                  <CardContent className="p-3">
+                    <h3 className="font-semibold mb-2 text-xs line-clamp-2 h-8">
                       {product.name}
                     </h3>
                     
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg font-bold text-blue-600">
+                      <span className="text-sm font-bold text-blue-600">
                         Rp {product.selling_price.toLocaleString('id-ID')}
                       </span>
                     </div>
@@ -268,7 +272,7 @@ const Frontend = () => {
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
                       <div className="flex items-center gap-1">
                         <Package className="h-3 w-3" />
-                        <span>Stok: {product.current_stock}</span>
+                        <span>{product.current_stock}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-yellow-500" />
@@ -276,29 +280,29 @@ const Frontend = () => {
                       </div>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 text-xs h-7"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleProductClick(product);
                         }}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye className="h-3 w-3 mr-1" />
                         Detail
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="h-7 w-7 p-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleLike(product.id);
                         }}
-                        className={likedProducts.includes(product.id) ? 'text-red-500' : ''}
                       >
-                        <Heart className={`h-4 w-4 ${likedProducts.includes(product.id) ? 'fill-current' : ''}`} />
+                        <Heart className={`h-3 w-3 ${likedProducts.includes(product.id) ? 'fill-current text-red-500' : ''}`} />
                       </Button>
                     </div>
                   </CardContent>
@@ -347,6 +351,10 @@ const Frontend = () => {
                       <Star className="h-4 w-4 text-yellow-500" />
                       <span className="text-sm">4.5 (120 ulasan)</span>
                     </div>
+                    <Badge className="bg-green-500 flex items-center gap-1">
+                      <Truck className="h-3 w-3" />
+                      COD Available
+                    </Badge>
                   </div>
                   
                   {selectedProduct.description && (
