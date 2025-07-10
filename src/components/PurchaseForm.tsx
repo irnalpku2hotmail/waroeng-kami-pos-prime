@@ -152,7 +152,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
         const factor = (baseUnitId) ? getConversionFactor(productId, unitId, baseUnitId) : 1;
         newItems[index].purchase_unit_id = unitId;
         newItems[index].conversion_factor = factor;
-        // Recalculate total_cost with conversion factor
         newItems[index].total_cost = calculateTotalCost(
           newItems[index].quantity,
           newItems[index].unit_cost,
@@ -169,7 +168,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     } else {
       newItems[index].purchase_unit_id = unitId;
       newItems[index].conversion_factor = 1;
-      // Recalculate total_cost
       newItems[index].total_cost = calculateTotalCost(
         newItems[index].quantity,
         newItems[index].unit_cost,
@@ -190,7 +188,6 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
       newItems[rowIdx].purchase_unit_id = baseUnitId;
       newItems[rowIdx].conversion_factor = 1;
       newItems[rowIdx].unit_cost = product.base_price || 0;
-      // Calculate total_cost with conversion factor
       newItems[rowIdx].total_cost = calculateTotalCost(
         newItems[rowIdx].quantity,
         newItems[rowIdx].unit_cost,
@@ -250,7 +247,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             supplier_id: data.supplier_id,
             payment_method: data.payment_method,
             purchase_date: data.purchase_date,
-            due_date: data.due_date || null, // Fix: Allow null for cash payments
+            due_date: data.due_date || null,
             notes: data.notes,
             total_amount: items.reduce((sum, item) => sum + (item.total_cost || 0), 0)
           })
@@ -264,7 +261,7 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
             ...data,
             user_id: user?.id,
             purchase_number: `PUR-${Date.now()}`,
-            due_date: data.due_date || null, // Fix: Allow null for cash payments
+            due_date: data.due_date || null,
             total_amount: items.reduce((sum, item) => sum + (item.total_cost || 0), 0)
           }])
           .select()
@@ -279,13 +276,18 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
           await supabase.from('purchase_items').delete().eq('purchase_id', purchase.id);
         }
         
+        // Fix: Remove id field from items to let database generate it
+        const itemsToInsert = items.map(item => {
+          const { id, ...itemWithoutId } = item;
+          return {
+            ...itemWithoutId,
+            purchase_id: purchaseId,
+          };
+        });
+        
         const { error } = await supabase
           .from('purchase_items')
-          .insert(items.map(item => ({
-            ...item,
-            purchase_id: purchaseId,
-            id: undefined // Remove id for new inserts
-          })));
+          .insert(itemsToInsert);
         if (error) throw error;
 
         // Auto update product base price if enabled
