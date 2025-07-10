@@ -1,10 +1,11 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Zap, Clock, Package } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import CountdownTimer from '@/components/CountdownTimer';
 
 interface HomeFlashSaleProps {
@@ -13,7 +14,7 @@ interface HomeFlashSaleProps {
 
 const HomeFlashSale = ({ onProductClick }: HomeFlashSaleProps) => {
   const [scrollPosition, setScrollPosition] = useState(0);
-  const containerRef = useState<HTMLDivElement | null>(null)[0];
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch active flash sales
   const { data: flashSales = [] } = useQuery({
@@ -44,13 +45,13 @@ const HomeFlashSale = ({ onProductClick }: HomeFlashSaleProps) => {
   });
 
   const scroll = (direction: 'left' | 'right') => {
-    if (containerRef) {
+    if (containerRef.current) {
       const scrollAmount = 280;
       const newPosition = direction === 'left' 
         ? Math.max(0, scrollPosition - scrollAmount)
         : scrollPosition + scrollAmount;
       
-      containerRef.scrollTo({ left: newPosition, behavior: 'smooth' });
+      containerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
       setScrollPosition(newPosition);
     }
   };
@@ -108,7 +109,7 @@ const HomeFlashSale = ({ onProductClick }: HomeFlashSaleProps) => {
 
         <div className="relative">
           <div 
-            ref={(ref) => containerRef && ref && (containerRef as any).current = ref}
+            ref={containerRef}
             className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >

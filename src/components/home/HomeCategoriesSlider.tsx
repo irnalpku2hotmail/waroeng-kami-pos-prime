@@ -1,9 +1,10 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Package } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 interface HomeCategoriesSliderProps {
   selectedCategory: string | null;
@@ -12,7 +13,7 @@ interface HomeCategoriesSliderProps {
 
 const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCategoriesSliderProps) => {
   const [scrollPosition, setScrollPosition] = useState(0);
-  const containerRef = useState<HTMLDivElement | null>(null)[0];
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -28,13 +29,13 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
   });
 
   const scroll = (direction: 'left' | 'right') => {
-    if (containerRef) {
+    if (containerRef.current) {
       const scrollAmount = 200;
       const newPosition = direction === 'left' 
         ? Math.max(0, scrollPosition - scrollAmount)
         : scrollPosition + scrollAmount;
       
-      containerRef.scrollTo({ left: newPosition, behavior: 'smooth' });
+      containerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
       setScrollPosition(newPosition);
     }
   };
@@ -68,7 +69,7 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
 
         <div className="relative">
           <div 
-            ref={(ref) => containerRef && ref && (containerRef as any).current = ref}
+            ref={containerRef}
             className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
