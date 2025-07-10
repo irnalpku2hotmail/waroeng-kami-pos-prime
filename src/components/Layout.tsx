@@ -52,7 +52,7 @@ const Layout = ({ children }: LayoutProps) => {
               <SheetContent side="left" className="w-64 p-0">
                 <div className="p-6">
                   <h2 className="text-xl font-bold text-blue-800 mb-6">{storeName}</h2>
-                  <NavigationSidebar />
+                  <NavigationSidebar onLinkClick={() => setIsMobileMenuOpen(false)} />
                 </div>
               </SheetContent>
             </Sheet>

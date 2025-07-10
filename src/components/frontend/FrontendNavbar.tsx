@@ -7,7 +7,7 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, ShoppingCart, User, LogOut, LogIn } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, LogOut, LogIn } from 'lucide-react';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 
@@ -15,12 +15,16 @@ interface FrontendNavbarProps {
   storeName: string;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  likedProducts: string[];
+  onToggleLike: (productId: string) => void;
 }
 
 const FrontendNavbar = ({ 
   storeName, 
   searchTerm, 
-  onSearchChange
+  onSearchChange, 
+  likedProducts, 
+  onToggleLike 
 }: FrontendNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
@@ -78,6 +82,16 @@ const FrontendNavbar = ({
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
+              {/* Wishlist */}
+              <Button variant="ghost" size="sm" className="relative">
+                <Heart className="h-5 w-5" />
+                {likedProducts.length > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs">
+                    {likedProducts.length}
+                  </Badge>
+                )}
+              </Button>
+
               {/* Cart */}
               <Button
                 variant="ghost"
@@ -98,7 +112,7 @@ const FrontendNavbar = ({
                 <div className="flex items-center space-x-2">
                   <Button variant="ghost" size="sm">
                     <User className="h-5 w-5 mr-2" />
-                    Akun
+                    {user.email?.split('@')[0]}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4" />

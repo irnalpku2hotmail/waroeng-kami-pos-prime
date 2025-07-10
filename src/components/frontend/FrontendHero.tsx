@@ -6,14 +6,12 @@ import { ChevronLeft, ChevronRight, ShoppingBag, Star, Zap } from 'lucide-react'
 interface FrontendHeroProps {
   storeName: string;
   storeDescription?: string;
-  carouselImages?: string[];
 }
 
-const FrontendHero = ({ storeName, storeDescription, carouselImages = [] }: FrontendHeroProps) => {
+const FrontendHero = ({ storeName, storeDescription }: FrontendHeroProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Default slides if no carousel images provided
-  const defaultSlides = [
+  const slides = [
     {
       id: 1,
       title: `Selamat Datang di ${storeName}`,
@@ -40,18 +38,6 @@ const FrontendHero = ({ storeName, storeDescription, carouselImages = [] }: Fron
     }
   ];
 
-  // Use carousel images if provided, otherwise use default slides
-  const slides = carouselImages.length > 0 
-    ? carouselImages.map((image, index) => ({
-        id: index + 1,
-        title: index === 0 ? `Selamat Datang di ${storeName}` : `Slide ${index + 1}`,
-        subtitle: index === 0 ? (storeDescription || "Temukan produk berkualitas dengan harga terbaik") : "Penawaran menarik untuk Anda",
-        image: image,
-        cta: "Belanja Sekarang",
-        bgGradient: index % 3 === 0 ? "from-blue-500 to-purple-600" : index % 3 === 1 ? "from-red-500 to-orange-500" : "from-green-500 to-teal-500"
-      }))
-    : defaultSlides;
-
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -68,7 +54,7 @@ const FrontendHero = ({ storeName, storeDescription, carouselImages = [] }: Fron
   };
 
   return (
-    <div className="relative h-64 md:h-80 overflow-hidden rounded-lg mx-4 my-6 shadow-2xl">
+    <div className="relative h-96 md:h-[500px] overflow-hidden rounded-lg mx-4 my-6 shadow-2xl">
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -78,30 +64,23 @@ const FrontendHero = ({ storeName, storeDescription, carouselImages = [] }: Fron
           }`}
         >
           <div className={`h-full bg-gradient-to-r ${slide.bgGradient} relative`}>
-            {carouselImages.length > 0 && (
-              <img 
-                src={slide.image} 
-                alt={slide.title}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            )}
-            <div className="absolute inset-0 bg-black bg-opacity-30" />
+            <div className="absolute inset-0 bg-black bg-opacity-20" />
             <div className="relative h-full flex items-center justify-center">
               <div className="text-center text-white px-6 max-w-4xl">
                 <div className="mb-4">
-                  {index === 1 && <Zap className="h-6 w-6 mx-auto mb-2 animate-pulse" />}
-                  {index === 2 && <Star className="h-6 w-6 mx-auto mb-2" />}
-                  {index === 0 && <ShoppingBag className="h-6 w-6 mx-auto mb-2" />}
+                  {index === 1 && <Zap className="h-8 w-8 mx-auto mb-2 animate-pulse" />}
+                  {index === 2 && <Star className="h-8 w-8 mx-auto mb-2" />}
+                  {index === 0 && <ShoppingBag className="h-8 w-8 mx-auto mb-2" />}
                 </div>
-                <h1 className="text-2xl md:text-4xl font-bold mb-3 animate-fade-in">
+                <h1 className="text-3xl md:text-5xl font-bold mb-4 animate-fade-in">
                   {slide.title}
                 </h1>
-                <p className="text-base md:text-lg mb-6 opacity-90">
+                <p className="text-lg md:text-xl mb-8 opacity-90">
                   {slide.subtitle}
                 </p>
                 <Button 
                   size="lg" 
-                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 py-2 text-base shadow-lg transform hover:scale-105 transition-all duration-200"
+                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-8 py-3 text-lg shadow-lg transform hover:scale-105 transition-all duration-200"
                 >
                   {slide.cta}
                 </Button>
@@ -116,13 +95,13 @@ const FrontendHero = ({ storeName, storeDescription, carouselImages = [] }: Fron
         onClick={prevSlide}
         className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
       >
-        <ChevronLeft className="h-5 w-5" />
+        <ChevronLeft className="h-6 w-6" />
       </button>
       <button
         onClick={nextSlide}
         className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight className="h-6 w-6" />
       </button>
 
       {/* Slide Indicators */}
@@ -131,7 +110,7 @@ const FrontendHero = ({ storeName, storeDescription, carouselImages = [] }: Fron
           <button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
               index === currentSlide 
                 ? 'bg-white scale-110' 
                 : 'bg-white bg-opacity-50 hover:bg-opacity-75'

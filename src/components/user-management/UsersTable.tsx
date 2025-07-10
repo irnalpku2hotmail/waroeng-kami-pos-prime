@@ -1,15 +1,21 @@
 
-import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { toast } from '@/hooks/use-toast';
-import { MoreHorizontal, Edit, Trash2, UserX, UserCheck } from 'lucide-react';
-import PaginationComponent from '@/components/PaginationComponent';
+import { supabase } from '@/integrations/supabase/client';
+import { MoreHorizontal, Edit, Ban, Trash2 } from 'lucide-react';
 
 interface UsersTableProps {
   users: any[];
@@ -22,192 +28,231 @@ interface UsersTableProps {
 
 const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange, onEditRole }: UsersTableProps) => {
   const queryClient = useQueryClient();
-  const [selectedUser, setSelectedUser] = useState<any>(null);
 
-  const deleteUser = useMutation({
+  // Deactivate user mutation
+  const deactivateUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // First, update the user's role to inactive or delete from profiles
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-      
-      if (profileError) throw profileError;
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        ban_duration: '24855h' // Effectively permanent ban
+      });
 
-      // Note: We cannot delete from auth.users directly via the client
-      // This would typically be handled by an admin function or edge function
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({ title: 'Success', description: 'User has been deleted successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
-
-  const toggleUserStatus = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: 'admin' | 'manager' | 'staff' | 'cashier' | 'buyer' }) => {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
-      
       if (error) throw error;
     },
     onSuccess: () => {
+      toast({ title: 'User deactivated successfully' });
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({ title: 'Success', description: 'User status updated successfully' });
     },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error deactivating user', 
+        description: error.message,
+        variant: 'destructive' 
+      });
     }
   });
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-100 text-red-800';
-      case 'manager':
-        return 'bg-blue-100 text-blue-800';
-      case 'staff':
-        return 'bg-green-100 text-green-800';
-      case 'cashier':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'buyer':
-        return 'bg-gray-100 text-gray-800';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-500';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'User deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error deleting user', 
+        description: error.message,
+        variant: 'destructive' 
+      });
     }
+  });
+
+  const getRoleBadge = (role: string) => {
+    const colors: Record<string, string> = {
+      admin: 'bg-red-600',
+      manager: 'bg-blue-600',
+      staff: 'bg-green-600',
+      cashier: 'bg-yellow-600'
+    };
+    
+    return <Badge className={colors[role] || 'bg-gray-600'}>{role}</Badge>;
   };
 
-  const isCurrentUser = (userId: string) => currentUser?.id === userId;
-  const isUserActive = (role: string) => role !== 'inactive';
+  const canManageUser = (targetUser: any) => {
+    if (targetUser.id === currentUser?.id) return false; // Can't manage self
+    return true; // Admin check is handled at page level
+  };
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const getVisiblePages = () => {
+      const delta = 2;
+      const range = [];
+      const rangeWithDots = [];
+
+      for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+        range.push(i);
+      }
+
+      if (currentPage - delta > 2) {
+        rangeWithDots.push(1, '...');
+      } else {
+        rangeWithDots.push(1);
+      }
+
+      rangeWithDots.push(...range);
+
+      if (currentPage + delta < totalPages - 1) {
+        rangeWithDots.push('...', totalPages);
+      } else if (totalPages > 1) {
+        rangeWithDots.push(totalPages);
+      }
+
+      return rangeWithDots;
+    };
+
+    return (
+      <div className="flex items-center justify-between px-2 py-4">
+        <div className="text-sm text-muted-foreground">
+          Page {currentPage} of {totalPages}
+        </div>
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) onPageChange(currentPage - 1);
+                }}
+                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
+              />
+            </PaginationItem>
+            
+            {getVisiblePages().map((page, index) => (
+              <PaginationItem key={index}>
+                {page === '...' ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onPageChange(page as number);
+                    }}
+                    isActive={currentPage === page}
+                    className="hover:bg-accent"
+                  >
+                    {page}
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            ))}
+            
+            <PaginationItem>
+              <PaginationNext 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) onPageChange(currentPage + 1);
+                }}
+                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-4">
+    <>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
+            <TableHead>User</TableHead>
             <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created At</TableHead>
+            <TableHead>Contact</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Last Updated</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.full_name}</TableCell>
-              <TableCell>{user.email}</TableCell>
+          {users.map((userData) => (
+            <TableRow key={userData.id}>
               <TableCell>
-                <Badge className={getRoleBadgeColor(user.role)}>
-                  {user.role}
-                </Badge>
+                <div className="flex items-center gap-3">
+                  {userData.avatar_url && (
+                    <img 
+                      src={userData.avatar_url} 
+                      alt={userData.full_name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  )}
+                  <div>
+                    <div className="font-medium">{userData.full_name}</div>
+                    <div className="text-sm text-gray-500">{userData.email}</div>
+                  </div>
+                </div>
               </TableCell>
+              <TableCell>{getRoleBadge(userData.role)}</TableCell>
               <TableCell>
-                <Badge variant={isUserActive(user.role) ? "default" : "secondary"}>
-                  {isUserActive(user.role) ? "Active" : "Inactive"}
-                </Badge>
+                <div>
+                  <div className="text-sm">{userData.phone}</div>
+                  <div className="text-sm text-gray-500 max-w-xs truncate">{userData.address}</div>
+                </div>
               </TableCell>
+              <TableCell>{new Date(userData.created_at).toLocaleDateString()}</TableCell>
+              <TableCell>{new Date(userData.updated_at).toLocaleDateString()}</TableCell>
               <TableCell>
-                {new Date(user.created_at).toLocaleDateString('id-ID')}
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => onEditRole(user)}
-                      disabled={isCurrentUser(user.id)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Role
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem
-                      onClick={() => toggleUserStatus.mutate({
-                        userId: user.id,
-                        newRole: isUserActive(user.role) ? 'buyer' : 'buyer'
-                      })}
-                      disabled={isCurrentUser(user.id)}
-                    >
-                      {isUserActive(user.role) ? (
+                {canManageUser(userData) ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem onClick={() => onEditRole(userData)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Role
+                      </DropdownMenuItem>
+                      {userData.id !== currentUser?.id && (
                         <>
-                          <UserX className="h-4 w-4 mr-2" />
-                          Deactivate
-                        </>
-                      ) : (
-                        <>
-                          <UserCheck className="h-4 w-4 mr-2" />
-                          Activate
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => deactivateUserMutation.mutate(userData.id)}
+                            className="text-orange-600"
+                          >
+                            <Ban className="mr-2 h-4 w-4" />
+                            Deactivate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => deleteUserMutation.mutate(userData.id)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
                         </>
                       )}
-                    </DropdownMenuItem>
-
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <DropdownMenuItem 
-                          onSelect={(e) => {
-                            e.preventDefault();
-                            setSelectedUser(user);
-                          }}
-                          disabled={isCurrentUser(user.id)}
-                          className="text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete User
-                        </DropdownMenuItem>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the user account for {selectedUser?.full_name}.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => {
-                              if (selectedUser) {
-                                deleteUser.mutate(selectedUser.id);
-                                setSelectedUser(null);
-                              }
-                            }}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Badge variant="outline">Current User</Badge>
+                )}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
-      {totalPages > 1 && (
-        <PaginationComponent
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
-          itemsPerPage={10}
-          totalItems={users.length}
-        />
-      )}
-    </div>
+      {renderPagination()}
+    </>
   );
 };
 
