@@ -10,12 +10,12 @@ import FrontendFooter from '@/components/frontend/FrontendFooter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Truck } from 'lucide-react';
+import { Plus, Truck, Package } from 'lucide-react';
 
 const Frontend = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const { addToCart, setShippingCost } = useCart();
+  const { addItem, setShippingCost } = useCart();
 
   // Fetch store settings
   const { data: settings } = useQuery({
@@ -87,7 +87,7 @@ const Frontend = () => {
   }, [codSettings, setShippingCost]);
 
   const handleAddToCart = (product: any) => {
-    addToCart({
+    addItem({
       id: product.id,
       product: product,
       quantity: 1,

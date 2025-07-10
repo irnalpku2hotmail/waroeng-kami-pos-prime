@@ -47,7 +47,7 @@ const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange,
   });
 
   const toggleUserStatus = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: string }) => {
+    mutationFn: async ({ userId, newRole }: { userId: string; newRole: 'admin' | 'manager' | 'staff' | 'cashier' | 'buyer' }) => {
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole })
@@ -136,7 +136,7 @@ const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange,
                     <DropdownMenuItem
                       onClick={() => toggleUserStatus.mutate({
                         userId: user.id,
-                        newRole: isUserActive(user.role) ? 'inactive' : 'buyer'
+                        newRole: isUserActive(user.role) ? 'buyer' : 'buyer'
                       })}
                       disabled={isCurrentUser(user.id)}
                     >
