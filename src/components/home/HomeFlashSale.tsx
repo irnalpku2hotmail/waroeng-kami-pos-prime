@@ -82,7 +82,6 @@ const HomeFlashSale = ({ onProductClick }: HomeFlashSaleProps) => {
                 <span className="text-gray-600">Berakhir dalam:</span>
                 <CountdownTimer 
                   endDate={flashSales[0].end_date}
-                  onExpire={() => {}}
                 />
               </div>
             )}
