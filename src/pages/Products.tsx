@@ -80,10 +80,15 @@ const Products = () => {
     setQrModalOpen(true);
   };
 
+  const handleExport = () => {
+    // Export functionality implementation
+    console.log('Export products to Excel');
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
-        <ProductsHeader />
+        <ProductsHeader onExport={handleExport} />
         
         <ProductsFilters
           searchTerm={searchTerm}

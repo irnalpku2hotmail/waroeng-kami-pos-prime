@@ -12,11 +12,20 @@ import {
 interface ProductsPaginationProps {
   currentPage: number;
   totalPages: number;
-  setCurrentPage: (n: number) => void;
+  onPageChange: (page: number) => void;
+  itemsPerPage: number;
+  totalItems: number;
 }
 
-const ProductsPagination = ({ currentPage, totalPages, setCurrentPage }: ProductsPaginationProps) => {
+const ProductsPagination = ({ 
+  currentPage, 
+  totalPages, 
+  onPageChange,
+  itemsPerPage,
+  totalItems
+}: ProductsPaginationProps) => {
   if (totalPages <= 1) return null;
+  
   const getVisiblePages = () => {
     const delta = 2;
     const range = [];
@@ -37,10 +46,11 @@ const ProductsPagination = ({ currentPage, totalPages, setCurrentPage }: Product
     }
     return rangeWithDots;
   };
+  
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <div className="text-sm text-muted-foreground">
-        Halaman {currentPage} dari {totalPages}
+        Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} dari {totalItems} produk
       </div>
       <Pagination>
         <PaginationContent>
@@ -49,7 +59,7 @@ const ProductsPagination = ({ currentPage, totalPages, setCurrentPage }: Product
               href="#"
               onClick={e => {
                 e.preventDefault();
-                if (currentPage > 1) setCurrentPage(currentPage - 1);
+                if (currentPage > 1) onPageChange(currentPage - 1);
               }}
               className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
             />
@@ -63,7 +73,7 @@ const ProductsPagination = ({ currentPage, totalPages, setCurrentPage }: Product
                   href="#"
                   onClick={e => {
                     e.preventDefault();
-                    setCurrentPage(page as number);
+                    onPageChange(page as number);
                   }}
                   isActive={currentPage === page}
                   className="hover:bg-accent"
@@ -78,7 +88,7 @@ const ProductsPagination = ({ currentPage, totalPages, setCurrentPage }: Product
               href="#"
               onClick={e => {
                 e.preventDefault();
-                if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                if (currentPage < totalPages) onPageChange(currentPage + 1);
               }}
               className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
             />
