@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,11 +44,19 @@ const Home = () => {
       const { data, error } = await supabase
         .from('settings')
         .select('value')
-        .eq('key', 'frontend_images')
+        .eq('key', 'frontend_settings')
         .single();
       
-      if (error || !data) return [];
-      return data.value?.images || [];
+      if (error || !data?.value) return [];
+      
+      // Type guard to ensure we have the correct structure
+      const settingsValue = data.value;
+      if (typeof settingsValue === 'object' && settingsValue !== null && 'banner_urls' in settingsValue) {
+        const bannerUrls = (settingsValue as any).banner_urls;
+        return Array.isArray(bannerUrls) ? bannerUrls : [];
+      }
+      
+      return [];
     }
   });
 
