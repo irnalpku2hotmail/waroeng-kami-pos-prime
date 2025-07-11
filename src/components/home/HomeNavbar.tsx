@@ -44,7 +44,7 @@ interface SearchResults {
 }
 
 const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: HomeNavbarProps) => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const { items } = useCart();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -106,7 +106,7 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await signOut();
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -252,7 +252,7 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                     <DialogHeader>
                       <DialogTitle>Login to Your Account</DialogTitle>
                     </DialogHeader>
-                    <AuthModal onClose={() => setAuthModalOpen(false)} />
+                    <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
                   </DialogContent>
                 </Dialog>
               </div>
