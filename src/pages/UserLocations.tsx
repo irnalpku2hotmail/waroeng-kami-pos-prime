@@ -14,6 +14,23 @@ declare global {
   }
 }
 
+interface UserLocation {
+  id: string;
+  user_id: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  city: string;
+  province: string;
+  country: string;
+  created_at: string;
+  updated_at: string;
+  user_profile?: {
+    full_name: string;
+    email: string;
+  };
+}
+
 const UserLocations = () => {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [map, setMap] = useState<any>(null);
@@ -33,7 +50,7 @@ const UserLocations = () => {
     }
   });
 
-  // Fetch user locations
+  // Fetch user locations with profile data
   const { data: locations = [] } = useQuery({
     queryKey: ['user-locations', selectedUser],
     queryFn: async () => {
@@ -59,18 +76,21 @@ const UserLocations = () => {
         if (profileError) throw profileError;
         
         // Combine location data with profile data
-        const locationsWithProfiles = locationData.map(location => {
+        const locationsWithProfiles: UserLocation[] = locationData.map(location => {
           const profile = profileData?.find(p => p.id === location.user_id);
           return {
             ...location,
-            profile: profile
+            user_profile: profile ? {
+              full_name: profile.full_name,
+              email: profile.email
+            } : undefined
           };
         });
         
         return locationsWithProfiles;
       }
       
-      return locationData || [];
+      return [];
     }
   });
 
@@ -129,11 +149,11 @@ const UserLocations = () => {
       if (location.latitude && location.longitude) {
         const marker = new window.google.maps.Marker({
           position: { 
-            lat: parseFloat(location.latitude.toString()), 
-            lng: parseFloat(location.longitude.toString()) 
+            lat: Number(location.latitude), 
+            lng: Number(location.longitude)
           },
           map: map,
-          title: location.profile?.full_name || 'Unknown User',
+          title: location.user_profile?.full_name || 'Unknown User',
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -149,8 +169,8 @@ const UserLocations = () => {
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div class="p-2">
-              <h3 class="font-semibold">${location.profile?.full_name || 'Unknown User'}</h3>
-              <p class="text-sm text-gray-600">${location.profile?.email || ''}</p>
+              <h3 class="font-semibold">${location.user_profile?.full_name || 'Unknown User'}</h3>
+              <p class="text-sm text-gray-600">${location.user_profile?.email || ''}</p>
               ${location.address ? `<p class="text-sm mt-1">${location.address}</p>` : ''}
               <p class="text-xs text-gray-500 mt-1">
                 Updated: ${new Date(location.updated_at).toLocaleDateString()}
@@ -241,7 +261,7 @@ const UserLocations = () => {
                 <SelectValue placeholder="Select a user or view all" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Users</SelectItem>
+                <SelectItem value="all">All Users</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.full_name} ({user.email})
