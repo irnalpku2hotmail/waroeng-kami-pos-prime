@@ -43,97 +43,84 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
   if (categories.length === 0) return null;
 
   return (
-    <div className="px-4 py-8 bg-white">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Shop by Category</h2>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => scroll('left')}
-              className="h-10 w-10 p-0 rounded-full shadow-md hover:shadow-lg transition-shadow"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => scroll('right')}
-              className="h-10 w-10 p-0 rounded-full shadow-md hover:shadow-lg transition-shadow"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="relative">
-          <div 
-            ref={containerRef}
-            className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+    <div className="relative">
+      <div className="flex items-center justify-center mb-6">
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => scroll('left')}
+            className="h-12 w-12 p-0 rounded-full border-2 border-blue-200 bg-white/80 backdrop-blur-sm hover:bg-blue-50 hover:border-blue-300 shadow-lg transition-all duration-300 hover:scale-105"
           >
-            {/* All Categories Button */}
+            <ChevronLeft className="h-5 w-5 text-blue-600" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => scroll('right')}
+            className="h-12 w-12 p-0 rounded-full border-2 border-blue-200 bg-white/80 backdrop-blur-sm hover:bg-blue-50 hover:border-blue-300 shadow-lg transition-all duration-300 hover:scale-105"
+          >
+            <ChevronRight className="h-5 w-5 text-blue-600" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="relative">
+        <div 
+          ref={containerRef}
+          className="flex gap-8 overflow-x-auto scrollbar-hide pb-4 px-4"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {/* All Categories Button */}
+          <button
+            onClick={() => onCategorySelect(null)}
+            className={`flex-shrink-0 flex flex-col items-center p-6 transition-all duration-300 min-w-[100px] transform hover:scale-110 ${
+              selectedCategory === null
+                ? 'opacity-100'
+                : 'opacity-70 hover:opacity-100'
+            }`}
+          >
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-3 shadow-lg transition-all duration-300 ${
+              selectedCategory === null 
+                ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-blue-300' 
+                : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 hover:from-blue-100 hover:to-purple-100'
+            }`}>
+              <span className="text-2xl font-bold">
+                All
+              </span>
+            </div>
+          </button>
+
+          {/* Category Buttons */}
+          {categories.map((category) => (
             <button
-              onClick={() => onCategorySelect(null)}
-              className={`flex-shrink-0 flex flex-col items-center p-6 rounded-3xl transition-all duration-300 min-w-[120px] transform hover:scale-105 ${
-                selectedCategory === null
-                  ? 'bg-gradient-to-br from-blue-500/20 to-purple-600/20 border-2 border-blue-500 backdrop-blur-sm'
-                  : 'bg-white/10 backdrop-blur-sm border border-gray-200/50 hover:bg-white/20'
+              key={category.id}
+              onClick={() => onCategorySelect(category.id)}
+              className={`flex-shrink-0 flex flex-col items-center p-6 transition-all duration-300 min-w-[100px] transform hover:scale-110 ${
+                selectedCategory === category.id
+                  ? 'opacity-100'
+                  : 'opacity-70 hover:opacity-100'
               }`}
             >
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${
-                selectedCategory === null 
-                  ? 'bg-blue-500/20 backdrop-blur-sm' 
-                  : 'bg-gray-100/50 backdrop-blur-sm'
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-3 overflow-hidden shadow-lg transition-all duration-300 ${
+                selectedCategory === category.id 
+                  ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-blue-300' 
+                  : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 hover:from-blue-100 hover:to-purple-100'
               }`}>
-                <span className={`text-2xl font-bold ${
-                  selectedCategory === null ? 'text-blue-600' : 'text-gray-600'
-                }`}>
-                  All
-                </span>
+                {category.icon_url ? (
+                  <img
+                    src={category.icon_url}
+                    alt={category.name}
+                    className="w-12 h-12 object-contain"
+                  />
+                ) : (
+                  <span className="font-bold text-xl">
+                    {category.name.charAt(0)}
+                  </span>
+                )}
               </div>
-              <span className="text-sm font-semibold text-center leading-tight text-gray-700">
-                All Products
-              </span>
             </button>
-
-            {/* Category Buttons */}
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => onCategorySelect(category.id)}
-                className={`flex-shrink-0 flex flex-col items-center p-6 rounded-3xl transition-all duration-300 min-w-[120px] transform hover:scale-105 ${
-                  selectedCategory === category.id
-                    ? 'bg-gradient-to-br from-blue-500/20 to-purple-600/20 border-2 border-blue-500 backdrop-blur-sm'
-                    : 'bg-white/10 backdrop-blur-sm border border-gray-200/50 hover:bg-white/20'
-                }`}
-              >
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 overflow-hidden ${
-                  selectedCategory === category.id 
-                    ? 'bg-blue-500/20 backdrop-blur-sm' 
-                    : 'bg-gray-100/50 backdrop-blur-sm'
-                }`}>
-                  {category.icon_url ? (
-                    <img
-                      src={category.icon_url}
-                      alt={category.name}
-                      className="w-10 h-10 object-contain"
-                    />
-                  ) : (
-                    <span className={`font-bold text-xl ${
-                      selectedCategory === category.id ? 'text-blue-600' : 'text-gray-600'
-                    }`}>
-                      {category.name.charAt(0)}
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm font-semibold text-center leading-tight text-gray-700">
-                  {category.name}
-                </span>
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
     </div>

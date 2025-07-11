@@ -9,8 +9,8 @@ import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
 import HomeFooter from '@/components/home/HomeFooter';
 import ProductGrid from '@/components/home/ProductGrid';
 import LocationPermissionModal from '@/components/home/LocationPermissionModal';
-import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Home = () => {
@@ -21,6 +21,8 @@ const Home = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   // Fetch store settings
   const { data: settings } = useQuery({
@@ -97,15 +99,15 @@ const Home = () => {
     checkLocationPermission();
   }, [user]);
 
-  // Auto-rotate carousel
+  // Auto-rotate carousel with play/pause functionality
   useEffect(() => {
-    if (frontendImages.length > 1) {
+    if (frontendImages.length > 1 && isAutoPlay && isPlaying) {
       const interval = setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % frontendImages.length);
-      }, 5000);
+      }, 4000);
       return () => clearInterval(interval);
     }
-  }, [frontendImages.length]);
+  }, [frontendImages.length, isAutoPlay, isPlaying]);
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) return;
@@ -185,12 +187,15 @@ const Home = () => {
     setCurrentImageIndex((prev) => (prev - 1 + frontendImages.length) % frontendImages.length);
   };
 
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+
   const storeInfo = settings?.store_info || {};
   const storeName = storeInfo.name || 'TokoQu';
-  const storeDescription = storeInfo.description;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Navbar */}
       <HomeNavbar
         storeName={storeName}
@@ -199,83 +204,118 @@ const Home = () => {
         onProductSelect={handleSearchProduct}
       />
 
-      {/* Hero Section with Carousel */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
-              Welcome to {storeName}
-            </h1>
-            {storeDescription && (
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-                {storeDescription}
-              </p>
-            )}
-          </div>
-
-          {/* Image Carousel */}
-          {frontendImages.length > 0 && (
-            <div className="relative max-w-4xl mx-auto mb-8">
-              <Card className="overflow-hidden">
-                <div className="relative h-64 md:h-96">
+      {/* Enhanced Hero Carousel */}
+      {frontendImages.length > 0 && (
+        <div className="relative max-w-7xl mx-auto px-4 py-8">
+          <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-1">
+            <div className="relative h-80 md:h-96 overflow-hidden rounded-3xl bg-white">
+              {frontendImages.map((image, index) => (
+                <div
+                  key={index}
+                  className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                    index === currentImageIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                  }`}
+                >
                   <img
-                    src={frontendImages[currentImageIndex]}
-                    alt={`Slide ${currentImageIndex + 1}`}
+                    src={image}
+                    alt={`Slide ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
-                  
-                  {frontendImages.length > 1 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={prevImage}
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={nextImage}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                      
-                      {/* Dots indicator */}
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                        {frontendImages.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setCurrentImageIndex(index)}
-                            className={`w-2 h-2 rounded-full transition-colors ${
-                              index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                 </div>
-              </Card>
+              ))}
+              
+              {/* Enhanced Navigation Controls */}
+              {frontendImages.length > 1 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={prevImage}
+                    className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-gray-700" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={nextImage}
+                    className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
+                  >
+                    <ChevronRight className="h-5 w-5 text-gray-700" />
+                  </Button>
+                  
+                  {/* Play/Pause Button */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={togglePlayPause}
+                    className="absolute top-6 right-6 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300"
+                  >
+                    {isPlaying ? (
+                      <Pause className="h-4 w-4 text-gray-700" />
+                    ) : (
+                      <Play className="h-4 w-4 text-gray-700" />
+                    )}
+                  </Button>
+                  
+                  {/* Enhanced Dots Indicator */}
+                  <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
+                    {frontendImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`transition-all duration-300 rounded-full border-2 border-white/50 ${
+                          index === currentImageIndex 
+                            ? 'w-12 h-3 bg-white' 
+                            : 'w-3 h-3 bg-white/50 hover:bg-white/75'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-black/20">
+                    <div 
+                      className="h-full bg-white transition-all duration-100 ease-linear"
+                      style={{ 
+                        width: `${((currentImageIndex + 1) / frontendImages.length) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Categories Section */}
+      <div className="py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
+            Kategori Produk
+          </h2>
+          <HomeCategoriesSlider
+            selectedCategory={selectedCategory}
+            onCategorySelect={setSelectedCategory}
+          />
         </div>
       </div>
 
-      {/* Categories Slider */}
-      <HomeCategoriesSlider
-        selectedCategory={selectedCategory}
-        onCategorySelect={setSelectedCategory}
-      />
-
-      {/* Products Section */}
-      <ProductGrid
-        searchTerm={searchTerm}
-        selectedCategory={selectedCategory}
-        onProductClick={handleProductClick}
-      />
+      {/* Enhanced Products Section */}
+      <div className="py-12 bg-white/50">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
+            Produk Pilihan
+          </h2>
+          <ProductGrid
+            searchTerm={searchTerm}
+            selectedCategory={selectedCategory}
+            onProductClick={handleProductClick}
+          />
+        </div>
+      </div>
 
       {/* Footer */}
       <HomeFooter />

@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, AlertTriangle, Edit } from 'lucide-react';
+import { Package, AlertTriangle, Edit, BarChart3 } from 'lucide-react';
 import StockAdjustmentModal from './StockAdjustmentModal';
+import StockLevelDetailsModal from './StockLevelDetailsModal';
 
 interface StockLevelTabProps {
   products: any[];
@@ -13,10 +14,16 @@ interface StockLevelTabProps {
 const StockLevelTab = ({ products }: StockLevelTabProps) => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adjustmentModalOpen, setAdjustmentModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   const handleAdjustStock = (product: any) => {
     setSelectedProduct(product);
     setAdjustmentModalOpen(true);
+  };
+
+  const handleViewDetails = (product: any) => {
+    setSelectedProduct(product);
+    setDetailsModalOpen(true);
   };
 
   return (
@@ -87,15 +94,26 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
                         Rp {product.selling_price?.toLocaleString('id-ID')}
                       </td>
                       <td className="p-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAdjustStock(product)}
-                          className="flex items-center gap-1"
-                        >
-                          <Edit className="h-3 w-3" />
-                          Sesuaikan Stok
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewDetails(product)}
+                            className="flex items-center gap-1"
+                          >
+                            <BarChart3 className="h-3 w-3" />
+                            Detail
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAdjustStock(product)}
+                            className="flex items-center gap-1"
+                          >
+                            <Edit className="h-3 w-3" />
+                            Sesuaikan
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -117,6 +135,15 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
         <StockAdjustmentModal
           open={adjustmentModalOpen}
           onOpenChange={setAdjustmentModalOpen}
+          product={selectedProduct}
+        />
+      )}
+
+      {/* Stock Details Modal */}
+      {selectedProduct && (
+        <StockLevelDetailsModal
+          open={detailsModalOpen}
+          onOpenChange={setDetailsModalOpen}
           product={selectedProduct}
         />
       )}
