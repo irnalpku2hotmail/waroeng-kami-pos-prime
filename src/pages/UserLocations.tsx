@@ -39,18 +39,38 @@ const UserLocations = () => {
     queryFn: async () => {
       let query = supabase
         .from('user_locations')
-        .select(`
-          *,
-          profiles!inner(full_name, email)
-        `);
+        .select('*');
       
       if (selectedUser) {
         query = query.eq('user_id', selectedUser);
       }
       
-      const { data, error } = await query;
+      const { data: locationData, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Get user profiles for the locations
+      if (locationData && locationData.length > 0) {
+        const userIds = locationData.map(loc => loc.user_id).filter(Boolean);
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+          
+        if (profileError) throw profileError;
+        
+        // Combine location data with profile data
+        const locationsWithProfiles = locationData.map(location => {
+          const profile = profileData?.find(p => p.id === location.user_id);
+          return {
+            ...location,
+            profile: profile
+          };
+        });
+        
+        return locationsWithProfiles;
+      }
+      
+      return locationData || [];
     }
   });
 
@@ -108,9 +128,12 @@ const UserLocations = () => {
     locations.forEach(location => {
       if (location.latitude && location.longitude) {
         const marker = new window.google.maps.Marker({
-          position: { lat: parseFloat(location.latitude), lng: parseFloat(location.longitude) },
+          position: { 
+            lat: parseFloat(location.latitude.toString()), 
+            lng: parseFloat(location.longitude.toString()) 
+          },
           map: map,
-          title: location.profiles?.full_name || 'Unknown User',
+          title: location.profile?.full_name || 'Unknown User',
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -126,8 +149,8 @@ const UserLocations = () => {
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div class="p-2">
-              <h3 class="font-semibold">${location.profiles?.full_name || 'Unknown User'}</h3>
-              <p class="text-sm text-gray-600">${location.profiles?.email || ''}</p>
+              <h3 class="font-semibold">${location.profile?.full_name || 'Unknown User'}</h3>
+              <p class="text-sm text-gray-600">${location.profile?.email || ''}</p>
               ${location.address ? `<p class="text-sm mt-1">${location.address}</p>` : ''}
               <p class="text-xs text-gray-500 mt-1">
                 Updated: ${new Date(location.updated_at).toLocaleDateString()}

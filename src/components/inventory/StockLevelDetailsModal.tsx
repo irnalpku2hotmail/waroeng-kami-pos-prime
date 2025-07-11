@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, TrendingUp, Package, AlertTriangle } from 'lucide-react';
 
 interface StockLevelDetailsModalProps {
@@ -82,7 +82,7 @@ const StockLevelDetailsModal = ({ open, onOpenChange, product }: StockLevelDetai
     if (!salesData.length || !purchaseHistory.length) return null;
     
     // Calculate average daily sales
-    const totalSales = salesData.reduce((sum: number, day: any) => sum + day.quantity, 0);
+    const totalSales = salesData.reduce((sum: number, day: any) => sum + (Number(day.quantity) || 0), 0);
     const avgDailySales = totalSales / salesData.length;
     
     // Find items with expiration dates

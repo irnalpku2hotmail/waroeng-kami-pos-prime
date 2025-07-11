@@ -47,17 +47,21 @@ const ProductGrid = ({ searchTerm, selectedCategory, onProductClick }: ProductGr
 
   const handleLike = async (productId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const success = await toggleLike(productId);
-    if (success) {
-      setLikedProducts(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(productId)) {
-          newSet.delete(productId);
-        } else {
-          newSet.add(productId);
-        }
-        return newSet;
-      });
+    try {
+      const success = await toggleLike(productId);
+      if (success) {
+        setLikedProducts(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(productId)) {
+            newSet.delete(productId);
+          } else {
+            newSet.add(productId);
+          }
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
     }
   };
 
