@@ -6,19 +6,40 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Heart, Star } from 'lucide-react';
 
-const ProductGrid = () => {
+interface ProductGridProps {
+  searchTerm?: string;
+  selectedCategory?: string | null;
+  onProductClick?: (product: any) => void;
+}
+
+const ProductGrid: React.FC<ProductGridProps> = ({ 
+  searchTerm = '', 
+  selectedCategory = null, 
+  onProductClick 
+}) => {
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['featured-products'],
+    queryKey: ['featured-products', searchTerm, selectedCategory],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select(`
           *,
           categories(name),
           units(abbreviation)
         `)
-        .eq('is_active', true)
-        .limit(8);
+        .eq('is_active', true);
+
+      // Apply search filter
+      if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+
+      // Apply category filter
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+
+      const { data, error } = await query.limit(8);
       
       if (error) throw error;
       return data || [];
@@ -68,6 +89,12 @@ const ProductGrid = () => {
     return now >= startDate && now <= endDate && item.flash_sales.is_active;
   };
 
+  const handleProductClick = (product: any) => {
+    if (onProductClick) {
+      onProductClick(product);
+    }
+  };
+
   return (
     <div className="mt-8">
       <h2 className="text-xl font-bold text-gray-900 mb-4">Produk Unggulan</h2>
@@ -75,11 +102,15 @@ const ProductGrid = () => {
         {products.map((product) => {
           const flashSaleItem = flashSaleItems.find(item => item.product_id === product.id);
           const isOnSale = flashSaleItem && isFlashSaleActive(flashSaleItem);
-          const currentPrice = isOnSale ? flashSaleItem.sale_price : product.selling_price;
-          const originalPrice = product.selling_price;
+          const currentPrice = isOnSale ? Number(flashSaleItem.sale_price) : Number(product.selling_price);
+          const originalPrice = Number(product.selling_price);
           
           return (
-            <Card key={product.id} className="group hover:shadow-lg transition-all duration-300 border-0 bg-white rounded-xl overflow-hidden">
+            <Card 
+              key={product.id} 
+              className="group hover:shadow-lg transition-all duration-300 border-0 bg-white rounded-xl overflow-hidden cursor-pointer"
+              onClick={() => handleProductClick(product)}
+            >
               <div className="relative">
                 <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex items-center justify-center">
                   {product.image_url ? (
