@@ -25,6 +25,21 @@ interface HomeNavbarProps {
   onProductSelect?: (product: any) => void;
 }
 
+interface SearchResults {
+  products: Array<{
+    id: string;
+    name: string;
+    image_url: string;
+    selling_price: number;
+    current_stock: number;
+  }>;
+  categories: Array<{
+    id: string;
+    name: string;
+    icon_url: string;
+  }>;
+}
+
 const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: HomeNavbarProps) => {
   const { user } = useAuth();
   const { items } = useCart();
@@ -33,10 +48,12 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
   // Search products and categories
-  const { data: searchResults = [] } = useQuery({
+  const { data: searchResults } = useQuery({
     queryKey: ['search', localSearchTerm],
-    queryFn: async () => {
-      if (!localSearchTerm || localSearchTerm.length < 2) return [];
+    queryFn: async (): Promise<SearchResults> => {
+      if (!localSearchTerm || localSearchTerm.length < 2) {
+        return { products: [], categories: [] };
+      }
       
       // Search products
       const { data: products, error: productsError } = await supabase
@@ -81,6 +98,7 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const hasResults = searchResults && (searchResults.products.length > 0 || searchResults.categories.length > 0);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -115,11 +133,11 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
               <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
                   <CommandList>
-                    {searchResults.products?.length === 0 && searchResults.categories?.length === 0 && (
+                    {!hasResults && (
                       <CommandEmpty>Tidak ada hasil ditemukan.</CommandEmpty>
                     )}
                     
-                    {searchResults.categories?.length > 0 && (
+                    {searchResults && searchResults.categories.length > 0 && (
                       <CommandGroup heading="Kategori">
                         {searchResults.categories.map((category) => (
                           <CommandItem
@@ -138,7 +156,7 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                       </CommandGroup>
                     )}
                     
-                    {searchResults.products?.length > 0 && (
+                    {searchResults && searchResults.products.length > 0 && (
                       <CommandGroup heading="Produk">
                         {searchResults.products.map((product) => (
                           <CommandItem
