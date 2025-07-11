@@ -1,12 +1,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Twitter, Youtube, Heart } from 'lucide-react';
+import { MapPin, Phone, Mail, ShoppingCart, Facebook, Instagram, Twitter } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const HomeFooter = () => {
   // Fetch store settings
   const { data: settings } = useQuery({
-    queryKey: ['settings'],
+    queryKey: ['footer-settings'],
     queryFn: async () => {
       const { data, error } = await supabase.from('settings').select('*');
       if (error) throw error;
@@ -20,209 +21,95 @@ const HomeFooter = () => {
   });
 
   const storeInfo = settings?.store_info || {};
-  const contactInfo = settings?.contact_info || {};
-  const socialMedia = settings?.social_media || {};
-  const businessHours = settings?.business_hours || {};
+  const storeName = storeInfo.name || 'TokoQu';
+  const storeAddress = storeInfo.address || '';
+  const storeEmail = storeInfo.email || '';
+  const storePhone = storeInfo.phone || '';
+  const storeDescription = storeInfo.description || '';
 
   return (
-    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-16">
+    <footer className="bg-gray-900 text-white">
+      <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Store Info */}
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              {storeInfo.logo_url && (
-                <img 
-                  src={storeInfo.logo_url} 
-                  alt="TokoQu" 
-                  className="h-12 w-12 rounded-full object-cover ring-2 ring-blue-400"
-                />
-              )}
-              <div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  TokoQu
-                </h3>
-                <p className="text-blue-300 text-sm">
-                  {storeInfo.store_name || 'Toko Online Terpercaya'}
-                </p>
-              </div>
+          {/* Company Info */}
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <ShoppingCart className="h-8 w-8 text-blue-400 mr-2" />
+              <span className="font-bold text-xl">{storeName}</span>
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">
-              {storeInfo.description || 'TokoQu adalah toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda sehari-hari.'}
+              {storeDescription || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda.'}
             </p>
-            {storeInfo.tagline && (
-              <p className="text-blue-400 font-medium text-sm italic">
-                "{storeInfo.tagline}"
-              </p>
-            )}
+            <div className="flex space-x-4">
+              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+                <Twitter className="h-5 w-5" />
+              </a>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg">Menu Cepat</h3>
+            <ul className="space-y-2">
+              <li><Link to="/" className="text-gray-300 hover:text-white transition-colors">Beranda</Link></li>
+              <li><Link to="/products" className="text-gray-300 hover:text-white transition-colors">Produk</Link></li>
+              <li><Link to="/about" className="text-gray-300 hover:text-white transition-colors">Tentang Kami</Link></li>
+              <li><Link to="/contact" className="text-gray-300 hover:text-white transition-colors">Kontak</Link></li>
+            </ul>
+          </div>
+
+          {/* Customer Service */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg">Layanan Pelanggan</h3>
+            <ul className="space-y-2">
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Panduan Belanja</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Kebijakan Privasi</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Syarat & Ketentuan</a></li>
+            </ul>
           </div>
 
           {/* Contact Info */}
-          <div className="space-y-6">
-            <h4 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <Phone className="h-5 w-5 text-blue-400" />
-              Hubungi Kami
-            </h4>
-            <div className="space-y-4">
-              {(contactInfo.store_address || contactInfo.address) && (
-                <div className="flex items-start space-x-3 p-3 bg-white/5 rounded-lg backdrop-blur-sm">
-                  <MapPin className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-white">Alamat Toko</p>
-                    <p className="text-gray-300 text-sm">
-                      {contactInfo.store_address || contactInfo.address}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {(contactInfo.store_phone || contactInfo.phone) && (
-                <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg backdrop-blur-sm">
-                  <Phone className="h-5 w-5 text-blue-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-white">Telepon</p>
-                    <p className="text-gray-300 text-sm">
-                      {contactInfo.store_phone || contactInfo.phone}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {(contactInfo.store_email || contactInfo.email) && (
-                <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg backdrop-blur-sm">
-                  <Mail className="h-5 w-5 text-blue-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-white">Email</p>
-                    <p className="text-gray-300 text-sm">
-                      {contactInfo.store_email || contactInfo.email}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Business Hours */}
-          <div className="space-y-6">
-            <h4 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-400" />
-              Jam Operasional
-            </h4>
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg">Hubungi Kami</h3>
             <div className="space-y-3">
-              {businessHours.monday_friday && (
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg backdrop-blur-sm">
-                  <span className="text-gray-300 text-sm">Senin - Jumat</span>
-                  <span className="text-white font-medium text-sm">{businessHours.monday_friday}</span>
+              {storeAddress && (
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300 text-sm">{storeAddress}</span>
                 </div>
               )}
-              {businessHours.saturday && (
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg backdrop-blur-sm">
-                  <span className="text-gray-300 text-sm">Sabtu</span>
-                  <span className="text-white font-medium text-sm">{businessHours.saturday}</span>
+              {storePhone && (
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-5 w-5 text-blue-400" />
+                  <a href={`tel:${storePhone}`} className="text-gray-300 hover:text-white transition-colors text-sm">
+                    {storePhone}
+                  </a>
                 </div>
               )}
-              {businessHours.sunday && (
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg backdrop-blur-sm">
-                  <span className="text-gray-300 text-sm">Minggu</span>
-                  <span className="text-white font-medium text-sm">{businessHours.sunday}</span>
+              {storeEmail && (
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-5 w-5 text-blue-400" />
+                  <a href={`mailto:${storeEmail}`} className="text-gray-300 hover:text-white transition-colors text-sm">
+                    {storeEmail}
+                  </a>
                 </div>
               )}
-              {!businessHours.monday_friday && !businessHours.saturday && !businessHours.sunday && (
-                <div className="p-3 bg-white/5 rounded-lg backdrop-blur-sm">
-                  <p className="text-gray-300 text-sm">Buka setiap hari</p>
-                  <p className="text-white font-medium text-sm">08:00 - 22:00 WIB</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Social Media & Quick Info */}
-          <div className="space-y-6">
-            <h4 className="text-xl font-semibold mb-6">Ikuti Kami</h4>
-            <div className="flex flex-wrap gap-3">
-              {socialMedia.facebook && (
-                <a 
-                  href={socialMedia.facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-700 transition-all duration-300 hover:scale-110 shadow-lg"
-                >
-                  <Facebook className="h-6 w-6" />
-                </a>
-              )}
-              {socialMedia.instagram && (
-                <a 
-                  href={socialMedia.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center hover:from-purple-600 hover:to-pink-600 transition-all duration-300 hover:scale-110 shadow-lg"
-                >
-                  <Instagram className="h-6 w-6" />
-                </a>
-              )}
-              {socialMedia.twitter && (
-                <a 
-                  href={socialMedia.twitter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 bg-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-500 transition-all duration-300 hover:scale-110 shadow-lg"
-                >
-                  <Twitter className="h-6 w-6" />
-                </a>
-              )}
-              {socialMedia.youtube && (
-                <a 
-                  href={socialMedia.youtube}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center hover:bg-red-700 transition-all duration-300 hover:scale-110 shadow-lg"
-                >
-                  <Youtube className="h-6 w-6" />
-                </a>
-              )}
-            </div>
-
-            <div className="pt-4 space-y-4">
-              <h5 className="font-semibold text-lg">Mengapa Pilih TokoQu?</h5>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Produk Berkualitas Terjamin</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Harga Kompetitif</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Pelayanan Ramah & Cepat</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Pengiriman Terpercaya</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-700 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <div className="flex items-center gap-2 mb-4 md:mb-0">
-            <p className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} TokoQu. Semua hak dilindungi.
-            </p>
-            <Heart className="h-4 w-4 text-red-400" />
-          </div>
-          <div className="flex space-x-6">
-            <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Kebijakan Privasi
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Syarat & Ketentuan
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Bantuan & FAQ
-            </a>
-          </div>
+        {/* Bottom Section */}
+        <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+          <p className="text-gray-400 text-sm">
+            © 2024 {storeName}. Semua hak dilindungi.
+          </p>
         </div>
       </div>
     </footer>

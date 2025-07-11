@@ -1311,6 +1311,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          is_primary: boolean | null
+          latitude: number | null
+          longitude: number | null
+          postal_code: string | null
+          province: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          postal_code?: string | null
+          province?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          postal_code?: string | null
+          province?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_product_likes: {
         Row: {
           created_at: string

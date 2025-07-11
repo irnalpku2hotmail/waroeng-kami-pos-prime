@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +28,42 @@ interface UsersTableProps {
 const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange, onEditRole }: UsersTableProps) => {
   const queryClient = useQueryClient();
 
+  // Delete user mutation - Updated to work with RLS
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // First delete the profile record which will cascade to related tables
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Profile deletion error:', profileError);
+        throw new Error(`Failed to delete user profile: ${profileError.message}`);
+      }
+
+      // Then delete the auth user (admin only operation)
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (authError) {
+        console.error('Auth deletion error:', authError);
+        throw new Error(`Failed to delete user account: ${authError.message}`);
+      }
+    },
+    onSuccess: () => {
+      toast({ title: 'User deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      console.error('Delete user error:', error);
+      toast({ 
+        title: 'Error deleting user', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    }
+  });
+
   // Deactivate user mutation
   const deactivateUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -45,25 +80,6 @@ const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange,
     onError: (error: any) => {
       toast({ 
         title: 'Error deactivating user', 
-        description: error.message,
-        variant: 'destructive' 
-      });
-    }
-  });
-
-  // Delete user mutation
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: 'User deleted successfully' });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: 'Error deleting user', 
         description: error.message,
         variant: 'destructive' 
       });
