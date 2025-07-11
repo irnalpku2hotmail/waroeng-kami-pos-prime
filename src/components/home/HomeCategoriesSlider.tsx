@@ -78,22 +78,22 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
               onClick={() => onCategorySelect(null)}
               className={`flex-shrink-0 flex flex-col items-center p-6 rounded-3xl transition-all duration-300 min-w-[120px] transform hover:scale-105 ${
                 selectedCategory === null
-                  ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-xl'
-                  : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:shadow-lg'
+                  ? 'bg-gradient-to-br from-blue-500/20 to-purple-600/20 border-2 border-blue-500 backdrop-blur-sm'
+                  : 'bg-white/10 backdrop-blur-sm border border-gray-200/50 hover:bg-white/20'
               }`}
             >
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${
                 selectedCategory === null 
-                  ? 'bg-white/20' 
-                  : 'bg-white shadow-md'
+                  ? 'bg-blue-500/20 backdrop-blur-sm' 
+                  : 'bg-gray-100/50 backdrop-blur-sm'
               }`}>
                 <span className={`text-2xl font-bold ${
-                  selectedCategory === null ? 'text-white' : 'text-blue-600'
+                  selectedCategory === null ? 'text-blue-600' : 'text-gray-600'
                 }`}>
                   All
                 </span>
               </div>
-              <span className="text-sm font-semibold text-center leading-tight">
+              <span className="text-sm font-semibold text-center leading-tight text-gray-700">
                 All Products
               </span>
             </button>
@@ -105,14 +105,14 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
                 onClick={() => onCategorySelect(category.id)}
                 className={`flex-shrink-0 flex flex-col items-center p-6 rounded-3xl transition-all duration-300 min-w-[120px] transform hover:scale-105 ${
                   selectedCategory === category.id
-                    ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-xl'
-                    : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:shadow-lg'
+                    ? 'bg-gradient-to-br from-blue-500/20 to-purple-600/20 border-2 border-blue-500 backdrop-blur-sm'
+                    : 'bg-white/10 backdrop-blur-sm border border-gray-200/50 hover:bg-white/20'
                 }`}
               >
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 overflow-hidden ${
                   selectedCategory === category.id 
-                    ? 'bg-white/20' 
-                    : 'bg-white shadow-md'
+                    ? 'bg-blue-500/20 backdrop-blur-sm' 
+                    : 'bg-gray-100/50 backdrop-blur-sm'
                 }`}>
                   {category.icon_url ? (
                     <img
@@ -122,13 +122,13 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
                     />
                   ) : (
                     <span className={`font-bold text-xl ${
-                      selectedCategory === category.id ? 'text-white' : 'text-blue-600'
+                      selectedCategory === category.id ? 'text-blue-600' : 'text-gray-600'
                     }`}>
                       {category.name.charAt(0)}
                     </span>
                   )}
                 </div>
-                <span className="text-sm font-semibold text-center leading-tight">
+                <span className="text-sm font-semibold text-center leading-tight text-gray-700">
                   {category.name}
                 </span>
               </button>

@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Search, 
   ShoppingCart, 
@@ -28,80 +26,19 @@ interface HomeNavbarProps {
   onProductSelect?: (product: any) => void;
 }
 
-interface SearchResults {
-  products: Array<{
-    id: string;
-    name: string;
-    image_url: string;
-    selling_price: number;
-    current_stock: number;
-  }>;
-  categories: Array<{
-    id: string;
-    name: string;
-    icon_url: string;
-  }>;
-}
-
 const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: HomeNavbarProps) => {
   const { user, signOut } = useAuth();
   const { items } = useCart();
   const navigate = useNavigate();
-  const [searchOpen, setSearchOpen] = useState(false);
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-
-  // Search products and categories
-  const { data: searchResults } = useQuery({
-    queryKey: ['search', localSearchTerm],
-    queryFn: async (): Promise<SearchResults> => {
-      if (!localSearchTerm || localSearchTerm.length < 2) {
-        return { products: [], categories: [] };
-      }
-      
-      // Search products
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select('id, name, image_url, selling_price, current_stock')
-        .or(`name.ilike.%${localSearchTerm}%,barcode.ilike.%${localSearchTerm}%`)
-        .eq('is_active', true)
-        .limit(5);
-
-      // Search categories
-      const { data: categories, error: categoriesError } = await supabase
-        .from('categories')
-        .select('id, name, icon_url')
-        .ilike('name', `%${localSearchTerm}%`)
-        .limit(3);
-
-      if (productsError) console.error('Products search error:', productsError);
-      if (categoriesError) console.error('Categories search error:', categoriesError);
-
-      return {
-        products: products || [],
-        categories: categories || []
-      };
-    },
-    enabled: localSearchTerm.length >= 2
-  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (localSearchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(localSearchTerm.trim())}`);
-      setSearchOpen(false);
     }
-  };
-
-  const handleProductSelect = (product: any) => {
-    setSearchOpen(false);
-    onProductSelect?.(product);
-  };
-
-  const handleCategorySelect = (category: any) => {
-    setSearchOpen(false);
-    navigate(`/search?category=${category.id}`);
   };
 
   const handleLogout = async () => {
@@ -114,7 +51,6 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const hasResults = searchResults && (searchResults.products.length > 0 || searchResults.categories.length > 0);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -130,82 +66,18 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
 
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-8">
-            <Popover open={searchOpen} onOpenChange={setSearchOpen}>
-              <PopoverTrigger asChild>
-                <div className="relative">
-                  <form onSubmit={handleSearch}>
-                    <Input
-                      type="text"
-                      placeholder="Search products or categories..."
-                      value={localSearchTerm}
-                      onChange={(e) => setLocalSearchTerm(e.target.value)}
-                      onFocus={() => setSearchOpen(true)}
-                      className="pl-10 pr-4 w-full rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  </form>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0" align="start">
-                <Command>
-                  <CommandList>
-                    {!hasResults && (
-                      <CommandEmpty>No results found.</CommandEmpty>
-                    )}
-                    
-                    {searchResults && searchResults.categories.length > 0 && (
-                      <CommandGroup heading="Categories">
-                        {searchResults.categories.map((category) => (
-                          <CommandItem
-                            key={category.id}
-                            onSelect={() => handleCategorySelect(category)}
-                            className="cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3">
-                              {category.icon_url && (
-                                <img src={category.icon_url} alt="" className="w-6 h-6" />
-                              )}
-                              <span>{category.name}</span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    )}
-                    
-                    {searchResults && searchResults.products.length > 0 && (
-                      <CommandGroup heading="Products">
-                        {searchResults.products.map((product) => (
-                          <CommandItem
-                            key={product.id}
-                            onSelect={() => handleProductSelect(product)}
-                            className="cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3">
-                              <img 
-                                src={product.image_url || '/placeholder.svg'} 
-                                alt={product.name}
-                                className="w-10 h-10 object-cover rounded"
-                              />
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">{product.name}</div>
-                                <div className="text-xs text-gray-500">
-                                  Rp {product.selling_price.toLocaleString('id-ID')}
-                                </div>
-                              </div>
-                              {product.current_stock <= 0 && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Out of Stock
-                                </Badge>
-                              )}
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Search products or categories..."
+                  value={localSearchTerm}
+                  onChange={(e) => setLocalSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 w-full rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+            </form>
           </div>
 
           {/* Right Side Icons */}

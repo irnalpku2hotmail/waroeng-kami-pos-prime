@@ -3,11 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Package, Star, ShoppingCart } from 'lucide-react';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { Package, Star } from 'lucide-react';
 
 interface ProductGridProps {
   searchTerm: string;
@@ -16,9 +12,6 @@ interface ProductGridProps {
 }
 
 const ProductGrid = ({ searchTerm, selectedCategory, onProductClick }: ProductGridProps) => {
-  const { user } = useAuth();
-  const { addItem } = useCart();
-
   // Fetch products with filtering
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['home-products', searchTerm, selectedCategory],
@@ -49,24 +42,6 @@ const ProductGrid = ({ searchTerm, selectedCategory, onProductClick }: ProductGr
     }
   });
 
-  const handleAddToCart = (product: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Please login to add items to cart',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    addItem(product);
-    toast({
-      title: 'Added to Cart',
-      description: `${product.name} has been added to your cart`
-    });
-  };
-
   return (
     <div className="px-4 py-8">
       <div className="max-w-7xl mx-auto">
@@ -85,7 +60,7 @@ const ProductGrid = ({ searchTerm, selectedCategory, onProductClick }: ProductGr
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
             {[...Array(12)].map((_, i) => (
               <Card key={i} className="animate-pulse">
-                <div className="h-28 bg-gray-200 rounded-t-lg" />
+                <div className="h-24 bg-gray-200 rounded-t-lg" />
                 <CardContent className="p-3">
                   <div className="h-3 bg-gray-200 rounded mb-2" />
                   <div className="h-3 bg-gray-200 rounded w-3/4" />
@@ -112,7 +87,7 @@ const ProductGrid = ({ searchTerm, selectedCategory, onProductClick }: ProductGr
                   <img
                     src={product.image_url || '/placeholder.svg'}
                     alt={product.name}
-                    className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-200"
+                    className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-200"
                   />
                   {product.current_stock <= 0 && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -139,7 +114,7 @@ const ProductGrid = ({ searchTerm, selectedCategory, onProductClick }: ProductGr
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
                     <div className="flex items-center gap-1">
                       <Package className="h-3 w-3" />
                       <span>{product.current_stock}</span>
@@ -149,16 +124,6 @@ const ProductGrid = ({ searchTerm, selectedCategory, onProductClick }: ProductGr
                       <span>4.5</span>
                     </div>
                   </div>
-                  
-                  <Button
-                    size="sm"
-                    className="w-full text-xs h-7"
-                    onClick={(e) => handleAddToCart(product, e)}
-                    disabled={product.current_stock <= 0}
-                  >
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    Add to Cart
-                  </Button>
                 </CardContent>
               </Card>
             ))}

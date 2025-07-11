@@ -6,12 +6,13 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeHero from '@/components/home/HomeHero';
 import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
-import HomeFlashSale from '@/components/home/HomeFlashSale';
 import HomeFooter from '@/components/home/HomeFooter';
 import ProductGrid from '@/components/home/ProductGrid';
 import LocationPermissionModal from '@/components/home/LocationPermissionModal';
+import { Card, CardContent } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Home = () => {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Fetch store settings
   const { data: settings } = useQuery({
@@ -33,6 +35,21 @@ const Home = () => {
         settingsMap[setting.key] = setting.value;
       });
       return settingsMap;
+    }
+  });
+
+  // Fetch frontend images for carousel
+  const { data: frontendImages = [] } = useQuery({
+    queryKey: ['frontend-images'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'frontend_images')
+        .single();
+      
+      if (error || !data) return [];
+      return data.value?.images || [];
     }
   });
 
@@ -72,6 +89,16 @@ const Home = () => {
 
     checkLocationPermission();
   }, [user]);
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    if (frontendImages.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % frontendImages.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [frontendImages.length]);
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) return;
@@ -143,6 +170,14 @@ const Home = () => {
     navigate(`/product/${product.id}`);
   };
 
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % frontendImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + frontendImages.length) % frontendImages.length);
+  };
+
   const storeInfo = settings?.store_info || {};
   const storeName = storeInfo.name || 'TokoQu';
   const storeDescription = storeInfo.description;
@@ -157,15 +192,70 @@ const Home = () => {
         onProductSelect={handleSearchProduct}
       />
 
-      {/* Hero Section */}
-      <HomeHero 
-        storeName={storeName}
-        storeDescription={storeDescription}
-        onProductClick={handleProductClick}
-      />
+      {/* Hero Section with Carousel */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
+              Welcome to {storeName}
+            </h1>
+            {storeDescription && (
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+                {storeDescription}
+              </p>
+            )}
+          </div>
 
-      {/* Flash Sale Section */}
-      <HomeFlashSale onProductClick={handleProductClick} />
+          {/* Image Carousel */}
+          {frontendImages.length > 0 && (
+            <div className="relative max-w-4xl mx-auto mb-8">
+              <Card className="overflow-hidden">
+                <div className="relative h-64 md:h-96">
+                  <img
+                    src={frontendImages[currentImageIndex]}
+                    alt={`Slide ${currentImageIndex + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {frontendImages.length > 1 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={prevImage}
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={nextImage}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Dots indicator */}
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                        {frontendImages.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setCurrentImageIndex(index)}
+                            className={`w-2 h-2 rounded-full transition-colors ${
+                              index === currentImageIndex ? 'bg-white' : 'bg-white/50'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Categories Slider */}
       <HomeCategoriesSlider
