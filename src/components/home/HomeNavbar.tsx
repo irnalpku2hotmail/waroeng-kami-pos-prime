@@ -5,18 +5,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Search, 
   ShoppingCart, 
   User,
-  Heart
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import UserDropdown from '@/components/layout/UserDropdown';
+import CartModal from '@/components/CartModal';
+import AuthModal from '@/components/AuthModal';
 
 interface HomeNavbarProps {
   storeName: string;
@@ -41,11 +44,13 @@ interface SearchResults {
 }
 
 const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: HomeNavbarProps) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { items } = useCart();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Search products and categories
   const { data: searchResults } = useQuery({
@@ -83,8 +88,10 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearchChange(localSearchTerm);
-    setSearchOpen(false);
+    if (localSearchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(localSearchTerm.trim())}`);
+      setSearchOpen(false);
+    }
   };
 
   const handleProductSelect = (product: any) => {
@@ -94,14 +101,23 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
 
   const handleCategorySelect = (category: any) => {
     setSearchOpen(false);
-    navigate(`/?category=${category.id}`);
+    navigate(`/search?category=${category.id}`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const hasResults = searchResults && (searchResults.products.length > 0 || searchResults.categories.length > 0);
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -120,11 +136,11 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                   <form onSubmit={handleSearch}>
                     <Input
                       type="text"
-                      placeholder="Cari produk atau kategori..."
+                      placeholder="Search products or categories..."
                       value={localSearchTerm}
                       onChange={(e) => setLocalSearchTerm(e.target.value)}
                       onFocus={() => setSearchOpen(true)}
-                      className="pl-10 pr-4 w-full"
+                      className="pl-10 pr-4 w-full rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     />
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   </form>
@@ -134,11 +150,11 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                 <Command>
                   <CommandList>
                     {!hasResults && (
-                      <CommandEmpty>Tidak ada hasil ditemukan.</CommandEmpty>
+                      <CommandEmpty>No results found.</CommandEmpty>
                     )}
                     
                     {searchResults && searchResults.categories.length > 0 && (
-                      <CommandGroup heading="Kategori">
+                      <CommandGroup heading="Categories">
                         {searchResults.categories.map((category) => (
                           <CommandItem
                             key={category.id}
@@ -157,7 +173,7 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                     )}
                     
                     {searchResults && searchResults.products.length > 0 && (
-                      <CommandGroup heading="Produk">
+                      <CommandGroup heading="Products">
                         {searchResults.products.map((product) => (
                           <CommandItem
                             key={product.id}
@@ -178,7 +194,7 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                               </div>
                               {product.current_stock <= 0 && (
                                 <Badge variant="destructive" className="text-xs">
-                                  Habis
+                                  Out of Stock
                                 </Badge>
                               )}
                             </div>
@@ -199,7 +215,7 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigate('/cart')}
+                  onClick={() => setCartModalOpen(true)}
                   className="relative"
                 >
                   <ShoppingCart className="h-5 w-5" />
@@ -210,22 +226,43 @@ const HomeNavbar = ({ storeName, searchTerm, onSearchChange, onProductSelect }: 
                   )}
                 </Button>
                 <UserDropdown />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/login')}
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  Login
-                </Button>
+                <Dialog open={authModalOpen} onOpenChange={setAuthModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Login
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Login to Your Account</DialogTitle>
+                    </DialogHeader>
+                    <AuthModal onClose={() => setAuthModalOpen(false)} />
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Cart Modal */}
+      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </nav>
   );
 };

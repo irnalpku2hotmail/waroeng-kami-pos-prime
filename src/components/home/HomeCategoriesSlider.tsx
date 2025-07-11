@@ -30,7 +30,7 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
 
   const scroll = (direction: 'left' | 'right') => {
     if (containerRef.current) {
-      const scrollAmount = 120;
+      const scrollAmount = 200;
       const newPosition = direction === 'left' 
         ? Math.max(0, scrollPosition - scrollAmount)
         : scrollPosition + scrollAmount;
@@ -43,26 +43,26 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
   if (categories.length === 0) return null;
 
   return (
-    <div className="px-4 py-6 bg-white">
+    <div className="px-4 py-8 bg-white">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Kategori Produk</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Shop by Category</h2>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => scroll('left')}
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0 rounded-full shadow-md hover:shadow-lg transition-shadow"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => scroll('right')}
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0 rounded-full shadow-md hover:shadow-lg transition-shadow"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -70,24 +70,32 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
         <div className="relative">
           <div 
             ref={containerRef}
-            className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
+            className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {/* All Categories Button */}
             <button
               onClick={() => onCategorySelect(null)}
-              className={`flex-shrink-0 flex flex-col items-center p-4 rounded-2xl transition-all duration-200 min-w-[100px] ${
+              className={`flex-shrink-0 flex flex-col items-center p-6 rounded-3xl transition-all duration-300 min-w-[120px] transform hover:scale-105 ${
                 selectedCategory === null
-                  ? 'bg-blue-100 text-blue-600 border-2 border-blue-200'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-xl'
+                  : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:shadow-lg'
               }`}
             >
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
-                selectedCategory === null ? 'bg-blue-600' : 'bg-gray-400'
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${
+                selectedCategory === null 
+                  ? 'bg-white/20' 
+                  : 'bg-white shadow-md'
               }`}>
-                <span className="text-white font-bold text-lg">All</span>
+                <span className={`text-2xl font-bold ${
+                  selectedCategory === null ? 'text-white' : 'text-blue-600'
+                }`}>
+                  All
+                </span>
               </div>
-              <span className="text-sm font-medium text-center">Semua</span>
+              <span className="text-sm font-semibold text-center leading-tight">
+                All Products
+              </span>
             </button>
 
             {/* Category Buttons */}
@@ -95,30 +103,32 @@ const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCatego
               <button
                 key={category.id}
                 onClick={() => onCategorySelect(category.id)}
-                className={`flex-shrink-0 flex flex-col items-center p-4 rounded-2xl transition-all duration-200 min-w-[100px] ${
+                className={`flex-shrink-0 flex flex-col items-center p-6 rounded-3xl transition-all duration-300 min-w-[120px] transform hover:scale-105 ${
                   selectedCategory === category.id
-                    ? 'bg-blue-100 text-blue-600 border-2 border-blue-200'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-xl'
+                    : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:shadow-lg'
                 }`}
               >
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 overflow-hidden ${
-                  selectedCategory === category.id ? 'bg-blue-600' : 'bg-white'
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 overflow-hidden ${
+                  selectedCategory === category.id 
+                    ? 'bg-white/20' 
+                    : 'bg-white shadow-md'
                 }`}>
                   {category.icon_url ? (
                     <img
                       src={category.icon_url}
                       alt={category.name}
-                      className="w-8 h-8 object-contain"
+                      className="w-10 h-10 object-contain"
                     />
                   ) : (
-                    <span className={`font-bold text-lg ${
-                      selectedCategory === category.id ? 'text-white' : 'text-gray-600'
+                    <span className={`font-bold text-xl ${
+                      selectedCategory === category.id ? 'text-white' : 'text-blue-600'
                     }`}>
                       {category.name.charAt(0)}
                     </span>
                   )}
                 </div>
-                <span className="text-sm font-medium text-center leading-tight">
+                <span className="text-sm font-semibold text-center leading-tight">
                   {category.name}
                 </span>
               </button>
