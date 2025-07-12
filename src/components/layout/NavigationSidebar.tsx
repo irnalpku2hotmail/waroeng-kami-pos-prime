@@ -16,7 +16,8 @@ import {
   Star,
   Zap,
   Archive,
-  TrendingUp
+  TrendingUp,
+  LayoutDashboard
 } from 'lucide-react';
 
 interface NavigationSidebarProps {
@@ -25,7 +26,8 @@ interface NavigationSidebarProps {
 
 const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ onLinkClick }) => {
   const menuItems = [
-    { name: 'Dashboard', path: '/', icon: Home },
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'POS', path: '/pos', icon: ShoppingCart },
     { name: 'Products', path: '/products', icon: Package },
     { name: 'Categories & Units', path: '/categories-units', icon: Archive },

@@ -204,11 +204,11 @@ const Home = () => {
         onProductSelect={handleSearchProduct}
       />
 
-      {/* Enhanced Hero Carousel */}
+      {/* Reduced Height Hero Carousel */}
       {frontendImages.length > 0 && (
-        <div className="relative max-w-7xl mx-auto px-4 py-8">
-          <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-1">
-            <div className="relative h-80 md:h-96 overflow-hidden rounded-3xl bg-white">
+        <div className="relative max-w-7xl mx-auto px-4 py-4">
+          <div className="relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-1">
+            <div className="relative h-48 md:h-64 overflow-hidden rounded-2xl bg-white">
               {frontendImages.map((image, index) => (
                 <div
                   key={index}
@@ -225,63 +225,51 @@ const Home = () => {
                 </div>
               ))}
               
-              {/* Enhanced Navigation Controls */}
+              {/* Navigation Controls */}
               {frontendImages.length > 1 && (
                 <>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={prevImage}
-                    className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
                   >
-                    <ChevronLeft className="h-5 w-5 text-gray-700" />
+                    <ChevronLeft className="h-4 w-4 text-gray-700" />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={nextImage}
-                    className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
                   >
-                    <ChevronRight className="h-5 w-5 text-gray-700" />
+                    <ChevronRight className="h-4 w-4 text-gray-700" />
                   </Button>
                   
-                  {/* Play/Pause Button */}
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={togglePlayPause}
-                    className="absolute top-6 right-6 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300"
+                    className="absolute top-4 right-4 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300"
                   >
                     {isPlaying ? (
-                      <Pause className="h-4 w-4 text-gray-700" />
+                      <Pause className="h-3 w-3 text-gray-700" />
                     ) : (
-                      <Play className="h-4 w-4 text-gray-700" />
+                      <Play className="h-3 w-3 text-gray-700" />
                     )}
                   </Button>
                   
-                  {/* Enhanced Dots Indicator */}
-                  <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
                     {frontendImages.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentImageIndex(index)}
                         className={`transition-all duration-300 rounded-full border-2 border-white/50 ${
                           index === currentImageIndex 
-                            ? 'w-12 h-3 bg-white' 
-                            : 'w-3 h-3 bg-white/50 hover:bg-white/75'
+                            ? 'w-8 h-2 bg-white' 
+                            : 'w-2 h-2 bg-white/50 hover:bg-white/75'
                         }`}
                       />
                     ))}
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-black/20">
-                    <div 
-                      className="h-full bg-white transition-all duration-100 ease-linear"
-                      style={{ 
-                        width: `${((currentImageIndex + 1) / frontendImages.length) * 100}%` 
-                      }}
-                    />
                   </div>
                 </>
               )}
@@ -290,10 +278,10 @@ const Home = () => {
         </div>
       )}
 
-      {/* Enhanced Categories Section */}
-      <div className="py-12">
+      {/* Categories Section */}
+      <div className="py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
             Kategori Produk
           </h2>
           <HomeCategoriesSlider
@@ -303,10 +291,10 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Enhanced Products Section */}
-      <div className="py-12 bg-white/50">
+      {/* Products Section */}
+      <div className="py-8 bg-white/50">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
             Produk Pilihan
           </h2>
           <ProductGrid

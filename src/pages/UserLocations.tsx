@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Users, CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { MapPin, Users, CheckCircle, Search } from 'lucide-react';
 import Layout from '@/components/Layout';
 
 declare global {
@@ -32,12 +32,12 @@ interface UserLocation {
 }
 
 const UserLocations = () => {
-  const [selectedUser, setSelectedUser] = useState<string>('');
+  const [searchUser, setSearchUser] = useState<string>('');
   const [map, setMap] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
 
-  // Fetch all users with profiles
+  // Fetch all users with profiles for search
   const { data: users = [] } = useQuery({
     queryKey: ['users-with-profiles'],
     queryFn: async () => {
@@ -50,16 +50,27 @@ const UserLocations = () => {
     }
   });
 
-  // Fetch user locations with profile data
+  // Fetch user locations with profile data based on search
   const { data: locations = [] } = useQuery({
-    queryKey: ['user-locations', selectedUser],
+    queryKey: ['user-locations', searchUser],
     queryFn: async () => {
       let query = supabase
         .from('user_locations')
         .select('*');
       
-      if (selectedUser) {
-        query = query.eq('user_id', selectedUser);
+      // If there's a search term, filter by user
+      if (searchUser) {
+        const filteredUsers = users.filter(user => 
+          user.full_name.toLowerCase().includes(searchUser.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchUser.toLowerCase())
+        );
+        
+        if (filteredUsers.length > 0) {
+          const userIds = filteredUsers.map(user => user.id);
+          query = query.in('user_id', userIds);
+        } else {
+          return []; // No matching users found
+        }
       }
       
       const { data: locationData, error } = await query;
@@ -91,7 +102,8 @@ const UserLocations = () => {
       }
       
       return [];
-    }
+    },
+    enabled: !!users.length
   });
 
   // Calculate statistics
@@ -109,7 +121,7 @@ const UserLocations = () => {
       window.initMap = initializeMap;
       
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap`;
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyDummy_ReplaceWithActualKey&callback=initMap';
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
@@ -250,25 +262,21 @@ const UserLocations = () => {
           </Card>
         </div>
 
-        {/* User Filter */}
+        {/* User Search */}
         <Card>
           <CardHeader>
-            <CardTitle>Filter by User</CardTitle>
+            <CardTitle>Search Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger className="w-full max-w-sm">
-                <SelectValue placeholder="Select a user or view all" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name} ({user.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search users by name or email..."
+                value={searchUser}
+                onChange={(e) => setSearchUser(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </CardContent>
         </Card>
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
+import ProductRecommendations from '@/components/ProductRecommendations';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -142,6 +142,10 @@ const ProductDetail = () => {
     toggleLikeMutation.mutate();
   };
 
+  const handleRecommendationClick = (recommendedProduct: any) => {
+    navigate(`/product/${recommendedProduct.id}`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -184,7 +188,7 @@ const ProductDetail = () => {
           Kembali
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Product Image */}
           <div className="space-y-4">
             <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-sm">
@@ -209,7 +213,7 @@ const ProductDetail = () => {
 
             <div className="flex items-center gap-4">
               <span className="text-3xl font-bold text-blue-600">
-                Rp {product.selling_price.toLocaleString('id-ID')}
+                Rp {Number(product.selling_price).toLocaleString('id-ID')}
               </span>
               {product.current_stock <= 0 ? (
                 <Badge variant="destructive">Stok Habis</Badge>
@@ -285,6 +289,18 @@ const ProductDetail = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Product Recommendations */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            Rekomendasi Produk Serupa
+          </h2>
+          <ProductRecommendations
+            categoryId={product.category_id}
+            currentProductId={product.id}
+            onProductClick={handleRecommendationClick}
+          />
         </div>
       </div>
 

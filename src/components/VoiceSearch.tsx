@@ -1,8 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, RotateCcw } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 interface VoiceSearchProps {
@@ -11,7 +10,6 @@ interface VoiceSearchProps {
 
 const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
   const [isListening, setIsListening] = useState(false);
-  const [isContinuousMode, setIsContinuousMode] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
 
   useEffect(() => {
@@ -21,7 +19,7 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
       if (SpeechRecognitionAPI) {
         const recognitionInstance = new SpeechRecognitionAPI();
         
-        recognitionInstance.continuous = true; // Enable continuous recognition
+        recognitionInstance.continuous = true; // Always continuous
         recognitionInstance.interimResults = false;
         recognitionInstance.lang = 'id-ID';
 
@@ -41,11 +39,6 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
             description: `"${transcript}"`,
             duration: 2000
           });
-
-          // In continuous mode, keep listening
-          if (!isContinuousMode) {
-            setIsListening(false);
-          }
         };
 
         recognitionInstance.onerror = (event) => {
@@ -67,10 +60,10 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
             });
           }
 
-          // In continuous mode, try to restart after error
-          if (isContinuousMode && event.error !== 'aborted') {
+          // Auto restart after error
+          if (event.error !== 'aborted') {
             setTimeout(() => {
-              if (recognitionInstance && isContinuousMode) {
+              if (recognitionInstance && isListening) {
                 try {
                   recognitionInstance.start();
                 } catch (error) {
@@ -78,18 +71,16 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
                 }
               }
             }, 1000);
-          } else {
-            setIsListening(false);
           }
         };
 
         recognitionInstance.onend = () => {
           console.log('Voice recognition ended');
           
-          // In continuous mode, restart recognition automatically
-          if (isContinuousMode) {
+          // Auto restart recognition
+          if (isListening) {
             setTimeout(() => {
-              if (recognitionInstance && isContinuousMode) {
+              if (recognitionInstance) {
                 try {
                   recognitionInstance.start();
                 } catch (error) {
@@ -97,15 +88,13 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
                 }
               }
             }, 500);
-          } else {
-            setIsListening(false);
           }
         };
 
         setRecognition(recognitionInstance);
       }
     }
-  }, [onVoiceResult, isContinuousMode]);
+  }, [onVoiceResult, isListening]);
 
   const startListening = () => {
     if (recognition) {
@@ -113,7 +102,7 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
         recognition.start();
         toast({
           title: 'Voice Search Aktif',
-          description: isContinuousMode ? 'Mode berkelanjutan aktif' : 'Silakan ucapkan perintah',
+          description: 'Voice search akan terus berjalan secara otomatis',
           duration: 2000
         });
       } catch (error) {
@@ -135,37 +124,8 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
     }
   };
 
-  const toggleContinuousMode = () => {
-    const newMode = !isContinuousMode;
-    setIsContinuousMode(newMode);
-    
-    // If switching to continuous mode and currently listening, restart with new settings
-    if (newMode && isListening) {
-      stopListening();
-      setTimeout(() => startListening(), 300);
-    }
-    
-    toast({
-      title: newMode ? 'Mode Berkelanjutan Aktif' : 'Mode Sekali Pakai Aktif',
-      description: newMode ? 'Voice search akan tetap aktif' : 'Voice search akan berhenti setelah sekali pakai',
-      duration: 2000
-    });
-  };
-
   return (
     <div className="flex items-center gap-3">
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="continuous-mode"
-          checked={isContinuousMode}
-          onCheckedChange={toggleContinuousMode}
-          disabled={isListening}
-        />
-        <Label htmlFor="continuous-mode" className="text-sm">
-          Mode Berkelanjutan
-        </Label>
-      </div>
-      
       <Button
         variant={isListening ? "destructive" : "outline"}
         size="sm"
@@ -175,7 +135,7 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
         {isListening ? (
           <>
             <MicOff className="h-4 w-4" />
-            {isContinuousMode ? 'Stop' : 'Berhenti'}
+            Stop Voice
           </>
         ) : (
           <>
@@ -185,7 +145,7 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
         )}
       </Button>
       
-      {isContinuousMode && isListening && (
+      {isListening && (
         <div className="flex items-center gap-1 text-sm text-green-600">
           <RotateCcw className="h-3 w-3 animate-spin" />
           Mendengarkan...
