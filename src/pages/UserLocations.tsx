@@ -39,98 +39,132 @@ interface UserLocation {
 const UserLocations = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: locations = [], isLoading } = useQuery({
+  const { data: locations = [], isLoading, error } = useQuery({
     queryKey: ['user-locations'],
     queryFn: async () => {
       console.log('Fetching user locations...');
       
-      // First get user locations
-      const { data: locationData, error: locationError } = await supabase
-        .from('user_locations')
-        .select('*')
-        .not('latitude', 'is', null)
-        .not('longitude', 'is', null)
-        .order('created_at', { ascending: false });
+      try {
+        // First get user locations
+        const { data: locationData, error: locationError } = await supabase
+          .from('user_locations')
+          .select('*')
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null)
+          .order('created_at', { ascending: false });
 
-      if (locationError) {
-        console.error('Location error:', locationError);
-        throw locationError;
+        if (locationError) {
+          console.error('Location error:', locationError);
+          throw locationError;
+        }
+
+        if (!locationData || locationData.length === 0) {
+          console.log('No location data found');
+          return [];
+        }
+
+        console.log('Location data:', locationData);
+
+        // Then get profile data for each location
+        const userIds = [...new Set(locationData.map(loc => loc.user_id).filter(Boolean))];
+        console.log('User IDs:', userIds);
+        
+        if (userIds.length === 0) {
+          return locationData.map(location => ({
+            ...location,
+            user_name: 'Unknown User',
+            user_email: ''
+          })) as UserLocation[];
+        }
+
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+        }
+
+        console.log('Profiles data:', profilesData);
+
+        // Create a map of user profiles for quick lookup
+        const profilesMap = new Map();
+        (profilesData || []).forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
+
+        // Combine location data with profile data
+        const locationsWithProfiles = locationData.map(location => {
+          const profile = profilesMap.get(location.user_id);
+          return {
+            ...location,
+            user_name: profile?.full_name || 'Unknown User',
+            user_email: profile?.email || ''
+          };
+        });
+
+        console.log('Final locations with profiles:', locationsWithProfiles);
+
+        return locationsWithProfiles.filter(location => 
+          location.latitude && location.longitude
+        ) as UserLocation[];
+      } catch (err) {
+        console.error('Error in queryFn:', err);
+        throw err;
       }
-
-      if (!locationData || locationData.length === 0) {
-        console.log('No location data found');
-        return [];
-      }
-
-      console.log('Location data:', locationData);
-
-      // Then get profile data for each location
-      const userIds = [...new Set(locationData.map(loc => loc.user_id).filter(Boolean))];
-      console.log('User IDs:', userIds);
-      
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .in('id', userIds);
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-      }
-
-      console.log('Profiles data:', profilesData);
-
-      // Create a map of user profiles for quick lookup
-      const profilesMap = new Map();
-      (profilesData || []).forEach(profile => {
-        profilesMap.set(profile.id, profile);
-      });
-
-      // Combine location data with profile data
-      const locationsWithProfiles = locationData.map(location => {
-        const profile = profilesMap.get(location.user_id);
-        return {
-          ...location,
-          user_name: profile?.full_name || 'Unknown User',
-          user_email: profile?.email || ''
-        };
-      });
-
-      console.log('Final locations with profiles:', locationsWithProfiles);
-
-      return locationsWithProfiles.filter(location => 
-        location.latitude && location.longitude
-      ) as UserLocation[];
     },
   });
 
   const { data: locationStats } = useQuery({
     queryKey: ['location-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_locations')
-        .select('city, province')
-        .not('latitude', 'is', null)
-        .not('longitude', 'is', null);
+      try {
+        const { data, error } = await supabase
+          .from('user_locations')
+          .select('city, province')
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const cities = [...new Set(data.map(loc => loc.city).filter(Boolean))];
-      const provinces = [...new Set(data.map(loc => loc.province).filter(Boolean))];
+        const cities = [...new Set(data.map(loc => loc.city).filter(Boolean))];
+        const provinces = [...new Set(data.map(loc => loc.province).filter(Boolean))];
 
-      return {
-        totalLocations: data.length,
-        uniqueCities: cities.length,
-        uniqueProvinces: provinces.length,
-      };
+        return {
+          totalLocations: data.length,
+          uniqueCities: cities.length,
+          uniqueProvinces: provinces.length,
+        };
+      } catch (err) {
+        console.error('Error fetching location stats:', err);
+        return {
+          totalLocations: 0,
+          uniqueCities: 0,
+          uniqueProvinces: 0,
+        };
+      }
     },
   });
 
   const filteredLocations = locations.filter(location =>
-    (location.user_name && String(location.user_name).toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.address && String(location.address).toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.city && String(location.city).toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.province && String(location.province).toLowerCase().includes(searchTerm.toLowerCase()))
+    (location.user_name && location.user_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.address && location.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.city && location.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.province && location.province.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <div className="text-center py-8">
+            <p className="text-red-600">Error loading user locations: {error.message}</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -228,11 +262,11 @@ const UserLocations = () => {
                     >
                       <Popup>
                         <div className="p-2">
-                          <h3 className="font-semibold">{String(location.user_name || 'User')}</h3>
-                          <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
-                          <p className="text-sm mt-1">{String(location.address || '')}</p>
+                          <h3 className="font-semibold">{location.user_name || 'User'}</h3>
+                          <p className="text-sm text-gray-600">{location.user_email || ''}</p>
+                          <p className="text-sm mt-1">{location.address || ''}</p>
                           <p className="text-xs text-gray-500">
-                            {String(location.city || '')}, {String(location.province || '')}
+                            {location.city || ''}, {location.province || ''}
                           </p>
                         </div>
                       </Popup>
@@ -265,12 +299,12 @@ const UserLocations = () => {
                       <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                       <div>
                         <h3 className="font-medium text-gray-900">
-                          {String(location.user_name || 'User')}
+                          {location.user_name || 'User'}
                         </h3>
-                        <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
-                        <p className="text-sm text-gray-700 mt-1">{String(location.address || '')}</p>
+                        <p className="text-sm text-gray-600">{location.user_email || ''}</p>
+                        <p className="text-sm text-gray-700 mt-1">{location.address || ''}</p>
                         <p className="text-xs text-gray-500">
-                          {String(location.city || '')}, {String(location.province || '')} {String(location.postal_code || '')}
+                          {location.city || ''}, {location.province || ''} {location.postal_code || ''}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           Koordinat: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
