@@ -58,20 +58,32 @@ const ReferralSection = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
+      // First get referral history
+      const { data: historyData, error: historyError } = await supabase
         .from('referral_history')
-        .select(`
-          *,
-          profiles!referral_history_referred_user_id_fkey (
-            full_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('referrer_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as ReferralHistory[];
+      if (historyError) throw historyError;
+
+      // Then get profile data for each referred user
+      const historyWithProfiles = await Promise.all(
+        (historyData || []).map(async (history) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', history.referred_user_id)
+            .single();
+
+          return {
+            ...history,
+            profiles: profileData || { full_name: 'User', email: '' }
+          };
+        })
+      );
+
+      return historyWithProfiles as ReferralHistory[];
     },
     enabled: !!user?.id,
   });

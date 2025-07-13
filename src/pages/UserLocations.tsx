@@ -43,19 +43,33 @@ const UserLocations = () => {
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['user-locations'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get user locations
+      const { data: locationData, error: locationError } = await supabase
         .from('user_locations')
-        .select(`
-          *,
-          profiles (
-            full_name,
-            email
-          )
-        `)
+        .select('*')
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return (data || []).filter(location => 
+      if (locationError) throw locationError;
+
+      // Then get profile data for each location
+      const locationsWithProfiles = await Promise.all(
+        (locationData || []).map(async (location) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', location.user_id)
+            .single();
+
+          return {
+            ...location,
+            profiles: profileData || { full_name: 'User', email: '' }
+          };
+        })
+      );
+
+      return locationsWithProfiles.filter(location => 
         location.latitude && location.longitude
       ) as UserLocation[];
     },
