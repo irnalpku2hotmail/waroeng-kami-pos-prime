@@ -40,20 +40,20 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, addToCar
                 {productImageUrl ? (
                   <img 
                     src={productImageUrl} 
-                    alt={product.name}
+                    alt={String(product.name || 'Product')}
                     className="w-full h-full object-cover hover:scale-105 transition-transform"
                   />
                 ) : (
                   <Package className="h-8 w-8 text-gray-400" />
                 )}
               </div>
-              <h3 className="font-medium text-sm truncate">{product.name}</h3>
+              <h3 className="font-medium text-sm truncate">{String(product.name || 'Unnamed Product')}</h3>
               <p className="text-lg font-bold text-green-600">
-                Rp {product.selling_price?.toLocaleString('id-ID')}
+                Rp {String(product.selling_price?.toLocaleString('id-ID') || '0')}
               </p>
               <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
-                <span>Stok: {product.current_stock}</span>
-                <span>{product.loyalty_points || 1} pts</span>
+                <span>Stok: {String(product.current_stock || 0)}</span>
+                <span>{String(product.loyalty_points || 1)} pts</span>
               </div>
               {product.price_variants?.length > 0 && (
                 <Badge variant="secondary" className="text-xs mt-1">Grosir</Badge>

@@ -228,7 +228,7 @@ const Dashboard = () => {
       case 'shipped':
         return <Badge className="bg-yellow-100 text-yellow-800">Dikirim</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge>{String(status || '')}</Badge>;
     }
   };
 
@@ -245,7 +245,7 @@ const Dashboard = () => {
               <Wifi className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent className="pb-1">
-              <div className="text-lg font-bold text-green-600">{onlineUsers}</div>
+              <div className="text-lg font-bold text-green-600">{String(onlineUsers || 0)}</div>
               <p className="text-[10px] text-muted-foreground">User aktif login</p>
             </CardContent>
           </Card>
@@ -256,7 +256,7 @@ const Dashboard = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="pb-1">
-              <div className="text-lg font-bold text-blue-600">{totalProducts}</div>
+              <div className="text-lg font-bold text-blue-600">{String(totalProducts)}</div>
               <p className="text-[10px] text-muted-foreground">Produk tersedia</p>
             </CardContent>
           </Card>
@@ -267,7 +267,7 @@ const Dashboard = () => {
               <AlertTriangle className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent className="pb-1">
-              <div className="text-lg font-bold text-orange-600">{lowStockProducts}</div>
+              <div className="text-lg font-bold text-orange-600">{String(lowStockProducts)}</div>
               <p className="text-[10px] text-muted-foreground">Produk &lt; 10 stok</p>
             </CardContent>
           </Card>
@@ -278,7 +278,7 @@ const Dashboard = () => {
               <Clock className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent className="pb-1">
-              <div className="text-lg font-bold text-red-600">{expiredProductsCount}</div>
+              <div className="text-lg font-bold text-red-600">{String(expiredProductsCount)}</div>
               <p className="text-[10px] text-muted-foreground">Produk expired</p>
             </CardContent>
           </Card>
@@ -289,7 +289,7 @@ const Dashboard = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="pb-1">
-              <div className="text-lg font-bold text-green-600">{totalCustomers}</div>
+              <div className="text-lg font-bold text-green-600">{String(totalCustomers)}</div>
               <p className="text-[10px] text-muted-foreground">Pelanggan terdaftar</p>
             </CardContent>
           </Card>
@@ -300,7 +300,7 @@ const Dashboard = () => {
               <Calendar className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent className="pb-1">
-              <div className="text-lg font-bold text-blue-600">{todayOrdersCount}</div>
+              <div className="text-lg font-bold text-blue-600">{String(todayOrdersCount)}</div>
               <p className="text-[10px] text-muted-foreground">Pesanan masuk</p>
             </CardContent>
           </Card>
@@ -312,9 +312,9 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="pb-1">
               <div className="text-lg font-bold text-purple-600">
-                Rp {todaySales?.toLocaleString('id-ID') || '0'}
+                Rp {String(todaySales?.toLocaleString('id-ID') || '0')}
               </div>
-              <p className="text-[10px] text-muted-foreground">Dari {todayTransactions} transaksi POS</p>
+              <p className="text-[10px] text-muted-foreground">Dari {String(todayTransactions)} transaksi POS</p>
             </CardContent>
           </Card>
           
@@ -325,7 +325,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="pb-1">
               <div className="text-lg font-bold text-green-600">
-                Rp {codIncomeToday?.toLocaleString('id-ID') || '0'}
+                Rp {String(codIncomeToday?.toLocaleString('id-ID') || '0')}
               </div>
               <p className="text-[10px] text-muted-foreground">COD delivered hari ini</p>
             </CardContent>
@@ -355,15 +355,15 @@ const Dashboard = () => {
                   {todaySalesTable.length > 0 ? (
                     todaySalesTable.map(order => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium text-xs">{order.number}</TableCell>
-                        <TableCell className="text-xs">{order.name}</TableCell>
+                        <TableCell className="font-medium text-xs">{String(order.number || '')}</TableCell>
+                        <TableCell className="text-xs">{String(order.name || '')}</TableCell>
                         <TableCell className="text-xs">
                           <Badge variant="secondary">
                             POS
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right text-xs">
-                          Rp {Number(order.total)?.toLocaleString('id-ID') || 0}
+                          Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}
                         </TableCell>
                       </TableRow>
                     ))
@@ -403,13 +403,13 @@ const Dashboard = () => {
                   {codSalesTable.length > 0 ? (
                     codSalesTable.map(order => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium text-xs">{order.number}</TableCell>
-                        <TableCell className="text-xs">{order.name}</TableCell>
+                        <TableCell className="font-medium text-xs">{String(order.number || '')}</TableCell>
+                        <TableCell className="text-xs">{String(order.name || '')}</TableCell>
                         <TableCell className="text-xs">
                           {getOrderStatusBadge(order.status)}
                         </TableCell>
                         <TableCell className="text-right text-xs">
-                          Rp {Number(order.total)?.toLocaleString('id-ID') || 0}
+                          Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}
                         </TableCell>
                       </TableRow>
                     ))

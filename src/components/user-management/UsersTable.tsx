@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -94,7 +95,7 @@ const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange,
       cashier: 'bg-yellow-600'
     };
     
-    return <Badge className={colors[role] || 'bg-gray-600'}>{role}</Badge>;
+    return <Badge className={colors[role] || 'bg-gray-600'}>{String(role || '')}</Badge>;
   };
 
   const canManageUser = (targetUser: any) => {
@@ -206,25 +207,25 @@ const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange,
                   {userData.avatar_url && (
                     <img 
                       src={userData.avatar_url} 
-                      alt={userData.full_name}
+                      alt={String(userData.full_name || '')}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   )}
                   <div>
-                    <div className="font-medium">{userData.full_name}</div>
-                    <div className="text-sm text-gray-500">{userData.email}</div>
+                    <div className="font-medium">{String(userData.full_name || '')}</div>
+                    <div className="text-sm text-gray-500">{String(userData.email || '')}</div>
                   </div>
                 </div>
               </TableCell>
               <TableCell>{getRoleBadge(userData.role)}</TableCell>
               <TableCell>
                 <div>
-                  <div className="text-sm">{userData.phone}</div>
-                  <div className="text-sm text-gray-500 max-w-xs truncate">{userData.address}</div>
+                  <div className="text-sm">{String(userData.phone || '')}</div>
+                  <div className="text-sm text-gray-500 max-w-xs truncate">{String(userData.address || '')}</div>
                 </div>
               </TableCell>
-              <TableCell>{new Date(userData.created_at).toLocaleDateString()}</TableCell>
-              <TableCell>{new Date(userData.updated_at).toLocaleDateString()}</TableCell>
+              <TableCell>{String(new Date(userData.created_at).toLocaleDateString())}</TableCell>
+              <TableCell>{String(new Date(userData.updated_at).toLocaleDateString())}</TableCell>
               <TableCell>
                 {canManageUser(userData) ? (
                   <DropdownMenu>
