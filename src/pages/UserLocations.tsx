@@ -125,10 +125,10 @@ const UserLocations = () => {
   });
 
   const filteredLocations = locations.filter(location =>
-    (location.user_name && location.user_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.address && location.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.city && location.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.province && location.province.toLowerCase().includes(searchTerm.toLowerCase()))
+    (location.user_name && String(location.user_name).toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.address && String(location.address).toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.city && String(location.city).toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.province && String(location.province).toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (isLoading) {
@@ -224,11 +224,11 @@ const UserLocations = () => {
                   >
                     <Popup>
                       <div className="p-2">
-                        <h3 className="font-semibold">{location.user_name || 'User'}</h3>
-                        <p className="text-sm text-gray-600">{location.user_email || ''}</p>
-                        <p className="text-sm mt-1">{location.address || ''}</p>
+                        <h3 className="font-semibold">{String(location.user_name || 'User')}</h3>
+                        <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
+                        <p className="text-sm mt-1">{String(location.address || '')}</p>
                         <p className="text-xs text-gray-500">
-                          {location.city || ''}, {location.province || ''}
+                          {String(location.city || '')}, {String(location.province || '')}
                         </p>
                       </div>
                     </Popup>
@@ -261,12 +261,12 @@ const UserLocations = () => {
                     <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <h3 className="font-medium text-gray-900">
-                        {location.user_name || 'User'}
+                        {String(location.user_name || 'User')}
                       </h3>
-                      <p className="text-sm text-gray-600">{location.user_email || ''}</p>
-                      <p className="text-sm text-gray-700 mt-1">{location.address || ''}</p>
+                      <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
+                      <p className="text-sm text-gray-700 mt-1">{String(location.address || '')}</p>
                       <p className="text-xs text-gray-500">
-                        {location.city || ''}, {location.province || ''} {location.postal_code || ''}
+                        {String(location.city || '')}, {String(location.province || '')} {String(location.postal_code || '')}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Koordinat: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
