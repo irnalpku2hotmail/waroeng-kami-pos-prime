@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Users, Navigation, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import Layout from '@/components/Layout';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -133,161 +134,165 @@ const UserLocations = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
+      <Layout>
+        <div className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Lokasi Pengguna</h1>
-      </div>
+    <Layout>
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Lokasi Pengguna</h1>
+        </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="flex items-center p-6">
+              <MapPin className="h-8 w-8 text-blue-600 mr-3" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Lokasi</p>
+                <p className="text-2xl font-bold">{locationStats?.totalLocations || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="flex items-center p-6">
+              <Navigation className="h-8 w-8 text-green-600 mr-3" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Kota Unik</p>
+                <p className="text-2xl font-bold">{locationStats?.uniqueCities || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="flex items-center p-6">
+              <Users className="h-8 w-8 text-purple-600 mr-3" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Provinsi Unik</p>
+                <p className="text-2xl font-bold">{locationStats?.uniqueProvinces || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search */}
         <Card>
-          <CardContent className="flex items-center p-6">
-            <MapPin className="h-8 w-8 text-blue-600 mr-3" />
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Lokasi</p>
-              <p className="text-2xl font-bold">{locationStats?.totalLocations || 0}</p>
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Cari berdasarkan nama, alamat, atau kota..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <Navigation className="h-8 w-8 text-green-600 mr-3" />
-            <div>
-              <p className="text-sm font-medium text-gray-600">Kota Unik</p>
-              <p className="text-2xl font-bold">{locationStats?.uniqueCities || 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <Users className="h-8 w-8 text-purple-600 mr-3" />
-            <div>
-              <p className="text-sm font-medium text-gray-600">Provinsi Unik</p>
-              <p className="text-2xl font-bold">{locationStats?.uniqueProvinces || 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Cari berdasarkan nama, alamat, atau kota..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
+        {/* Map */}
+        {locations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Peta Lokasi Pengguna</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-96 rounded-lg overflow-hidden">
+                <MapContainer
+                  center={[locations[0].latitude, locations[0].longitude]}
+                  zoom={10}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {filteredLocations.map((location) => (
+                    <Marker
+                      key={location.id}
+                      position={[location.latitude, location.longitude]}
+                    >
+                      <Popup>
+                        <div className="p-2">
+                          <h3 className="font-semibold">{String(location.user_name || 'User')}</h3>
+                          <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
+                          <p className="text-sm mt-1">{String(location.address || '')}</p>
+                          <p className="text-xs text-gray-500">
+                            {String(location.city || '')}, {String(location.province || '')}
+                          </p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Map */}
-      {locations.length > 0 && (
+        {/* Locations List */}
         <Card>
           <CardHeader>
-            <CardTitle>Peta Lokasi Pengguna</CardTitle>
+            <CardTitle>Daftar Lokasi ({filteredLocations.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-96 rounded-lg overflow-hidden">
-              <MapContainer
-                center={[locations[0].latitude, locations[0].longitude]}
-                zoom={10}
-                style={{ height: '100%', width: '100%' }}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+            {filteredLocations.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                {searchTerm ? 'Tidak ada lokasi yang sesuai dengan pencarian.' : 'Belum ada data lokasi pengguna.'}
+              </p>
+            ) : (
+              <div className="space-y-4">
                 {filteredLocations.map((location) => (
-                  <Marker
+                  <div
                     key={location.id}
-                    position={[location.latitude, location.longitude]}
+                    className="flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50"
                   >
-                    <Popup>
-                      <div className="p-2">
-                        <h3 className="font-semibold">{String(location.user_name || 'User')}</h3>
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {String(location.user_name || 'User')}
+                        </h3>
                         <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
-                        <p className="text-sm mt-1">{String(location.address || '')}</p>
+                        <p className="text-sm text-gray-700 mt-1">{String(location.address || '')}</p>
                         <p className="text-xs text-gray-500">
-                          {String(location.city || '')}, {String(location.province || '')}
+                          {String(location.city || '')}, {String(location.province || '')} {String(location.postal_code || '')}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Koordinat: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                         </p>
                       </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Locations List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Lokasi ({filteredLocations.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredLocations.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              {searchTerm ? 'Tidak ada lokasi yang sesuai dengan pencarian.' : 'Belum ada data lokasi pengguna.'}
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {filteredLocations.map((location) => (
-                <div
-                  key={location.id}
-                  className="flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        {String(location.user_name || 'User')}
-                      </h3>
-                      <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
-                      <p className="text-sm text-gray-700 mt-1">{String(location.address || '')}</p>
+                    </div>
+                    <div className="flex flex-col items-end space-y-2">
+                      {location.is_primary && (
+                        <Badge variant="default">Utama</Badge>
+                      )}
                       <p className="text-xs text-gray-500">
-                        {String(location.city || '')}, {String(location.province || '')} {String(location.postal_code || '')}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Koordinat: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                        {new Date(location.created_at).toLocaleDateString('id-ID')}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end space-y-2">
-                    {location.is_primary && (
-                      <Badge variant="default">Utama</Badge>
-                    )}
-                    <p className="text-xs text-gray-500">
-                      {new Date(location.created_at).toLocaleDateString('id-ID')}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
   );
 };
 
