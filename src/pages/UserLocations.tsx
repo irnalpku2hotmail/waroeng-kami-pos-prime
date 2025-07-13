@@ -190,8 +190,9 @@ const UserLocations = () => {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {locations.map((location) => (
-                  location.latitude && location.longitude && (
+                {locations
+                  .filter(location => location.latitude && location.longitude)
+                  .map((location) => (
                     <Marker 
                       key={location.id}
                       position={[Number(location.latitude), Number(location.longitude)]}
@@ -207,8 +208,7 @@ const UserLocations = () => {
                         </div>
                       </Popup>
                     </Marker>
-                  )
-                ))}
+                  ))}
               </MapContainer>
             </div>
             <p className="text-sm text-gray-500 mt-2">
