@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Upload, X, Plus } from 'lucide-react';
 
@@ -33,14 +34,15 @@ type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
   product?: any;
-  onSubmit: (data: ProductFormData & { image_urls: string[] }) => void;
-  onCancel: () => void;
+  onSuccess: () => void;
+  onClose: () => void;
 }
 
-const ProductForm = ({ product, onSubmit, onCancel }: ProductFormProps) => {
+const ProductForm = ({ product, onSuccess, onClose }: ProductFormProps) => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -97,7 +99,7 @@ const ProductForm = ({ product, onSubmit, onCancel }: ProductFormProps) => {
       setValue('barcode', product.barcode || '');
       setValue('is_active', product.is_active);
       
-      // Handle existing images (assuming image_url is now an array or single string)
+      // Handle existing images - check for both single string and array
       if (product.image_url) {
         const urls = Array.isArray(product.image_url) ? product.image_url : [product.image_url];
         setExistingImageUrls(urls);
@@ -154,6 +156,55 @@ const ProductForm = ({ product, onSubmit, onCancel }: ProductFormProps) => {
     return Promise.all(uploadPromises);
   };
 
+  const createProduct = useMutation({
+    mutationFn: async (data: ProductFormData & { image_urls: string[] }) => {
+      const { image_urls, ...productData } = data;
+      const productToInsert = {
+        ...productData,
+        image_url: image_urls.length > 0 ? JSON.stringify(image_urls) : null
+      };
+      
+      const { error } = await supabase.from('products').insert([productToInsert]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['all-products'] });
+      toast({ title: 'Berhasil', description: 'Produk berhasil ditambahkan' });
+      onSuccess();
+    },
+    onError: (error) => {
+      console.error('Error creating product:', error);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const updateProduct = useMutation({
+    mutationFn: async (data: ProductFormData & { image_urls: string[] }) => {
+      const { image_urls, ...productData } = data;
+      const productToUpdate = {
+        ...productData,
+        image_url: image_urls.length > 0 ? JSON.stringify(image_urls) : null
+      };
+      
+      const { error } = await supabase
+        .from('products')
+        .update(productToUpdate)
+        .eq('id', product.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['all-products'] });
+      toast({ title: 'Berhasil', description: 'Produk berhasil diperbarui' });
+      onSuccess();
+    },
+    onError: (error) => {
+      console.error('Error updating product:', error);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
   const onFormSubmit = async (data: ProductFormData) => {
     setUploading(true);
     try {
@@ -164,7 +215,13 @@ const ProductForm = ({ product, onSubmit, onCancel }: ProductFormProps) => {
         imageUrls = [...imageUrls, ...uploadedUrls];
       }
 
-      onSubmit({ ...data, image_urls: imageUrls });
+      const formDataWithImages = { ...data, image_urls: imageUrls };
+
+      if (product) {
+        updateProduct.mutate(formDataWithImages);
+      } else {
+        createProduct.mutate(formDataWithImages);
+      }
     } catch (error) {
       console.error('Error uploading images:', error);
       toast({
@@ -401,7 +458,7 @@ const ProductForm = ({ product, onSubmit, onCancel }: ProductFormProps) => {
           </div>
 
           <div className="flex gap-4 pt-4">
-            <Button type="submit" disabled={uploading}>
+            <Button type="submit" disabled={uploading || createProduct.isPending || updateProduct.isPending}>
               {uploading ? (
                 <>
                   <Upload className="mr-2 h-4 w-4 animate-spin" />
@@ -411,7 +468,7 @@ const ProductForm = ({ product, onSubmit, onCancel }: ProductFormProps) => {
                 product ? 'Update Produk' : 'Tambah Produk'
               )}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Batal
             </Button>
           </div>
