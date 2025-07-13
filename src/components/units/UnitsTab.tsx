@@ -106,8 +106,8 @@ const UnitsTab = () => {
   const handleEdit = (unit: any) => {
     setEditUnit(unit);
     setUnitData({
-      name: unit.name,
-      abbreviation: unit.abbreviation
+      name: String(unit.name || ''),
+      abbreviation: String(unit.abbreviation || '')
     });
     setOpen(true);
   };
@@ -213,8 +213,8 @@ const UnitsTab = () => {
             <TableBody>
               {units.map((unit) => (
                 <TableRow key={unit.id}>
-                  <TableCell className="font-medium">{unit.name}</TableCell>
-                  <TableCell>{unit.abbreviation}</TableCell>
+                  <TableCell className="font-medium">{String(unit.name || '')}</TableCell>
+                  <TableCell>{String(unit.abbreviation || '')}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
