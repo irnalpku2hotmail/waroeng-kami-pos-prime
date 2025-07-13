@@ -41,6 +41,8 @@ const UserLocations = () => {
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['user-locations'],
     queryFn: async () => {
+      console.log('Fetching user locations...');
+      
       // First get user locations
       const { data: locationData, error: locationError } = await supabase
         .from('user_locations')
@@ -49,14 +51,21 @@ const UserLocations = () => {
         .not('longitude', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (locationError) throw locationError;
+      if (locationError) {
+        console.error('Location error:', locationError);
+        throw locationError;
+      }
 
       if (!locationData || locationData.length === 0) {
+        console.log('No location data found');
         return [];
       }
 
+      console.log('Location data:', locationData);
+
       // Then get profile data for each location
       const userIds = [...new Set(locationData.map(loc => loc.user_id).filter(Boolean))];
+      console.log('User IDs:', userIds);
       
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -66,6 +75,8 @@ const UserLocations = () => {
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
       }
+
+      console.log('Profiles data:', profilesData);
 
       // Create a map of user profiles for quick lookup
       const profilesMap = new Map();
@@ -82,6 +93,8 @@ const UserLocations = () => {
           user_email: profile?.email || ''
         };
       });
+
+      console.log('Final locations with profiles:', locationsWithProfiles);
 
       return locationsWithProfiles.filter(location => 
         location.latitude && location.longitude
@@ -211,11 +224,11 @@ const UserLocations = () => {
                   >
                     <Popup>
                       <div className="p-2">
-                        <h3 className="font-semibold">{location.user_name || 'User'}</h3>
-                        <p className="text-sm text-gray-600">{location.user_email || ''}</p>
-                        <p className="text-sm mt-1">{location.address || ''}</p>
+                        <h3 className="font-semibold">{String(location.user_name || 'User')}</h3>
+                        <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
+                        <p className="text-sm mt-1">{String(location.address || '')}</p>
                         <p className="text-xs text-gray-500">
-                          {location.city || ''}, {location.province || ''}
+                          {String(location.city || '')}, {String(location.province || '')}
                         </p>
                       </div>
                     </Popup>
@@ -248,12 +261,12 @@ const UserLocations = () => {
                     <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <h3 className="font-medium text-gray-900">
-                        {location.user_name || 'User'}
+                        {String(location.user_name || 'User')}
                       </h3>
-                      <p className="text-sm text-gray-600">{location.user_email || ''}</p>
-                      <p className="text-sm text-gray-700 mt-1">{location.address || ''}</p>
+                      <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
+                      <p className="text-sm text-gray-700 mt-1">{String(location.address || '')}</p>
                       <p className="text-xs text-gray-500">
-                        {location.city || ''}, {location.province || ''} {location.postal_code || ''}
+                        {String(location.city || '')}, {String(location.province || '')} {String(location.postal_code || '')}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Koordinat: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
