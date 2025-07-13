@@ -34,7 +34,24 @@ const Layout = ({ children }: LayoutProps) => {
     }
   });
 
-  const storeName = settings?.store_name?.name || 'SmartPOS';
+  // Safely extract store name and handle potential object values
+  const getStoreName = () => {
+    if (!settings?.store_name) return 'SmartPOS';
+    
+    // Handle case where store_name might be an object with a name property
+    if (typeof settings.store_name === 'object' && settings.store_name?.name) {
+      return String(settings.store_name.name);
+    }
+    
+    // Handle case where store_name is a direct string
+    if (typeof settings.store_name === 'string') {
+      return settings.store_name;
+    }
+    
+    return 'SmartPOS';
+  };
+
+  const storeName = getStoreName();
 
   return (
     <div className="min-h-screen bg-gray-50">
