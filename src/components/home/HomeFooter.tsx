@@ -21,7 +21,42 @@ const HomeFooter = ({ storeInfo }: HomeFooterProps) => {
     email: 'info@waroengkami.com'
   };
 
-  const store = storeInfo || defaultStoreInfo;
+  // Helper function to safely extract string values from potentially object values
+  const extractStringValue = (value: any, defaultValue: string): string => {
+    if (!value) return defaultValue;
+    
+    if (typeof value === 'object' && value !== null) {
+      // Check if it has common properties like name, email, address, phone
+      if ('name' in value && typeof value.name === 'string') {
+        return value.name;
+      }
+      if ('email' in value && typeof value.email === 'string') {
+        return value.email;
+      }
+      if ('address' in value && typeof value.address === 'string') {
+        return value.address;
+      }
+      if ('phone' in value && typeof value.phone === 'string') {
+        return value.phone;
+      }
+      // If it's an object but doesn't have expected properties, return default
+      return defaultValue;
+    }
+    
+    if (typeof value === 'string') {
+      return value;
+    }
+    
+    // Convert any other type to string safely
+    return String(value) || defaultValue;
+  };
+
+  const store = storeInfo ? {
+    name: extractStringValue(storeInfo.name, defaultStoreInfo.name),
+    address: extractStringValue(storeInfo.address, defaultStoreInfo.address),
+    phone: extractStringValue(storeInfo.phone, defaultStoreInfo.phone),
+    email: extractStringValue(storeInfo.email, defaultStoreInfo.email)
+  } : defaultStoreInfo;
 
   return (
     <footer className="bg-gray-900 text-white">
