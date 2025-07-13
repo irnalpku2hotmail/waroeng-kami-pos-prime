@@ -60,11 +60,41 @@ const Home = () => {
         settings[setting.key] = setting.value;
       });
 
+      // Helper function to safely extract string values from potentially object values
+      const extractStringValue = (value: any, defaultValue: string): string => {
+        if (!value) return defaultValue;
+        
+        if (typeof value === 'object' && value !== null) {
+          // Check if it has common properties like name, email, address, phone
+          if ('name' in value && typeof value.name === 'string') {
+            return value.name;
+          }
+          if ('email' in value && typeof value.email === 'string') {
+            return value.email;
+          }
+          if ('address' in value && typeof value.address === 'string') {
+            return value.address;
+          }
+          if ('phone' in value && typeof value.phone === 'string') {
+            return value.phone;
+          }
+          // If it's an object but doesn't have expected properties, return default
+          return defaultValue;
+        }
+        
+        if (typeof value === 'string') {
+          return value;
+        }
+        
+        // Convert any other type to string safely
+        return String(value) || defaultValue;
+      };
+
       return {
-        name: settings.store_name || 'Waroeng Kami',
-        address: settings.store_address || 'Jl. Contoh No. 123, Jakarta',
-        phone: settings.store_phone || '+62 812-3456-7890',
-        email: settings.store_email || 'info@waroengkami.com'
+        name: extractStringValue(settings.store_name, 'Waroeng Kami'),
+        address: extractStringValue(settings.store_address, 'Jl. Contoh No. 123, Jakarta'),
+        phone: extractStringValue(settings.store_phone, '+62 812-3456-7890'),
+        email: extractStringValue(settings.store_email, 'info@waroengkami.com')
       };
     },
   });
