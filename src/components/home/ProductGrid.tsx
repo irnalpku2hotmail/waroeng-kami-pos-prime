@@ -6,10 +6,33 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Heart, Star } from 'lucide-react';
 
+interface Product {
+  id: string;
+  name: string;
+  selling_price: number;
+  image_url: string | null;
+  current_stock: number;
+  min_stock: number;
+  loyalty_points: number;
+  categories?: { name: string } | null;
+  units?: { abbreviation: string } | null;
+}
+
+interface FlashSaleItem {
+  id: string;
+  product_id: string;
+  sale_price: number;
+  flash_sales?: {
+    start_date: string;
+    end_date: string;
+    is_active: boolean;
+  } | null;
+}
+
 interface ProductGridProps {
   searchTerm?: string;
   selectedCategory?: string | null;
-  onProductClick?: (product: any) => void;
+  onProductClick?: (product: Product) => void;
 }
 
 const ProductGrid: React.FC<ProductGridProps> = ({ 
@@ -42,7 +65,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
       const { data, error } = await query.limit(8);
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as Product[];
     }
   });
 
@@ -59,7 +82,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         .gt('stock_quantity', 0);
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as FlashSaleItem[];
     }
   });
 
@@ -81,7 +104,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     }).format(price);
   };
 
-  const isFlashSaleActive = (item: any) => {
+  const isFlashSaleActive = (item: FlashSaleItem) => {
     if (!item?.flash_sales) return false;
     const now = new Date();
     const startDate = new Date(item.flash_sales.start_date);
@@ -89,7 +112,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     return now >= startDate && now <= endDate && item.flash_sales.is_active;
   };
 
-  const handleProductClick = (product: any) => {
+  const handleProductClick = (product: Product) => {
     if (onProductClick) {
       onProductClick(product);
     }
@@ -116,7 +139,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
                   {product.image_url ? (
                     <img 
                       src={product.image_url} 
-                      alt={product.name}
+                      alt={String(product.name || 'Product')}
                       className="w-full h-full object-cover rounded-lg"
                     />
                   ) : (
@@ -146,7 +169,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
               <CardContent className="p-4">
                 <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 h-10">
-                  {product.name}
+                  {String(product.name || 'Unnamed Product')}
                 </h3>
                 
                 <div className="flex items-center gap-1 mb-2">
@@ -180,10 +203,10 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-gray-500">
-                    Stok: {product.current_stock}
+                    Stok: {product.current_stock || 0}
                   </span>
                   <span className="text-xs text-green-600 font-medium">
-                    +{product.loyalty_points} poin
+                    +{product.loyalty_points || 0} poin
                   </span>
                 </div>
               </CardContent>

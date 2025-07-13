@@ -12,7 +12,7 @@ interface Product {
   selling_price: number;
   image_url: string | null;
   current_stock: number;
-  categories?: { name: string };
+  categories?: { name: string } | null;
 }
 
 const ProductCarousel = () => {
@@ -22,6 +22,7 @@ const ProductCarousel = () => {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products-carousel'],
     queryFn: async () => {
+      console.log('Fetching products for carousel...');
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -37,7 +38,12 @@ const ProductCarousel = () => {
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+      
+      console.log('Products data:', data);
       return data as Product[];
     },
   });
@@ -98,7 +104,7 @@ const ProductCarousel = () => {
                 {product.image_url ? (
                   <img 
                     src={product.image_url} 
-                    alt={product.name}
+                    alt={String(product.name || 'Product')}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -109,15 +115,15 @@ const ProductCarousel = () => {
               </div>
               
               <h3 className="font-medium text-sm text-gray-900 mb-1 line-clamp-2">
-                {product.name}
+                {String(product.name || 'Unnamed Product')}
               </h3>
               
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-blue-600">
-                  Rp {product.selling_price.toLocaleString('id-ID')}
+                  Rp {(product.selling_price || 0).toLocaleString('id-ID')}
                 </span>
                 <Badge variant="secondary" className="text-xs">
-                  Stok: {product.current_stock}
+                  Stok: {product.current_stock || 0}
                 </Badge>
               </div>
             </CardContent>

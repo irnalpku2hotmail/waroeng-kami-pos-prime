@@ -10,10 +10,34 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Star, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+interface Product {
+  id: string;
+  name: string;
+  selling_price: number;
+  image_url: string | null;
+  current_stock: number;
+}
+
+interface FlashSaleItem {
+  id: string;
+  product_id: string;
+  original_price: number;
+  sale_price: number;
+  discount_percentage: number;
+  stock_quantity: number;
+  products: Product | null;
+  flash_sales: {
+    name: string;
+    start_date: string;
+    end_date: string;
+    is_active: boolean;
+  } | null;
+}
+
 interface HomeHeroProps {
   storeName?: string;
   storeDescription?: string;
-  onProductClick?: (product: any) => void;
+  onProductClick?: (product: Product) => void;
 }
 
 const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick }: HomeHeroProps) => {
@@ -25,6 +49,7 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
     queryKey: ['flash-sale-products'],
     queryFn: async () => {
       const now = new Date().toISOString();
+      console.log('Fetching flash sale products...');
       const { data, error } = await supabase
         .from('flash_sale_items')
         .select(`
@@ -38,12 +63,17 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
         .gt('stock_quantity', 0)
         .limit(4);
 
-      if (error) throw error;
-      return data || [];
+      if (error) {
+        console.error('Error fetching flash sale products:', error);
+        throw error;
+      }
+      
+      console.log('Flash sale products data:', data);
+      return (data || []) as FlashSaleItem[];
     }
   });
 
-  const handleAddToCart = (product: any, flashSaleItem?: any) => {
+  const handleAddToCart = (product: Product, flashSaleItem?: FlashSaleItem) => {
     if (!user) {
       toast({
         title: 'Login Required',
@@ -57,11 +87,11 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
     addItem({ ...product, selling_price: price });
     toast({
       title: 'Added to Cart',
-      description: `${product.name} has been added to your cart`
+      description: `${String(product.name || 'Product')} has been added to your cart`
     });
   };
 
-  const handleProductClick = (product: any) => {
+  const handleProductClick = (product: Product) => {
     if (onProductClick) {
       onProductClick(product);
     }
@@ -73,11 +103,11 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
-            Welcome to {storeName}
+            Welcome to {String(storeName || 'Waroeng Kami')}
           </h1>
           {storeDescription && (
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              {storeDescription}
+              {String(storeDescription)}
             </p>
           )}
         </div>
@@ -97,35 +127,35 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
                 <Card 
                   key={item.id} 
                   className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
-                  onClick={() => handleProductClick(item.products)}
+                  onClick={() => item.products && handleProductClick(item.products)}
                 >
                   <div className="relative">
                     <img
-                      src={item.products.image_url || '/placeholder.svg'}
-                      alt={item.products.name}
+                      src={item.products?.image_url || '/placeholder.svg'}
+                      alt={String(item.products?.name || 'Product')}
                       className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                     <Badge className="absolute top-2 left-2 bg-red-500 text-white text-xs">
-                      -{item.discount_percentage}%
+                      -{item.discount_percentage || 0}%
                     </Badge>
                   </div>
                   
                   <CardContent className="p-3">
                     <h3 className="font-medium text-sm mb-2 line-clamp-2">
-                      {item.products.name}
+                      {String(item.products?.name || 'Unnamed Product')}
                     </h3>
                     
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm font-bold text-red-600">
-                        Rp {item.sale_price.toLocaleString('id-ID')}
+                        Rp {(item.sale_price || 0).toLocaleString('id-ID')}
                       </span>
                       <span className="text-xs text-gray-500 line-through">
-                        Rp {item.original_price.toLocaleString('id-ID')}
+                        Rp {(item.original_price || 0).toLocaleString('id-ID')}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                      <span>Stock: {item.stock_quantity}</span>
+                      <span>Stock: {item.stock_quantity || 0}</span>
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-yellow-500" />
                         <span>4.5</span>
@@ -137,7 +167,9 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
                       className="w-full text-xs h-7"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleAddToCart(item.products, item);
+                        if (item.products) {
+                          handleAddToCart(item.products, item);
+                        }
                       }}
                     >
                       <ShoppingCart className="h-3 w-3 mr-1" />

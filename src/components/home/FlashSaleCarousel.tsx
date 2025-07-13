@@ -17,11 +17,11 @@ interface FlashSaleItem {
     id: string;
     name: string;
     image_url: string | null;
-  };
+  } | null;
   flash_sales: {
     name: string;
     end_date: string;
-  };
+  } | null;
 }
 
 const FlashSaleCarousel = () => {
@@ -31,6 +31,7 @@ const FlashSaleCarousel = () => {
   const { data: flashSaleItems = [], isLoading } = useQuery({
     queryKey: ['flash-sale-items'],
     queryFn: async () => {
+      console.log('Fetching flash sale items...');
       const { data, error } = await supabase
         .from('flash_sale_items')
         .select(`
@@ -55,7 +56,12 @@ const FlashSaleCarousel = () => {
         .order('discount_percentage', { ascending: false })
         .limit(20);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching flash sale items:', error);
+        throw error;
+      }
+      
+      console.log('Flash sale items data:', data);
       return data as FlashSaleItem[];
     },
   });
@@ -108,10 +114,10 @@ const FlashSaleCarousel = () => {
           <Card key={item.id} className="bg-white shadow-sm hover:shadow-md transition-shadow border border-red-200">
             <CardContent className="p-3">
               <div className="aspect-square bg-white rounded-lg mb-3 overflow-hidden relative">
-                {item.products.image_url ? (
+                {item.products?.image_url ? (
                   <img 
                     src={item.products.image_url} 
-                    alt={item.products.name}
+                    alt={String(item.products?.name || 'Product')}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -120,26 +126,26 @@ const FlashSaleCarousel = () => {
                   </div>
                 )}
                 <Badge className="absolute top-2 left-2 bg-red-500 text-white">
-                  -{item.discount_percentage}%
+                  -{item.discount_percentage || 0}%
                 </Badge>
               </div>
               
               <h3 className="font-medium text-sm text-gray-900 mb-2 line-clamp-2">
-                {item.products.name}
+                {String(item.products?.name || 'Unnamed Product')}
               </h3>
               
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-bold text-red-600">
-                    Rp {item.sale_price.toLocaleString('id-ID')}
+                    Rp {(item.sale_price || 0).toLocaleString('id-ID')}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500 line-through">
-                    Rp {item.original_price.toLocaleString('id-ID')}
+                    Rp {(item.original_price || 0).toLocaleString('id-ID')}
                   </span>
                   <Badge variant="secondary" className="text-xs">
-                    Tersisa: {item.stock_quantity - item.sold_quantity}
+                    Tersisa: {(item.stock_quantity || 0) - (item.sold_quantity || 0)}
                   </Badge>
                 </div>
               </div>
