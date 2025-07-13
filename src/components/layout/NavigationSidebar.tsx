@@ -30,7 +30,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ onLinkClick }) =>
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'POS', path: '/pos', icon: ShoppingCart },
     { name: 'Products', path: '/products', icon: Package },
-    { name: 'Categories & Units', path: '/categories-units', icon: Archive },
+    { name: 'Categories & Units', path: '/categories', icon: Archive },
     { name: 'Inventory', path: '/inventory', icon: TrendingUp },
     { name: 'Orders', path: '/orders', icon: FileText },
     { name: 'Purchases', path: '/purchases', icon: Truck },

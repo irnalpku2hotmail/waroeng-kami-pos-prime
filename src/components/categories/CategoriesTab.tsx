@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,18 +9,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Upload, X, Package, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
 
 const CategoriesTab = () => {
   const [open, setOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconPreview, setIconPreview] = useState<string>('');
-  const [uploading, setUploading] = useState(false);
   const [categoryData, setCategoryData] = useState({
     name: '',
-    description: ''
+    description: '',
+    icon_url: ''
   });
   const queryClient = useQueryClient();
 
@@ -53,55 +52,24 @@ const CategoriesTab = () => {
     return data.length > 0;
   };
 
-  const uploadIcon = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('category-icons')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data } = supabase.storage
-      .from('category-icons')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
-
   const saveCategory = useMutation({
-    mutationFn: async (data: { name: string; description?: string; icon_url?: string }) => {
+    mutationFn: async (data: { name: string; description: string; icon_url: string }) => {
       // Check for duplicate name
       const isDuplicate = await checkDuplicateName(data.name, editCategory?.id);
       if (isDuplicate) {
         throw new Error('Nama kategori sudah ada, silakan gunakan nama lain');
       }
 
-      let icon_url = iconPreview;
-      if (iconFile) {
-        icon_url = await uploadIcon(iconFile);
-      }
-
-      const formData = { 
-        name: data.name, 
-        description: data.description || undefined, 
-        icon_url 
-      };
-
       if (editCategory) {
         const { error } = await supabase
           .from('categories')
-          .update(formData)
+          .update(data)
           .eq('id', editCategory.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('categories')
-          .insert([formData]);
+          .insert([data]);
         if (error) throw error;
       }
     },
@@ -140,10 +108,10 @@ const CategoriesTab = () => {
   const handleEdit = (category: any) => {
     setEditCategory(category);
     setCategoryData({
-      name: category.name,
-      description: category.description || ''
+      name: String(category.name || ''),
+      description: String(category.description || ''),
+      icon_url: String(category.icon_url || '')
     });
-    setIconPreview(category.icon_url || '');
     setOpen(true);
   };
 
@@ -151,30 +119,12 @@ const CategoriesTab = () => {
     setEditCategory(null);
     setCategoryData({
       name: '',
-      description: ''
+      description: '',
+      icon_url: ''
     });
-    setIconFile(null);
-    setIconPreview('');
   };
 
-  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIconFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setIconPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeIcon = () => {
-    setIconFile(null);
-    setIconPreview('');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryData.name.trim()) {
       toast({ 
@@ -184,13 +134,7 @@ const CategoriesTab = () => {
       });
       return;
     }
-    
-    try {
-      setUploading(true);
-      await saveCategory.mutateAsync(categoryData);
-    } finally {
-      setUploading(false);
-    }
+    saveCategory.mutate(categoryData);
   };
 
   return (
@@ -225,75 +169,34 @@ const CategoriesTab = () => {
                   id="name"
                   value={categoryData.name}
                   onChange={(e) => setCategoryData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Masukkan nama kategori"
+                  placeholder="Makanan"
                   required
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="description">Deskripsi</Label>
                 <Textarea
                   id="description"
                   value={categoryData.description}
                   onChange={(e) => setCategoryData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Masukkan deskripsi kategori (opsional)"
-                  rows={3}
+                  placeholder="Deskripsi kategori..."
                 />
               </div>
-
               <div className="space-y-2">
-                <Label>Icon Kategori</Label>
-                <div className="flex items-center gap-4">
-                  {iconPreview ? (
-                    <div className="relative">
-                      <img 
-                        src={iconPreview} 
-                        alt="Icon preview" 
-                        className="w-16 h-16 object-cover rounded border"
-                      />
-                      <button
-                        type="button"
-                        onClick={removeIcon}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
-                      <Package className="h-6 w-6 text-gray-400" />
-                    </div>
-                  )}
-                  
-                  <div>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleIconChange}
-                      className="hidden"
-                      id="icon-upload"
-                    />
-                    <Label htmlFor="icon-upload" className="cursor-pointer">
-                      <Button type="button" variant="outline" asChild>
-                        <span>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Icon
-                        </span>
-                      </Button>
-                    </Label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Format: JPG, PNG (Max: 2MB)
-                    </p>
-                  </div>
-                </div>
+                <Label htmlFor="icon_url">URL Icon</Label>
+                <Input
+                  id="icon_url"
+                  value={categoryData.icon_url}
+                  onChange={(e) => setCategoryData(prev => ({ ...prev, icon_url: e.target.value }))}
+                  placeholder="https://example.com/icon.png"
+                />
               </div>
-
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   Batal
                 </Button>
-                <Button type="submit" disabled={uploading || saveCategory.isPending}>
-                  {uploading ? 'Mengupload...' : (editCategory ? 'Update' : 'Simpan')}
+                <Button type="submit" disabled={saveCategory.isPending}>
+                  {saveCategory.isPending ? 'Menyimpan...' : (editCategory ? 'Update' : 'Simpan')}
                 </Button>
               </div>
             </form>
@@ -314,7 +217,6 @@ const CategoriesTab = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Icon</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Deskripsi</TableHead>
                 <TableHead>Aksi</TableHead>
@@ -323,19 +225,8 @@ const CategoriesTab = () => {
             <TableBody>
               {categories.map((category) => (
                 <TableRow key={category.id}>
-                  <TableCell>
-                    {category.icon_url ? (
-                      <img 
-                        src={category.icon_url} 
-                        alt={category.name} 
-                        className="w-8 h-8 object-cover rounded"
-                      />
-                    ) : (
-                      <Package className="h-8 w-8 text-gray-400" />
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="max-w-xs truncate">{category.description || '-'}</TableCell>
+                  <TableCell className="font-medium">{String(category.name || '')}</TableCell>
+                  <TableCell>{String(category.description || '')}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
