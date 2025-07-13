@@ -35,20 +35,27 @@ const Layout = ({ children }: LayoutProps) => {
   });
 
   // Safely extract store name and handle potential object values
-  const getStoreName = () => {
+  const getStoreName = (): string => {
     if (!settings?.store_name) return 'SmartPOS';
     
+    const storeNameValue = settings.store_name;
+    
     // Handle case where store_name might be an object with a name property
-    if (typeof settings.store_name === 'object' && settings.store_name?.name) {
-      return String(settings.store_name.name);
+    if (typeof storeNameValue === 'object' && storeNameValue !== null) {
+      if ('name' in storeNameValue && typeof storeNameValue.name === 'string') {
+        return storeNameValue.name;
+      }
+      // If it's an object but doesn't have a name property, return default
+      return 'SmartPOS';
     }
     
     // Handle case where store_name is a direct string
-    if (typeof settings.store_name === 'string') {
-      return settings.store_name;
+    if (typeof storeNameValue === 'string') {
+      return storeNameValue;
     }
     
-    return 'SmartPOS';
+    // Convert any other type to string safely
+    return String(storeNameValue) || 'SmartPOS';
   };
 
   const storeName = getStoreName();
