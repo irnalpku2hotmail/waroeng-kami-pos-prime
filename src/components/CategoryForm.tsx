@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,15 +27,15 @@ interface CategoryFormProps {
 
 const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
   const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconPreview, setIconPreview] = useState<string>(category?.icon_url || '');
+  const [iconPreview, setIconPreview] = useState<string>(String(category?.icon_url || ''));
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, formState: { errors } } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
-      name: category?.name || '',
-      description: category?.description || '',
+      name: String(category?.name || ''),
+      description: String(category?.description || ''),
     }
   });
 
@@ -44,7 +45,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
       setIconFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
-        setIconPreview(e.target?.result as string);
+        setIconPreview(String(e.target?.result || ''));
       };
       reader.readAsDataURL(file);
     }
@@ -109,7 +110,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
       onSuccess();
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: String(error.message), variant: 'destructive' });
     }
   });
 
@@ -133,7 +134,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
       onSuccess();
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: String(error.message), variant: 'destructive' });
     }
   });
 
@@ -147,9 +148,9 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
       }
 
       const formData = { 
-        name: data.name, 
-        description: data.description || undefined, 
-        icon_url 
+        name: String(data.name), 
+        description: data.description ? String(data.description) : undefined, 
+        icon_url: icon_url || undefined
       };
 
       if (category) {
@@ -158,7 +159,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
         createCategory.mutate(formData);
       }
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: String(error.message), variant: 'destructive' });
     } finally {
       setUploading(false);
     }
@@ -174,7 +175,7 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
           placeholder="Masukkan nama kategori"
         />
         {errors.name && (
-          <p className="text-sm text-red-500">{errors.name.message}</p>
+          <p className="text-sm text-red-500">{String(errors.name.message)}</p>
         )}
       </div>
 
