@@ -237,7 +237,7 @@ const ReferralSection = () => {
                       {history.profiles?.full_name || 'User'}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {history.profiles?.email}
+                      {history.profiles?.email || ''}
                     </p>
                     <p className="text-xs text-gray-400">
                       {new Date(history.created_at).toLocaleDateString('id-ID')}

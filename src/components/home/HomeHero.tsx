@@ -11,12 +11,12 @@ import { ShoppingCart, Star, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface HomeHeroProps {
-  storeName: string;
+  storeName?: string;
   storeDescription?: string;
-  onProductClick: (product: any) => void;
+  onProductClick?: (product: any) => void;
 }
 
-const HomeHero = ({ storeName, storeDescription, onProductClick }: HomeHeroProps) => {
+const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick }: HomeHeroProps) => {
   const { user } = useAuth();
   const { addItem } = useCart();
 
@@ -61,6 +61,12 @@ const HomeHero = ({ storeName, storeDescription, onProductClick }: HomeHeroProps
     });
   };
 
+  const handleProductClick = (product: any) => {
+    if (onProductClick) {
+      onProductClick(product);
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
       <div className="max-w-7xl mx-auto px-4">
@@ -91,7 +97,7 @@ const HomeHero = ({ storeName, storeDescription, onProductClick }: HomeHeroProps
                 <Card 
                   key={item.id} 
                   className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
-                  onClick={() => onProductClick(item.products)}
+                  onClick={() => handleProductClick(item.products)}
                 >
                   <div className="relative">
                     <img

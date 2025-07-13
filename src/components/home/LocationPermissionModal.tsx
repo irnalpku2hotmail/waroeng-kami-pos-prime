@@ -1,68 +1,69 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { MapPin, X } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface LocationPermissionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAllow: () => void;
-  onDeny: () => void;
+  onAllow?: () => void;
+  onDeny?: () => void;
 }
 
-const LocationPermissionModal = ({ open, onOpenChange, onAllow, onDeny }: LocationPermissionModalProps) => {
+const LocationPermissionModal = ({ 
+  open, 
+  onOpenChange, 
+  onAllow, 
+  onDeny 
+}: LocationPermissionModalProps) => {
+  const handleAllow = () => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log('Location granted:', position.coords);
+        onAllow?.();
+        onOpenChange(false);
+      },
+      (error) => {
+        console.log('Location denied:', error);
+        onDeny?.();
+        onOpenChange(false);
+      }
+    );
+  };
+
+  const handleDeny = () => {
+    onDeny?.();
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-blue-600" />
-            Izin Akses Lokasi
+            Izinkan Akses Lokasi
           </DialogTitle>
-          <DialogDescription className="text-left">
-            Kami ingin mengakses lokasi Anda untuk memberikan pengalaman berbelanja yang lebih baik, seperti:
+          <DialogDescription>
+            Kami ingin menggunakan lokasi Anda untuk memberikan pengalaman yang lebih baik,
+            seperti menampilkan toko terdekat dan estimasi pengiriman yang akurat.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-blue-600">•</span>
-              <span>Menampilkan estimasi waktu pengiriman yang akurat</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-600">•</span>
-              <span>Mencari produk yang tersedia di area Anda</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-600">•</span>
-              <span>Menghitung ongkos kirim dengan tepat</span>
-            </li>
-          </ul>
-          
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <p className="text-xs text-gray-500">
-              Informasi lokasi Anda akan disimpan dengan aman dan tidak akan dibagikan kepada pihak ketiga tanpa persetujuan Anda.
-            </p>
-          </div>
-          
-          <div className="flex gap-3">
-            <Button
-              onClick={onAllow}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              Izinkan
-            </Button>
-            <Button
-              onClick={onDeny}
-              variant="outline"
-              className="flex-1"
-            >
-              Tidak Sekarang
-            </Button>
-          </div>
-        </div>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+          <Button variant="outline" onClick={handleDeny}>
+            Tidak Sekarang
+          </Button>
+          <Button onClick={handleAllow}>
+            Izinkan Akses
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -69,12 +69,27 @@ const Home = () => {
     },
   });
 
+  const handleProductClick = (product: any) => {
+    navigate(`/product/${product.id}`);
+  };
+
+  const handleLocationAllow = () => {
+    console.log('Location access allowed');
+  };
+
+  const handleLocationDeny = () => {
+    console.log('Location access denied');
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <HomeNavbar />
       
       <main className="bg-white">
-        <HomeHero />
+        <HomeHero 
+          storeName={storeInfo?.name}
+          onProductClick={handleProductClick}
+        />
         
         <div className="container mx-auto px-4 py-8 space-y-8">
           {/* Categories Section */}
@@ -104,6 +119,8 @@ const Home = () => {
       <LocationPermissionModal 
         open={showLocationModal} 
         onOpenChange={setShowLocationModal}
+        onAllow={handleLocationAllow}
+        onDeny={handleLocationDeny}
       />
     </div>
   );
