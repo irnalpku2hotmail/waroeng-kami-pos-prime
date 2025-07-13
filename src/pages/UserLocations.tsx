@@ -1,18 +1,22 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { MapPin, Users, CheckCircle, Search } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import Layout from '@/components/Layout';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-declare global {
-  interface Window {
-    google: any;
-    initMap: () => void;
-  }
-}
+// Fix for default markers in react-leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 interface UserLocation {
   id: string;
@@ -33,9 +37,6 @@ interface UserLocation {
 
 const UserLocations = () => {
   const [searchUser, setSearchUser] = useState<string>('');
-  const [map, setMap] = useState<any>(null);
-  const [markers, setMarkers] = useState<any[]>([]);
-  const mapRef = useRef<HTMLDivElement>(null);
 
   // Fetch all users with profiles for search
   const { data: users = [] } = useQuery({
@@ -69,7 +70,7 @@ const UserLocations = () => {
           const userIds = filteredUsers.map(user => user.id);
           query = query.in('user_id', userIds);
         } else {
-          return []; // No matching users found
+          return [];
         }
       }
       
@@ -109,107 +110,6 @@ const UserLocations = () => {
   // Calculate statistics
   const totalUsers = users.length;
   const usersWithLocation = new Set(locations.map(loc => loc.user_id)).size;
-
-  // Initialize Google Maps
-  useEffect(() => {
-    const loadGoogleMaps = () => {
-      if (window.google) {
-        initializeMap();
-        return;
-      }
-
-      window.initMap = initializeMap;
-      
-      const script = document.createElement('script');
-      script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyDummy_ReplaceWithActualKey&callback=initMap';
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    };
-
-    const initializeMap = () => {
-      if (!mapRef.current || !window.google) return;
-
-      const mapInstance = new window.google.maps.Map(mapRef.current, {
-        center: { lat: -6.2088, lng: 106.8456 }, // Jakarta center
-        zoom: 10,
-        styles: [
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }]
-          }
-        ]
-      });
-
-      setMap(mapInstance);
-    };
-
-    loadGoogleMaps();
-  }, []);
-
-  // Update markers when locations change
-  useEffect(() => {
-    if (!map || !window.google) return;
-
-    // Clear existing markers
-    markers.forEach(marker => marker.setMap(null));
-    const newMarkers: any[] = [];
-
-    // Add new markers
-    locations.forEach(location => {
-      if (location.latitude && location.longitude) {
-        const marker = new window.google.maps.Marker({
-          position: { 
-            lat: Number(location.latitude), 
-            lng: Number(location.longitude)
-          },
-          map: map,
-          title: location.user_profile?.full_name || 'Unknown User',
-          icon: {
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="16" fill="#3B82F6"/>
-                <circle cx="16" cy="16" r="12" fill="white"/>
-                <circle cx="16" cy="16" r="8" fill="#3B82F6"/>
-              </svg>
-            `),
-            scaledSize: new window.google.maps.Size(32, 32)
-          }
-        });
-
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: `
-            <div class="p-2">
-              <h3 class="font-semibold">${location.user_profile?.full_name || 'Unknown User'}</h3>
-              <p class="text-sm text-gray-600">${location.user_profile?.email || ''}</p>
-              ${location.address ? `<p class="text-sm mt-1">${location.address}</p>` : ''}
-              <p class="text-xs text-gray-500 mt-1">
-                Updated: ${new Date(location.updated_at).toLocaleDateString()}
-              </p>
-            </div>
-          `
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-
-        newMarkers.push(marker);
-      }
-    });
-
-    setMarkers(newMarkers);
-
-    // Adjust map bounds to show all markers
-    if (newMarkers.length > 0) {
-      const bounds = new window.google.maps.LatLngBounds();
-      newMarkers.forEach(marker => {
-        bounds.extend(marker.getPosition());
-      });
-      map.fitBounds(bounds);
-    }
-  }, [map, locations]);
 
   return (
     <Layout>
@@ -262,12 +162,13 @@ const UserLocations = () => {
           </Card>
         </div>
 
-        {/* User Search */}
+        {/* Interactive Map with Search */}
         <Card>
           <CardHeader>
-            <CardTitle>Search Users</CardTitle>
-          </CardHeader>
-          <CardContent>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Interactive Map
+            </CardTitle>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -277,25 +178,41 @@ const UserLocations = () => {
                 className="pl-10"
               />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Map */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Interactive Map
-            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div 
-              ref={mapRef} 
-              className="w-full h-96 rounded-lg border"
-              style={{ minHeight: '400px' }}
-            />
+            <div className="w-full h-96 rounded-lg border overflow-hidden">
+              <MapContainer
+                center={[-6.2088, 106.8456]}
+                zoom={10}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {locations.map((location) => (
+                  location.latitude && location.longitude && (
+                    <Marker 
+                      key={location.id}
+                      position={[Number(location.latitude), Number(location.longitude)]}
+                    >
+                      <Popup>
+                        <div className="p-2">
+                          <h3 className="font-semibold">{location.user_profile?.full_name || 'Unknown User'}</h3>
+                          <p className="text-sm text-gray-600">{location.user_profile?.email || ''}</p>
+                          {location.address && <p className="text-sm mt-1">{location.address}</p>}
+                          <p className="text-xs text-gray-500 mt-1">
+                            Updated: {new Date(location.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )
+                ))}
+              </MapContainer>
+            </div>
             <p className="text-sm text-gray-500 mt-2">
-              Click on markers to view user details. {locations.length} location(s) found.
+              {locations.length} location(s) found.
             </p>
           </CardContent>
         </Card>

@@ -20,12 +20,11 @@ const HomeFooter = () => {
     }
   });
 
-  const storeInfo = settings?.store_info || {};
-  const storeName = storeInfo.name || 'TokoQu';
-  const storeAddress = storeInfo.address || '';
-  const storeEmail = storeInfo.email || '';
-  const storePhone = storeInfo.phone || '';
-  const storeDescription = storeInfo.description || '';
+  // Extract store information from settings
+  const storeName = settings?.store_name?.name || 'TokoQu';
+  const storeAddress = settings?.store_address?.address || '';
+  const storeEmail = settings?.store_email?.email || '';
+  const storePhone = settings?.store_phone?.phone || '';
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -38,7 +37,7 @@ const HomeFooter = () => {
               <span className="font-bold text-xl">{storeName}</span>
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">
-              {storeDescription || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda.'}
+              Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">

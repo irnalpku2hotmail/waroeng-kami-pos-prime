@@ -67,7 +67,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+          <div key={i} className="animate-pulse bg-gray-100 rounded-lg h-48"></div>
         ))}
       </div>
     );
@@ -96,8 +96,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   };
 
   return (
-    <div className="mt-8">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Produk Unggulan</h2>
+    <div className="mt-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {products.map((product) => {
           const flashSaleItem = flashSaleItems.find(item => item.product_id === product.id);
@@ -108,71 +107,68 @@ const ProductGrid: React.FC<ProductGridProps> = ({
           return (
             <Card 
               key={product.id} 
-              className="group hover:shadow-lg transition-all duration-300 border-0 bg-white rounded-xl overflow-hidden cursor-pointer"
+              className="group hover:shadow-md transition-all duration-300 border bg-white rounded-lg overflow-hidden cursor-pointer"
               onClick={() => handleProductClick(product)}
             >
               <div className="relative">
-                <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex items-center justify-center">
+                <div className="aspect-square bg-gray-50 p-3 flex items-center justify-center">
                   {product.image_url ? (
                     <img 
                       src={product.image_url} 
                       alt={product.name}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover rounded"
                     />
                   ) : (
-                    <div className="text-6xl text-blue-300">📦</div>
+                    <div className="text-4xl text-gray-300">📦</div>
                   )}
                 </div>
                 
                 {/* Flash Sale Badge */}
                 {isOnSale && (
                   <Badge className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1">
-                    Flash Sale
+                    Sale
                   </Badge>
                 )}
                 
                 {/* Stock Badge */}
                 {product.current_stock <= product.min_stock && (
                   <Badge variant="destructive" className="absolute top-2 right-2 text-xs">
-                    Stok Terbatas
+                    Terbatas
                   </Badge>
                 )}
 
                 {/* Wishlist Button */}
-                <button className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Heart className="h-4 w-4 text-gray-600 hover:text-red-500" />
+                <button className="absolute bottom-2 right-2 p-1.5 bg-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <Heart className="h-3 w-3 text-gray-600 hover:text-red-500" />
                 </button>
               </div>
 
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 h-10">
+              <CardContent className="p-3">
+                <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2 h-8">
                   {product.name}
                 </h3>
                 
                 <div className="flex items-center gap-1 mb-2">
                   <div className="flex items-center">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <Star key={i} className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-                  <span className="text-xs text-gray-500 ml-1">(4.5)</span>
+                  <span className="text-xs text-gray-500">(4.5)</span>
                 </div>
 
                 <div className="space-y-1">
                   {isOnSale ? (
                     <div className="flex flex-col">
-                      <span className="text-lg font-bold text-red-600">
+                      <span className="text-base font-bold text-red-600">
                         {formatPrice(currentPrice)}
                       </span>
-                      <span className="text-sm text-gray-500 line-through">
+                      <span className="text-xs text-gray-500 line-through">
                         {formatPrice(originalPrice)}
                       </span>
-                      <Badge variant="secondary" className="text-xs w-fit">
-                        -{Math.round(((originalPrice - currentPrice) / originalPrice) * 100)}%
-                      </Badge>
                     </div>
                   ) : (
-                    <span className="text-lg font-bold text-blue-600">
+                    <span className="text-base font-bold text-blue-600">
                       {formatPrice(currentPrice)}
                     </span>
                   )}
