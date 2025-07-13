@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -159,12 +158,25 @@ const ProductForm = ({ product, onSuccess, onClose }: ProductFormProps) => {
   const createProduct = useMutation({
     mutationFn: async (data: ProductFormData & { image_urls: string[] }) => {
       const { image_urls, ...productData } = data;
+      
+      // Ensure all required fields are present
       const productToInsert = {
-        ...productData,
+        name: productData.name,
+        description: productData.description || null,
+        base_price: productData.base_price,
+        selling_price: productData.selling_price,
+        min_quantity: productData.min_quantity,
+        min_stock: productData.min_stock,
+        current_stock: productData.current_stock,
+        loyalty_points: productData.loyalty_points,
+        category_id: productData.category_id || null,
+        unit_id: productData.unit_id || null,
+        barcode: productData.barcode || null,
+        is_active: productData.is_active,
         image_url: image_urls.length > 0 ? JSON.stringify(image_urls) : null
       };
       
-      const { error } = await supabase.from('products').insert([productToInsert]);
+      const { error } = await supabase.from('products').insert(productToInsert);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -182,8 +194,21 @@ const ProductForm = ({ product, onSuccess, onClose }: ProductFormProps) => {
   const updateProduct = useMutation({
     mutationFn: async (data: ProductFormData & { image_urls: string[] }) => {
       const { image_urls, ...productData } = data;
+      
+      // Ensure all required fields are present
       const productToUpdate = {
-        ...productData,
+        name: productData.name,
+        description: productData.description || null,
+        base_price: productData.base_price,
+        selling_price: productData.selling_price,
+        min_quantity: productData.min_quantity,
+        min_stock: productData.min_stock,
+        current_stock: productData.current_stock,
+        loyalty_points: productData.loyalty_points,
+        category_id: productData.category_id || null,
+        unit_id: productData.unit_id || null,
+        barcode: productData.barcode || null,
+        is_active: productData.is_active,
         image_url: image_urls.length > 0 ? JSON.stringify(image_urls) : null
       };
       
