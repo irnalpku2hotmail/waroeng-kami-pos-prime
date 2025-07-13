@@ -30,7 +30,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ onLinkClick }) =>
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'POS', path: '/pos', icon: ShoppingCart },
     { name: 'Products', path: '/products', icon: Package },
-    { name: 'Categories & Units', path: '/categories', icon: Archive },
+    { name: 'Categories & Units', path: '/categories-units', icon: Archive },
     { name: 'Inventory', path: '/inventory', icon: TrendingUp },
     { name: 'Orders', path: '/orders', icon: FileText },
     { name: 'Purchases', path: '/purchases', icon: Truck },
@@ -48,12 +48,6 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ onLinkClick }) =>
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
-  const handleLinkClick = (e: React.MouseEvent) => {
-    if (onLinkClick) {
-      onLinkClick();
-    }
-  };
-
   return (
     <nav className="space-y-2">
       {menuItems.map((item) => {
@@ -62,8 +56,14 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ onLinkClick }) =>
           <NavLink
             key={item.path}
             to={item.path}
-            onClick={handleLinkClick}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100 hover:text-gray-900 [&.active]:bg-blue-100 [&.active]:text-blue-800"
+            onClick={onLinkClick}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`
+            }
           >
             <Icon className="h-4 w-4" />
             {item.name}

@@ -1,19 +1,17 @@
-
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import HomeNavbar from '@/components/home/HomeNavbar';
+import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
+import HomeFooter from '@/components/home/HomeFooter';
+import ProductGrid from '@/components/home/ProductGrid';
 import LocationPermissionModal from '@/components/home/LocationPermissionModal';
+import { Card } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-// Lazy load components
-const HomeCategoriesSlider = lazy(() => import('@/components/home/HomeCategoriesSlider'));
-const ProductGrid = lazy(() => import('@/components/home/ProductGrid'));
-const HomeFooter = lazy(() => import('@/components/home/HomeFooter'));
 
 const Home = () => {
   const { user } = useAuth();
@@ -53,6 +51,7 @@ const Home = () => {
       
       if (error || !data?.value) return [];
       
+      // Type guard to ensure we have the correct structure
       const settingsValue = data.value;
       if (typeof settingsValue === 'object' && settingsValue !== null && 'banner_urls' in settingsValue) {
         const bannerUrls = (settingsValue as any).banner_urls;
@@ -119,6 +118,7 @@ const Home = () => {
         
         if (user) {
           try {
+            // Save location to database
             const { error } = await supabase
               .from('user_locations')
               .upsert({
@@ -195,7 +195,7 @@ const Home = () => {
   const storeName = storeInfo.name || 'TokoQu';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Navbar */}
       <HomeNavbar
         storeName={storeName}
@@ -204,11 +204,11 @@ const Home = () => {
         onProductSelect={handleSearchProduct}
       />
 
-      {/* Compact Hero Carousel */}
+      {/* Reduced Height Hero Carousel */}
       {frontendImages.length > 0 && (
         <div className="relative max-w-7xl mx-auto px-4 py-4">
-          <div className="relative overflow-hidden rounded-lg shadow-lg bg-white border">
-            <div className="relative h-32 md:h-40 overflow-hidden">
+          <div className="relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-1">
+            <div className="relative h-48 md:h-64 overflow-hidden rounded-2xl bg-white">
               {frontendImages.map((image, index) => (
                 <div
                   key={index}
@@ -221,6 +221,7 @@ const Home = () => {
                     alt={`Slide ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                 </div>
               ))}
               
@@ -231,41 +232,41 @@ const Home = () => {
                     variant="outline"
                     size="icon"
                     onClick={prevImage}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-sm h-6 w-6"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
                   >
-                    <ChevronLeft className="h-3 w-3 text-gray-700" />
+                    <ChevronLeft className="h-4 w-4 text-gray-700" />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={nextImage}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-sm h-6 w-6"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110"
                   >
-                    <ChevronRight className="h-3 w-3 text-gray-700" />
+                    <ChevronRight className="h-4 w-4 text-gray-700" />
                   </Button>
                   
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={togglePlayPause}
-                    className="absolute top-2 right-2 bg-white/90 hover:bg-white border-0 shadow-sm h-6 w-6"
+                    className="absolute top-4 right-4 bg-white/90 hover:bg-white border-0 shadow-lg backdrop-blur-sm transition-all duration-300"
                   >
                     {isPlaying ? (
-                      <Pause className="h-2 w-2 text-gray-700" />
+                      <Pause className="h-3 w-3 text-gray-700" />
                     ) : (
-                      <Play className="h-2 w-2 text-gray-700" />
+                      <Play className="h-3 w-3 text-gray-700" />
                     )}
                   </Button>
                   
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
                     {frontendImages.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentImageIndex(index)}
-                        className={`transition-all duration-300 rounded-full ${
+                        className={`transition-all duration-300 rounded-full border-2 border-white/50 ${
                           index === currentImageIndex 
-                            ? 'w-4 h-1 bg-white' 
-                            : 'w-1 h-1 bg-white/50 hover:bg-white/75'
+                            ? 'w-8 h-2 bg-white' 
+                            : 'w-2 h-2 bg-white/50 hover:bg-white/75'
                         }`}
                       />
                     ))}
@@ -278,40 +279,34 @@ const Home = () => {
       )}
 
       {/* Categories Section */}
-      <div className="py-6">
+      <div className="py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-xl font-bold text-center text-gray-800 mb-4">
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
             Kategori Produk
           </h2>
-          <Suspense fallback={<div className="h-24 bg-gray-100 animate-pulse rounded-lg"></div>}>
-            <HomeCategoriesSlider
-              selectedCategory={selectedCategory}
-              onCategorySelect={setSelectedCategory}
-            />
-          </Suspense>
+          <HomeCategoriesSlider
+            selectedCategory={selectedCategory}
+            onCategorySelect={setSelectedCategory}
+          />
         </div>
       </div>
 
       {/* Products Section */}
-      <div className="py-6 bg-white">
+      <div className="py-8 bg-white/50">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-xl font-bold text-center text-gray-800 mb-4">
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
             Produk Pilihan
           </h2>
-          <Suspense fallback={<div className="grid grid-cols-2 md:grid-cols-4 gap-4"><div className="h-48 bg-gray-100 animate-pulse rounded-lg"></div><div className="h-48 bg-gray-100 animate-pulse rounded-lg"></div><div className="h-48 bg-gray-100 animate-pulse rounded-lg"></div><div className="h-48 bg-gray-100 animate-pulse rounded-lg"></div></div>}>
-            <ProductGrid
-              searchTerm={searchTerm}
-              selectedCategory={selectedCategory}
-              onProductClick={handleProductClick}
-            />
-          </Suspense>
+          <ProductGrid
+            searchTerm={searchTerm}
+            selectedCategory={selectedCategory}
+            onProductClick={handleProductClick}
+          />
         </div>
       </div>
 
       {/* Footer */}
-      <Suspense fallback={<div className="h-64 bg-gray-100 animate-pulse"></div>}>
-        <HomeFooter />
-      </Suspense>
+      <HomeFooter />
 
       {/* Location Permission Modal */}
       <LocationPermissionModal

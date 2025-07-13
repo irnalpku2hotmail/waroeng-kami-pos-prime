@@ -1,11 +1,18 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { MapPin, Users, CheckCircle, Search } from 'lucide-react';
 import Layout from '@/components/Layout';
+
+declare global {
+  interface Window {
+    google: any;
+    initMap: () => void;
+  }
+}
 
 interface UserLocation {
   id: string;
@@ -26,6 +33,9 @@ interface UserLocation {
 
 const UserLocations = () => {
   const [searchUser, setSearchUser] = useState<string>('');
+  const [map, setMap] = useState<any>(null);
+  const [markers, setMarkers] = useState<any[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
 
   // Fetch all users with profiles for search
   const { data: users = [] } = useQuery({
@@ -59,7 +69,7 @@ const UserLocations = () => {
           const userIds = filteredUsers.map(user => user.id);
           query = query.in('user_id', userIds);
         } else {
-          return [];
+          return []; // No matching users found
         }
       }
       
@@ -100,8 +110,106 @@ const UserLocations = () => {
   const totalUsers = users.length;
   const usersWithLocation = new Set(locations.map(loc => loc.user_id)).size;
 
-  console.log('UserLocations render - locations:', locations);
-  console.log('UserLocations render - users:', users);
+  // Initialize Google Maps
+  useEffect(() => {
+    const loadGoogleMaps = () => {
+      if (window.google) {
+        initializeMap();
+        return;
+      }
+
+      window.initMap = initializeMap;
+      
+      const script = document.createElement('script');
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyDummy_ReplaceWithActualKey&callback=initMap';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    };
+
+    const initializeMap = () => {
+      if (!mapRef.current || !window.google) return;
+
+      const mapInstance = new window.google.maps.Map(mapRef.current, {
+        center: { lat: -6.2088, lng: 106.8456 }, // Jakarta center
+        zoom: 10,
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }]
+          }
+        ]
+      });
+
+      setMap(mapInstance);
+    };
+
+    loadGoogleMaps();
+  }, []);
+
+  // Update markers when locations change
+  useEffect(() => {
+    if (!map || !window.google) return;
+
+    // Clear existing markers
+    markers.forEach(marker => marker.setMap(null));
+    const newMarkers: any[] = [];
+
+    // Add new markers
+    locations.forEach(location => {
+      if (location.latitude && location.longitude) {
+        const marker = new window.google.maps.Marker({
+          position: { 
+            lat: Number(location.latitude), 
+            lng: Number(location.longitude)
+          },
+          map: map,
+          title: location.user_profile?.full_name || 'Unknown User',
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="16" fill="#3B82F6"/>
+                <circle cx="16" cy="16" r="12" fill="white"/>
+                <circle cx="16" cy="16" r="8" fill="#3B82F6"/>
+              </svg>
+            `),
+            scaledSize: new window.google.maps.Size(32, 32)
+          }
+        });
+
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div class="p-2">
+              <h3 class="font-semibold">${location.user_profile?.full_name || 'Unknown User'}</h3>
+              <p class="text-sm text-gray-600">${location.user_profile?.email || ''}</p>
+              ${location.address ? `<p class="text-sm mt-1">${location.address}</p>` : ''}
+              <p class="text-xs text-gray-500 mt-1">
+                Updated: ${new Date(location.updated_at).toLocaleDateString()}
+              </p>
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        newMarkers.push(marker);
+      }
+    });
+
+    setMarkers(newMarkers);
+
+    // Adjust map bounds to show all markers
+    if (newMarkers.length > 0) {
+      const bounds = new window.google.maps.LatLngBounds();
+      newMarkers.forEach(marker => {
+        bounds.extend(marker.getPosition());
+      });
+      map.fitBounds(bounds);
+    }
+  }, [map, locations]);
 
   return (
     <Layout>
@@ -154,13 +262,12 @@ const UserLocations = () => {
           </Card>
         </div>
 
-        {/* Search and Location List */}
+        {/* User Search */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              User Locations
-            </CardTitle>
+            <CardTitle>Search Users</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -170,47 +277,25 @@ const UserLocations = () => {
                 className="pl-10"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Map */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Interactive Map
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {locations.length > 0 ? (
-                locations
-                  .filter(location => location.latitude && location.longitude)
-                  .map((location) => (
-                    <div key={location.id} className="p-4 border rounded-lg">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold">{location.user_profile?.full_name || 'Unknown User'}</h3>
-                          <p className="text-sm text-gray-600">{location.user_profile?.email || ''}</p>
-                          {location.address && <p className="text-sm mt-1">{location.address}</p>}
-                          <p className="text-sm text-gray-500">
-                            {location.city}, {location.province}, {location.country}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Coordinates: {location.latitude}, {location.longitude}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            Updated: {new Date(location.updated_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <MapPin className="h-5 w-5 text-blue-500 mt-1" />
-                      </div>
-                    </div>
-                  ))
-              ) : (
-                <div className="text-center py-8">
-                  <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No location data found</p>
-                  {searchUser && (
-                    <p className="text-sm text-gray-400 mt-2">
-                      Try searching for a different user
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-            <p className="text-sm text-gray-500 mt-4">
-              {locations.length} location(s) found.
+            <div 
+              ref={mapRef} 
+              className="w-full h-96 rounded-lg border"
+              style={{ minHeight: '400px' }}
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              Click on markers to view user details. {locations.length} location(s) found.
             </p>
           </CardContent>
         </Card>
