@@ -224,11 +224,11 @@ const UserLocations = () => {
                   >
                     <Popup>
                       <div className="p-2">
-                        <h3 className="font-semibold">{String(location.user_name || 'User')}</h3>
-                        <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
-                        <p className="text-sm mt-1">{String(location.address || '')}</p>
+                        <h3 className="font-semibold">{location.user_name || 'User'}</h3>
+                        <p className="text-sm text-gray-600">{location.user_email || ''}</p>
+                        <p className="text-sm mt-1">{location.address || ''}</p>
                         <p className="text-xs text-gray-500">
-                          {String(location.city || '')}, {String(location.province || '')}
+                          {location.city || ''}, {location.province || ''}
                         </p>
                       </div>
                     </Popup>
@@ -261,12 +261,12 @@ const UserLocations = () => {
                     <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <h3 className="font-medium text-gray-900">
-                        {String(location.user_name || 'User')}
+                        {location.user_name || 'User'}
                       </h3>
-                      <p className="text-sm text-gray-600">{String(location.user_email || '')}</p>
-                      <p className="text-sm text-gray-700 mt-1">{String(location.address || '')}</p>
+                      <p className="text-sm text-gray-600">{location.user_email || ''}</p>
+                      <p className="text-sm text-gray-700 mt-1">{location.address || ''}</p>
                       <p className="text-xs text-gray-500">
-                        {String(location.city || '')}, {String(location.province || '')} {String(location.postal_code || '')}
+                        {location.city || ''}, {location.province || ''} {location.postal_code || ''}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Koordinat: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
