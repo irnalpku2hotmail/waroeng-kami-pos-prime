@@ -614,6 +614,7 @@ export type Database = {
           full_name: string
           id: string
           phone: string | null
+          referral_code: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
@@ -626,6 +627,7 @@ export type Database = {
           full_name: string
           id: string
           phone?: string | null
+          referral_code?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -638,6 +640,7 @@ export type Database = {
           full_name?: string
           id?: string
           phone?: string | null
+          referral_code?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -811,6 +814,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          points_earned: number
+          total_referrals: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          points_earned?: number
+          total_referrals?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          points_earned?: number
+          total_referrals?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_history: {
+        Row: {
+          created_at: string
+          id: string
+          points_awarded: number
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          referral_code?: string
+          referred_user_id?: string
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: []
       }
       return_items: {
         Row: {
@@ -1395,6 +1461,10 @@ export type Database = {
         Returns: string
       }
       generate_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_referral_code: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

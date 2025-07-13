@@ -1,125 +1,114 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 
-interface HomeCategoriesSliderProps {
-  selectedCategory: string | null;
-  onCategorySelect: (categoryId: string | null) => void;
+interface Category {
+  id: string;
+  name: string;
+  icon_url: string | null;
 }
 
-const HomeCategoriesSlider = ({ selectedCategory, onCategorySelect }: HomeCategoriesSliderProps) => {
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+const HomeCategoriesSlider = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Fetch categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ['categories-home'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, name, icon_url')
         .order('name');
 
       if (error) throw error;
-      return data || [];
-    }
+      return data as Category[];
+    },
   });
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (containerRef.current) {
-      const scrollAmount = 200;
-      const newPosition = direction === 'left' 
-        ? Math.max(0, scrollPosition - scrollAmount)
-        : scrollPosition + scrollAmount;
-      
-      containerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
-      setScrollPosition(newPosition);
-    }
+  const itemsPerView = 6;
+  const maxIndex = Math.max(0, categories.length - itemsPerView);
+
+  const nextSlide = () => {
+    setCurrentIndex(prev => Math.min(prev + 1, maxIndex));
   };
 
-  if (categories.length === 0) return null;
+  const prevSlide = () => {
+    setCurrentIndex(prev => Math.max(prev - 1, 0));
+  };
 
-  return (
-    <div className="relative">
-      <div className="flex items-center justify-center mb-6">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => scroll('left')}
-            className="h-12 w-12 p-0 rounded-full border-2 border-blue-200 bg-white/80 backdrop-blur-sm hover:bg-blue-50 hover:border-blue-300 shadow-lg transition-all duration-300 hover:scale-105"
-          >
-            <ChevronLeft className="h-5 w-5 text-blue-600" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => scroll('right')}
-            className="h-12 w-12 p-0 rounded-full border-2 border-blue-200 bg-white/80 backdrop-blur-sm hover:bg-blue-50 hover:border-blue-300 shadow-lg transition-all duration-300 hover:scale-105"
-          >
-            <ChevronRight className="h-5 w-5 text-blue-600" />
-          </Button>
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Kategori</h2>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-20"></div>
+          ))}
         </div>
       </div>
+    );
+  }
 
-      <div className="relative">
-        <div 
-          ref={containerRef}
-          className="flex gap-8 overflow-x-auto scrollbar-hide pb-4 px-4"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {/* All Categories Button */}
-          <button
-            onClick={() => onCategorySelect(null)}
-            className={`flex-shrink-0 flex flex-col items-center p-6 transition-all duration-300 min-w-[100px] transform hover:scale-110 ${
-              selectedCategory === null
-                ? 'opacity-100'
-                : 'opacity-70 hover:opacity-100'
-            }`}
-          >
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-3 shadow-lg transition-all duration-300 ${
-              selectedCategory === null 
-                ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-blue-300' 
-                : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 hover:from-blue-100 hover:to-purple-100'
-            }`}>
-              <span className="text-2xl font-bold">
-                All
-              </span>
-            </div>
-          </button>
+  if (categories.length === 0) {
+    return null;
+  }
 
-          {/* Category Buttons */}
-          {categories.map((category) => (
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900">Kategori</h2>
+        {categories.length > itemsPerView && (
+          <div className="flex gap-2">
             <button
-              key={category.id}
-              onClick={() => onCategorySelect(category.id)}
-              className={`flex-shrink-0 flex flex-col items-center p-6 transition-all duration-300 min-w-[100px] transform hover:scale-110 ${
-                selectedCategory === category.id
-                  ? 'opacity-100'
-                  : 'opacity-70 hover:opacity-100'
-              }`}
+              onClick={prevSlide}
+              disabled={currentIndex === 0}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
             >
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-3 overflow-hidden shadow-lg transition-all duration-300 ${
-                selectedCategory === category.id 
-                  ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-blue-300' 
-                  : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 hover:from-blue-100 hover:to-purple-100'
-              }`}>
-                {category.icon_url ? (
-                  <img
-                    src={category.icon_url}
-                    alt={category.name}
-                    className="w-12 h-12 object-contain"
-                  />
-                ) : (
-                  <span className="font-bold text-xl">
-                    {category.name.charAt(0)}
-                  </span>
-                )}
-              </div>
+              <ChevronLeft className="h-4 w-4" />
             </button>
+            <button
+              onClick={nextSlide}
+              disabled={currentIndex >= maxIndex}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="overflow-hidden">
+        <div 
+          className="flex transition-transform duration-300 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)` }}
+        >
+          {categories.map((category) => (
+            <div 
+              key={category.id} 
+              className="flex-shrink-0 w-1/3 md:w-1/6 px-2"
+            >
+              <div className="bg-white rounded-lg border border-gray-200 p-4 text-center hover:shadow-md transition-shadow cursor-pointer">
+                <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 rounded-lg flex items-center justify-center">
+                  {category.icon_url ? (
+                    <img 
+                      src={category.icon_url} 
+                      alt={category.name}
+                      className="w-8 h-8 object-contain"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                      <span className="text-blue-600 text-sm font-bold">
+                        {category.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {category.name}
+                </p>
+              </div>
+            </div>
           ))}
         </div>
       </div>

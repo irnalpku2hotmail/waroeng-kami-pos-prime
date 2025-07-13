@@ -1,114 +1,116 @@
 
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Phone, Mail, ShoppingCart, Facebook, Instagram, Twitter } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 
-const HomeFooter = () => {
-  // Fetch store settings
-  const { data: settings } = useQuery({
-    queryKey: ['footer-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('settings').select('*');
-      if (error) throw error;
-      
-      const settingsMap: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsMap[setting.key] = setting.value;
-      });
-      return settingsMap;
-    }
-  });
+interface StoreInfo {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+}
 
-  const storeInfo = settings?.store_info || {};
-  const storeName = storeInfo.name || 'TokoQu';
-  const storeAddress = storeInfo.address || '';
-  const storeEmail = storeInfo.email || '';
-  const storePhone = storeInfo.phone || '';
-  const storeDescription = storeInfo.description || '';
+interface HomeFooterProps {
+  storeInfo?: StoreInfo;
+}
+
+const HomeFooter = ({ storeInfo }: HomeFooterProps) => {
+  const defaultStoreInfo = {
+    name: 'Waroeng Kami',
+    address: 'Jl. Contoh No. 123, Jakarta',
+    phone: '+62 812-3456-7890',
+    email: 'info@waroengkami.com'
+  };
+
+  const store = storeInfo || defaultStoreInfo;
 
   return (
     <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Company Info */}
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Store Info */}
           <div className="space-y-4">
-            <div className="flex items-center">
-              <ShoppingCart className="h-8 w-8 text-blue-400 mr-2" />
-              <span className="font-bold text-xl">{storeName}</span>
-            </div>
-            <p className="text-gray-300 text-sm leading-relaxed">
-              {storeDescription || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda.'}
-            </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
+            <h3 className="text-lg font-bold">{store.name}</h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                <span className="text-gray-300 text-sm">{store.address}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Phone className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 text-sm">{store.phone}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 text-sm">{store.email}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 text-sm">Buka 24 Jam</span>
+              </div>
             </div>
           </div>
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Menu Cepat</h3>
-            <ul className="space-y-2">
-              <li><Link to="/" className="text-gray-300 hover:text-white transition-colors">Beranda</Link></li>
-              <li><Link to="/products" className="text-gray-300 hover:text-white transition-colors">Produk</Link></li>
-              <li><Link to="/about" className="text-gray-300 hover:text-white transition-colors">Tentang Kami</Link></li>
-              <li><Link to="/contact" className="text-gray-300 hover:text-white transition-colors">Kontak</Link></li>
-            </ul>
+            <h3 className="text-lg font-bold">Menu Cepat</h3>
+            <div className="space-y-2">
+              <Link to="/" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Beranda
+              </Link>
+              <Link to="/products" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Produk
+              </Link>
+              <Link to="/categories" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Kategori
+              </Link>
+              <Link to="/about" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Tentang Kami
+              </Link>
+            </div>
           </div>
 
           {/* Customer Service */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Layanan Pelanggan</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Panduan Belanja</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Kebijakan Privasi</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Syarat & Ketentuan</a></li>
-            </ul>
+            <h3 className="text-lg font-bold">Layanan</h3>
+            <div className="space-y-2">
+              <Link to="/help" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Bantuan
+              </Link>
+              <Link to="/contact" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Hubungi Kami
+              </Link>
+              <Link to="/faq" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                FAQ
+              </Link>
+              <Link to="/terms" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Syarat & Ketentuan
+              </Link>
+            </div>
           </div>
 
-          {/* Contact Info */}
+          {/* Social Media */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Hubungi Kami</h3>
-            <div className="space-y-3">
-              {storeAddress && (
-                <div className="flex items-start space-x-3">
-                  <MapPin className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">{storeAddress}</span>
-                </div>
-              )}
-              {storePhone && (
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-blue-400" />
-                  <a href={`tel:${storePhone}`} className="text-gray-300 hover:text-white transition-colors text-sm">
-                    {storePhone}
-                  </a>
-                </div>
-              )}
-              {storeEmail && (
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-blue-400" />
-                  <a href={`mailto:${storeEmail}`} className="text-gray-300 hover:text-white transition-colors text-sm">
-                    {storeEmail}
-                  </a>
-                </div>
-              )}
+            <h3 className="text-lg font-bold">Ikuti Kami</h3>
+            <div className="space-y-2">
+              <a href="#" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Facebook
+              </a>
+              <a href="#" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Instagram
+              </a>
+              <a href="#" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                Twitter
+              </a>
+              <a href="#" className="block text-gray-300 hover:text-white text-sm transition-colors">
+                WhatsApp
+              </a>
             </div>
           </div>
         </div>
 
-        {/* Bottom Section */}
         <div className="border-t border-gray-800 mt-8 pt-8 text-center">
           <p className="text-gray-400 text-sm">
-            © 2024 {storeName}. Semua hak dilindungi.
+            © 2024 {store.name}. Semua hak dilindungi.
           </p>
         </div>
       </div>
