@@ -26,7 +26,7 @@ export const useProductLikes = () => {
     if (!user?.id) return;
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('user_product_likes')
         .select('product_id')
         .eq('user_id', user.id);
@@ -58,7 +58,7 @@ export const useProductLikes = () => {
     try {
       if (isLiked) {
         // Remove like
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('user_product_likes')
           .delete()
           .eq('user_id', user.id)
@@ -80,7 +80,7 @@ export const useProductLikes = () => {
         });
       } else {
         // Add like
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('user_product_likes')
           .insert({
             user_id: user.id,

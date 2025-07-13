@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +21,7 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { addItem } = useCart();
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
@@ -88,13 +89,13 @@ const ProductDetail = () => {
     },
   });
 
-  const { isLiked, toggleLike } = useProductLikes(id || '');
+  const { toggleLike, isLiked } = useProductLikes();
 
   const likeMutation = useMutation({
     mutationFn: async () => {
       if (!user || !id) throw new Error('User not authenticated');
       
-      if (isLiked) {
+      if (isLiked(id)) {
         const { error } = await supabase
           .from('user_product_likes')
           .delete()
@@ -111,8 +112,8 @@ const ProductDetail = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-likes', id] });
       toast({ 
-        title: isLiked ? 'Removed from favorites' : 'Added to favorites',
-        description: isLiked ? 'Product removed from your favorites' : 'Product added to your favorites'
+        title: isLiked(id) ? 'Removed from favorites' : 'Added to favorites',
+        description: isLiked(id) ? 'Product removed from your favorites' : 'Product added to your favorites'
       });
     },
   });
@@ -153,13 +154,12 @@ const ProductDetail = () => {
       minimum_quantity: 1
     };
 
-    addToCart({
+    addItem({
       id: product.id,
       name: product.name,
-      price: price,
-      quantity: quantity,
+      selling_price: price,
       image_url: product.image_url,
-      variant: variant
+      current_stock: product.current_stock
     });
 
     toast({
@@ -354,10 +354,10 @@ const ProductDetail = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => toggleLike()}
-                  className={isLiked ? 'text-red-500 hover:text-red-600' : ''}
+                  onClick={() => toggleLike(id || '')}
+                  className={isLiked(id || '') ? 'text-red-500 hover:text-red-600' : ''}
                 >
-                  <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                  <Heart className={`h-4 w-4 ${isLiked(id || '') ? 'fill-current' : ''}`} />
                 </Button>
               </div>
               <Button
@@ -381,11 +381,11 @@ const ProductDetail = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Stock:</span>
-                  <span>{product.current_stock} {product.units?.abbreviation}</span>
+                  <span>{product.current_stock} {product.units?.abbreviation || ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Minimum Order:</span>
-                  <span>{product.min_quantity} {product.units?.abbreviation}</span>
+                  <span>{product.min_quantity} {product.units?.abbreviation || ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Loyalty Points:</span>
@@ -407,7 +407,8 @@ const ProductDetail = () => {
         {/* Product Recommendations */}
         <ProductRecommendations 
           currentProductId={id || ''} 
-          categoryId={product.category_id} 
+          categoryId={product.category_id}
+          onProductClick={(productId) => navigate(`/product/${productId}`)}
         />
       </main>
 

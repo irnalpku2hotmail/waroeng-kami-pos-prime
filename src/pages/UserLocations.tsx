@@ -31,10 +31,8 @@ interface UserLocation {
   is_primary: boolean;
   created_at: string;
   updated_at: string;
-  profiles?: {
-    full_name: string;
-    email: string;
-  };
+  user_name?: string;
+  user_email?: string;
 }
 
 const UserLocations = () => {
@@ -53,21 +51,37 @@ const UserLocations = () => {
 
       if (locationError) throw locationError;
 
-      // Then get profile data for each location
-      const locationsWithProfiles = await Promise.all(
-        (locationData || []).map(async (location) => {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .eq('id', location.user_id)
-            .single();
+      if (!locationData || locationData.length === 0) {
+        return [];
+      }
 
-          return {
-            ...location,
-            profiles: profileData || { full_name: 'User', email: '' }
-          };
-        })
-      );
+      // Then get profile data for each location
+      const userIds = [...new Set(locationData.map(loc => loc.user_id).filter(Boolean))];
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Create a map of user profiles for quick lookup
+      const profilesMap = new Map();
+      (profilesData || []).forEach(profile => {
+        profilesMap.set(profile.id, profile);
+      });
+
+      // Combine location data with profile data
+      const locationsWithProfiles = locationData.map(location => {
+        const profile = profilesMap.get(location.user_id);
+        return {
+          ...location,
+          user_name: profile?.full_name || 'Unknown User',
+          user_email: profile?.email || ''
+        };
+      });
 
       return locationsWithProfiles.filter(location => 
         location.latitude && location.longitude
@@ -98,10 +112,10 @@ const UserLocations = () => {
   });
 
   const filteredLocations = locations.filter(location =>
-    location.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    location.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    location.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    location.province?.toLowerCase().includes(searchTerm.toLowerCase())
+    (location.user_name && location.user_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.address && location.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.city && location.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (location.province && location.province.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (isLoading) {
@@ -197,11 +211,11 @@ const UserLocations = () => {
                   >
                     <Popup>
                       <div className="p-2">
-                        <h3 className="font-semibold">{location.profiles?.full_name || 'User'}</h3>
-                        <p className="text-sm text-gray-600">{location.profiles?.email || ''}</p>
-                        <p className="text-sm mt-1">{location.address}</p>
+                        <h3 className="font-semibold">{location.user_name || 'User'}</h3>
+                        <p className="text-sm text-gray-600">{location.user_email || ''}</p>
+                        <p className="text-sm mt-1">{location.address || ''}</p>
                         <p className="text-xs text-gray-500">
-                          {location.city}, {location.province}
+                          {location.city || ''}, {location.province || ''}
                         </p>
                       </div>
                     </Popup>
@@ -234,12 +248,12 @@ const UserLocations = () => {
                     <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <h3 className="font-medium text-gray-900">
-                        {location.profiles?.full_name || 'User'}
+                        {location.user_name || 'User'}
                       </h3>
-                      <p className="text-sm text-gray-600">{location.profiles?.email || ''}</p>
-                      <p className="text-sm text-gray-700 mt-1">{location.address}</p>
+                      <p className="text-sm text-gray-600">{location.user_email || ''}</p>
+                      <p className="text-sm text-gray-700 mt-1">{location.address || ''}</p>
                       <p className="text-xs text-gray-500">
-                        {location.city}, {location.province} {location.postal_code}
+                        {location.city || ''}, {location.province || ''} {location.postal_code || ''}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Koordinat: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
