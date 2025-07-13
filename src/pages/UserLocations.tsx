@@ -5,18 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { MapPin, Users, CheckCircle, Search } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import Layout from '@/components/Layout';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Fix for default markers in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 interface UserLocation {
   id: string;
@@ -111,6 +100,9 @@ const UserLocations = () => {
   const totalUsers = users.length;
   const usersWithLocation = new Set(locations.map(loc => loc.user_id)).size;
 
+  console.log('UserLocations render - locations:', locations);
+  console.log('UserLocations render - users:', users);
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -162,12 +154,12 @@ const UserLocations = () => {
           </Card>
         </div>
 
-        {/* Interactive Map with Search */}
+        {/* Search and Location List */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Interactive Map
+              User Locations
             </CardTitle>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -180,38 +172,44 @@ const UserLocations = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="w-full h-96 rounded-lg border overflow-hidden">
-              <MapContainer
-                center={[-6.2088, 106.8456]}
-                zoom={10}
-                style={{ height: '100%', width: '100%' }}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {locations
+            <div className="space-y-4">
+              {locations.length > 0 ? (
+                locations
                   .filter(location => location.latitude && location.longitude)
                   .map((location) => (
-                    <Marker 
-                      key={location.id}
-                      position={[Number(location.latitude), Number(location.longitude)]}
-                    >
-                      <Popup>
-                        <div className="p-2">
+                    <div key={location.id} className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div>
                           <h3 className="font-semibold">{location.user_profile?.full_name || 'Unknown User'}</h3>
                           <p className="text-sm text-gray-600">{location.user_profile?.email || ''}</p>
                           {location.address && <p className="text-sm mt-1">{location.address}</p>}
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-sm text-gray-500">
+                            {location.city}, {location.province}, {location.country}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Coordinates: {location.latitude}, {location.longitude}
+                          </p>
+                          <p className="text-xs text-gray-400">
                             Updated: {new Date(location.updated_at).toLocaleDateString()}
                           </p>
                         </div>
-                      </Popup>
-                    </Marker>
-                  ))}
-              </MapContainer>
+                        <MapPin className="h-5 w-5 text-blue-500 mt-1" />
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center py-8">
+                  <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No location data found</p>
+                  {searchUser && (
+                    <p className="text-sm text-gray-400 mt-2">
+                      Try searching for a different user
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-500 mt-4">
               {locations.length} location(s) found.
             </p>
           </CardContent>
