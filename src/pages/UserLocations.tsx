@@ -32,8 +32,8 @@ interface UserLocation {
   is_primary: boolean;
   created_at: string;
   updated_at: string;
-  user_name?: string;
-  user_email?: string;
+  user_name: string;
+  user_email: string;
 }
 
 const UserLocations = () => {
@@ -91,16 +91,23 @@ const UserLocations = () => {
         // Create a map of user profiles for quick lookup
         const profilesMap = new Map();
         (profilesData || []).forEach(profile => {
-          profilesMap.set(profile.id, profile);
+          if (profile && profile.id) {
+            profilesMap.set(profile.id, profile);
+          }
         });
 
         // Combine location data with profile data
         const locationsWithProfiles = locationData.map(location => {
           const profile = profilesMap.get(location.user_id);
+          
+          // Ensure we always return strings for user_name and user_email
+          const userName = profile?.full_name;
+          const userEmail = profile?.email;
+          
           return {
             ...location,
-            user_name: profile?.full_name || 'Unknown User',
-            user_email: profile?.email || ''
+            user_name: typeof userName === 'string' ? userName : 'Unknown User',
+            user_email: typeof userEmail === 'string' ? userEmail : ''
           };
         });
 
@@ -147,12 +154,15 @@ const UserLocations = () => {
     },
   });
 
-  const filteredLocations = locations.filter(location =>
-    (location.user_name && location.user_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.address && location.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.city && location.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (location.province && location.province.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredLocations = locations.filter(location => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (location.user_name && location.user_name.toLowerCase().includes(searchLower)) ||
+      (location.address && location.address.toLowerCase().includes(searchLower)) ||
+      (location.city && location.city.toLowerCase().includes(searchLower)) ||
+      (location.province && location.province.toLowerCase().includes(searchLower))
+    );
+  });
 
   if (error) {
     return (
