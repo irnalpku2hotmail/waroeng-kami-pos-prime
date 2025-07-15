@@ -1,119 +1,122 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Package, Grid3X3 } from 'lucide-react';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 interface Category {
   id: string;
   name: string;
+  description: string | null;
   icon_url: string | null;
+  product_count?: number;
 }
 
-const HomeCategoriesSlider = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+interface HomeCategoriesSliderProps {
+  onCategorySelect?: (categoryId: string) => void;
+}
 
+const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) => {
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ['categories-home'],
+    queryKey: ['categories-with-count'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, icon_url')
+        .select(`
+          *,
+          products(id)
+        `)
         .order('name');
 
       if (error) throw error;
-      return data as Category[];
-    },
+
+      return data.map(category => ({
+        ...category,
+        product_count: category.products?.length || 0
+      }));
+    }
   });
 
-  const itemsPerView = 6;
-  const maxIndex = Math.max(0, categories.length - itemsPerView);
-
-  const nextSlide = useCallback(() => {
-    setCurrentIndex(prev => Math.min(prev + 1, maxIndex));
-  }, [maxIndex]);
-
-  const prevSlide = useCallback(() => {
-    setCurrentIndex(prev => Math.max(prev - 1, 0));
-  }, []);
+  const handleCategoryClick = (categoryId: string) => {
+    if (onCategorySelect) {
+      onCategorySelect(categoryId);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="w-full">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Kategori</h2>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-20"></div>
-          ))}
-        </div>
+      <div className="flex justify-center items-center h-32">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  if (categories.length === 0) {
-    return null;
-  }
-
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Kategori</h2>
-        {categories.length > itemsPerView && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={prevSlide}
-              disabled={currentIndex === 0}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={nextSlide}
-              disabled={currentIndex >= maxIndex}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="overflow-hidden">
-        <div 
-          className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)` }}
-        >
+    <div className="relative">
+      <Carousel
+        opts={{
+          align: "start",
+          loop: true,
+        }}
+        className="w-full"
+      >
+        <CarouselContent>
           {categories.map((category) => (
-            <div 
-              key={category.id} 
-              className="flex-shrink-0 w-1/3 md:w-1/6 px-2"
-            >
-              <div className="bg-white rounded-lg border border-gray-200 p-4 text-center hover:shadow-md transition-shadow cursor-pointer">
-                <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 rounded-lg flex items-center justify-center">
-                  {category.icon_url ? (
-                    <img 
-                      src={category.icon_url} 
-                      alt={category.name}
-                      className="w-8 h-8 object-contain"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                      <span className="text-blue-600 text-sm font-bold">
-                        {category.name.charAt(0)}
-                      </span>
+            <CarouselItem key={category.id} className="basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/6">
+              <Card 
+                className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden border-2 border-transparent hover:border-blue-500"
+                onClick={() => handleCategoryClick(category.id)}
+              >
+                <CardContent className="p-4 text-center">
+                  <div className="relative mb-3">
+                    <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      {category.icon_url ? (
+                        <img 
+                          src={category.icon_url} 
+                          alt={category.name}
+                          className="w-8 h-8 object-cover rounded-full"
+                        />
+                      ) : (
+                        <Grid3X3 className="h-8 w-8 text-blue-600" />
+                      )}
                     </div>
+                    {category.product_count && category.product_count > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs bg-blue-500">
+                        {category.product_count}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-1">
+                    {category.name}
+                  </h3>
+                  
+                  {category.description && (
+                    <p className="text-xs text-gray-500 line-clamp-2">
+                      {category.description}
+                    </p>
                   )}
-                </div>
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {category.name}
-                </p>
-              </div>
-            </div>
+                  
+                  <div className="flex items-center justify-center mt-2 text-xs text-gray-500">
+                    <Package className="h-3 w-3 mr-1" />
+                    {category.product_count} produk
+                  </div>
+                </CardContent>
+              </Card>
+            </CarouselItem>
           ))}
-        </div>
-      </div>
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Star, Package } from 'lucide-react';
+import { ShoppingCart, Star, TrendingUp } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -22,33 +22,41 @@ interface Product {
   selling_price: number;
   image_url: string | null;
   current_stock: number;
-  min_stock: number;
-  loyalty_points: number;
-  categories?: { name: string } | null;
+  total_sold?: number;
 }
 
-interface ProductCarouselProps {
+interface BestSellingProductsProps {
   onProductClick?: (product: Product) => void;
 }
 
-const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
+const BestSellingProducts = ({ onProductClick }: BestSellingProductsProps) => {
   const { user } = useAuth();
   const { addItem } = useCart();
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['all-products'],
+    queryKey: ['best-selling-products'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
         .select(`
           *,
-          categories(name)
+          transaction_items(quantity)
         `)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       if (error) throw error;
-      return data || [];
+
+      const productsWithSales = data.map(product => {
+        const totalSold = product.transaction_items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
+        return {
+          ...product,
+          total_sold: totalSold
+        };
+      });
+
+      return productsWithSales.sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0));
     }
   });
 
@@ -94,7 +102,7 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
         className="w-full"
       >
         <CarouselContent>
-          {products.map((product) => (
+          {products.map((product, index) => (
             <CarouselItem key={product.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
               <Card 
                 className="group hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border-0 bg-gradient-to-br from-white to-gray-50"
@@ -113,19 +121,18 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
                     )}
                   </div>
                   
-                  {/* Category Badge */}
-                  {product.categories && (
-                    <Badge className="absolute top-2 left-2 bg-blue-100 text-blue-800 text-xs">
-                      {product.categories.name}
-                    </Badge>
-                  )}
+                  {/* Best Seller Badge */}
+                  <Badge className="absolute top-2 left-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-2 py-1 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    #{index + 1}
+                  </Badge>
                   
                   {/* Stock Status */}
                   {product.current_stock <= 0 ? (
                     <Badge variant="destructive" className="absolute top-2 right-2 text-xs">
                       Habis
                     </Badge>
-                  ) : product.current_stock <= product.min_stock ? (
+                  ) : product.current_stock <= 10 ? (
                     <Badge variant="secondary" className="absolute top-2 right-2 text-xs bg-orange-100 text-orange-800">
                       Sisa {product.current_stock}
                     </Badge>
@@ -146,19 +153,12 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
                     <span className="text-xs text-gray-500 ml-1">(4.5)</span>
                   </div>
 
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-bold text-blue-600">
                       Rp {product.selling_price.toLocaleString('id-ID')}
                     </span>
                     <span className="text-xs text-green-600 font-medium">
-                      +{product.loyalty_points} poin
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Package className="h-3 w-3" />
-                      Stok: {product.current_stock}
+                      {product.total_sold || 0} terjual
                     </span>
                   </div>
 
@@ -183,4 +183,4 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
   );
 };
 
-export default ProductCarousel;
+export default BestSellingProducts;
