@@ -10,16 +10,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 
-const UnitsTab = () => {
+interface UnitsTabProps {
+  units: any[];
+  isLoading: boolean;
+  searchTerm: string;
+}
+
+const UnitsTab = ({ units: externalUnits, isLoading: externalLoading, searchTerm: externalSearchTerm }: UnitsTabProps) => {
   const [open, setOpen] = useState(false);
   const [editUnit, setEditUnit] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(externalSearchTerm || '');
   const [unitData, setUnitData] = useState({
     name: '',
     abbreviation: ''
   });
   const queryClient = useQueryClient();
 
+  // Use external data if provided, otherwise fetch our own
   const { data: units = [], isLoading } = useQuery({
     queryKey: ['units', searchTerm],
     queryFn: async () => {
@@ -32,8 +39,12 @@ const UnitsTab = () => {
       const { data, error } = await query.order('name');
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !externalUnits.length // Only fetch if external data is not provided
   });
+
+  const finalUnits = externalUnits.length > 0 ? externalUnits : units;
+  const finalLoading = externalUnits.length > 0 ? externalLoading : isLoading;
 
   const checkDuplicateName = async (name: string, excludeId?: string) => {
     const { data, error } = await supabase
@@ -193,9 +204,9 @@ const UnitsTab = () => {
       </div>
 
       <div className="border rounded-lg">
-        {isLoading ? (
+        {finalLoading ? (
           <div className="text-center py-8">Loading...</div>
-        ) : units.length === 0 ? (
+        ) : finalUnits.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">
               {searchTerm ? 'Tidak ada unit yang ditemukan' : 'Belum ada unit'}
@@ -211,7 +222,7 @@ const UnitsTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {units.map((unit) => (
+              {finalUnits.map((unit) => (
                 <TableRow key={unit.id}>
                   <TableCell className="font-medium">{String(unit.name || '')}</TableCell>
                   <TableCell>{String(unit.abbreviation || '')}</TableCell>

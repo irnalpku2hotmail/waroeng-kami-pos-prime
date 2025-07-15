@@ -31,7 +31,7 @@ const Expenses = () => {
 
   const [expenseData, setExpenseData] = useState({
     title: '',
-    category: 'operational',
+    category: 'operational' as const,
     amount: '',
     expense_date: new Date().toISOString().slice(0, 10),
     description: '',
@@ -90,13 +90,13 @@ const Expenses = () => {
 
   const createExpense = useMutation({
     mutationFn: async (data: any) => {
-      const { user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('User not authenticated');
 
       const expensePayload = {
         ...data,
         amount: parseFloat(data.amount),
-        user_id: user.user.id
+        user_id: userData.user.id
       };
 
       if (editExpense) {
@@ -164,7 +164,7 @@ const Expenses = () => {
     setEditExpense(null);
     setExpenseData({
       title: '',
-      category: 'operational',
+      category: 'operational' as const,
       amount: '',
       expense_date: new Date().toISOString().slice(0, 10),
       description: '',
@@ -221,7 +221,7 @@ const Expenses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Kategori *</Label>
-                  <Select value={expenseData.category} onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value }))}>
+                  <Select value={expenseData.category} onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value as any }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>

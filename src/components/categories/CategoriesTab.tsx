@@ -11,10 +11,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 
-const CategoriesTab = () => {
+interface CategoriesTabProps {
+  categories: any[];
+  isLoading: boolean;
+  searchTerm: string;
+}
+
+const CategoriesTab = ({ categories: externalCategories, isLoading: externalLoading, searchTerm: externalSearchTerm }: CategoriesTabProps) => {
   const [open, setOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(externalSearchTerm || '');
   const [categoryData, setCategoryData] = useState({
     name: '',
     description: '',
@@ -22,6 +28,7 @@ const CategoriesTab = () => {
   });
   const queryClient = useQueryClient();
 
+  // Use external data if provided, otherwise fetch our own
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['categories', searchTerm],
     queryFn: async () => {
@@ -34,8 +41,12 @@ const CategoriesTab = () => {
       const { data, error } = await query.order('name');
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !externalCategories.length // Only fetch if external data is not provided
   });
+
+  const finalCategories = externalCategories.length > 0 ? externalCategories : categories;
+  const finalLoading = externalCategories.length > 0 ? externalLoading : isLoading;
 
   const checkDuplicateName = async (name: string, excludeId?: string) => {
     const { data, error } = await supabase
@@ -205,9 +216,9 @@ const CategoriesTab = () => {
       </div>
 
       <div className="border rounded-lg">
-        {isLoading ? (
+        {finalLoading ? (
           <div className="text-center py-8">Loading...</div>
-        ) : categories.length === 0 ? (
+        ) : finalCategories.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">
               {searchTerm ? 'Tidak ada kategori yang ditemukan' : 'Belum ada kategori'}
@@ -223,7 +234,7 @@ const CategoriesTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.map((category) => (
+              {finalCategories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{String(category.name || '')}</TableCell>
                   <TableCell>{String(category.description || '')}</TableCell>
