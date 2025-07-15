@@ -4,12 +4,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, ShoppingCart, Menu, X, MapPin } from 'lucide-react';
+import { Search, ShoppingCart, Menu, X, LogOut, User, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-const HomeNavbar = () => {
+interface HomeNavbarProps {
+  storeInfo?: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+  };
+}
+
+const HomeNavbar = ({ storeInfo }: HomeNavbarProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getTotalItems } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -20,6 +39,26 @@ const HomeNavbar = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+      toast({
+        title: 'Berhasil logout',
+        description: 'Anda telah berhasil keluar dari akun.',
+      });
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: 'Error',
+        description: 'Terjadi kesalahan saat logout.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const storeName = storeInfo?.name || 'Waroeng Kami';
+
   return (
     <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -29,7 +68,7 @@ const HomeNavbar = () => {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">W</span>
             </div>
-            <span className="font-bold text-xl text-gray-900">Waroeng Kami</span>
+            <span className="font-bold text-xl text-gray-900">{storeName}</span>
           </Link>
 
           {/* Search Bar - Desktop */}
@@ -53,30 +92,52 @@ const HomeNavbar = () => {
 
           {/* Right Section */}
           <div className="flex items-center space-x-4">
-            {/* Location Indicator */}
-            <div className="hidden lg:flex items-center text-sm text-gray-600">
-              <MapPin className="h-4 w-4 mr-1" />
-              <span>Jakarta</span>
-            </div>
-
             {/* Cart */}
-            <Button variant="ghost" size="sm" className="relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative"
+              onClick={() => {
+                // For now, just show cart items count
+                toast({
+                  title: 'Keranjang',
+                  description: `Anda memiliki ${getTotalItems()} item di keranjang`,
+                });
+              }}
+            >
               <ShoppingCart className="h-5 w-5" />
-              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                0
-              </Badge>
+              {getTotalItems() > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  {getTotalItems()}
+                </Badge>
+              )}
             </Button>
 
-            {/* Auth Buttons */}
+            {/* Auth Section */}
             {user ? (
               <div className="hidden md:flex items-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate('/profile')}
-                >
-                  Profile
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/orders')}>
+                      <Package className="h-4 w-4 mr-2" />
+                      Riwayat Pesanan
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-2">
@@ -132,16 +193,41 @@ const HomeNavbar = () => {
           <div className="md:hidden border-t py-4">
             <div className="space-y-2">
               {user ? (
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start"
-                  onClick={() => {
-                    navigate('/profile');
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  Profile
-                </Button>
+                <>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Profile
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigate('/orders');
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Riwayat Pesanan
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </>
               ) : (
                 <>
                   <Button 

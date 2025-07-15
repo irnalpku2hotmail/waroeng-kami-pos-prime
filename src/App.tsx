@@ -34,7 +34,6 @@ import Inventory from "./pages/Inventory";
 import Frontend from "./pages/Frontend";
 import SearchResults from "./pages/SearchResults";
 import Notifications from "./pages/Notifications";
-import UserLocations from "./pages/UserLocations";
 
 // Auth pages
 import Login from "./pages/auth/Login";
@@ -85,7 +84,6 @@ function App() {
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/frontend" element={<ProtectedRoute><Frontend /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                <Route path="/user-locations" element={<ProtectedRoute><UserLocations /></ProtectedRoute>} />
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />

@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeHero from '@/components/home/HomeHero';
 import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
 import ProductCarousel from '@/components/home/ProductCarousel';
 import FlashSaleCarousel from '@/components/home/FlashSaleCarousel';
@@ -113,14 +112,9 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <HomeNavbar />
+      <HomeNavbar storeInfo={storeInfo} />
       
       <main className="bg-white">
-        <HomeHero 
-          storeName={storeInfo?.name}
-          onProductClick={handleProductClick}
-        />
-        
         <div className="container mx-auto px-4 py-8 space-y-8">
           {/* Categories Section */}
           <section>
