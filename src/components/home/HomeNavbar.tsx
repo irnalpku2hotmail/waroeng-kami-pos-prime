@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -62,8 +63,11 @@ const HomeNavbar = ({ storeInfo }: HomeNavbarProps) => {
     
     const nameValue = storeInfo.name;
     
+    // First check if nameValue is null
+    if (nameValue === null) return 'Waroeng Kami';
+    
     // Handle case where name might be an object (but not null)
-    if (nameValue !== null && typeof nameValue === 'object') {
+    if (typeof nameValue === 'object') {
       if ('name' in nameValue && typeof nameValue.name === 'string') {
         return nameValue.name;
       }
