@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 interface Category {
   id: string;
@@ -29,13 +29,13 @@ const HomeCategoriesSlider = () => {
   const itemsPerView = 6;
   const maxIndex = Math.max(0, categories.length - itemsPerView);
 
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
     setCurrentIndex(prev => Math.min(prev + 1, maxIndex));
-  };
+  }, [maxIndex]);
 
-  const prevSlide = () => {
+  const prevSlide = useCallback(() => {
     setCurrentIndex(prev => Math.max(prev - 1, 0));
-  };
+  }, []);
 
   if (isLoading) {
     return (
@@ -61,6 +61,7 @@ const HomeCategoriesSlider = () => {
         {categories.length > itemsPerView && (
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={prevSlide}
               disabled={currentIndex === 0}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
@@ -68,6 +69,7 @@ const HomeCategoriesSlider = () => {
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
+              type="button"
               onClick={nextSlide}
               disabled={currentIndex >= maxIndex}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"

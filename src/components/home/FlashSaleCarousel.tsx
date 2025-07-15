@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -72,13 +72,17 @@ const FlashSaleCarousel = () => {
     return flashSaleItems.slice(start, start + itemsPerPage);
   }, [flashSaleItems, currentPage]);
 
-  const nextPage = () => {
-    setCurrentPage((prev) => (prev + 1) % totalPages);
-  };
+  const nextPage = useCallback(() => {
+    if (totalPages > 1) {
+      setCurrentPage((prev) => (prev + 1) % totalPages);
+    }
+  }, [totalPages]);
 
-  const prevPage = () => {
-    setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages);
-  };
+  const prevPage = useCallback(() => {
+    if (totalPages > 1) {
+      setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages);
+    }
+  }, [totalPages]);
 
   if (isLoading || flashSaleItems.length === 0) {
     return null;
@@ -93,6 +97,7 @@ const FlashSaleCarousel = () => {
         </div>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={prevPage}
             disabled={totalPages <= 1}
             className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
@@ -100,6 +105,7 @@ const FlashSaleCarousel = () => {
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={nextPage}
             disabled={totalPages <= 1}
             className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
