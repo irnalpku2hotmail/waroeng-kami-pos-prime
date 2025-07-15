@@ -67,18 +67,20 @@ const HomeNavbar = ({ storeInfo }: HomeNavbarProps) => {
     // First check if nameValue is null
     if (nameValue === null) return 'Waroeng Kami';
     
-    // Handle case where name might be an object (but not null)
-    if (typeof nameValue === 'object' && nameValue !== null) {
-      if ('name' in nameValue && typeof nameValue.name === 'string') {
-        return nameValue.name;
-      }
-      // If it's an object but doesn't have a name property, return default
-      return 'Waroeng Kami';
-    }
-    
     // Handle case where name is a direct string
     if (typeof nameValue === 'string') {
       return nameValue;
+    }
+    
+    // Handle case where name might be an object (but not null)
+    if (typeof nameValue === 'object') {
+      // Use type assertion since we've already checked it's not null
+      const objValue = nameValue as Record<string, any>;
+      if ('name' in objValue && typeof objValue.name === 'string') {
+        return objValue.name;
+      }
+      // If it's an object but doesn't have a name property, return default
+      return 'Waroeng Kami';
     }
     
     // Convert any other type to string safely
