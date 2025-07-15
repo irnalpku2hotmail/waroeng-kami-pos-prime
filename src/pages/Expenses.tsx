@@ -16,6 +16,9 @@ import { Plus, Edit, Trash2, Search, DollarSign, TrendingUp, Eye, FileText } fro
 import Layout from '@/components/Layout';
 import ExpenseDetailsModal from '@/components/ExpenseDetailsModal';
 import PaginationComponent from '@/components/PaginationComponent';
+import { Database } from '@/integrations/supabase/types';
+
+type ExpenseCategory = Database['public']['Enums']['expense_category'];
 
 const ITEMS_PER_PAGE = 10;
 
@@ -25,13 +28,13 @@ const Expenses = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | ExpenseCategory>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   const [expenseData, setExpenseData] = useState({
     title: '',
-    category: 'operational' as const,
+    category: 'operational' as ExpenseCategory,
     amount: '',
     expense_date: new Date().toISOString().slice(0, 10),
     description: '',
@@ -164,7 +167,7 @@ const Expenses = () => {
     setEditExpense(null);
     setExpenseData({
       title: '',
-      category: 'operational' as const,
+      category: 'operational' as ExpenseCategory,
       amount: '',
       expense_date: new Date().toISOString().slice(0, 10),
       description: '',
@@ -180,9 +183,9 @@ const Expenses = () => {
   const getCategoryBadge = (category: string) => {
     const colors = {
       operational: 'bg-blue-100 text-blue-800',
-      marketing: 'bg-purple-100 text-purple-800',
-      inventory: 'bg-green-100 text-green-800',
       maintenance: 'bg-yellow-100 text-yellow-800',
+      utilities: 'bg-green-100 text-green-800',
+      supplies: 'bg-purple-100 text-purple-800',
       other: 'bg-gray-100 text-gray-800'
     };
     return colors[category as keyof typeof colors] || colors.other;
@@ -221,15 +224,15 @@ const Expenses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Kategori *</Label>
-                  <Select value={expenseData.category} onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value as any }))}>
+                  <Select value={expenseData.category} onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value as ExpenseCategory }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="operational">Operasional</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="inventory">Inventory</SelectItem>
                       <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="utilities">Utilitas</SelectItem>
+                      <SelectItem value="supplies">Supplies</SelectItem>
                       <SelectItem value="other">Lainnya</SelectItem>
                     </SelectContent>
                   </Select>
@@ -342,7 +345,7 @@ const Expenses = () => {
             />
           </div>
           <Select value={categoryFilter} onValueChange={(value) => {
-            setCategoryFilter(value);
+            setCategoryFilter(value as 'all' | ExpenseCategory);
             setCurrentPage(1);
           }}>
             <SelectTrigger className="w-48">
@@ -351,9 +354,9 @@ const Expenses = () => {
             <SelectContent>
               <SelectItem value="all">Semua Kategori</SelectItem>
               <SelectItem value="operational">Operasional</SelectItem>
-              <SelectItem value="marketing">Marketing</SelectItem>
-              <SelectItem value="inventory">Inventory</SelectItem>
               <SelectItem value="maintenance">Maintenance</SelectItem>
+              <SelectItem value="utilities">Utilitas</SelectItem>
+              <SelectItem value="supplies">Supplies</SelectItem>
               <SelectItem value="other">Lainnya</SelectItem>
             </SelectContent>
           </Select>
