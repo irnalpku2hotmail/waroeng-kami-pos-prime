@@ -57,7 +57,31 @@ const HomeNavbar = ({ storeInfo }: HomeNavbarProps) => {
     }
   };
 
-  const storeName = storeInfo?.name || 'Waroeng Kami';
+  // Safely extract store name
+  const getStoreName = (): string => {
+    if (!storeInfo?.name) return 'Waroeng Kami';
+    
+    const nameValue = storeInfo.name;
+    
+    // Handle case where name might be an object
+    if (typeof nameValue === 'object' && nameValue !== null) {
+      if ('name' in nameValue && typeof nameValue.name === 'string') {
+        return nameValue.name;
+      }
+      // If it's an object but doesn't have a name property, return default
+      return 'Waroeng Kami';
+    }
+    
+    // Handle case where name is a direct string
+    if (typeof nameValue === 'string') {
+      return nameValue;
+    }
+    
+    // Convert any other type to string safely
+    return String(nameValue) || 'Waroeng Kami';
+  };
+
+  const storeName = getStoreName();
 
   return (
     <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
