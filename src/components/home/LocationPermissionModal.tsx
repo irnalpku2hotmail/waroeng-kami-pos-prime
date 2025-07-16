@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,17 +24,36 @@ const LocationPermissionModal = ({
   onAllow, 
   onDeny 
 }: LocationPermissionModalProps) => {
-  const handleAllow = () => {
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  const handleAllow = async () => {
+    setIsGettingLocation(true);
+    
+    if (!navigator.geolocation) {
+      console.log('Geolocation not supported');
+      onDeny?.();
+      onOpenChange(false);
+      setIsGettingLocation(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         console.log('Location granted:', position.coords);
         onAllow?.();
         onOpenChange(false);
+        setIsGettingLocation(false);
       },
       (error) => {
         console.log('Location denied:', error);
         onDeny?.();
         onOpenChange(false);
+        setIsGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 600000
       }
     );
   };
@@ -57,11 +77,11 @@ const LocationPermissionModal = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
-          <Button variant="outline" onClick={handleDeny}>
+          <Button variant="outline" onClick={handleDeny} disabled={isGettingLocation}>
             Tidak Sekarang
           </Button>
-          <Button onClick={handleAllow}>
-            Izinkan Akses
+          <Button onClick={handleAllow} disabled={isGettingLocation}>
+            {isGettingLocation ? 'Mendapatkan Lokasi...' : 'Izinkan Akses'}
           </Button>
         </DialogFooter>
       </DialogContent>

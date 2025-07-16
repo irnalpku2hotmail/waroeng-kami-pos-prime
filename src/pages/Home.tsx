@@ -1,134 +1,62 @@
 
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import FrontendHero from '@/components/frontend/FrontendHero';
 import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
-import ProductCarousel from '@/components/home/ProductCarousel';
-import FlashSaleCarousel from '@/components/home/FlashSaleCarousel';
+import HomeFlashSale from '@/components/home/HomeFlashSale';
 import BestSellingProducts from '@/components/home/BestSellingProducts';
 import RecentlyBoughtProducts from '@/components/home/RecentlyBoughtProducts';
+import ProductCarousel from '@/components/home/ProductCarousel';
 import HomeFooter from '@/components/home/HomeFooter';
-import LocationPermissionModal from '@/components/home/LocationPermissionModal';
-import FrontendCartModal from '@/components/frontend/FrontendCartModal';
+import CartModal from '@/components/CartModal';
+import LocationPicker from '@/components/home/LocationPicker';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [showLocationModal, setShowLocationModal] = useState(false);
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [cartModalOpen, setCartModalOpen] = useState(false);
 
-  // Check for location permission on component mount
-  useEffect(() => {
-    const checkLocationPermission = async () => {
-      if ('geolocation' in navigator) {
-        try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          if (permission.state === 'prompt') {
-            setShowLocationModal(true);
-          } else if (permission.state === 'granted') {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                console.log('Location:', position.coords);
-              },
-              (error) => {
-                console.log('Location error:', error);
-              }
-            );
-          }
-        } catch (error) {
-          console.log('Permission query error:', error);
-        }
-      }
-    };
-
-    checkLocationPermission();
-  }, []);
-
-  const { data: storeInfo } = useQuery({
+  // Fetch store settings
+  const { data: settings } = useQuery({
     queryKey: ['store-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('settings')
         .select('*')
         .in('key', ['store_name', 'store_address', 'store_phone', 'store_email']);
-
+      
       if (error) throw error;
-
-      const settings: Record<string, any> = {};
-      data.forEach(setting => {
-        settings[setting.key] = setting.value;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
       });
-
-      const extractStringValue = (value: any, defaultValue: string): string => {
-        if (!value) return defaultValue;
-        
-        if (typeof value === 'object' && value !== null) {
-          if ('name' in value && typeof value.name === 'string') {
-            return value.name;
-          }
-          if ('email' in value && typeof value.email === 'string') {
-            return value.email;
-          }
-          if ('address' in value && typeof value.address === 'string') {
-            return value.address;
-          }
-          if ('phone' in value && typeof value.phone === 'string') {
-            return value.phone;
-          }
-          return defaultValue;
-        }
-        
-        if (typeof value === 'string') {
-          return value;
-        }
-        
-        return String(value) || defaultValue;
-      };
-
-      return {
-        name: extractStringValue(settings.store_name, 'Waroeng Kami'),
-        address: extractStringValue(settings.store_address, 'Jl. Contoh No. 123, Jakarta'),
-        phone: extractStringValue(settings.store_phone, '+62 812-3456-7890'),
-        email: extractStringValue(settings.store_email, 'info@waroengkami.com')
-      };
-    },
-  });
-
-  // Fetch frontend settings for banner
-  const { data: frontendSettings } = useQuery({
-    queryKey: ['frontend-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('key', 'frontend_settings')
-        .single();
-      if (error) {
-        console.log('No frontend settings found');
-        return null;
-      }
-      return data.value;
+      return settingsMap;
     }
   });
 
-  const handleProductClick = (product: any) => {
-    navigate(`/product/${product.id}`);
-  };
+  // Check if user has location set
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('latitude, longitude, address_text')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
-  const handleLocationAllow = () => {
-    console.log('Location access allowed');
-  };
-
-  const handleLocationDeny = () => {
-    console.log('Location access denied');
-  };
-
-  const handleCategorySelect = (categoryId: string) => {
-    navigate(`/search?category=${categoryId}`);
-  };
+  const storeName = settings?.store_name?.name || 'Waroeng Kami';
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
@@ -136,80 +64,69 @@ const Home = () => {
     }
   };
 
+  const handleCategorySelect = (categoryId: string) => {
+    navigate(`/search?category=${categoryId}`);
+  };
+
+  const handleLocationSelect = (lat: number, lng: number, address: string) => {
+    console.log('Location:', { lat, lng, address });
+  };
+
   return (
-    <div className="min-h-screen bg-white">
-      <HomeNavbar 
-        storeInfo={storeInfo} 
+    <div className="min-h-screen bg-gray-50">
+      <HomeNavbar
+        storeInfo={settings}
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onSearch={handleSearch}
       />
-      
-      <main className="bg-white">
-        {/* Hero Section with Banner from Frontend Settings */}
-        <FrontendHero 
-          storeName={storeInfo?.name || 'Waroeng Kami'}
-          storeDescription="Temukan produk berkualitas dengan harga terbaik"
-          frontendSettings={frontendSettings}
-        />
 
-        <div className="container mx-auto px-4 py-8 space-y-8">
-          {/* Categories Section */}
-          <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
-              Kategori Produk
-            </h2>
-            <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
-          </section>
-
-          {/* Flash Sale Section */}
-          <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
-              ⚡ Flash Sale
-            </h2>
-            <FlashSaleCarousel onProductClick={handleProductClick} />
-          </section>
-
-          {/* Best Selling Products */}
-          <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
-              🏆 Produk Terlaris
-            </h2>
-            <BestSellingProducts onProductClick={handleProductClick} />
-          </section>
-
-          {/* Recently Bought Products */}
-          <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
-              🔄 Beli Lagi
-            </h2>
-            <RecentlyBoughtProducts onProductClick={handleProductClick} />
-          </section>
-
-          {/* All Products Section */}
-          <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
-              Semua Produk
-            </h2>
-            <ProductCarousel onProductClick={handleProductClick} />
-          </section>
+      {/* Location Picker for authenticated users */}
+      {user && (
+        <div className="bg-white border-b py-2">
+          <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              {userProfile?.address_text ? (
+                <span className="text-sm text-gray-600">
+                  📍 {userProfile.address_text.slice(0, 50)}...
+                </span>
+              ) : (
+                <span className="text-sm text-gray-600">📍 Lokasi belum diset</span>
+              )}
+            </div>
+            <LocationPicker onLocationSelect={handleLocationSelect} />
+          </div>
         </div>
-      </main>
+      )}
 
-      <HomeFooter storeInfo={storeInfo} />
+      <FrontendHero storeName={storeName} />
       
-      <LocationPermissionModal 
-        open={showLocationModal} 
-        onOpenChange={setShowLocationModal}
-        onAllow={handleLocationAllow}
-        onDeny={handleLocationDeny}
-      />
+      {/* Categories Section */}
+      <section className="py-8 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Kategori Produk</h2>
+          </div>
+          <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
+        </div>
+      </section>
 
-      <FrontendCartModal 
-        open={cartModalOpen} 
-        onOpenChange={setCartModalOpen} 
-      />
+      {/* Flash Sale Section */}
+      <HomeFlashSale />
+
+      {/* Best Selling Products */}
+      <BestSellingProducts />
+
+      {/* Recently Bought Products */}
+      <RecentlyBoughtProducts />
+
+      {/* All Products */}
+      <ProductCarousel />
+
+      <HomeFooter />
+      
+      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </div>
   );
 };

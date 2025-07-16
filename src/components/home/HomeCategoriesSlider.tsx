@@ -1,9 +1,8 @@
 
+import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Package, Grid3X3 } from 'lucide-react';
+import { Grid3X3 } from 'lucide-react';
 import {
   Carousel,
   CarouselContent,
@@ -17,7 +16,6 @@ interface Category {
   name: string;
   description: string | null;
   icon_url: string | null;
-  product_count?: number;
 }
 
 interface HomeCategoriesSliderProps {
@@ -25,25 +23,34 @@ interface HomeCategoriesSliderProps {
 }
 
 const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) => {
+  const carouselRef = useRef<HTMLDivElement>(null);
+
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ['categories-with-count'],
+    queryKey: ['categories-slider'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select(`
-          *,
-          products(id)
-        `)
+        .select('*')
         .order('name');
 
       if (error) throw error;
-
-      return data.map(category => ({
-        ...category,
-        product_count: category.products?.length || 0
-      }));
+      return data;
     }
   });
+
+  // Auto scroll effect
+  useEffect(() => {
+    if (!carouselRef.current) return;
+
+    const interval = setInterval(() => {
+      const nextButton = carouselRef.current?.querySelector('[data-testid="carousel-next"]') as HTMLButtonElement;
+      if (nextButton) {
+        nextButton.click();
+      }
+    }, 3000); // Auto scroll every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [categories]);
 
   const handleCategoryClick = (categoryId: string) => {
     if (onCategorySelect) {
@@ -53,14 +60,14 @@ const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) =
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-32">
+      <div className="flex justify-center items-center h-20">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={carouselRef}>
       <Carousel
         opts={{
           align: "start",
@@ -70,52 +77,30 @@ const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) =
       >
         <CarouselContent>
           {categories.map((category) => (
-            <CarouselItem key={category.id} className="basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/6">
-              <Card 
-                className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden border-2 border-transparent hover:border-blue-500"
+            <CarouselItem key={category.id} className="basis-1/4 md:basis-1/6 lg:basis-1/8">
+              <div 
+                className="group cursor-pointer p-2"
                 onClick={() => handleCategoryClick(category.id)}
               >
-                <CardContent className="p-4 text-center">
-                  <div className="relative mb-3">
-                    <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      {category.icon_url ? (
-                        <img 
-                          src={category.icon_url} 
-                          alt={category.name}
-                          className="w-8 h-8 object-cover rounded-full"
-                        />
-                      ) : (
-                        <Grid3X3 className="h-8 w-8 text-blue-600" />
-                      )}
-                    </div>
-                    {category.product_count && category.product_count > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs bg-blue-500">
-                        {category.product_count}
-                      </Badge>
+                <div className="relative">
+                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-md">
+                    {category.icon_url ? (
+                      <img 
+                        src={category.icon_url} 
+                        alt={category.name}
+                        className="w-10 h-10 object-cover rounded-full"
+                      />
+                    ) : (
+                      <Grid3X3 className="h-8 w-8 text-blue-600" />
                     )}
                   </div>
-                  
-                  <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-1">
-                    {category.name}
-                  </h3>
-                  
-                  {category.description && (
-                    <p className="text-xs text-gray-500 line-clamp-2">
-                      {category.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-center mt-2 text-xs text-gray-500">
-                    <Package className="h-3 w-3 mr-1" />
-                    {category.product_count} produk
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
+        <CarouselPrevious className="hidden md:flex" />
+        <CarouselNext className="hidden md:flex" data-testid="carousel-next" />
       </Carousel>
     </div>
   );

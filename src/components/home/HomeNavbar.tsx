@@ -1,6 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
@@ -38,10 +40,75 @@ interface HomeNavbarProps {
   onSearch?: () => void;
 }
 
+interface SearchSuggestion {
+  type: 'product' | 'category';
+  id: string;
+  name: string;
+}
+
 const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSearch }: HomeNavbarProps) => {
   const { user, signOut, profile } = useAuth();
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Search suggestions query
+  const { data: searchData } = useQuery({
+    queryKey: ['search-suggestions', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm || searchTerm.length < 2) return { products: [], categories: [] };
+
+      const [productsResult, categoriesResult] = await Promise.all([
+        supabase
+          .from('products')
+          .select('id, name')
+          .ilike('name', `%${searchTerm}%`)
+          .limit(5),
+        supabase
+          .from('categories')
+          .select('id, name')
+          .ilike('name', `%${searchTerm}%`)
+          .limit(3)
+      ]);
+
+      return {
+        products: productsResult.data || [],
+        categories: categoriesResult.data || []
+      };
+    },
+    enabled: searchTerm.length >= 2
+  });
+
+  useEffect(() => {
+    if (searchData) {
+      const productSuggestions: SearchSuggestion[] = searchData.products.map(p => ({
+        type: 'product',
+        id: p.id,
+        name: p.name
+      }));
+
+      const categorySuggestions: SearchSuggestion[] = searchData.categories.map(c => ({
+        type: 'category',
+        id: c.id,
+        name: c.name
+      }));
+
+      setSuggestions([...categorySuggestions, ...productSuggestions]);
+    }
+  }, [searchData]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Helper function to safely extract string values from potentially object values
   const extractStringValue = (value: any, defaultValue: string): string => {
@@ -95,11 +162,34 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowSuggestions(false);
     if (onSearch) {
       onSearch();
     } else if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
+  };
+
+  const handleSuggestionClick = (suggestion: SearchSuggestion) => {
+    setShowSuggestions(false);
+    if (suggestion.type === 'category') {
+      navigate(`/search?category=${suggestion.id}`);
+    } else {
+      onSearchChange(suggestion.name);
+      navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
+    }
+  };
+
+  const handleInputFocus = () => {
+    if (suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    onSearchChange(value);
+    setShowSuggestions(value.length >= 2);
   };
 
   return (
@@ -123,18 +213,39 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
           </Link>
 
           {/* Search Bar - Hidden on mobile, shown on desktop */}
-          <div className="hidden md:block flex-1 max-w-2xl mx-8">
+          <div className="hidden md:block flex-1 max-w-2xl mx-8" ref={searchRef}>
             <form onSubmit={handleSearch} className="relative">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   type="search"
-                  placeholder="Cari produk favorit Anda..."
+                  placeholder="Cari produk atau kategori..."
                   value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
+                  onChange={handleInputChange}
+                  onFocus={handleInputFocus}
                   className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
                 />
               </div>
+
+              {/* Search Suggestions */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                  {suggestions.map((suggestion, index) => (
+                    <div
+                      key={`${suggestion.type}-${suggestion.id}`}
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      {suggestion.type === 'category' ? (
+                        <Badge variant="secondary" className="text-xs">Kategori</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">Produk</Badge>
+                      )}
+                      <span className="text-gray-900">{suggestion.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </form>
           </div>
           
@@ -210,18 +321,39 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
         </div>
 
         {/* Mobile Search Bar */}
-        <div className="md:hidden pb-3">
+        <div className="md:hidden pb-3" ref={searchRef}>
           <form onSubmit={handleSearch} className="relative">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="search"
-                placeholder="Cari produk..."
+                placeholder="Cari produk atau kategori..."
                 value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={handleInputChange}
+                onFocus={handleInputFocus}
                 className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
               />
             </div>
+
+            {/* Mobile Search Suggestions */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={`${suggestion.type}-${suggestion.id}`}
+                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    {suggestion.type === 'category' ? (
+                      <Badge variant="secondary" className="text-xs">Kategori</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">Produk</Badge>
+                    )}
+                    <span className="text-gray-900">{suggestion.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </form>
         </div>
       </div>
