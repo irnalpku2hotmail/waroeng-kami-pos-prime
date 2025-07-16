@@ -1,285 +1,264 @@
 
-import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import { Icon } from 'leaflet';
-import { useMutation } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, Clock, Star, Search, Navigation } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { MapPin, Target, Save } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import LocationPermissionModal from './LocationPermissionModal';
-import 'leaflet/dist/leaflet.css';
 
-// Fix for default markers in react-leaflet
-const customIcon = new Icon({
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-interface LocationPickerProps {
-  onLocationSelect?: (lat: number, lng: number, address: string) => void;
+interface UserLocation {
+  id: string;
+  address_text: string;
+  latitude: number;
+  longitude: number;
+  location_updated_at: string;
 }
 
-interface MapEventsProps {
-  onLocationClick: (lat: number, lng: number) => void;
-}
-
-const MapEvents: React.FC<MapEventsProps> = ({ onLocationClick }) => {
-  useMapEvents({
-    click: (e) => {
-      onLocationClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-};
-
-const LocationPicker: React.FC<LocationPickerProps> = ({ onLocationSelect }) => {
+const LocationPicker = () => {
   const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [position, setPosition] = useState<[number, number]>([- 6.2088, 106.8456]); // Default to Jakarta
-  const [address, setAddress] = useState('');
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const mapRef = useRef<any>(null);
+  const [selectedLocation, setSelectedLocation] = useState<UserLocation | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
-  // Update user location mutation
-  const updateLocation = useMutation({
-    mutationFn: async ({ lat, lng, addressText }: { lat: number; lng: number; addressText: string }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { error } = await supabase
+  // Fetch user locations
+  const { data: locations = [], isLoading, refetch } = useQuery({
+    queryKey: ['user-locations'],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
         .from('profiles')
-        .update({
-          latitude: lat,
-          longitude: lng,
-          address_text: addressText,
-          location_updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+        .select('id, address_text, latitude, longitude, location_updated_at')
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
+        .order('location_updated_at', { ascending: false });
 
       if (error) throw error;
+      return data as UserLocation[];
     },
-    onSuccess: () => {
-      toast({
-        title: 'Berhasil',
-        description: 'Lokasi berhasil disimpan'
-      });
-      setIsOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
+    enabled: !!user
   });
 
   // Get current location
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       toast({
-        title: 'Error',
-        description: 'Browser tidak mendukung geolocation',
-        variant: 'destructive'
+        title: 'Geolocation tidak didukung',
+        description: 'Browser Anda tidak mendukung fitur geolocation',
+        variant: 'destructive',
       });
       return;
     }
 
-    setShowPermissionModal(true);
-  };
-
-  const handleLocationPermissionAllow = () => {
-    setIsGettingLocation(true);
-    
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setPosition([latitude, longitude]);
+      async (position) => {
+        const { latitude, longitude } = position.coords;
         
-        // Reverse geocoding to get address
         try {
+          // Reverse geocoding to get address
           const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_API_KEY`
           );
           const data = await response.json();
-          
-          if (data.display_name) {
-            setAddress(data.display_name);
+          const address = data.results[0]?.formatted || `${latitude}, ${longitude}`;
+
+          // Update user's location in database
+          if (user) {
+            const { error } = await supabase
+              .from('profiles')
+              .update({
+                latitude,
+                longitude,
+                address_text: address,
+                location_updated_at: new Date().toISOString()
+              })
+              .eq('id', user.id);
+
+            if (error) throw error;
+
+            toast({
+              title: 'Lokasi berhasil diperbarui',
+              description: address
+            });
+
+            refetch();
           }
         } catch (error) {
-          console.error('Reverse geocoding error:', error);
-          setAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-        }
-        
-        setIsGettingLocation(false);
-        
-        // Pan map to current location
-        if (mapRef.current) {
-          mapRef.current.flyTo([latitude, longitude], 15);
+          console.error('Error updating location:', error);
+          toast({
+            title: 'Gagal memperbarui lokasi',
+            description: 'Terjadi kesalahan saat menyimpan lokasi',
+            variant: 'destructive',
+          });
         }
       },
       (error) => {
         console.error('Geolocation error:', error);
-        setIsGettingLocation(false);
         toast({
-          title: 'Error',
-          description: 'Gagal mendapatkan lokasi',
-          variant: 'destructive'
+          title: 'Gagal mendapatkan lokasi',
+          description: 'Tidak dapat mengakses lokasi Anda',
+          variant: 'destructive',
         });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 600000
       }
     );
   };
 
-  const handleLocationPermissionDeny = () => {
+  const handleLocationSelect = (location: UserLocation) => {
+    setSelectedLocation(location);
     toast({
-      title: 'Info',
-      description: 'Anda dapat memilih lokasi secara manual di peta',
+      title: 'Lokasi dipilih',
+      description: location.address_text
     });
   };
 
-  const handleMapClick = async (lat: number, lng: number) => {
-    setPosition([lat, lng]);
-    
-    // Reverse geocoding
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
-      );
-      const data = await response.json();
-      
-      if (data.display_name) {
-        setAddress(data.display_name);
-      }
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-    }
-  };
+  const filteredLocations = locations.filter(location =>
+    location.address_text.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleSaveLocation = () => {
-    if (position && address) {
-      updateLocation.mutate({
-        lat: position[0],
-        lng: position[1],
-        addressText: address
-      });
-      
-      if (onLocationSelect) {
-        onLocationSelect(position[0], position[1], address);
-      }
-    }
-  };
+  if (!user) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600">Silakan login untuk menggunakan fitur lokasi</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Pilih Lokasi
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              Pilih Lokasi Anda
-            </DialogTitle>
-            <DialogDescription>
-              Klik pada peta untuk memilih lokasi atau gunakan tombol untuk mendapatkan lokasi saat ini
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                onClick={getCurrentLocation}
-                disabled={isGettingLocation}
-                className="flex items-center gap-2"
+    <div className="space-y-6">
+      {/* Current Location Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Lokasi Saat Ini
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {selectedLocation ? (
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-green-600 mt-1" />
+              <div className="flex-1">
+                <p className="font-medium">{selectedLocation.address_text}</p>
+                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    Diperbarui {new Date(selectedLocation.location_updated_at).toLocaleDateString('id-ID')}
+                  </span>
+                </div>
+              </div>
+              <Badge className="bg-green-100 text-green-700">
+                Aktif
+              </Badge>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+              <p className="text-gray-600 mb-4">Belum ada lokasi yang dipilih</p>
+              <Button 
+                onClick={() => setShowLocationModal(true)}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                <Target className="h-4 w-4" />
-                {isGettingLocation ? 'Mendapatkan Lokasi...' : 'Lokasi Saat Ini'}
+                <Navigation className="h-4 w-4 mr-2" />
+                Gunakan Lokasi Saat Ini
               </Button>
             </div>
+          )}
+        </CardContent>
+      </Card>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Alamat</Label>
-              <Input
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Alamat akan muncul saat Anda memilih lokasi di peta"
-              />
+      {/* Search and Filter */}
+      <div className="flex gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Cari alamat..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button 
+          variant="outline"
+          onClick={() => setShowLocationModal(true)}
+        >
+          <Navigation className="h-4 w-4 mr-2" />
+          Lokasi Baru
+        </Button>
+      </div>
+
+      {/* Saved Locations */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Alamat Tersimpan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
             </div>
-
-            <div className="h-80 w-full rounded-lg overflow-hidden border">
-              <MapContainer
-                center={position}
-                zoom={13}
-                style={{ height: '100%', width: '100%' }}
-                ref={mapRef}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={position} icon={customIcon} />
-                <MapEvents onLocationClick={handleMapClick} />
-              </MapContainer>
+          ) : filteredLocations.length === 0 ? (
+            <div className="text-center py-6">
+              <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+              <p className="text-gray-600">
+                {searchTerm ? 'Tidak ada alamat yang sesuai' : 'Belum ada alamat tersimpan'}
+              </p>
             </div>
-
-            <div className="text-sm text-gray-600">
-              <p><strong>Koordinat:</strong> {position[0].toFixed(6)}, {position[1].toFixed(6)}</p>
+          ) : (
+            <div className="space-y-3">
+              {filteredLocations.map((location) => (
+                <div
+                  key={location.id}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    selectedLocation?.id === location.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => handleLocationSelect(location)}
+                >
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-gray-600 mt-1" />
+                    <div className="flex-1">
+                      <p className="font-medium">{location.address_text}</p>
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {new Date(location.location_updated_at).toLocaleDateString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+                    {selectedLocation?.id === location.id && (
+                      <Badge className="bg-blue-100 text-blue-700">
+                        Dipilih
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
+        </CardContent>
+      </Card>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Batal
-            </Button>
-            <Button 
-              onClick={handleSaveLocation}
-              disabled={!position || !address || updateLocation.isPending}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {updateLocation.isPending ? 'Menyimpan...' : 'Simpan Lokasi'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <LocationPermissionModal
-        open={showPermissionModal}
-        onOpenChange={setShowPermissionModal}
-        onAllow={handleLocationPermissionAllow}
-        onDeny={handleLocationPermissionDeny}
+      {/* Location Permission Modal */}
+      <LocationPermissionModal 
+        open={showLocationModal}
+        onOpenChange={setShowLocationModal}
       />
-    </>
+    </div>
   );
 };
 
