@@ -50,6 +50,14 @@ const ProductGrid = ({ products }: ProductGridProps) => {
       quantity: 1,
       image: product.image_url || undefined,
       stock: product.current_stock,
+      product_id: product.id,
+      unit_price: product.selling_price,
+      total_price: product.selling_price * 1,
+      product: {
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url
+      }
     });
 
     toast({

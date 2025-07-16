@@ -45,7 +45,8 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
       name: product.name,
       price: product.selling_price,
       image: product.image_url,
-      quantity: 1
+      quantity: 1,
+      stock: product.current_stock || 0
     });
     toast({
       title: "Produk ditambahkan",

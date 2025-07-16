@@ -64,6 +64,14 @@ const HomeFlashSale = ({ flashSales }: HomeFlashSaleProps) => {
       stock: item.stock_quantity,
       flashSalePrice: item.sale_price,
       isFlashSale: true,
+      product_id: item.product_id,
+      unit_price: item.sale_price,
+      total_price: item.sale_price * 1,
+      product: {
+        id: item.product_id,
+        name: item.products.name,
+        image_url: item.products.image_url
+      }
     });
 
     toast({
