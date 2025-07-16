@@ -1,9 +1,10 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeHero from '@/components/home/HomeHero';
+import FrontendHero from '@/components/frontend/FrontendHero';
 import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
 import ProductCarousel from '@/components/home/ProductCarousel';
 import FlashSaleCarousel from '@/components/home/FlashSaleCarousel';
@@ -11,18 +12,12 @@ import BestSellingProducts from '@/components/home/BestSellingProducts';
 import RecentlyBoughtProducts from '@/components/home/RecentlyBoughtProducts';
 import HomeFooter from '@/components/home/HomeFooter';
 import LocationPermissionModal from '@/components/home/LocationPermissionModal';
-import ProductGrid from '@/components/home/ProductGrid';
 import FrontendCartModal from '@/components/frontend/FrontendCartModal';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [cartModalOpen, setCartModalOpen] = useState(false);
 
   // Check for location permission on component mount
@@ -114,21 +109,8 @@ const Home = () => {
     console.log('Location access denied');
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim() || selectedCategory) {
-      navigate(`/search?${searchTerm.trim() ? `q=${encodeURIComponent(searchTerm.trim())}` : ''}${selectedCategory ? `${searchTerm.trim() ? '&' : ''}category=${selectedCategory}` : ''}`);
-    }
-  };
-
   const handleCategorySelect = (categoryId: string) => {
     navigate(`/search?category=${categoryId}`);
-  };
-
-  const resetSearch = () => {
-    setSearchTerm('');
-    setSelectedCategory(null);
-    setShowSearchResults(false);
   };
 
   return (
@@ -136,36 +118,18 @@ const Home = () => {
       <HomeNavbar 
         storeInfo={storeInfo} 
         onCartClick={() => setCartModalOpen(true)}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
       
       <main className="bg-white">
         {/* Hero Section with Banner/Slider */}
-        <HomeHero 
-          storeName={storeInfo?.name}
+        <FrontendHero 
+          storeName={storeInfo?.name || 'Waroeng Kami'}
           storeDescription="Temukan produk berkualitas dengan harga terbaik"
-          onProductClick={handleProductClick}
         />
 
         <div className="container mx-auto px-4 py-8 space-y-8">
-          {/* Enhanced Search Bar */}
-          <section className="max-w-2xl mx-auto">
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Cari produk..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 rounded-full border-2 border-gray-200 focus:border-blue-500"
-                />
-              </div>
-              <Button type="submit" className="rounded-full px-6">
-                Cari
-              </Button>
-            </form>
-          </section>
-
           {/* Categories Section */}
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
