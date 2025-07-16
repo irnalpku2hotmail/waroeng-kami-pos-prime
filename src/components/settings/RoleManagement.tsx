@@ -41,6 +41,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 const RoleManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,7 +67,7 @@ const RoleManagement = () => {
 
   // Update user role mutation
   const updateUserRole = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: string }) => {
+    mutationFn: async ({ userId, newRole }: { userId: string; newRole: UserRole }) => {
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole })
@@ -97,7 +100,7 @@ const RoleManagement = () => {
 
   const handleSaveRole = (newRole: string) => {
     if (editingUser) {
-      updateUserRole.mutate({ userId: editingUser.id, newRole });
+      updateUserRole.mutate({ userId: editingUser.id, newRole: newRole as UserRole });
     }
   };
 
