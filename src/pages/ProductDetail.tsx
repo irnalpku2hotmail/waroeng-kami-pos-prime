@@ -1,31 +1,40 @@
 
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Minus, Plus, ShoppingCart, Star, Package } from 'lucide-react';
-import HomeNavbar from '@/components/home/HomeNavbar';
-import FrontendCartModal from '@/components/frontend/FrontendCartModal';
+import { 
+  ShoppingCart, 
+  Package, 
+  Tag, 
+  Star, 
+  Plus, 
+  Minus,
+  ArrowLeft,
+  Heart,
+  Share2
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const ProductDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { addItem } = useCart();
-  const queryClient = useQueryClient();
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [currentPrice, setCurrentPrice] = useState(0);
 
+  // Fetch product details
   const { data: product, isLoading } = useQuery({
-    queryKey: ['product', id],
+    queryKey: ['product-detail', id],
     queryFn: async () => {
       if (!id) throw new Error('Product ID is required');
       
@@ -33,394 +42,351 @@ const ProductDetail = () => {
         .from('products')
         .select(`
           *,
-          categories (
-            id,
-            name,
-            description
-          ),
-          units (
-            id,
-            name,
-            abbreviation
-          ),
-          price_variants (
-            id,
-            name,
-            price,
-            minimum_quantity,
-            is_active
-          )
+          categories (name, id),
+          units (name, abbreviation),
+          price_variants (*)
         `)
         .eq('id', id)
         .single();
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!id
   });
 
-  // Fetch store info for navbar
-  const { data: storeInfo } = useQuery({
-    queryKey: ['store-settings'],
+  // Fetch similar products
+  const { data: similarProducts } = useQuery({
+    queryKey: ['similar-products', product?.category_id],
     queryFn: async () => {
+      if (!product?.category_id) return [];
+      
       const { data, error } = await supabase
-        .from('settings')
+        .from('products')
         .select('*')
-        .in('key', ['store_name', 'store_address', 'store_phone', 'store_email']);
+        .eq('category_id', product.category_id)
+        .neq('id', product.id)
+        .eq('is_active', true)
+        .limit(4);
 
       if (error) throw error;
-
-      const settings: Record<string, any> = {};
-      data.forEach(setting => {
-        settings[setting.key] = setting.value;
-      });
-
-      const extractStringValue = (value: any, defaultValue: string): string => {
-        if (!value) return defaultValue;
-        
-        if (typeof value === 'object' && value !== null) {
-          if ('name' in value && typeof value.name === 'string') {
-            return value.name;
-          }
-          if ('email' in value && typeof value.email === 'string') {
-            return value.email;
-          }
-          if ('address' in value && typeof value.address === 'string') {
-            return value.address;
-          }
-          if ('phone' in value && typeof value.phone === 'string') {
-            return value.phone;
-          }
-          return defaultValue;
-        }
-        
-        if (typeof value === 'string') {
-          return value;
-        }
-        
-        return String(value) || defaultValue;
-      };
-
-      return {
-        name: extractStringValue(settings.store_name, 'Waroeng Kami'),
-        address: extractStringValue(settings.store_address, 'Jl. Contoh No. 123, Jakarta'),
-        phone: extractStringValue(settings.store_phone, '+62 812-3456-7890'),
-        email: extractStringValue(settings.store_email, 'info@waroengkami.com')
-      };
+      return data;
     },
+    enabled: !!product?.category_id
   });
 
-  const getCurrentPrice = () => {
-    if (selectedVariant) {
-      return selectedVariant.price;
-    }
-    return product?.selling_price || 0;
-  };
-
-  const getMinQuantity = () => {
-    if (selectedVariant) {
-      return selectedVariant.minimum_quantity;
-    }
-    return product?.min_quantity || 1;
-  };
-
-  const handleAddToCart = () => {
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Please login to add items to cart',
-        variant: 'destructive'
-      });
-      return;
-    }
-
+  // Calculate price based on quantity and price variants
+  useEffect(() => {
     if (!product) return;
 
-    if (product.current_stock < quantity) {
-      toast({
-        title: 'Insufficient Stock',
-        description: `Only ${product.current_stock} items available`,
-        variant: 'destructive'
-      });
-      return;
+    let price = product.selling_price;
+    
+    if (product.price_variants && product.price_variants.length > 0) {
+      // Sort variants by minimum quantity desc to get the best applicable price
+      const sortedVariants = [...product.price_variants]
+        .filter(variant => variant.is_active)
+        .sort((a, b) => b.minimum_quantity - a.minimum_quantity);
+
+      for (const variant of sortedVariants) {
+        if (quantity >= variant.minimum_quantity) {
+          price = variant.price;
+          break;
+        }
+      }
     }
 
-    const minQty = getMinQuantity();
-    if (quantity < minQty) {
-      toast({
-        title: 'Minimum Quantity Required',
-        description: `Minimum quantity is ${minQty}`,
-        variant: 'destructive'
-      });
-      return;
-    }
+    setCurrentPrice(price);
+  }, [product, quantity]);
 
-    addItem({
+  const handleAddToCart = () => {
+    if (!product) return;
+
+    addToCart({
       id: product.id,
       name: product.name,
-      price: getCurrentPrice(),
+      price: currentPrice,
+      quantity,
       image: product.image_url,
-      quantity: quantity,
-      variant: selectedVariant?.name
+      stock: product.current_stock
     });
 
     toast({
-      title: 'Added to Cart',
-      description: `${quantity}x ${product.name} added to cart`
+      title: 'Berhasil!',
+      description: `${product.name} telah ditambahkan ke keranjang`,
     });
   };
 
-  const handleBuyNow = () => {
-    handleAddToCart();
-    navigate('/cart');
-  };
-
-  const handleCartClick = () => {
-    setCartModalOpen(true);
-  };
-
-  const handleSearchChange = (term: string) => {
-    setSearchTerm(term);
-  };
-
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(price);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white">
-        <HomeNavbar 
-          storeInfo={storeInfo}
-          onCartClick={handleCartClick}
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-          onSearch={handleSearch}
-        />
-        <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="h-96 bg-gray-200 rounded"></div>
-              <div className="space-y-4">
-                <div className="h-8 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          </div>
+      <Layout>
+        <div className="flex justify-center items-center h-96">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-white">
-        <HomeNavbar 
-          storeInfo={storeInfo}
-          onCartClick={handleCartClick}
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-          onSearch={handleSearch}
-        />
-        <div className="container mx-auto px-4 py-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h1>
-          <Button onClick={() => navigate('/')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
+      <Layout>
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-bold mb-2">Produk tidak ditemukan</h2>
+          <Button onClick={() => navigate('/products')}>
+            Kembali ke Produk
           </Button>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <HomeNavbar 
-        storeInfo={storeInfo}
-        onCartClick={handleCartClick}
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        onSearch={handleSearch}
-      />
-      
-      <main className="container mx-auto px-4 py-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-6">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali
-          </Button>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-600">{product.categories?.name}</span>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-900 font-medium">{product.name}</span>
-        </div>
+    <Layout>
+      <div className="space-y-6">
+        {/* Back Button */}
+        <Button 
+          variant="outline" 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Kembali
+        </Button>
 
-        {/* Product Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Image */}
-          <div className="space-y-4">
-            <div className="aspect-square overflow-hidden rounded-xl bg-gray-100">
-              <img
-                src={product.image_url || '/placeholder.svg'}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
+          <Card>
+            <CardContent className="p-6">
+              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+                {product.image_url ? (
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="h-24 w-24 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="flex-1">
+                  <Heart className="h-4 w-4 mr-2" />
+                  Favorit
+                </Button>
+                <Button size="sm" variant="outline" className="flex-1">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Bagikan
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Product Info */}
+          {/* Product Details */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                {product.categories && (
-                  <Badge variant="secondary" className="text-sm">
-                    {product.categories.name}
-                  </Badge>
-                )}
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <span className="text-sm text-gray-600">4.5 (120 reviews)</span>
-                </div>
+                <Badge variant="secondary">
+                  {product.categories?.name || 'Tanpa Kategori'}
+                </Badge>
+                <Badge variant={product.current_stock > 0 ? 'default' : 'destructive'}>
+                  {product.current_stock > 0 ? 'Tersedia' : 'Habis'}
+                </Badge>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                {product.name}
-              </h1>
               
-              <div className="flex items-center gap-4 mb-4">
-                <span className="text-3xl font-bold text-blue-600">
-                  Rp {getCurrentPrice().toLocaleString('id-ID')}
-                </span>
-                {selectedVariant && (
-                  <Badge className="bg-green-100 text-green-800">
-                    {selectedVariant.name}
-                  </Badge>
-                )}
-              </div>
-
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Package className="h-4 w-4" />
-                  <span>Stok: {product.current_stock}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span>Unit: {product.units?.name || 'pcs'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Price Variants */}
-            {product.price_variants && product.price_variants.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Pilih Varian:</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {product.price_variants
-                    .filter((variant: any) => variant.is_active)
-                    .map((variant: any) => (
-                    <Card 
-                      key={variant.id}
-                      className={`cursor-pointer transition-colors ${
-                        selectedVariant?.id === variant.id 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'hover:border-gray-300'
-                      }`}
-                      onClick={() => setSelectedVariant(variant)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="text-sm font-medium">{variant.name}</div>
-                        <div className="text-xs text-gray-600">
-                          Min: {variant.minimum_quantity} pcs
-                        </div>
-                        <div className="text-sm font-bold text-blue-600">
-                          Rp {variant.price.toLocaleString('id-ID')}
-                        </div>
-                      </CardContent>
-                    </Card>
+              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+              
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center">
+                  {[...Array(5)].map((_, i) => (
+                    <Star 
+                      key={i} 
+                      className="h-4 w-4 text-yellow-400 fill-current" 
+                    />
                   ))}
                 </div>
+                <span className="text-sm text-gray-600">(0 ulasan)</span>
               </div>
-            )}
-
-            {/* Description */}
-            {product.description && (
-              <div className="space-y-2">
-                <h3 className="font-semibold">Deskripsi:</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {product.description}
-                </p>
-              </div>
-            )}
-
-            {/* Quantity Selector */}
-            <div className="space-y-3">
-              <h3 className="font-semibold">Jumlah:</h3>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="font-medium text-lg px-4">{quantity}</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
-                  disabled={quantity >= product.current_stock}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-gray-600">
-                  ({product.current_stock} tersedia)
-                </span>
-              </div>
-              <p className="text-xs text-gray-500">
-                Minimum pembelian: {getMinQuantity()} pcs
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3 pt-4">
-              <Button
-                onClick={handleAddToCart}
-                disabled={product.current_stock === 0 || quantity < getMinQuantity()}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
-                size="lg"
-              >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
-              </Button>
               
-              <Button
-                onClick={handleBuyNow}
-                disabled={product.current_stock === 0 || quantity < getMinQuantity()}
-                variant="outline"
-                className="w-full py-3"
-                size="lg"
-              >
-                Beli Sekarang
-              </Button>
+              <div className="text-3xl font-bold text-blue-600 mb-4">
+                {formatPrice(currentPrice)}
+                {currentPrice !== product.selling_price && (
+                  <span className="text-lg text-gray-500 line-through ml-2">
+                    {formatPrice(product.selling_price)}
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Price Variants Info */}
+            {product.price_variants && product.price_variants.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Harga Berdasarkan Kuantitas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {product.price_variants
+                      .filter(variant => variant.is_active)
+                      .sort((a, b) => a.minimum_quantity - b.minimum_quantity)
+                      .map((variant, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 border rounded">
+                          <span>Min. {variant.minimum_quantity} {product.units?.abbreviation}</span>
+                          <span className="font-semibold">{formatPrice(variant.price)}</span>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Quantity and Add to Cart */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jumlah</label>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="text-lg font-semibold min-w-[3rem] text-center">
+                        {quantity}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuantity(quantity + 1)}
+                        disabled={quantity >= product.current_stock}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Stok tersedia: {product.current_stock} {product.units?.abbreviation}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <span className="font-medium">Total Harga:</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      {formatPrice(currentPrice * quantity)}
+                    </span>
+                  </div>
+
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={product.current_stock === 0}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Product Description */}
+            {product.description && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Deskripsi Produk</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700 leading-relaxed">{product.description}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Product Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Informasi Produk</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Barcode:</span>
+                    <span>{product.barcode || 'Tidak ada'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Unit:</span>
+                    <span>{product.units?.name || 'Tidak ada'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Minimal Stok:</span>
+                    <span>{product.min_stock} {product.units?.abbreviation}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Poin Loyalitas:</span>
+                    <span>{product.loyalty_points} poin</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      </main>
 
-      <FrontendCartModal 
-        open={cartModalOpen} 
-        onOpenChange={setCartModalOpen} 
-      />
-    </div>
+        {/* Similar Products */}
+        {similarProducts && similarProducts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Produk Serupa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {similarProducts.map((similarProduct) => (
+                  <div
+                    key={similarProduct.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/product/${similarProduct.id}`)}
+                  >
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-3">
+                      {similarProduct.image_url ? (
+                        <img 
+                          src={similarProduct.image_url} 
+                          alt={similarProduct.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="font-medium mb-2 line-clamp-2">{similarProduct.name}</h3>
+                    <p className="text-lg font-bold text-blue-600">
+                      {formatPrice(similarProduct.selling_price)}
+                    </p>
+                    <Badge 
+                      variant={similarProduct.current_stock > 0 ? 'default' : 'destructive'}
+                      className="mt-2"
+                    >
+                      {similarProduct.current_stock > 0 ? 'Tersedia' : 'Habis'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </Layout>
   );
 };
 

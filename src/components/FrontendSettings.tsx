@@ -5,481 +5,218 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Image, Upload, Settings, Trash } from 'lucide-react';
-
-interface FrontendSettings {
-  header: string;
-  banner_urls: string[];
-  logo_url?: string;
-}
-
-const initialSettings: FrontendSettings = {
-  header: '',
-  banner_urls: [],
-  logo_url: '',
-};
-
-const bucketName = 'frontend-assets';
-
-// Better type guard
-function isFrontendSettings(val: unknown): val is FrontendSettings {
-  return (
-    !!val &&
-    typeof val === 'object' &&
-    !Array.isArray(val) &&
-    'header' in val &&
-    'banner_urls' in val &&
-    Array.isArray((val as any).banner_urls)
-  );
-}
+import { Plus, X, Upload, Image } from 'lucide-react';
 
 const FrontendSettings = () => {
-  const [bannerFiles, setBannerFiles] = useState<File[]>([]);
-  const [bannerPreviews, setBannerPreviews] = useState<string[]>([]);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const [newBannerUrl, setNewBannerUrl] = useState('');
 
-  // Query for current settings (expecting banner_urls array)
-  const { data: settings, isLoading } = useQuery({
+  // Fetch frontend settings
+  const { data: settings } = useQuery({
     queryKey: ['frontend-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('settings')
-        .select('value')
-        .eq('key', 'frontend_settings')
-        .maybeSingle();
+        .select('*')
+        .in('key', ['banner_images', 'banner_enabled', 'hero_title', 'hero_subtitle']);
+      
       if (error) throw error;
-
-      // Handle empty/null/malformed values
-      const value = data?.value;
-      if (isFrontendSettings(value)) return value;
-
-      // fallback migration from older shapes
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const bannerUrl = (value as any).banner_url;
-        return {
-          header: (value as any).header || '',
-          // if old data: string banner_url
-          banner_urls: bannerUrl ? [bannerUrl] : [],
-          logo_url: (value as any).logo_url || '',
-        };
-      }
-
-      // fall back to empty settings if missing or wrong type
-      return initialSettings;
-    },
+      
+      const settingsObj: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsObj[setting.key] = setting.value;
+      });
+      return settingsObj;
+    }
   });
 
-  // Save updated settings
+  // Update settings mutation
   const updateSettings = useMutation({
-    mutationFn: async (settingsData: FrontendSettings) => {
-      const { error } = await supabase
-        .from('settings')
-        .upsert(
-          {
-            key: 'frontend_settings',
-            value: settingsData as any,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'key' }
-        );
-      if (error) throw error;
+    mutationFn: async (settingsData: Record<string, any>) => {
+      const promises = Object.entries(settingsData).map(async ([key, value]) => {
+        const { error } = await supabase
+          .from('settings')
+          .upsert({ 
+            key, 
+            value,
+            updated_at: new Date().toISOString()
+          }, { 
+            onConflict: 'key' 
+          });
+        if (error) throw error;
+      });
+      
+      await Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['frontend-settings'] });
-      toast({
-        title: 'Berhasil',
-        description: 'Pengaturan frontend berhasil disimpan!',
-      });
-      setBannerFiles([]);
-      setBannerPreviews([]);
-      setLogoFile(null);
-      setLogoPreview(null);
+      toast({ title: 'Berhasil', description: 'Pengaturan frontend berhasil disimpan' });
     },
-    onError: (err: any) => {
-      toast({
-        title: 'Gagal',
-        description: err.message,
-        variant: 'destructive',
-      });
-    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   });
 
-  // Upload banner/banners
-  const uploadBannerFiles = useMutation({
-    mutationFn: async (files: File[]) => {
-      const uploadedUrls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
-        const filename = `banner_${Date.now()}_${i}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filename, file, {
-            cacheControl: '3600',
-            upsert: true,
-          });
-        if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from(bucketName).getPublicUrl(filename);
-        uploadedUrls.push(data.publicUrl);
-      }
-      return uploadedUrls;
-    },
-    onSuccess: (newUrls: string[]) => {
-      const newSettings: FrontendSettings = {
-        header: settings?.header || '',
-        banner_urls: [
-          ...(settings?.banner_urls ?? []),
-          ...newUrls,
-        ],
-        logo_url: settings?.logo_url || '',
-      };
-      updateSettings.mutate(newSettings);
-      toast({
-        title: 'Banner berhasil diupload!',
-        description: `${newUrls.length} banner ditambahkan.`,
-      });
-    },
-    onError: (err: any) => {
-      toast({
-        title: 'Gagal upload',
-        description: err.message,
-        variant: 'destructive',
-      });
-    },
-  });
+  const bannerImages = settings?.banner_images || [];
+  const isBannerEnabled = settings?.banner_enabled !== false;
 
-  // Logic upload logo
-  const uploadLogo = useMutation({
-    mutationFn: async (file: File) => {
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
-      const filename = `logo_${Date.now()}.${fileExt}`;
-      const { error } = await supabase.storage
-        .from(bucketName)
-        .upload(filename, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-      if (error) throw error;
-      const { data } = supabase.storage.from(bucketName).getPublicUrl(filename);
-
-      // update favicon on index.html
-      const link = document.querySelector("link[rel~='icon']");
-      if (link) {
-        link.setAttribute('href', data.publicUrl);
-      } else {
-        const newLink = document.createElement('link');
-        newLink.rel = 'icon';
-        newLink.href = data.publicUrl;
-        document.head.appendChild(newLink);
-      }
-      return data.publicUrl;
-    },
-    onSuccess: (logoUrl: string) => {
-      const newSettings: FrontendSettings = {
-        ...(settings ?? initialSettings),
-        logo_url: logoUrl,
-        banner_urls: settings?.banner_urls ?? [],
-        header: settings?.header ?? '',
-      };
-      updateSettings.mutate(newSettings);
-      setLogoFile(null);
-      setLogoPreview(null);
-
-      toast({
-        title: 'Logo berhasil diupload!',
-        description: 'Logo/favIcon sudah diupdate.',
-      });
-    },
-    onError: (err: any) => {
-      toast({
-        title: 'Gagal upload',
-        description: err.message || "Gagal upload logo",
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // File handler banners (multi-image)
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    const allowed = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-    ];
-    for (let f of files) {
-      if (f.size > 5 * 1024 * 1024) {
-        toast({
-          title: 'Ukuran file terlalu besar',
-          description: 'Maksimal 5MB',
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (!allowed.includes(f.type)) {
-        toast({
-          title: 'Format tidak didukung',
-          description: 'File harus gambar',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-    setBannerFiles(files);
-    const fileReaders = files.map(
-      (file) =>
-        new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (evt) => resolve(evt.target?.result as string);
-          reader.readAsDataURL(file);
-        })
-    );
-    Promise.all(fileReaders).then((previews) => setBannerPreviews(previews));
+  const handleToggleBanner = (enabled: boolean) => {
+    updateSettings.mutate({ banner_enabled: enabled });
   };
 
-  // File handler for logo only
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: 'Ukuran file terlalu besar',
-        description: 'Maksimal 5MB',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const allowed = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-    ];
-    if (!allowed.includes(file.type)) {
-      toast({
-        title: 'Format tidak didukung',
-        description: 'File harus gambar',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setLogoFile(file);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      setLogoPreview(evt.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+  const handleAddBanner = () => {
+    if (!newBannerUrl.trim()) return;
+    
+    const updatedImages = [...bannerImages, newBannerUrl.trim()];
+    updateSettings.mutate({ banner_images: updatedImages });
+    setNewBannerUrl('');
   };
 
-  // Remove banner (from settings)
-  const handleRemoveBanner = (idx: number) => {
-    if (!settings?.banner_urls) return;
-    const newBanners = [...settings.banner_urls];
-    newBanners.splice(idx, 1);
-    const newSettings: FrontendSettings = {
-      ...(settings as FrontendSettings),
-      banner_urls: newBanners,
-      header: settings.header ?? "",
-      logo_url: settings.logo_url ?? "",
-    };
-    updateSettings.mutate(newSettings);
+  const handleRemoveBanner = (index: number) => {
+    const updatedImages = bannerImages.filter((_: any, i: number) => i !== index);
+    updateSettings.mutate({ banner_images: updatedImages });
   };
 
-  // Save settings (header, banners, logo)
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleHeroSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    const newSettings: FrontendSettings = {
-      header: fd.get('header')?.toString() || '',
-      banner_urls: settings?.banner_urls ?? [],
-      logo_url: settings?.logo_url || '',
+    const formData = new FormData(e.currentTarget);
+    
+    const heroData = {
+      hero_title: formData.get('hero_title') as string,
+      hero_subtitle: formData.get('hero_subtitle') as string,
     };
-    updateSettings.mutate(newSettings);
 
-    // upload files if ada (logo or new banners)
-    if (logoFile) uploadLogo.mutate(logoFile);
-    if (bannerFiles.length > 0) uploadBannerFiles.mutate(bannerFiles);
+    updateSettings.mutate(heroData);
   };
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <Settings className="inline mr-2" />
-            Pengaturan Frontend
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="py-8 text-center">Memuat...</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Make sure to only access properties if settings is FrontendSettings
-  const safeSettings = isFrontendSettings(settings) ? settings : initialSettings;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <Settings className="inline mr-2" />
-          Pengaturan Frontend
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Logo Section */}
-          <div className="space-y-2">
-            <Label>Logo & Favicon</Label>
-            <div className="border border-dashed rounded-md p-3 flex flex-col md:flex-row gap-5">
-              <div className="w-32 h-32 relative flex items-center justify-center">
-                {logoPreview || safeSettings.logo_url ? (
-                  <img
-                    src={logoPreview || safeSettings.logo_url}
-                    alt="Logo"
-                    className="object-contain h-full w-full"
-                  />
-                ) : (
-                  <div className="bg-gray-100 border rounded w-full h-full flex justify-center items-center text-sm text-gray-400">
-                    <Image className="w-8 h-8" /> Preview Logo
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col justify-center">
-                <Input
-                  id="logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoChange}
-                />
-                <span className="text-xs text-gray-500">
-                  (PNG/JPG/JPEG/GIF/WebP/SVG, max 5MB)
-                </span>
-                {logoFile && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => uploadLogo.mutate(logoFile)}
-                  >
-                    <Upload className="mr-1 h-4 w-4" /> Upload Logo
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Logo juga otomatis menjadi favicon pada halaman frontend.
+    <div className="space-y-6">
+      {/* Banner Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Image className="h-5 w-5" />
+              Pengaturan Banner
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="banner-enabled" className="text-sm">
+                Aktifkan Banner
+              </Label>
+              <Switch
+                id="banner-enabled"
+                checked={isBannerEnabled}
+                onCheckedChange={handleToggleBanner}
+              />
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Add New Banner */}
+          <div className="space-y-4">
+            <Label>Tambah Banner Baru</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Masukkan URL gambar banner..."
+                value={newBannerUrl}
+                onChange={(e) => setNewBannerUrl(e.target.value)}
+              />
+              <Button onClick={handleAddBanner} disabled={!newBannerUrl.trim()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah
+              </Button>
+            </div>
+            <p className="text-sm text-gray-600">
+              Ukuran yang disarankan: 1200x400 piksel. Format: JPG, PNG, WebP
+            </p>
+          </div>
 
-          {/* Banner / Carousel Section */}
-          <div className="space-y-2">
-            <Label>Banners/Slider (bisa lebih dari satu gambar)</Label>
-            <div className="border border-dashed rounded-md p-3">
-              <div className="flex flex-wrap gap-4 mb-4">
-                {safeSettings.banner_urls.length > 0 ? safeSettings.banner_urls.map((url, idx) => (
-                  <div className="relative w-40 h-24" key={url + idx}>
-                    <img
-                      src={url}
-                      alt={`Banner-${idx}`}
-                      className="object-cover w-full h-full rounded"
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="destructive"
-                      className="absolute top-1 right-1"
-                      onClick={() => handleRemoveBanner(idx)}
-                      title="Hapus banner"
-                    >
-                      <Trash className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )) : (
-                  <div className="bg-gray-100 border rounded w-40 h-24 flex justify-center items-center text-sm text-gray-400">
-                    <Image className="w-8 h-8" /> Tidak ada Banner
-                  </div>
-                )}
+          {/* Banner List */}
+          <div className="space-y-4">
+            <Label>Daftar Banner ({bannerImages.length})</Label>
+            {bannerImages.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
+                <Upload className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <p>Belum ada banner yang ditambahkan</p>
+                <p className="text-sm">Tambahkan banner untuk ditampilkan di halaman home</p>
               </div>
-              {bannerPreviews.length > 0 && (
-                <div className="flex flex-wrap gap-4 mb-4 border-t pt-2">
-                  {bannerPreviews.map((p, idx) => (
-                    <div className="w-40 h-24 relative" key={idx}>
-                      <img
-                        src={p}
-                        alt={`Preview-Banner-${idx}`}
-                        className="object-cover w-full h-full rounded border"
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {bannerImages.map((imageUrl: string, index: number) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img 
+                        src={imageUrl} 
+                        alt={`Banner ${index + 1}`}
+                        className="w-full h-full object-cover"
                       />
                     </div>
-                  ))}
-                  <div className="flex flex-col gap-2">
                     <Button
-                      type="button"
+                      variant="destructive"
                       size="sm"
-                      className="mt-1"
-                      variant="secondary"
-                      onClick={() => uploadBannerFiles.mutate(bannerFiles)}
-                      disabled={uploadBannerFiles.isPending}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleRemoveBanner(index)}
                     >
-                      <Upload className="w-4 h-4 mr-1" />
-                      {uploadBannerFiles.isPending ? 'Mengupload...' : 'Upload Semua'}
+                      <X className="h-4 w-4" />
                     </Button>
+                    <Badge className="absolute bottom-2 left-2">
+                      Banner {index + 1}
+                    </Badge>
                   </div>
-                </div>
-              )}
-              <Input
-                id="banners"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleBannerChange}
-              />
-              <span className="text-xs text-gray-500">
-                Upload satu kali untuk banyak gambar (PNG/JPG/JPEG/GIF/WebP/SVG, max 5MB/gambar)
-              </span>
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Header only */}
-          <div className="space-y-2">
-            <Label htmlFor="header">Header</Label>
-            <Input
-              id="header"
-              name="header"
-              defaultValue={safeSettings.header}
-              placeholder="Teks header atau html"
-            />
+          {/* Banner Info */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2">Informasi Banner</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Banner akan berganti otomatis setiap 7 detik</li>
+              <li>• Menggunakan efek coverflow untuk transisi yang menarik</li>
+              <li>• Pengguna dapat navigasi manual dengan tombol panah</li>
+              <li>• Indicator dots menunjukkan posisi banner aktif</li>
+            </ul>
           </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={
-              updateSettings.isPending ||
-              uploadBannerFiles.isPending ||
-              uploadLogo.isPending
-            }
-          >
-            {updateSettings.isPending ||
-            uploadBannerFiles.isPending ||
-            uploadLogo.isPending
-              ? 'Menyimpan...'
-              : 'Simpan Pengaturan'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Hero Section Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan Hero Section</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleHeroSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="hero_title">Judul Hero</Label>
+              <Input
+                id="hero_title"
+                name="hero_title"
+                defaultValue={settings?.hero_title || ''}
+                placeholder="Judul utama hero section"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hero_subtitle">Subtitle Hero</Label>
+              <Input
+                id="hero_subtitle"
+                name="hero_subtitle"
+                defaultValue={settings?.hero_subtitle || ''}
+                placeholder="Subtitle hero section"
+              />
+            </div>
+            <Button type="submit">
+              Simpan Pengaturan Hero
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

@@ -60,7 +60,12 @@ const PermissionManagement = () => {
   const queryClient = useQueryClient();
 
   const roles: UserRole[] = ['admin', 'manager', 'staff', 'cashier', 'buyer'];
-  const resources = ['products', 'categories', 'users', 'orders', 'reports', 'settings'];
+  const resources = [
+    'products', 'categories', 'users', 'orders', 'reports', 'settings',
+    'pos', 'inventory', 'purchases', 'returns', 'suppliers', 'customers',
+    'expenses', 'credit-management', 'point-exchange', 'points-rewards',
+    'flash-sales', 'user-locations'
+  ];
 
   // Fetch permissions
   const { data: permissions = [], isLoading } = useQuery({
