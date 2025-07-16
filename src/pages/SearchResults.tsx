@@ -1,13 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import HomeNavbar from '@/components/home/HomeNavbar';
+import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, ShoppingCart, Package, Search, Filter } from 'lucide-react';
+import { Heart, ShoppingCart, Package, Search } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import CartModal from '@/components/CartModal';
 import { toast } from '@/hooks/use-toast';
@@ -38,7 +38,6 @@ const SearchResults = () => {
   const { addItem } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [cartModalOpen, setCartModalOpen] = useState(false);
-  const [sortBy, setSortBy] = useState('name');
   
   const searchParams = new URLSearchParams(location.search);
   const query = searchParams.get('q') || '';
@@ -75,9 +74,9 @@ const SearchResults = () => {
     email: settings?.store_email?.email || ''
   };
 
-  // Enhanced search products query
+  // Search products query
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['search-products', query, categoryId, sortBy],
+    queryKey: ['search-products', query, categoryId],
     queryFn: async () => {
       let queryBuilder = supabase
         .from('products')
@@ -96,30 +95,14 @@ const SearchResults = () => {
         .eq('is_active', true);
 
       if (categoryId) {
-        // Search by category - show all products in this category
+        // Search by category
         queryBuilder = queryBuilder.eq('category_id', categoryId);
       } else if (query) {
-        // Enhanced search: product name, description, or category name
-        queryBuilder = queryBuilder.or(
-          `name.ilike.%${query}%,description.ilike.%${query}%,categories.name.ilike.%${query}%`
-        );
+        // Search by product name or category name
+        queryBuilder = queryBuilder.or(`name.ilike.%${query}%,categories.name.ilike.%${query}%`);
       }
 
-      // Apply sorting
-      switch (sortBy) {
-        case 'price_low':
-          queryBuilder = queryBuilder.order('selling_price', { ascending: true });
-          break;
-        case 'price_high':
-          queryBuilder = queryBuilder.order('selling_price', { ascending: false });
-          break;
-        case 'name':
-        default:
-          queryBuilder = queryBuilder.order('name', { ascending: true });
-          break;
-      }
-
-      const { data, error } = await queryBuilder.limit(50);
+      const { data, error } = await queryBuilder.limit(20);
       if (error) throw error;
       return data as Product[];
     },
@@ -148,6 +131,10 @@ const SearchResults = () => {
     }
   };
 
+  const handleCategorySelect = (newCategoryId: string) => {
+    navigate(`/search?category=${newCategoryId}`);
+  };
+
   const handleAddToCart = (product: Product) => {
     if (product.current_stock <= 0) {
       toast({
@@ -161,9 +148,9 @@ const SearchResults = () => {
     addItem({
       id: product.id,
       name: product.name,
-      selling_price: product.selling_price,
-      image_url: product.image_url,
-      current_stock: product.current_stock
+      price: product.selling_price,
+      image: product.image_url,
+      quantity: 1
     });
 
     toast({
@@ -200,40 +187,25 @@ const SearchResults = () => {
         onSearch={handleSearch}
       />
 
-      {/* Search Header */}
+      {/* Categories Section */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {getSearchTitle()}
-              </h1>
-              <p className="text-gray-600">
-                {isLoading ? 'Mencari...' : `${products.length} produk ditemukan`}
-              </p>
-            </div>
-            
-            {/* Sort Options */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-gray-500" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="name">Urutkan: Nama</option>
-                  <option value="price_low">Harga: Rendah ke Tinggi</option>
-                  <option value="price_high">Harga: Tinggi ke Rendah</option>
-                </select>
-              </div>
-            </div>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Kategori</h2>
+          <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
         </div>
       </div>
 
       {/* Search Results */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {getSearchTitle()}
+          </h1>
+          <p className="text-gray-600">
+            {isLoading ? 'Mencari...' : `${products.length} produk ditemukan`}
+          </p>
+        </div>
+
         {/* Loading */}
         {isLoading && (
           <div className="flex justify-center items-center py-12">

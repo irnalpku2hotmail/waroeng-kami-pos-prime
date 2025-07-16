@@ -15,8 +15,7 @@ import {
   Search, 
   History,
   UserCircle,
-  Store,
-  MapPin
+  Store
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -55,7 +54,7 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Enhanced search suggestions query
+  // Search suggestions query
   const { data: searchData } = useQuery({
     queryKey: ['search-suggestions', searchTerm],
     queryFn: async () => {
@@ -65,8 +64,7 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
         supabase
           .from('products')
           .select('id, name')
-          .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-          .eq('is_active', true)
+          .ilike('name', `%${searchTerm}%`)
           .limit(5),
         supabase
           .from('categories')
@@ -176,8 +174,9 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
     setShowSuggestions(false);
     if (suggestion.type === 'category') {
       navigate(`/search?category=${suggestion.id}`);
-    } else if (suggestion.type === 'product') {
-      navigate(`/product/${suggestion.id}`);
+    } else {
+      onSearchChange(suggestion.name);
+      navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
     }
   };
 
@@ -228,30 +227,21 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
                 />
               </div>
 
-              {/* Enhanced Search Suggestions */}
+              {/* Search Suggestions */}
               {showSuggestions && suggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg z-50 max-h-64 overflow-y-auto">
                   {suggestions.map((suggestion, index) => (
                     <div
                       key={`${suggestion.type}-${suggestion.id}`}
-                      className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 border-b border-gray-100 last:border-b-0"
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
                       onClick={() => handleSuggestionClick(suggestion)}
                     >
                       {suggestion.type === 'category' ? (
-                        <>
-                          <Badge variant="secondary" className="text-xs shrink-0">
-                            Kategori
-                          </Badge>
-                          <span className="text-gray-900 font-medium">{suggestion.name}</span>
-                        </>
+                        <Badge variant="secondary" className="text-xs">Kategori</Badge>
                       ) : (
-                        <>
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            Produk
-                          </Badge>
-                          <span className="text-gray-900">{suggestion.name}</span>
-                        </>
+                        <Badge variant="outline" className="text-xs">Produk</Badge>
                       )}
+                      <span className="text-gray-900">{suggestion.name}</span>
                     </div>
                   ))}
                 </div>
@@ -285,10 +275,6 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
                   <DropdownMenuItem onClick={() => navigate('/order-history')}>
                     <History className="h-4 w-4 mr-2" />
                     Riwayat Pesanan
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/user-location')}>
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Lokasi Saya
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
@@ -355,24 +341,15 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
                 {suggestions.map((suggestion, index) => (
                   <div
                     key={`${suggestion.type}-${suggestion.id}`}
-                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 border-b border-gray-100 last:border-b-0"
+                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
                     onClick={() => handleSuggestionClick(suggestion)}
                   >
                     {suggestion.type === 'category' ? (
-                      <>
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          Kategori
-                        </Badge>
-                        <span className="text-gray-900 font-medium">{suggestion.name}</span>
-                      </>
+                      <Badge variant="secondary" className="text-xs">Kategori</Badge>
                     ) : (
-                      <>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          Produk
-                        </Badge>
-                        <span className="text-gray-900">{suggestion.name}</span>
-                      </>
+                      <Badge variant="outline" className="text-xs">Produk</Badge>
                     )}
+                    <span className="text-gray-900">{suggestion.name}</span>
                   </div>
                 ))}
               </div>

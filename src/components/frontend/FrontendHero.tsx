@@ -1,23 +1,22 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { ChevronRight, Star, Users, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, ArrowRight } from 'lucide-react';
 
 interface FrontendHeroProps {
-  storeName?: string;
-  onProductClick?: (product: any) => void;
+  storeName: string;
 }
 
-const FrontendHero = ({ storeName = 'Waroeng Kami', onProductClick }: FrontendHeroProps) => {
-  // Fetch store settings for hero content
+const FrontendHero = ({ storeName }: FrontendHeroProps) => {
+  // Fetch banner images from frontend settings
   const { data: settings } = useQuery({
-    queryKey: ['store-settings-hero'],
+    queryKey: ['frontend-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('settings')
         .select('*')
-        .in('key', ['store_name', 'store_description', 'hero_title', 'hero_subtitle']);
+        .in('key', ['hero_banner_1', 'hero_banner_2', 'hero_banner_3']);
       
       if (error) throw error;
       
@@ -29,111 +28,104 @@ const FrontendHero = ({ storeName = 'Waroeng Kami', onProductClick }: FrontendHe
     }
   });
 
-  const storeDisplayName = settings?.store_name?.name || storeName;
-  const storeDescription = settings?.store_description?.description || 'Toko online terpercaya dengan produk berkualitas tinggi';
-  const heroTitle = settings?.hero_title?.title || `Selamat Datang di ${storeDisplayName}`;
-  const heroSubtitle = settings?.hero_subtitle?.subtitle || 'Temukan produk terbaik dengan harga terjangkau';
+  const bannerImages = [
+    settings?.hero_banner_1?.url || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=80',
+    settings?.hero_banner_2?.url || 'https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?auto=format&fit=crop&w=2000&q=80',
+    settings?.hero_banner_3?.url || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?auto=format&fit=crop&w=2000&q=80'
+  ];
+
+  const backgroundPattern = "data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='20' cy='20' r='1'/%3E%3Ccircle cx='40' cy='40' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E";
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 text-white overflow-hidden">
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <pattern id="hero-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-            <circle cx="20" cy="20" r="2" fill="currentColor" />
-          </pattern>
-          <rect width="100%" height="100%" fill="url(#hero-pattern)" />
-        </svg>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 py-16 lg:py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Hero Content */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                {heroTitle}
+      <div 
+        className="absolute inset-0 animate-pulse" 
+        style={{ backgroundImage: `url("${backgroundPattern}")` }}
+      ></div>
+      
+      <div className="relative max-w-7xl mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-2 gap-6 items-center">
+          {/* Content */}
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
+                Selamat Datang di{' '}
+                <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
+                  {storeName}
+                </span>
               </h1>
-              <p className="text-lg lg:text-xl text-gray-600 max-w-2xl">
-                {heroSubtitle}
-              </p>
-              <p className="text-base text-gray-500">
-                {storeDescription}
+              <p className="text-base md:text-lg text-blue-100 leading-relaxed">
+                Temukan produk terbaik dengan harga terjangkau. Belanja mudah, cepat, dan terpercaya.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                size="lg" 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
-              >
-                <ShoppingCart className="h-5 w-5 mr-2" />
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 py-3">
+              <div className="text-center">
+                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
+                  <ShoppingBag className="h-4 w-4" />
+                </div>
+                <div className="text-lg font-bold">1000+</div>
+                <div className="text-xs text-blue-200">Produk</div>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div className="text-lg font-bold">5000+</div>
+                <div className="text-xs text-blue-200">Pelanggan</div>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
+                  <Star className="h-4 w-4" />
+                </div>
+                <div className="text-lg font-bold">4.8</div>
+                <div className="text-xs text-blue-200">Rating</div>
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
                 Mulai Belanja
+                <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg"
-              >
-                Lihat Katalog
-                <ArrowRight className="h-5 w-5 ml-2" />
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
+                Lihat Produk
               </Button>
-            </div>
-
-            {/* Features */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
-              <div className="text-center">
-                <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-green-600 text-xl">✓</span>
-                </div>
-                <p className="text-sm font-medium text-gray-900">Produk Berkualitas</p>
-              </div>
-              <div className="text-center">
-                <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-blue-600 text-xl">🚚</span>
-                </div>
-                <p className="text-sm font-medium text-gray-900">Pengiriman Cepat</p>
-              </div>
-              <div className="text-center">
-                <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-purple-600 text-xl">💳</span>
-                </div>
-                <p className="text-sm font-medium text-gray-900">Pembayaran Mudah</p>
-              </div>
             </div>
           </div>
 
-          {/* Hero Image */}
-          <div className="relative">
-            <div className="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl overflow-hidden shadow-2xl">
-              <img
-                src="/placeholder.svg"
-                alt="Hero Image"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            {/* Floating Cards */}
-            <div className="absolute -top-4 -left-4 bg-white rounded-lg shadow-lg p-4 transform -rotate-6">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
+          {/* Hero Images - Reduced height */}
+          <div className="relative h-48 lg:h-60">
+            <div className="grid grid-cols-2 gap-3 h-full">
+              <div className="space-y-3">
+                <div className="relative h-24 lg:h-32 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
+                  <img 
+                    src={bannerImages[0]}
+                    alt="Hero 1" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>
-                <div>
-                  <p className="text-xs font-medium">Terpercaya</p>
-                  <p className="text-xs text-gray-500">1000+ Customer</p>
+                <div className="relative h-20 lg:h-24 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
+                  <img 
+                    src={bannerImages[1]}
+                    alt="Hero 2" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>
               </div>
-            </div>
-            
-            <div className="absolute -bottom-4 -right-4 bg-white rounded-lg shadow-lg p-4 transform rotate-6">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">🎯</span>
-                </div>
-                <div>
-                  <p className="text-xs font-medium">Flash Sale</p>
-                  <p className="text-xs text-gray-500">Diskon 50%</p>
+              <div className="mt-6">
+                <div className="relative h-36 lg:h-48 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
+                  <img 
+                    src={bannerImages[2]}
+                    alt="Hero 3" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>
               </div>
             </div>

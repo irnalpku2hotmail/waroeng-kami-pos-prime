@@ -4,263 +4,185 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Clock, Flame, Zap, Star } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
-
-interface Product {
-  id: string;
-  name: string;
-  selling_price: number;
-  image_url: string | null;
-  current_stock: number;
-}
-
-interface FlashSaleItem {
-  id: string;
-  product_id: string;
-  original_price: number;
-  sale_price: number;
-  discount_percentage: number;
-  stock_quantity: number;
-  sold_quantity: number;
-  products: Product | null;
-  flash_sales: {
-    name: string;
-    start_date: string;
-    end_date: string;
-    is_active: boolean;
-  } | null;
-}
+import { ChevronLeft, ChevronRight, Zap, Clock, Package } from 'lucide-react';
+import { useState, useRef } from 'react';
+import CountdownTimer from '@/components/CountdownTimer';
 
 interface HomeFlashSaleProps {
-  onProductClick?: (product: Product) => void;
+  onProductClick: (product: any) => void;
 }
 
 const HomeFlashSale = ({ onProductClick }: HomeFlashSaleProps) => {
-  const { user } = useAuth();
-  const { addItem } = useCart();
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch flash sale products
-  const { data: flashSaleProducts = [] } = useQuery({
-    queryKey: ['flash-sale-products'],
+  // Fetch active flash sales
+  const { data: flashSales = [] } = useQuery({
+    queryKey: ['active-flash-sales'],
     queryFn: async () => {
       const now = new Date().toISOString();
       const { data, error } = await supabase
-        .from('flash_sale_items')
+        .from('flash_sales')
         .select(`
           *,
-          products!inner(*),
-          flash_sales!inner(*)
+          flash_sale_items(
+            *,
+            products(
+              *,
+              categories(name),
+              units(name, abbreviation)
+            )
+          )
         `)
-        .eq('flash_sales.is_active', true)
-        .lte('flash_sales.start_date', now)
-        .gte('flash_sales.end_date', now)
-        .gt('stock_quantity', 0)
-        .limit(6);
+        .eq('is_active', true)
+        .lte('start_date', now)
+        .gte('end_date', now)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching flash sale products:', error);
-        throw error;
-      }
-      
-      return (data || []) as FlashSaleItem[];
+      if (error) throw error;
+      return data || [];
     }
   });
 
-  // Calculate countdown timer
-  useEffect(() => {
-    if (flashSaleProducts.length === 0) return;
-
-    const updateTimer = () => {
-      const now = new Date();
-      const endTime = new Date(flashSaleProducts[0]?.flash_sales?.end_date);
-      const difference = endTime.getTime() - now.getTime();
-
-      if (difference > 0) {
-        const hours = Math.floor(difference / (1000 * 60 * 60));
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-        setTimeLeft({ hours, minutes, seconds });
-      } else {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-      }
-    };
-
-    updateTimer();
-    const timer = setInterval(updateTimer, 1000);
-    return () => clearInterval(timer);
-  }, [flashSaleProducts]);
-
-  const handleAddToCart = (product: Product, flashSaleItem: FlashSaleItem) => {
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Please login to add items to cart',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    addItem({ 
-      ...product, 
-      selling_price: flashSaleItem.sale_price 
-    });
-    
-    toast({
-      title: 'Added to Cart',
-      description: `${product.name} has been added to your cart`
-    });
-  };
-
-  const handleProductClick = (product: Product) => {
-    if (onProductClick) {
-      onProductClick(product);
+  const scroll = (direction: 'left' | 'right') => {
+    if (containerRef.current) {
+      const scrollAmount = 280;
+      const newPosition = direction === 'left' 
+        ? Math.max(0, scrollPosition - scrollAmount)
+        : scrollPosition + scrollAmount;
+      
+      containerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
+      setScrollPosition(newPosition);
     }
   };
 
-  if (flashSaleProducts.length === 0) {
-    return null;
-  }
+  // Get all flash sale items
+  const flashSaleItems = flashSales.flatMap(sale => 
+    sale.flash_sale_items?.map(item => ({
+      ...item,
+      flashSale: sale,
+      product: item.products
+    })) || []
+  );
+
+  if (flashSaleItems.length === 0) return null;
 
   return (
-    <section className="py-12 bg-gradient-to-r from-red-500 via-pink-500 to-orange-500 relative overflow-hidden">
-      {/* Background Animation */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-24 h-24 bg-white rounded-full animate-bounce"></div>
-        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-white rounded-full animate-ping"></div>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Flame className="h-8 w-8 text-white animate-pulse" />
-            <h2 className="text-3xl font-bold text-white">Flash Sale</h2>
-            <Zap className="h-8 w-8 text-white animate-pulse" />
-          </div>
-          
-          {/* Countdown Timer */}
-          <div className="bg-white/20 backdrop-blur-sm rounded-full px-6 py-3 inline-block">
-            <div className="flex items-center gap-4 text-white">
-              <Clock className="h-5 w-5" />
-              <span className="text-sm font-medium">Berakhir dalam:</span>
-              <div className="flex gap-2">
-                <div className="bg-white/30 px-3 py-1 rounded text-sm font-bold">
-                  {String(timeLeft.hours).padStart(2, '0')}h
-                </div>
-                <div className="bg-white/30 px-3 py-1 rounded text-sm font-bold">
-                  {String(timeLeft.minutes).padStart(2, '0')}m
-                </div>
-                <div className="bg-white/30 px-3 py-1 rounded text-sm font-bold">
-                  {String(timeLeft.seconds).padStart(2, '0')}s
-                </div>
-              </div>
+    <div className="px-4 py-6 bg-gradient-to-r from-red-50 to-orange-50">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Zap className="h-6 w-6 text-red-500 animate-pulse" />
+              <h2 className="text-xl font-bold text-gray-900">Flash Sale</h2>
             </div>
+            {flashSales[0] && (
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-gray-600" />
+                <span className="text-gray-600">Berakhir dalam:</span>
+                <CountdownTimer 
+                  endDate={flashSales[0].end_date}
+                />
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => scroll('left')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => scroll('right')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {flashSaleProducts.map((item) => (
-            <Card 
-              key={item.id} 
-              className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden bg-white transform hover:scale-105"
-              onClick={() => item.products && handleProductClick(item.products)}
-            >
-              <div className="relative">
-                <div className="aspect-square bg-gray-100 overflow-hidden">
-                  <img
-                    src={item.products?.image_url || '/placeholder.svg'}
-                    alt={item.products?.name || 'Product'}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                </div>
-                
-                {/* Discount Badge */}
-                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-                  -{Math.round(item.discount_percentage)}%
-                </div>
-                
-                {/* Flash Sale Badge */}
-                <div className="absolute top-2 right-2 bg-yellow-400 text-red-600 text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
-                  ⚡ FLASH
-                </div>
-                
-                {/* Stock Progress */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">
-                  <div className="text-xs mb-1">Terjual: {item.sold_quantity}/{item.sold_quantity + item.stock_quantity}</div>
-                  <div className="w-full bg-gray-300 rounded-full h-1">
-                    <div 
-                      className="bg-yellow-400 h-1 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${(item.sold_quantity / (item.sold_quantity + item.stock_quantity)) * 100}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-              
-              <CardContent className="p-3">
-                <h3 className="font-medium text-sm mb-2 line-clamp-2 min-h-[2.5rem]">
-                  {item.products?.name || 'Unnamed Product'}
-                </h3>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-red-600">
-                      Rp {item.sale_price.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 line-through">
-                      Rp {item.original_price.toLocaleString('id-ID')}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                      <span className="text-xs text-gray-600">4.5</span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-xs text-orange-600 font-medium">
-                    Sisa {item.stock_quantity} pcs
-                  </div>
-                  
-                  <Button
-                    size="sm"
-                    className="w-full text-xs h-8 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (item.products) {
-                        handleAddToCart(item.products, item);
-                      }
-                    }}
-                  >
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    Beli Sekarang
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        {/* Call to Action */}
-        <div className="text-center mt-8">
-          <Button 
-            variant="outline" 
-            className="bg-white/20 backdrop-blur-sm border-white text-white hover:bg-white hover:text-red-500 transition-all duration-300"
+        <div className="relative">
+          <div 
+            ref={containerRef}
+            className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            Lihat Semua Flash Sale
-          </Button>
+            {flashSaleItems.map((item) => {
+              const discountPercent = Math.round(((item.original_price - item.sale_price) / item.original_price) * 100);
+              const soldPercent = Math.round((item.sold_quantity / item.stock_quantity) * 100);
+              
+              return (
+                <Card 
+                  key={item.id}
+                  className="flex-shrink-0 w-56 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group border-2 border-red-200"
+                  onClick={() => onProductClick({...item.product, flash_sale_price: item.sale_price})}
+                >
+                  <div className="relative">
+                    <img
+                      src={item.product?.image_url || '/placeholder.svg'}
+                      alt={item.product?.name}
+                      className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <Badge className="absolute top-2 left-2 bg-red-500 text-white">
+                      -{discountPercent}%
+                    </Badge>
+                    <Badge className="absolute top-2 right-2 bg-orange-500">
+                      <Zap className="h-3 w-3 mr-1" />
+                      Flash Sale
+                    </Badge>
+                  </div>
+                  
+                  <CardContent className="p-3">
+                    <h3 className="font-semibold mb-2 text-sm line-clamp-2 h-10">
+                      {item.product?.name}
+                    </h3>
+                    
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-red-600">
+                          Rp {item.sale_price.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500 line-through">
+                          Rp {item.original_price.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-600">Terjual {item.sold_quantity}</span>
+                        <span className="text-gray-600">{soldPercent}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-orange-400 to-red-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(soldPercent, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        <span>Sisa {item.stock_quantity - item.sold_quantity}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

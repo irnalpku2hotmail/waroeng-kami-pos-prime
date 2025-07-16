@@ -10,12 +10,10 @@ import BestSellingProducts from '@/components/home/BestSellingProducts';
 import RecentlyBoughtProducts from '@/components/home/RecentlyBoughtProducts';
 import ProductCarousel from '@/components/home/ProductCarousel';
 import HomeFooter from '@/components/home/HomeFooter';
-import FrontendFooter from '@/components/frontend/FrontendFooter';
 import CartModal from '@/components/CartModal';
 import LocationPicker from '@/components/home/LocationPicker';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
 
 interface StoreInfo {
   name: string;
@@ -27,7 +25,6 @@ interface StoreInfo {
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { setCustomerInfo, setShippingCost } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [cartModalOpen, setCartModalOpen] = useState(false);
 
@@ -50,14 +47,14 @@ const Home = () => {
     }
   });
 
-  // Check if user has location set and auto-fill shipping info
+  // Check if user has location set
   const { data: userProfile } = useQuery({
     queryKey: ['user-profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('latitude, longitude, address_text, full_name, phone, email')
+        .select('latitude, longitude, address_text')
         .eq('id', user.id)
         .single();
       if (error) throw error;
@@ -65,21 +62,6 @@ const Home = () => {
     },
     enabled: !!user?.id
   });
-
-  // Auto-fill customer info when user profile is loaded
-  useEffect(() => {
-    if (userProfile && user) {
-      setCustomerInfo({
-        name: userProfile.full_name || user.email?.split('@')[0] || '',
-        phone: userProfile.phone || '',
-        email: user.email || '',
-        address: userProfile.address_text || ''
-      });
-
-      // Set default shipping cost (can be calculated based on location later)
-      setShippingCost(10000);
-    }
-  }, [userProfile, user, setCustomerInfo, setShippingCost]);
 
   const storeName = settings?.store_name?.name || 'Waroeng Kami';
 
@@ -103,11 +85,6 @@ const Home = () => {
 
   const handleLocationSelect = (lat: number, lng: number, address: string) => {
     console.log('Location:', { lat, lng, address });
-    // Update shipping info when location is selected
-    setCustomerInfo(prev => ({
-      ...prev,
-      address: address
-    }));
   };
 
   const handleProductClick = (product: any) => {
@@ -142,7 +119,7 @@ const Home = () => {
         </div>
       )}
 
-      <FrontendHero storeName={storeName} onProductClick={handleProductClick} />
+      <FrontendHero storeName={storeName} />
       
       {/* Categories Section */}
       <section className="py-8 bg-white">
@@ -154,7 +131,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Flash Sale Section with enhanced design */}
+      {/* Flash Sale Section */}
       <HomeFlashSale onProductClick={handleProductClick} />
 
       {/* Best Selling Products */}
@@ -166,7 +143,7 @@ const Home = () => {
       {/* All Products */}
       <ProductCarousel onProductClick={handleProductClick} />
 
-      <FrontendFooter />
+      <HomeFooter />
       
       <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </div>
