@@ -54,9 +54,12 @@ const HomeNavbar = ({ storeInfo }: HomeNavbarProps) => {
       return nameValue;
     }
     
-    // If it's an object with a name property
-    if (typeof nameValue === 'object' && 'name' in nameValue && typeof nameValue.name === 'string') {
-      return nameValue.name;
+    // If it's an object with a name property, handle it safely
+    if (typeof nameValue === 'object' && nameValue !== null && 'name' in nameValue) {
+      const objectName = (nameValue as any).name;
+      if (typeof objectName === 'string') {
+        return objectName;
+      }
     }
     
     // Fallback
