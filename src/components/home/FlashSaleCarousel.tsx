@@ -67,12 +67,12 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+        {[...Array(6)].map((_, i) => (
           <div key={i} className="animate-pulse">
             <div className="bg-gray-200 aspect-square rounded-lg mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded mb-1"></div>
-            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+            <div className="h-3 bg-gray-200 rounded mb-1"></div>
+            <div className="h-2 bg-gray-200 rounded w-2/3"></div>
           </div>
         ))}
       </div>
@@ -81,30 +81,30 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
 
   if (!flashSaleItems?.length) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <Zap className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>Tidak ada flash sale aktif saat ini</p>
+      <div className="text-center py-6 text-gray-500">
+        <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">Tidak ada flash sale aktif saat ini</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
       {flashSaleItems?.map((item) => (
         <Card 
           key={item.id} 
           className="cursor-pointer hover:shadow-md transition-shadow duration-200 group relative overflow-hidden"
           onClick={() => onProductClick(item.products)}
         >
-          <div className="absolute top-2 left-2 z-10">
-            <Badge className="bg-red-500 text-white">
-              <Zap className="h-3 w-3 mr-1" />
+          <div className="absolute top-1 left-1 z-10">
+            <Badge className="bg-red-500 text-white text-xs px-1 py-0">
+              <Zap className="h-2 w-2 mr-0.5" />
               -{item.discount_percentage}%
             </Badge>
           </div>
           
-          <CardContent className="p-3">
-            <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100">
+          <CardContent className="p-2">
+            <div className="aspect-square mb-2 overflow-hidden rounded-lg bg-gray-100">
               <img
                 src={item.products?.image_url || '/placeholder.svg'}
                 alt={item.products?.name || 'Product'}
@@ -112,13 +112,13 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
               />
             </div>
             
-            <div className="space-y-2">
-              <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+            <div className="space-y-1">
+              <h3 className="font-medium text-xs line-clamp-2 leading-tight">
                 {item.products?.name}
               </h3>
               
               {item.products?.categories && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs px-1 py-0">
                   {item.products.categories.name}
                 </Badge>
               )}
@@ -126,7 +126,7 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="font-bold text-red-600 text-sm">
+                    <span className="font-bold text-red-600 text-xs">
                       Rp {item.sale_price?.toLocaleString('id-ID') || '0'}
                     </span>
                     <span className="text-xs text-gray-500 line-through">
@@ -137,9 +137,9 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
                   <Button
                     size="sm"
                     onClick={(e) => handleAddToCart(e, item)}
-                    className="h-8 w-8 p-0"
+                    className="h-6 w-6 p-0 text-xs"
                   >
-                    <ShoppingCart className="h-4 w-4" />
+                    <ShoppingCart className="h-3 w-3" />
                   </Button>
                 </div>
                 
@@ -148,7 +148,9 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
                 </div>
                 
                 {item.flash_sales?.end_date && (
-                  <CountdownTimer endTime={item.flash_sales.end_date} />
+                  <div className="text-xs">
+                    <CountdownTimer endDate={item.flash_sales.end_date} />
+                  </div>
                 )}
               </div>
             </div>
