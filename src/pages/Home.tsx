@@ -15,6 +15,13 @@ import LocationPicker from '@/components/home/LocationPicker';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface StoreInfo {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+}
+
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -58,6 +65,14 @@ const Home = () => {
 
   const storeName = settings?.store_name?.name || 'Waroeng Kami';
 
+  // Transform settings to StoreInfo format
+  const storeInfo: StoreInfo = {
+    name: settings?.store_name?.name || 'Waroeng Kami',
+    address: settings?.store_address?.address || '',
+    phone: settings?.store_phone?.phone || '',
+    email: settings?.store_email?.email || ''
+  };
+
   const handleSearch = () => {
     if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
@@ -72,10 +87,14 @@ const Home = () => {
     console.log('Location:', { lat, lng, address });
   };
 
+  const handleProductClick = (product: any) => {
+    navigate(`/product/${product.id}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <HomeNavbar
-        storeInfo={settings}
+        storeInfo={storeInfo}
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -113,16 +132,16 @@ const Home = () => {
       </section>
 
       {/* Flash Sale Section */}
-      <HomeFlashSale />
+      <HomeFlashSale onProductClick={handleProductClick} />
 
       {/* Best Selling Products */}
-      <BestSellingProducts />
+      <BestSellingProducts onProductClick={handleProductClick} />
 
       {/* Recently Bought Products */}
-      <RecentlyBoughtProducts />
+      <RecentlyBoughtProducts onProductClick={handleProductClick} />
 
       {/* All Products */}
-      <ProductCarousel />
+      <ProductCarousel onProductClick={handleProductClick} />
 
       <HomeFooter />
       

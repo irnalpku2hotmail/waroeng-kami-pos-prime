@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -26,10 +25,17 @@ interface Product {
   };
 }
 
+interface StoreInfo {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+}
+
 const SearchResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addItem } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [cartModalOpen, setCartModalOpen] = useState(false);
   
@@ -59,6 +65,14 @@ const SearchResults = () => {
       return settingsMap;
     }
   });
+
+  // Transform settings to StoreInfo format
+  const storeInfo: StoreInfo = {
+    name: settings?.store_name?.name || 'Waroeng Kami',
+    address: settings?.store_address?.address || '',
+    phone: settings?.store_phone?.phone || '',
+    email: settings?.store_email?.email || ''
+  };
 
   // Search products query
   const { data: products = [], isLoading } = useQuery({
@@ -131,12 +145,12 @@ const SearchResults = () => {
       return;
     }
 
-    addToCart({
+    addItem({
       id: product.id,
       name: product.name,
       price: product.selling_price,
-      quantity: 1,
-      image_url: product.image_url
+      image: product.image_url,
+      quantity: 1
     });
 
     toast({
@@ -166,7 +180,7 @@ const SearchResults = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <HomeNavbar
-        storeInfo={settings}
+        storeInfo={storeInfo}
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
