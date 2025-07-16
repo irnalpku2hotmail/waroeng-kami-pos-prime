@@ -1,20 +1,17 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Heart, ShoppingCart, Minus, Plus, ArrowLeft, Star } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, ShoppingCart, Star, Package } from 'lucide-react';
 import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeFooter from '@/components/home/HomeFooter';
-import ProductRecommendations from '@/components/ProductRecommendations';
-import { useProductLikes } from '@/hooks/useProductLikes';
+import FrontendCartModal from '@/components/frontend/FrontendCartModal';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -25,46 +22,44 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [cartModalOpen, setCartModalOpen] = useState(false);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
     queryFn: async () => {
+      if (!id) throw new Error('Product ID is required');
+      
       const { data, error } = await supabase
         .from('products')
         .select(`
           *,
-          categories (name),
-          units (name, abbreviation),
-          price_variants (*)
+          categories (
+            id,
+            name,
+            description
+          ),
+          units (
+            id,
+            name,
+            abbreviation
+          ),
+          price_variants (
+            id,
+            name,
+            price,
+            minimum_quantity,
+            is_active
+          )
         `)
         .eq('id', id)
         .single();
 
       if (error) throw error;
       return data;
-    },
-    enabled: !!id,
+    }
   });
 
-  const { data: flashSaleItem } = useQuery({
-    queryKey: ['flash-sale-item', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('flash_sale_items')
-        .select(`
-          *,
-          flash_sales (*)
-        `)
-        .eq('product_id', id)
-        .gt('stock_quantity', 0)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    },
-    enabled: !!id,
-  });
-
+  // Fetch store info for navbar
   const { data: storeInfo } = useQuery({
     queryKey: ['store-settings'],
     queryFn: async () => {
@@ -80,90 +75,97 @@ const ProductDetail = () => {
         settings[setting.key] = setting.value;
       });
 
+      const extractStringValue = (value: any, defaultValue: string): string => {
+        if (!value) return defaultValue;
+        
+        if (typeof value === 'object' && value !== null) {
+          if ('name' in value && typeof value.name === 'string') {
+            return value.name;
+          }
+          if ('email' in value && typeof value.email === 'string') {
+            return value.email;
+          }
+          if ('address' in value && typeof value.address === 'string') {
+            return value.address;
+          }
+          if ('phone' in value && typeof value.phone === 'string') {
+            return value.phone;
+          }
+          return defaultValue;
+        }
+        
+        if (typeof value === 'string') {
+          return value;
+        }
+        
+        return String(value) || defaultValue;
+      };
+
       return {
-        name: settings.store_name || 'Waroeng Kami',
-        address: settings.store_address || 'Jl. Contoh No. 123, Jakarta',
-        phone: settings.store_phone || '+62 812-3456-7890',
-        email: settings.store_email || 'info@waroengkami.com'
+        name: extractStringValue(settings.store_name, 'Waroeng Kami'),
+        address: extractStringValue(settings.store_address, 'Jl. Contoh No. 123, Jakarta'),
+        phone: extractStringValue(settings.store_phone, '+62 812-3456-7890'),
+        email: extractStringValue(settings.store_email, 'info@waroengkami.com')
       };
     },
   });
 
-  const { toggleLike, isLiked } = useProductLikes();
-
-  const likeMutation = useMutation({
-    mutationFn: async () => {
-      if (!user || !id) throw new Error('User not authenticated');
-      
-      if (isLiked(id)) {
-        const { error } = await supabase
-          .from('user_product_likes')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('product_id', id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('user_product_likes')
-          .insert({ user_id: user.id, product_id: id });
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-likes', id] });
-      toast({ 
-        title: isLiked(id) ? 'Removed from favorites' : 'Added to favorites',
-        description: isLiked(id) ? 'Product removed from your favorites' : 'Product added to your favorites'
-      });
-    },
-  });
-
-  useEffect(() => {
-    if (product?.price_variants && product.price_variants.length > 0) {
-      setSelectedVariant(product.price_variants[0]);
-    }
-  }, [product]);
-
   const getCurrentPrice = () => {
-    if (flashSaleItem && isFlashSaleActive()) {
-      return flashSaleItem.sale_price;
+    if (selectedVariant) {
+      return selectedVariant.price;
     }
-    return selectedVariant?.price || product?.selling_price || 0;
+    return product?.selling_price || 0;
   };
 
-  const getOriginalPrice = () => {
-    return selectedVariant?.price || product?.selling_price || 0;
-  };
-
-  const isFlashSaleActive = () => {
-    if (!flashSaleItem?.flash_sales) return false;
-    const now = new Date();
-    const start = new Date(flashSaleItem.flash_sales.start_date);
-    const end = new Date(flashSaleItem.flash_sales.end_date);
-    return now >= start && now <= end && flashSaleItem.flash_sales.is_active;
+  const getMinQuantity = () => {
+    if (selectedVariant) {
+      return selectedVariant.minimum_quantity;
+    }
+    return product?.min_quantity || 1;
   };
 
   const handleAddToCart = () => {
+    if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Please login to add items to cart',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!product) return;
-    
-    const price = getCurrentPrice();
-    const variant = selectedVariant || {
-      id: 'default',
-      name: 'Regular',
-      price: product.selling_price,
-      minimum_quantity: 1
-    };
+
+    if (product.current_stock < quantity) {
+      toast({
+        title: 'Insufficient Stock',
+        description: `Only ${product.current_stock} items available`,
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const minQty = getMinQuantity();
+    if (quantity < minQty) {
+      toast({
+        title: 'Minimum Quantity Required',
+        description: `Minimum quantity is ${minQty}`,
+        variant: 'destructive'
+      });
+      return;
+    }
 
     addItem({
       id: product.id,
       name: product.name,
-      selling_price: price,
-      image_url: product.image_url,
-      current_stock: product.current_stock
+      price: getCurrentPrice(),
+      image: product.image_url,
+      quantity: quantity,
+      variant: selectedVariant?.name
     });
 
     toast({
-      title: 'Added to cart',
+      title: 'Added to Cart',
       description: `${quantity}x ${product.name} added to cart`
     });
   };
@@ -174,11 +176,17 @@ const ProductDetail = () => {
   };
 
   const handleCartClick = () => {
-    navigate('/cart');
+    setCartModalOpen(true);
   };
 
   const handleSearchChange = (term: string) => {
     setSearchTerm(term);
+  };
+
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   if (isLoading) {
@@ -189,13 +197,19 @@ const ProductDetail = () => {
           onCartClick={handleCartClick}
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
+          onSearch={handleSearch}
         />
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="h-96 bg-gray-200 rounded"></div>
+              <div className="space-y-4">
+                <div className="h-8 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -210,6 +224,7 @@ const ProductDetail = () => {
           onCartClick={handleCartClick}
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
+          onSearch={handleSearch}
         />
         <div className="container mx-auto px-4 py-8 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h1>
@@ -218,7 +233,6 @@ const ProductDetail = () => {
             Back to Home
           </Button>
         </div>
-        <HomeFooter storeInfo={storeInfo} />
       </div>
     );
   }
@@ -230,110 +244,125 @@ const ProductDetail = () => {
         onCartClick={handleCartClick}
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
+        onSearch={handleSearch}
       />
       
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <button onClick={() => navigate('/')} className="hover:text-gray-700">
-            Home
-          </button>
-          <span>/</span>
-          <span className="text-gray-900">{product.name}</span>
+        <div className="flex items-center gap-2 mb-6">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Kembali
+          </Button>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-600">{product.categories?.name}</span>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-900 font-medium">{product.name}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        {/* Product Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
           {/* Product Image */}
           <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-lg border overflow-hidden">
-              {product.image_url ? (
-                <img 
-                  src={product.image_url} 
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                  <span className="text-gray-400">No Image</span>
-                </div>
-              )}
+            <div className="aspect-square overflow-hidden rounded-xl bg-gray-100">
+              <img
+                src={product.image_url || '/placeholder.svg'}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
 
           {/* Product Info */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-              {product.categories && (
-                <Badge variant="secondary" className="mb-4">
-                  {product.categories.name}
-                </Badge>
-              )}
-              
-              {/* Flash Sale Banner */}
-              {isFlashSaleActive() && (
-                <div className="bg-red-100 border border-red-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-red-600" />
-                    <span className="text-red-800 font-medium">Flash Sale Active!</span>
-                  </div>
-                  <p className="text-red-700 text-sm mt-1">
-                    Limited time offer - {flashSaleItem?.stock_quantity} items left
-                  </p>
-                </div>
-              )}
-
-              {/* Price */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-bold text-green-600">
-                    Rp {getCurrentPrice().toLocaleString('id-ID')}
-                  </span>
-                  {isFlashSaleActive() && (
-                    <span className="text-lg text-gray-500 line-through">
-                      Rp {getOriginalPrice().toLocaleString('id-ID')}
-                    </span>
-                  )}
-                </div>
-                {isFlashSaleActive() && (
-                  <div className="text-sm text-red-600 font-medium">
-                    Save {Math.round(((getOriginalPrice() - getCurrentPrice()) / getOriginalPrice()) * 100)}%
-                  </div>
+              <div className="flex items-center gap-2 mb-2">
+                {product.categories && (
+                  <Badge variant="secondary" className="text-sm">
+                    {product.categories.name}
+                  </Badge>
                 )}
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                  <span className="text-sm text-gray-600">4.5 (120 reviews)</span>
+                </div>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                {product.name}
+              </h1>
+              
+              <div className="flex items-center gap-4 mb-4">
+                <span className="text-3xl font-bold text-blue-600">
+                  Rp {getCurrentPrice().toLocaleString('id-ID')}
+                </span>
+                {selectedVariant && (
+                  <Badge className="bg-green-100 text-green-800">
+                    {selectedVariant.name}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Package className="h-4 w-4" />
+                  <span>Stok: {product.current_stock}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>Unit: {product.units?.name || 'pcs'}</span>
+                </div>
               </div>
             </div>
 
             {/* Price Variants */}
             {product.price_variants && product.price_variants.length > 0 && (
               <div className="space-y-3">
-                <h3 className="font-medium text-gray-900">Price Options</h3>
+                <h3 className="font-semibold">Pilih Varian:</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {product.price_variants.map((variant: any) => (
-                    <button
+                  {product.price_variants
+                    .filter((variant: any) => variant.is_active)
+                    .map((variant: any) => (
+                    <Card 
                       key={variant.id}
-                      onClick={() => setSelectedVariant(variant)}
-                      className={`p-3 border rounded-lg text-left transition-colors ${
-                        selectedVariant?.id === variant.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                      className={`cursor-pointer transition-colors ${
+                        selectedVariant?.id === variant.id 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'hover:border-gray-300'
                       }`}
+                      onClick={() => setSelectedVariant(variant)}
                     >
-                      <div className="font-medium">{variant.name}</div>
-                      <div className="text-sm text-gray-500">
-                        Min: {variant.minimum_quantity} pcs
-                      </div>
-                      <div className="text-green-600 font-medium">
-                        Rp {variant.price.toLocaleString('id-ID')}
-                      </div>
-                    </button>
+                      <CardContent className="p-3">
+                        <div className="text-sm font-medium">{variant.name}</div>
+                        <div className="text-xs text-gray-600">
+                          Min: {variant.minimum_quantity} pcs
+                        </div>
+                        <div className="text-sm font-bold text-blue-600">
+                          Rp {variant.price.toLocaleString('id-ID')}
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Description */}
+            {product.description && (
+              <div className="space-y-2">
+                <h3 className="font-semibold">Deskripsi:</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {product.description}
+                </p>
+              </div>
+            )}
+
             {/* Quantity Selector */}
             <div className="space-y-3">
-              <h3 className="font-medium text-gray-900">Quantity</h3>
+              <h3 className="font-semibold">Jumlah:</h3>
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -343,101 +372,54 @@ const ProductDetail = () => {
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <Input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-20 text-center"
-                  min="1"
-                />
+                <span className="font-medium text-lg px-4">{quantity}</span>
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
+                  disabled={quantity >= product.current_stock}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
-                <span className="text-gray-500">
-                  Stock: {product.current_stock}
+                <span className="text-sm text-gray-600">
+                  ({product.current_stock} tersedia)
                 </span>
               </div>
+              <p className="text-xs text-gray-500">
+                Minimum pembelian: {getMinQuantity()} pcs
+              </p>
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleAddToCart}
-                  className="flex-1"
-                  disabled={quantity > product.current_stock}
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => toggleLike(id || '')}
-                  className={isLiked(id || '') ? 'text-red-500 hover:text-red-600' : ''}
-                >
-                  <Heart className={`h-4 w-4 ${isLiked(id || '') ? 'fill-current' : ''}`} />
-                </Button>
-              </div>
+            <div className="space-y-3 pt-4">
+              <Button
+                onClick={handleAddToCart}
+                disabled={product.current_stock === 0 || quantity < getMinQuantity()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
+                size="lg"
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+              </Button>
+              
               <Button
                 onClick={handleBuyNow}
-                className="w-full"
-                variant="secondary"
-                disabled={quantity > product.current_stock}
+                disabled={product.current_stock === 0 || quantity < getMinQuantity()}
+                variant="outline"
+                className="w-full py-3"
+                size="lg"
               >
-                Buy Now
+                Beli Sekarang
               </Button>
-            </div>
-
-            {/* Product Details */}
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900">Product Details</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">SKU:</span>
-                  <span>{product.barcode || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Stock:</span>
-                  <span>{product.current_stock} {product.units?.abbreviation || ''}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Minimum Order:</span>
-                  <span>{product.min_quantity} {product.units?.abbreviation || ''}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Loyalty Points:</span>
-                  <span>{product.loyalty_points} points</span>
-                </div>
-              </div>
-              {product.description && (
-                <div className="space-y-2">
-                  <h4 className="font-medium">Description</h4>
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    {product.description}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
-
-        {/* Product Recommendations */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-900">Produk Serupa</h2>
-          <ProductRecommendations 
-            currentProductId={id || ''} 
-            categoryId={product.category_id}
-          />
-        </div>
       </main>
 
-      <HomeFooter storeInfo={storeInfo} />
+      <FrontendCartModal 
+        open={cartModalOpen} 
+        onOpenChange={setCartModalOpen} 
+      />
     </div>
   );
 };
