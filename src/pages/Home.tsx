@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import BannerCarousel from '@/components/home/BannerCarousel';
 import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
@@ -9,11 +10,14 @@ import HomeFlashSale from '@/components/home/HomeFlashSale';
 import ProductGrid from '@/components/home/ProductGrid';
 import HomeFooter from '@/components/home/HomeFooter';
 import LocationPermissionModal from '@/components/home/LocationPermissionModal';
+import CartModal from '@/components/CartModal';
 import { useState } from 'react';
 
 const Home = () => {
   const { user } = useAuth();
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch flash sales
   const { data: flashSales } = useQuery({
@@ -59,7 +63,11 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar onLocationClick={() => setShowLocationModal(true)} />
+      <HomeNavbar 
+        onCartClick={() => setCartModalOpen(true)}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
       
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Banner Carousel */}
@@ -95,9 +103,12 @@ const Home = () => {
       
       {/* Location Permission Modal */}
       <LocationPermissionModal 
-        isOpen={showLocationModal}
-        onClose={() => setShowLocationModal(false)}
+        open={showLocationModal}
+        onOpenChange={setShowLocationModal}
       />
+
+      {/* Cart Modal */}
+      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </div>
   );
 };

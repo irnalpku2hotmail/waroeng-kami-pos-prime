@@ -25,15 +25,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
-interface StoreInfo {
-  name: string;
-  address: string;
-  phone: string;
-  email: string;
-}
-
 interface HomeNavbarProps {
-  storeInfo?: StoreInfo;
   onCartClick: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
@@ -46,7 +38,7 @@ interface SearchSuggestion {
   name: string;
 }
 
-const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSearch }: HomeNavbarProps) => {
+const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeNavbarProps) => {
   const { user, signOut, profile } = useAuth();
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
@@ -82,7 +74,7 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
   });
 
   useEffect(() => {
-    if (searchData) {
+    if (searchData && searchData.products && searchData.categories) {
       const productSuggestions: SearchSuggestion[] = searchData.products.map(p => ({
         type: 'product',
         id: p.id,
@@ -109,47 +101,6 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Helper function to safely extract string values from potentially object values
-  const extractStringValue = (value: any, defaultValue: string): string => {
-    if (!value) return defaultValue;
-    
-    if (typeof value === 'object' && value !== null) {
-      if ('name' in value && typeof value.name === 'string') {
-        return value.name;
-      }
-      if ('email' in value && typeof value.email === 'string') {
-        return value.email;
-      }
-      if ('address' in value && typeof value.address === 'string') {
-        return value.address;
-      }
-      if ('phone' in value && typeof value.phone === 'string') {
-        return value.phone;
-      }
-      return defaultValue;
-    }
-    
-    if (typeof value === 'string') {
-      return value;
-    }
-    
-    return String(value) || defaultValue;
-  };
-
-  const defaultStoreInfo = {
-    name: 'Waroeng Kami',
-    address: 'Jl. Contoh No. 123, Jakarta',
-    phone: '+62 812-3456-7890',
-    email: 'info@waroengkami.com'
-  };
-
-  const store = storeInfo ? {
-    name: extractStringValue(storeInfo.name, defaultStoreInfo.name),
-    address: extractStringValue(storeInfo.address, defaultStoreInfo.address),
-    phone: extractStringValue(storeInfo.phone, defaultStoreInfo.phone),
-    email: extractStringValue(storeInfo.email, defaultStoreInfo.email)
-  } : defaultStoreInfo;
 
   const handleSignOut = async () => {
     try {
@@ -204,7 +155,7 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
             </div>
             <div className="text-white">
               <h1 className="text-xl font-bold leading-tight">
-                {store.name}
+                Waroeng Kami
               </h1>
               <p className="text-blue-100 text-xs hidden md:block">
                 Toko online terpercaya
