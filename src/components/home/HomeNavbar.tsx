@@ -1,19 +1,26 @@
 
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, ShoppingCart, Menu, X, LogOut, User, Package } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { 
+  ShoppingCart, 
+  Search, 
+  User, 
+  LogOut, 
+  Settings, 
+  Heart,
+  History,
+  MapPin
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -27,267 +34,150 @@ interface HomeNavbarProps {
 }
 
 const HomeNavbar = ({ storeInfo }: HomeNavbarProps) => {
+  const { user, signOut } = useAuth();
+  const { items } = useCart();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { getTotalItems } = useCart();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate('/');
-      toast({
-        title: 'Berhasil logout',
-        description: 'Anda telah berhasil keluar dari akun.',
-      });
-    } catch (error) {
-      console.error('Error logging out:', error);
-      toast({
-        title: 'Error',
-        description: 'Terjadi kesalahan saat logout.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Safely extract store name
-  const getStoreName = (): string => {
+  const getStoreName = () => {
     if (!storeInfo?.name) return 'Waroeng Kami';
     
     const nameValue = storeInfo.name;
     
-    // First check if nameValue is null
-    if (nameValue === null) return 'Waroeng Kami';
+    // Handle null case
+    if (!nameValue) return 'Waroeng Kami';
     
-    // Handle case where name is a direct string
+    // If it's already a string, return it
     if (typeof nameValue === 'string') {
       return nameValue;
     }
     
-    // Handle case where name might be an object (but not null)
-    if (typeof nameValue === 'object') {
-      // Use type assertion since we've already checked it's not null
-      const objValue = nameValue as Record<string, any>;
-      if ('name' in objValue && typeof objValue.name === 'string') {
-        return objValue.name;
-      }
-      // If it's an object but doesn't have a name property, return default
-      return 'Waroeng Kami';
+    // If it's an object with a name property
+    if (typeof nameValue === 'object' && 'name' in nameValue && typeof nameValue.name === 'string') {
+      return nameValue.name;
     }
     
-    // Convert any other type to string safely
-    return String(nameValue) || 'Waroeng Kami';
+    // Fallback
+    return 'Waroeng Kami';
   };
 
-  const storeName = getStoreName();
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   return (
-    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="container mx-auto px-4">
+    <nav className="bg-white shadow-md border-b sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">W</span>
-            </div>
-            <span className="font-bold text-xl text-gray-900">{storeName}</span>
-          </Link>
-
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-lg mx-8">
-            <form onSubmit={handleSearch} className="flex w-full">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Cari produk..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 rounded-r-none border-r-0"
-                />
+          {/* Logo and Store Info */}
+          <div className="flex items-center space-x-4">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">W</span>
               </div>
-              <Button type="submit" className="rounded-l-none">
-                Cari
-              </Button>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900">{getStoreName()}</h1>
+                <div className="flex items-center text-xs text-gray-500">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  <span className="truncate max-w-40">{storeInfo?.address || 'Jakarta'}</span>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* Search Bar */}
+          <div className="flex-1 max-w-lg mx-8">
+            <form onSubmit={handleSearch} className="relative">
+              <Input
+                type="text"
+                placeholder="Cari produk..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 rounded-full border-2 border-gray-200 focus:border-blue-500"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             </form>
           </div>
 
-          {/* Right Section */}
+          {/* Right Side - Cart and User */}
           <div className="flex items-center space-x-4">
             {/* Cart */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="relative"
-              onClick={() => {
-                // For now, just show cart items count
-                toast({
-                  title: 'Keranjang',
-                  description: `Anda memiliki ${getTotalItems()} item di keranjang`,
-                });
-              }}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {getTotalItems() > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  {getTotalItems()}
-                </Badge>
-              )}
-            </Button>
+            <Link to="/cart" className="relative">
+              <Button variant="ghost" size="sm" className="relative">
+                <ShoppingCart className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs min-w-[1.25rem] h-5 flex items-center justify-center rounded-full">
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
 
-            {/* Auth Section */}
+            {/* User Menu */}
             {user ? (
-              <div className="hidden md:flex items-center space-x-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/orders')}>
-                      <Package className="h-4 w-4 mr-2" />
-                      Riwayat Pesanan
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                    <User className="h-5 w-5" />
+                    <span className="hidden md:block text-sm">
+                      {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/order-history')}>
+                    <History className="mr-2 h-4 w-4" />
+                    Riwayat Pesanan
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/favorites')}>
+                    <Heart className="mr-2 h-4 w-4" />
+                    Favorit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Keluar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <div className="hidden md:flex items-center space-x-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/login')}
-                >
+              <div className="flex space-x-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
                   Masuk
                 </Button>
-                <Button 
-                  size="sm"
-                  onClick={() => navigate('/register')}
-                >
+                <Button size="sm" onClick={() => navigate('/register')}>
                   Daftar
                 </Button>
               </div>
             )}
-
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
           </div>
         </div>
-
-        {/* Mobile Search */}
-        <div className="md:hidden pb-4">
-          <form onSubmit={handleSearch} className="flex">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Cari produk..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 rounded-r-none border-r-0"
-              />
-            </div>
-            <Button type="submit" className="rounded-l-none">
-              Cari
-            </Button>
-          </form>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t py-4">
-            <div className="space-y-2">
-              {user ? (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start"
-                    onClick={() => {
-                      navigate('/profile');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Profile
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start"
-                    onClick={() => {
-                      navigate('/orders');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Riwayat Pesanan
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start"
-                    onClick={() => {
-                      handleLogout();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start"
-                    onClick={() => {
-                      navigate('/login');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Masuk
-                  </Button>
-                  <Button 
-                    className="w-full justify-start"
-                    onClick={() => {
-                      navigate('/register');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Daftar
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </nav>
   );
 };
 
 export default HomeNavbar;
-

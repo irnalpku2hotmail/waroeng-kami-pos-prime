@@ -33,6 +33,7 @@ import UserManagement from "./pages/UserManagement";
 import Inventory from "./pages/Inventory";
 import Frontend from "./pages/Frontend";
 import SearchResults from "./pages/SearchResults";
+import OrderHistory from "./pages/OrderHistory";
 import Notifications from "./pages/Notifications";
 
 // Auth pages
@@ -58,6 +59,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/search" element={<SearchResults />} />
+                <Route path="/order-history" element={<OrderHistory />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 

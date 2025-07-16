@@ -68,6 +68,36 @@ const SearchResults = () => {
     enabled: !!categoryId
   });
 
+  // Fetch recommendations based on search or category
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ['search-recommendations', searchQuery, categoryId],
+    queryFn: async () => {
+      let query = supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          units(name, abbreviation)
+        `)
+        .eq('is_active', true)
+        .limit(6);
+
+      // If searching by category, get popular products from the same category
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      } else if (searchQuery) {
+        // If text search, get products from similar categories or popular products
+        query = query.order('current_stock', { ascending: false });
+      }
+
+      const { data, error } = await query.order('selling_price', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!searchQuery || !!categoryId
+  });
+
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
@@ -95,6 +125,11 @@ const SearchResults = () => {
 
   const handleProductClick = (product: any) => {
     navigate(`/product/${product.id}`);
+  };
+
+  const handleCategorySearch = (categoryId: string, categoryName: string) => {
+    setSearchParams({ category: categoryId });
+    setLocalSearchTerm(categoryName);
   };
 
   return (
@@ -163,68 +198,142 @@ const SearchResults = () => {
             <p className="text-gray-500">Try adjusting your search terms</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {results.map((product) => (
-              <Card 
-                key={product.id}
-                className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
-                onClick={() => handleProductClick(product)}
-              >
-                <div className="relative">
-                  <img
-                    src={product.image_url || '/placeholder.svg'}
-                    alt={product.name}
-                    className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
-                  {product.current_stock <= 0 && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <Badge variant="destructive" className="text-xs">
-                        Out of Stock
+          <>
+            {/* Main Results */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-12">
+              {results.map((product) => (
+                <Card 
+                  key={product.id}
+                  className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
+                  onClick={() => handleProductClick(product)}
+                >
+                  <div className="relative">
+                    <img
+                      src={product.image_url || '/placeholder.svg'}
+                      alt={product.name}
+                      className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    {product.current_stock <= 0 && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <Badge variant="destructive" className="text-xs">
+                          Out of Stock
+                        </Badge>
+                      </div>
+                    )}
+                    {product.current_stock <= product.min_stock && product.current_stock > 0 && (
+                      <Badge className="absolute top-2 left-2 bg-orange-500 text-xs">
+                        Limited
                       </Badge>
+                    )}
+                  </div>
+                  
+                  <CardContent className="p-3">
+                    <h3 className="font-semibold mb-2 text-xs line-clamp-2 h-8">
+                      {product.name}
+                    </h3>
+                    
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-bold text-blue-600">
+                        Rp {product.selling_price.toLocaleString('id-ID')}
+                      </span>
                     </div>
-                  )}
-                  {product.current_stock <= product.min_stock && product.current_stock > 0 && (
-                    <Badge className="absolute top-2 left-2 bg-orange-500 text-xs">
-                      Limited
-                    </Badge>
-                  )}
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                      <div className="flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        <span>{product.current_stock}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 text-yellow-500" />
+                        <span>4.5</span>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      size="sm"
+                      className="w-full text-xs h-7"
+                      onClick={(e) => handleAddToCart(product, e)}
+                      disabled={product.current_stock <= 0}
+                    >
+                      <ShoppingCart className="h-3 w-3 mr-1" />
+                      Add to Cart
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Recommendations */}
+            {recommendations.length > 0 && (
+              <div className="mt-12">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">
+                  {categoryId ? 'Produk Lainnya dalam Kategori Ini' : 'Produk yang Sering Dicari'}
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  {recommendations.map((product) => (
+                    <Card 
+                      key={product.id}
+                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <div className="relative">
+                        <img
+                          src={product.image_url || '/placeholder.svg'}
+                          alt={product.name}
+                          className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                        {product.current_stock <= 0 && (
+                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <Badge variant="destructive" className="text-xs">
+                              Out of Stock
+                            </Badge>
+                          </div>
+                        )}
+                        {product.current_stock <= product.min_stock && product.current_stock > 0 && (
+                          <Badge className="absolute top-2 left-2 bg-orange-500 text-xs">
+                            Limited
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <CardContent className="p-3">
+                        <h3 className="font-semibold mb-2 text-xs line-clamp-2 h-8">
+                          {product.name}
+                        </h3>
+                        
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-bold text-blue-600">
+                            Rp {product.selling_price.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                          <div className="flex items-center gap-1">
+                            <Package className="h-3 w-3" />
+                            <span>{product.current_stock}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500" />
+                            <span>4.5</span>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          size="sm"
+                          className="w-full text-xs h-7"
+                          onClick={(e) => handleAddToCart(product, e)}
+                          disabled={product.current_stock <= 0}
+                        >
+                          <ShoppingCart className="h-3 w-3 mr-1" />
+                          Add to Cart
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                
-                <CardContent className="p-3">
-                  <h3 className="font-semibold mb-2 text-xs line-clamp-2 h-8">
-                    {product.name}
-                  </h3>
-                  
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-bold text-blue-600">
-                      Rp {product.selling_price.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                    <div className="flex items-center gap-1">
-                      <Package className="h-3 w-3" />
-                      <span>{product.current_stock}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-yellow-500" />
-                      <span>4.5</span>
-                    </div>
-                  </div>
-                  
-                  <Button
-                    size="sm"
-                    className="w-full text-xs h-7"
-                    onClick={(e) => handleAddToCart(product, e)}
-                    disabled={product.current_stock <= 0}
-                  >
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    Add to Cart
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
