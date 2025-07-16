@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,12 +10,12 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 
 interface UnitsTabProps {
-  units: any[];
-  isLoading: boolean;
-  searchTerm: string;
+  units?: any[];
+  isLoading?: boolean;
+  searchTerm?: string;
 }
 
-const UnitsTab = ({ units: externalUnits, isLoading: externalLoading, searchTerm: externalSearchTerm }: UnitsTabProps) => {
+const UnitsTab = ({ units: externalUnits = [], isLoading: externalLoading = false, searchTerm: externalSearchTerm = '' }: UnitsTabProps) => {
   const [open, setOpen] = useState(false);
   const [editUnit, setEditUnit] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState(externalSearchTerm || '');
@@ -40,7 +39,7 @@ const UnitsTab = ({ units: externalUnits, isLoading: externalLoading, searchTerm
       if (error) throw error;
       return data;
     },
-    enabled: !externalUnits.length // Only fetch if external data is not provided
+    enabled: externalUnits.length === 0 // Only fetch if external data is not provided
   });
 
   const finalUnits = externalUnits.length > 0 ? externalUnits : units;
