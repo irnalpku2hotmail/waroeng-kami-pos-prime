@@ -1,13 +1,14 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { PresenceProvider } from '@/contexts/PresenceContext';
 import Home from '@/pages/Home';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
+import Login from '@/pages/auth/Login';
+import Register from '@/pages/auth/Register';
 import SearchResults from '@/pages/SearchResults';
 import ProductDetail from '@/pages/ProductDetail';
 import UserLocation from '@/pages/UserLocation';
@@ -36,11 +37,12 @@ import Notifications from '@/pages/Notifications';
 import NotFound from '@/pages/NotFound';
 import Layout from '@/components/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { MapPin } from 'lucide-react';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <QueryClient>
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
@@ -55,7 +57,7 @@ function App() {
                 <Route path="/user-location" element={<UserLocation />} />
                 
                 {/* Protected Routes */}
-                <Route element={<ProtectedRoute />}>
+                <Route element={<ProtectedRoute><></></ProtectedRoute>}>
                   <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
                   <Route path="/products" element={<Layout><Products /></Layout>} />
                   <Route path="/product-details/:id" element={<Layout><ProductDetails /></Layout>} />
@@ -86,7 +88,7 @@ function App() {
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>
-    </QueryClient>
+    </QueryClientProvider>
   );
 }
 

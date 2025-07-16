@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Clock, Fire, Zap, Star } from 'lucide-react';
+import { ShoppingCart, Clock, Flame, Zap, Star } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 
@@ -139,7 +139,7 @@ const HomeFlashSale = ({ onProductClick }: HomeFlashSaleProps) => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Fire className="h-8 w-8 text-white animate-pulse" />
+            <Flame className="h-8 w-8 text-white animate-pulse" />
             <h2 className="text-3xl font-bold text-white">Flash Sale</h2>
             <Zap className="h-8 w-8 text-white animate-pulse" />
           </div>

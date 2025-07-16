@@ -15,7 +15,8 @@ import {
   Search, 
   History,
   UserCircle,
-  Store
+  Store,
+  MapPin
 } from 'lucide-react';
 import {
   DropdownMenu,
