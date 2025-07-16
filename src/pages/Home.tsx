@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +12,7 @@ import RecentlyBoughtProducts from '@/components/home/RecentlyBoughtProducts';
 import HomeFooter from '@/components/home/HomeFooter';
 import LocationPermissionModal from '@/components/home/LocationPermissionModal';
 import ProductGrid from '@/components/home/ProductGrid';
+import FrontendCartModal from '@/components/frontend/FrontendCartModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
@@ -23,6 +23,7 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
 
   // Check for location permission on component mount
   useEffect(() => {
@@ -116,13 +117,12 @@ const Home = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim() || selectedCategory) {
-      setShowSearchResults(true);
+      navigate(`/search?${searchTerm.trim() ? `q=${encodeURIComponent(searchTerm.trim())}` : ''}${selectedCategory ? `${searchTerm.trim() ? '&' : ''}category=${selectedCategory}` : ''}`);
     }
   };
 
   const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setShowSearchResults(true);
+    navigate(`/search?category=${categoryId}`);
   };
 
   const resetSearch = () => {
@@ -133,7 +133,10 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <HomeNavbar storeInfo={storeInfo} />
+      <HomeNavbar 
+        storeInfo={storeInfo} 
+        onCartClick={() => setCartModalOpen(true)}
+      />
       
       <main className="bg-white">
         {/* Hero Section with Banner/Slider */}
@@ -161,70 +164,47 @@ const Home = () => {
                 Cari
               </Button>
             </form>
-            {showSearchResults && (
-              <div className="mt-4 text-center">
-                <Button 
-                  variant="outline" 
-                  onClick={resetSearch}
-                  className="rounded-full"
-                >
-                  Lihat Semua Produk
-                </Button>
-              </div>
-            )}
           </section>
 
-          {showSearchResults ? (
-            <section>
-              <ProductGrid 
-                searchTerm={searchTerm}
-                selectedCategory={selectedCategory}
-                onProductClick={handleProductClick}
-              />
-            </section>
-          ) : (
-            <>
-              {/* Categories Section */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  Kategori Produk
-                </h2>
-                <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
-              </section>
+          {/* Categories Section */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              Kategori Produk
+            </h2>
+            <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
+          </section>
 
-              {/* Flash Sale Section */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  ⚡ Flash Sale
-                </h2>
-                <FlashSaleCarousel onProductClick={handleProductClick} />
-              </section>
+          {/* Flash Sale Section */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              ⚡ Flash Sale
+            </h2>
+            <FlashSaleCarousel onProductClick={handleProductClick} />
+          </section>
 
-              {/* Best Selling Products */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  🏆 Produk Terlaris
-                </h2>
-                <BestSellingProducts onProductClick={handleProductClick} />
-              </section>
+          {/* Best Selling Products */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              🏆 Produk Terlaris
+            </h2>
+            <BestSellingProducts onProductClick={handleProductClick} />
+          </section>
 
-              {/* Recently Bought Products */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  🔄 Beli Lagi
-                </h2>
-                <RecentlyBoughtProducts onProductClick={handleProductClick} />
-              </section>
+          {/* Recently Bought Products */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              🔄 Beli Lagi
+            </h2>
+            <RecentlyBoughtProducts onProductClick={handleProductClick} />
+          </section>
 
-              {/* All Products Section */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  Semua Produk
-                </h2>
-                <ProductCarousel onProductClick={handleProductClick} />
-              </section>
-            </>
-          )}
+          {/* All Products Section */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              Semua Produk
+            </h2>
+            <ProductCarousel onProductClick={handleProductClick} />
+          </section>
         </div>
       </main>
 
@@ -235,6 +215,11 @@ const Home = () => {
         onOpenChange={setShowLocationModal}
         onAllow={handleLocationAllow}
         onDeny={handleLocationDeny}
+      />
+
+      <FrontendCartModal 
+        open={cartModalOpen} 
+        onOpenChange={setCartModalOpen} 
       />
     </div>
   );
