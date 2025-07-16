@@ -37,54 +37,54 @@ const FrontendHero = ({ storeName }: FrontendHeroProps) => {
   return (
     <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 text-white overflow-hidden">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Ccircle cx="20" cy="20" r="1"/%3E%3Ccircle cx="40" cy="40" r="1"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse"></div>
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.05\"%3E%3Ccircle cx=\"20\" cy=\"20\" r=\"1\"/%3E%3Ccircle cx=\"40\" cy=\"40\" r=\"1\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse"></div>
       
-      <div className="relative max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8 items-center">
+      <div className="relative max-w-7xl mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-2 gap-6 items-center">
           {/* Content */}
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
                 Selamat Datang di{' '}
                 <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
                   {storeName}
                 </span>
               </h1>
-              <p className="text-lg md:text-xl text-blue-100 leading-relaxed">
+              <p className="text-base md:text-lg text-blue-100 leading-relaxed">
                 Temukan produk terbaik dengan harga terjangkau. Belanja mudah, cepat, dan terpercaya.
               </p>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 py-4">
+            <div className="grid grid-cols-3 gap-3 py-3">
               <div className="text-center">
-                <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-full mx-auto mb-2">
-                  <ShoppingBag className="h-5 w-5" />
+                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
+                  <ShoppingBag className="h-4 w-4" />
                 </div>
-                <div className="text-xl font-bold">1000+</div>
+                <div className="text-lg font-bold">1000+</div>
                 <div className="text-xs text-blue-200">Produk</div>
               </div>
               <div className="text-center">
-                <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-full mx-auto mb-2">
-                  <Users className="h-5 w-5" />
+                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
+                  <Users className="h-4 w-4" />
                 </div>
-                <div className="text-xl font-bold">5000+</div>
+                <div className="text-lg font-bold">5000+</div>
                 <div className="text-xs text-blue-200">Pelanggan</div>
               </div>
               <div className="text-center">
-                <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-full mx-auto mb-2">
-                  <Star className="h-5 w-5" />
+                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
+                  <Star className="h-4 w-4" />
                 </div>
-                <div className="text-xl font-bold">4.8</div>
+                <div className="text-lg font-bold">4.8</div>
                 <div className="text-xs text-blue-200">Rating</div>
               </div>
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
                 Mulai Belanja
-                <ChevronRight className="ml-2 h-5 w-5" />
+                <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
                 Lihat Produk
@@ -93,10 +93,10 @@ const FrontendHero = ({ storeName }: FrontendHeroProps) => {
           </div>
 
           {/* Hero Images - Reduced height */}
-          <div className="relative h-64 lg:h-80">
-            <div className="grid grid-cols-2 gap-4 h-full">
-              <div className="space-y-4">
-                <div className="relative h-32 lg:h-40 rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+          <div className="relative h-48 lg:h-60">
+            <div className="grid grid-cols-2 gap-3 h-full">
+              <div className="space-y-3">
+                <div className="relative h-24 lg:h-32 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
                   <img 
                     src={bannerImages[0]}
                     alt="Hero 1" 
@@ -104,7 +104,7 @@ const FrontendHero = ({ storeName }: FrontendHeroProps) => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>
-                <div className="relative h-28 lg:h-36 rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                <div className="relative h-20 lg:h-24 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
                   <img 
                     src={bannerImages[1]}
                     alt="Hero 2" 
@@ -113,8 +113,8 @@ const FrontendHero = ({ storeName }: FrontendHeroProps) => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>
               </div>
-              <div className="mt-8">
-                <div className="relative h-48 lg:h-64 rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+              <div className="mt-6">
+                <div className="relative h-36 lg:h-48 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
                   <img 
                     src={bannerImages[2]}
                     alt="Hero 3" 
