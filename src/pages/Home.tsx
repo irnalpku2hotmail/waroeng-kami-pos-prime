@@ -9,10 +9,10 @@ import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider
 import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
 import ProductGrid from '@/components/home/ProductGrid';
 import HomeFooter from '@/components/home/HomeFooter';
-import InteractiveLocationPicker from '@/components/home/InteractiveLocationPicker';
 import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
 import BestSellingSlider from '@/components/home/BestSellingSlider';
 import CartModal from '@/components/CartModal';
+import ShippingInfoDisplay from '@/components/home/ShippingInfoDisplay';
 import { useState } from 'react';
 
 const Home = () => {
@@ -77,7 +77,7 @@ const Home = () => {
 
   const handleCategorySelect = (categoryId: string, categoryName: string) => {
     setSelectedCategory(categoryId);
-    setSearchTerm(categoryName); // Set search term to show what's being filtered
+    setSearchTerm(categoryName);
   };
 
   const handleSearch = () => {
@@ -103,10 +103,8 @@ const Home = () => {
         {/* Banner Carousel */}
         <BannerCarousel />
         
-        {/* Interactive Location Picker */}
-        <div className="mb-8">
-          <InteractiveLocationPicker />
-        </div>
+        {/* Shipping Info Display */}
+        <ShippingInfoDisplay />
         
         {/* Enhanced Categories Slider */}
         <EnhancedCategoriesSlider onCategorySelect={handleCategorySelect} />

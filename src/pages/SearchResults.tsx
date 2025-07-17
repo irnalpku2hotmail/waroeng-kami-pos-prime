@@ -5,15 +5,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ShoppingCart, Search, Package } from 'lucide-react';
+import { ShoppingCart, Search, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
+import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
+import CartModal from '@/components/CartModal';
+import { useState } from 'react';
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const query = searchParams.get('q') || '';
 
   const { data: products = [], isLoading } = useQuery({
@@ -76,26 +81,29 @@ const SearchResults = () => {
     navigate(`/product/${productId}`);
   };
 
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm p-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="font-semibold">Hasil Pencarian</h1>
-            <p className="text-sm text-gray-600">"{query}"</p>
-          </div>
-        </div>
-      </div>
+      <HomeNavbar 
+        onCartClick={() => setCartModalOpen(true)}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onSearch={handleSearch}
+      />
 
-      <div className="p-4">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Hasil Pencarian
+          </h1>
+          <p className="text-gray-600">"{query}"</p>
+        </div>
+
         {isLoading && (
           <div className="text-center py-8">
             <Search className="h-8 w-8 text-gray-400 mx-auto mb-2 animate-pulse" />
@@ -187,6 +195,7 @@ const SearchResults = () => {
       </div>
 
       <HomeFooter />
+      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </div>
   );
 };

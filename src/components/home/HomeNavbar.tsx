@@ -129,22 +129,15 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setShowSuggestions(false);
-    if (onSearch) {
-      onSearch();
-    } else if (searchTerm.trim()) {
+    if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setShowSuggestions(false);
-    if (suggestion.type === 'category') {
-      onSearchChange(suggestion.name);
-      if (onSearch) onSearch();
-    } else {
-      onSearchChange(suggestion.name);
-      navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
-    }
+    onSearchChange(suggestion.name);
+    navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
   };
 
   const handleInputFocus = () => {
@@ -157,6 +150,12 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     const value = e.target.value;
     onSearchChange(value);
     setShowSuggestions(value.length >= 2);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch(e as any);
+    }
   };
 
   // Get store info from settings
@@ -204,6 +203,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
                   value={searchTerm}
                   onChange={handleInputChange}
                   onFocus={handleInputFocus}
+                  onKeyDown={handleKeyDown}
                   className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
                 />
               </div>
@@ -312,6 +312,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
                 value={searchTerm}
                 onChange={handleInputChange}
                 onFocus={handleInputFocus}
+                onKeyDown={handleKeyDown}
                 className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
               />
             </div>

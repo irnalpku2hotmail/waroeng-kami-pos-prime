@@ -32,6 +32,50 @@ const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSlider
     }
   });
 
+  // Auto scroll effect
+  useEffect(() => {
+    if (!scrollRef.current || categories.length === 0) return;
+
+    const scrollContainer = scrollRef.current;
+    let scrollPosition = 0;
+    const scrollStep = 2;
+    const scrollDelay = 50;
+
+    const autoScroll = () => {
+      if (scrollContainer) {
+        scrollPosition += scrollStep;
+        
+        // Reset scroll position when reaching the end
+        if (scrollPosition >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
+          scrollPosition = 0;
+        }
+        
+        scrollContainer.scrollTo({
+          left: scrollPosition,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    const interval = setInterval(autoScroll, scrollDelay);
+
+    // Pause auto-scroll on hover
+    const handleMouseEnter = () => clearInterval(interval);
+    const handleMouseLeave = () => {
+      const newInterval = setInterval(autoScroll, scrollDelay);
+      return newInterval;
+    };
+
+    scrollContainer.addEventListener('mouseenter', handleMouseEnter);
+    scrollContainer.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      clearInterval(interval);
+      scrollContainer.removeEventListener('mouseenter', handleMouseEnter);
+      scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [categories]);
+
   const scrollLeft = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
@@ -60,8 +104,8 @@ const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSlider
 
   return (
     <div className="mb-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Kategori Produk</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900">Kategori</h2>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={scrollLeft}>
             <ChevronLeft className="h-4 w-4" />
@@ -74,7 +118,7 @@ const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSlider
       
       <div 
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
+        className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {categories.map((category) => (
@@ -84,25 +128,15 @@ const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSlider
             onClick={() => handleCategoryClick(category.id, category.name)}
           >
             <div className="relative">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
+              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
                 {category.icon_url ? (
                   <img 
                     src={category.icon_url} 
                     alt={category.name}
-                    className="w-12 h-12 object-cover rounded-xl"
+                    className="w-8 h-8 object-cover rounded-full"
                   />
                 ) : (
-                  <Grid3X3 className="h-10 w-10 text-blue-600" />
-                )}
-              </div>
-              <div className="mt-3 text-center">
-                <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {category.name}
-                </h3>
-                {category.description && (
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                    {category.description}
-                  </p>
+                  <Grid3X3 className="h-8 w-8 text-blue-600" />
                 )}
               </div>
             </div>
