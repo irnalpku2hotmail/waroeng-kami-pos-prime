@@ -8,20 +8,24 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ShoppingCart, Search, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
+import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
+import { useState } from 'react';
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const query = searchParams.get('q') || '';
+  const [searchTerm, setSearchTerm] = useState(query);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['search-products', query],
     queryFn: async () => {
       if (!query.trim()) return [];
 
-      const { data, error } = await supabase
+      // Search in product names
+      const productSearch = supabase
         .from('products')
         .select(`
           *,
@@ -29,11 +33,31 @@ const SearchResults = () => {
           units (name, abbreviation)
         `)
         .eq('is_active', true)
-        .ilike('name', `%${query}%`)
-        .order('name');
+        .ilike('name', `%${query}%`);
 
-      if (error) throw error;
-      return data || [];
+      // Search in categories
+      const categorySearch = supabase
+        .from('products')
+        .select(`
+          *,
+          categories!inner (name, id),
+          units (name, abbreviation)
+        `)
+        .eq('is_active', true)
+        .ilike('categories.name', `%${query}%`);
+
+      const [productResults, categoryResults] = await Promise.all([
+        productSearch,
+        categorySearch
+      ]);
+
+      // Combine and deduplicate results
+      const allProducts = [...(productResults.data || []), ...(categoryResults.data || [])];
+      const uniqueProducts = allProducts.filter((product, index, self) => 
+        index === self.findIndex(p => p.id === product.id)
+      );
+
+      return uniqueProducts;
     },
     enabled: !!query.trim()
   });
@@ -76,11 +100,24 @@ const SearchResults = () => {
     navigate(`/product/${productId}`);
   };
 
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm p-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+      <HomeNavbar 
+        onCartClick={() => {}}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onSearch={handleSearch}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
           <Button
             variant="ghost"
             size="sm"
@@ -89,13 +126,11 @@ const SearchResults = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="font-semibold">Hasil Pencarian</h1>
-            <p className="text-sm text-gray-600">"{query}"</p>
+            <h1 className="text-2xl font-bold text-gray-900">Hasil Pencarian</h1>
+            <p className="text-gray-600">"{query}"</p>
           </div>
         </div>
-      </div>
 
-      <div className="p-4">
         {isLoading && (
           <div className="text-center py-8">
             <Search className="h-8 w-8 text-gray-400 mx-auto mb-2 animate-pulse" />
@@ -123,7 +158,7 @@ const SearchResults = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
               {products.map((product) => (
                 <Card 
                   key={product.id} 

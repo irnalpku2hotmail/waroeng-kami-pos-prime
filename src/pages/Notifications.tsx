@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, CheckCircle, Filter, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
 
@@ -12,6 +12,7 @@ const ITEMS_PER_PAGE = 20;
 
 const Notifications = () => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedPriority, setSelectedPriority] = useState<string>('all');
 
   const { data: notificationsData } = useQuery({
     queryKey: ['notifications', currentPage],
@@ -117,14 +118,19 @@ const Notifications = () => {
         return new Date(b.time).getTime() - new Date(a.time).getTime();
       });
 
+      // Filter by priority if selected
+      const filteredNotifications = selectedPriority === 'all' 
+        ? sortedNotifications 
+        : sortedNotifications.filter(n => n.priority === selectedPriority);
+
       // Pagination
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE;
-      const paginatedNotifications = sortedNotifications.slice(from, to);
+      const paginatedNotifications = filteredNotifications.slice(from, to);
 
       return {
         data: paginatedNotifications,
-        count: sortedNotifications.length
+        count: filteredNotifications.length
       };
     }
   });
@@ -135,10 +141,10 @@ const Notifications = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 border-red-200 text-red-800';
-      case 'high': return 'bg-orange-100 border-orange-200 text-orange-800';
-      case 'medium': return 'bg-blue-100 border-blue-200 text-blue-800';
-      default: return 'bg-gray-100 border-gray-200 text-gray-800';
+      case 'urgent': return 'bg-red-50 border-red-200';
+      case 'high': return 'bg-orange-50 border-orange-200';
+      case 'medium': return 'bg-blue-50 border-blue-200';
+      default: return 'bg-gray-50 border-gray-200';
     }
   };
 
@@ -165,22 +171,83 @@ const Notifications = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Notifikasi & Peringatan</h1>
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {notificationsCount} notifikasi
-            </span>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-3 rounded-full">
+                <Bell className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Notifikasi & Peringatan</h1>
+                <p className="text-blue-100">Pantau status penting sistem Anda</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold">{notificationsCount}</div>
+              <div className="text-blue-100">Total notifikasi</div>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filter Notifikasi
+              </CardTitle>
+              <Button variant="outline" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus Semua
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={selectedPriority === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('all')}
+              >
+                Semua
+              </Button>
+              <Button
+                variant={selectedPriority === 'urgent' ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('urgent')}
+              >
+                Mendesak
+              </Button>
+              <Button
+                variant={selectedPriority === 'high' ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('high')}
+              >
+                Tinggi
+              </Button>
+              <Button
+                variant={selectedPriority === 'medium' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('medium')}
+              >
+                Sedang
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notifications List */}
+        <div className="space-y-3">
           {notifications.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <Bell className="h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-gray-500">Tidak ada notifikasi</p>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <div className="bg-green-100 p-4 rounded-full mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Semua Terkendali!</h3>
+                <p className="text-gray-500 text-center">Tidak ada notifikasi yang memerlukan perhatian saat ini.</p>
               </CardContent>
             </Card>
           ) : (
@@ -188,29 +255,36 @@ const Notifications = () => {
               {notifications.map((notification) => {
                 const IconComponent = notification.icon;
                 return (
-                  <Card key={notification.id} className={`border ${getPriorityColor(notification.priority)}`}>
+                  <Card key={notification.id} className={`border-l-4 ${getPriorityColor(notification.priority)} hover:shadow-md transition-shadow`}>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
-                          <IconComponent className="h-5 w-5" />
+                        <div className="flex-shrink-0 p-2 rounded-full bg-white shadow-sm">
+                          <IconComponent className="h-5 w-5 text-gray-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium">{notification.title}</h3>
-                            <Badge variant={getPriorityBadge(notification.priority) as "default" | "destructive" | "outline" | "secondary"}>
-                              {getPriorityLabel(notification.priority)}
-                            </Badge>
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-semibold text-gray-900">{notification.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={getPriorityBadge(notification.priority) as "default" | "destructive" | "outline" | "secondary"} className="text-xs">
+                                {getPriorityLabel(notification.priority)}
+                              </Badge>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                          <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(notification.time).toLocaleDateString('id-ID', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                          <p className="text-sm text-gray-700 mb-3">{notification.message}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock className="h-3 w-3" />
+                              {new Date(notification.time).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-xs h-6">
+                              Tandai Dibaca
+                            </Button>
                           </div>
                         </div>
                       </div>

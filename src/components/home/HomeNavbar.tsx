@@ -72,6 +72,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
           .from('products')
           .select('id, name')
           .ilike('name', `%${searchTerm}%`)
+          .eq('is_active', true)
           .limit(5),
         supabase
           .from('categories')
@@ -138,11 +139,10 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setShowSuggestions(false);
+    onSearchChange(suggestion.name);
     if (suggestion.type === 'category') {
-      onSearchChange(suggestion.name);
       if (onSearch) onSearch();
     } else {
-      onSearchChange(suggestion.name);
       navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
     }
   };
@@ -160,10 +160,10 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   };
 
   // Get store info from settings
-  const storeInfo = settings?.store_info || {};
-  const storeName = storeInfo.name || 'Waroeng Kami';
-  const storeTagline = storeInfo.tagline || 'Toko online terpercaya';
-  const logoUrl = storeInfo.logo_url;
+  const storeInfo = settings?.store_info || settings?.store_name || {};
+  const storeName = typeof storeInfo === 'object' ? storeInfo.name || 'Waroeng Kami' : storeInfo || 'Waroeng Kami';
+  const storeTagline = typeof storeInfo === 'object' ? storeInfo.tagline || 'Toko online terpercaya' : 'Toko online terpercaya';
+  const logoUrl = typeof storeInfo === 'object' ? storeInfo.logo_url : null;
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg border-b sticky top-0 z-50">
