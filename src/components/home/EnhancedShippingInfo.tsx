@@ -1,179 +1,242 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { MapPin, Truck, Clock, Navigation, Loader2 } from 'lucide-react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { MapPin, Truck, Clock, Shield, Zap, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from 'react';
 
 const EnhancedShippingInfo = () => {
-  const { user, profile } = useAuth();
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [address, setAddress] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const { user } = useAuth();
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationAddress, setLocationAddress] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  const detectLocation = async () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by this browser.');
-      return;
+  // Fetch settings data for shipping info
+  const { data: settings } = useQuery({
+    queryKey: ['shipping-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .in('key', ['cod_settings', 'shipping_info']);
+      
+      if (error) throw error;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
     }
+  });
 
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setLocation({ lat: latitude, lng: longitude });
+  const shippingInfo = settings?.shipping_info || {};
+  const codSettings = settings?.cod_settings || {};
+
+  // Check if user has stored location in profile
+  useEffect(() => {
+    const checkProfileLocation = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('latitude, longitude, address_text, location_updated_at')
+          .eq('id', user.id)
+          .single();
         
-        // Reverse geocoding untuk mendapatkan alamat
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-          );
-          const data = await response.json();
-          setAddress(data.display_name || 'Lokasi tidak ditemukan');
-        } catch (error) {
-          console.error('Error getting address:', error);
-          setAddress('Gagal mendapatkan alamat');
+        if (data && data.latitude && data.longitude) {
+          setUserLocation({
+            latitude: data.latitude,
+            longitude: data.longitude
+          });
+          setLocationAddress(data.address_text || null);
+        } else {
+          setShowLocationPrompt(true);
         }
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        setLoading(false);
-        alert('Gagal mendapatkan lokasi. Pastikan GPS aktif.');
       }
-    );
+    };
+    
+    checkProfileLocation();
+  }, [user]);
+
+  const detectLocation = () => {
+    setIsLoading(true);
+    setError(null);
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ latitude, longitude });
+          
+          // Get address from coordinates using Nominatim
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            );
+            const data = await response.json();
+            const address = data.display_name || 'Lokasi terdeteksi';
+            setLocationAddress(address);
+            
+            // Save location to user profile if logged in
+            if (user) {
+              await supabase
+                .from('profiles')
+                .update({
+                  latitude,
+                  longitude,
+                  address_text: address,
+                  location_updated_at: new Date().toISOString()
+                })
+                .eq('id', user.id);
+            }
+            
+            setIsLoading(false);
+          } catch (err) {
+            console.error('Error getting address:', err);
+            setLocationAddress('Lokasi terdeteksi, alamat tidak tersedia');
+            setIsLoading(false);
+          }
+        },
+        (err) => {
+          console.error('Error getting location:', err);
+          setError('Tidak dapat mendeteksi lokasi. Pastikan izin lokasi diaktifkan.');
+          setIsLoading(false);
+        }
+      );
+    } else {
+      setError('Browser Anda tidak mendukung geolocation.');
+      setIsLoading(false);
+    }
   };
 
-  if (isMobile) {
-    return (
-      <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500 rounded-full">
-              <Truck className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Pengiriman</h3>
-              <p className="text-sm text-gray-600">Gratis ongkir hari ini</p>
-            </div>
-          </div>
-          <Button 
-            onClick={detectLocation}
-            disabled={loading}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Navigation className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-        
-        {location && (
-          <div className="mt-3 p-2 bg-white rounded-lg">
-            <div className="flex items-center space-x-2">
-              <MapPin className="h-4 w-4 text-green-600" />
-              <p className="text-sm text-gray-700 truncate">{address}</p>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-      <CardContent className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Informasi Pengiriman */}
-          <div className="space-y-4">
+    <div className="mb-8">
+      {/* Location detection on mobile - Simplified version */}
+      <div className="md:hidden mb-4">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-blue-500 rounded-full">
-                <Truck className="h-6 w-6 text-white" />
+              <div className="bg-blue-100 p-2 rounded-full">
+                <MapPin className="h-5 w-5 text-blue-600" />
               </div>
-              <div>
-                <h3 className="font-bold text-lg text-gray-900">Pengiriman Gratis</h3>
-                <p className="text-gray-600">Untuk pembelian minimal Rp 100.000</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Estimasi 1-2 hari kerja</span>
-            </div>
-            <Badge className="bg-green-100 text-green-800">
-              <span className="animate-pulse">●</span> Tersedia untuk wilayah Anda
-            </Badge>
-          </div>
-
-          {/* Deteksi Lokasi */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-purple-500 rounded-full">
-                <MapPin className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-gray-900">Lokasi Anda</h3>
-                <p className="text-gray-600">Deteksi otomatis untuk layanan terbaik</p>
+              <div className="flex-1">
+                {locationAddress ? (
+                  <>
+                    <p className="font-medium text-sm text-gray-700">Lokasi Pengiriman</p>
+                    <p className="text-xs text-gray-500 line-clamp-2">{locationAddress}</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-700">Deteksi lokasi untuk pengiriman</p>
+                )}
               </div>
             </div>
-            <Button 
+            
+            <button 
               onClick={detectLocation}
-              disabled={loading}
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Mendeteksi...
-                </>
-              ) : (
-                <>
-                  <Navigation className="h-4 w-4 mr-2" />
-                  Deteksi Lokasi
-                </>
-              )}
-            </Button>
+              {isLoading ? 'Mendeteksi...' : locationAddress ? 'Perbarui' : 'Deteksi'}
+            </button>
           </div>
-
-          {/* Status Lokasi */}
-          <div className="space-y-4">
-            {location ? (
-              <div className="p-4 bg-white rounded-lg border border-green-200">
-                <div className="flex items-center space-x-2 mb-2">
-                  <MapPin className="h-5 w-5 text-green-600" />
-                  <span className="font-semibold text-green-800">Lokasi Terdeteksi</span>
+          
+          {error && (
+            <p className="mt-2 text-red-500 text-xs">{error}</p>
+          )}
+        </div>
+      </div>
+      
+      {/* Desktop version with full shipping info */}
+      <div className="hidden md:block">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-sm">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Location detection */}
+            <div className="flex-1 bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
+              <div className="flex items-start space-x-4">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <MapPin className="h-6 w-6 text-blue-600" />
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed">{address}</p>
-                <div className="mt-3 flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-green-600">Siap untuk pengiriman</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800 mb-1">Lokasi Pengiriman</h3>
+                  {locationAddress ? (
+                    <>
+                      <p className="text-gray-600 mb-3 line-clamp-2">{locationAddress}</p>
+                      <button 
+                        onClick={detectLocation}
+                        disabled={isLoading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm"
+                      >
+                        {isLoading ? 'Mendeteksi...' : 'Perbarui Lokasi'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 mb-3">Deteksi lokasi Anda untuk pengiriman lebih akurat</p>
+                      <button 
+                        onClick={detectLocation}
+                        disabled={isLoading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm"
+                      >
+                        {isLoading ? 'Mendeteksi...' : 'Deteksi Lokasi'}
+                      </button>
+                    </>
+                  )}
+                  
+                  {error && (
+                    <p className="mt-2 text-red-500 text-sm">{error}</p>
+                  )}
                 </div>
               </div>
-            ) : (
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Klik tombol deteksi untuk mengetahui lokasi Anda</p>
+            </div>
+            
+            {/* Shipping Features */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
+              {/* Fast Delivery */}
+              <div className="bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-green-100 p-2 rounded-full">
+                    <Truck className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-800">Pengiriman Cepat</h3>
+                    <p className="text-xs text-gray-500 mt-1">Sampai dalam 1-3 hari kerja</p>
+                  </div>
                 </div>
               </div>
-            )}
+              
+              {/* Free Shipping */}
+              <div className="bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-purple-100 p-2 rounded-full">
+                    <Package className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-800">Gratis Ongkir</h3>
+                    <p className="text-xs text-gray-500 mt-1">Minimal pembelian {codSettings.free_shipping_min ? `Rp${codSettings.free_shipping_min.toLocaleString()}` : 'Rp100.000'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Cash on Delivery */}
+              <div className="bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-800">Bayar di Tempat</h3>
+                    <p className="text-xs text-gray-500 mt-1">COD tersedia untuk semua area</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

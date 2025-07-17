@@ -19,8 +19,13 @@ const EnhancedFooter = () => {
     }
   });
 
-  const storeInfo = settings?.store_info || {};
-  const contactInfo = settings?.contact_info || {};
+  // Get store information from settings
+  const storeName = settings?.store_name?.name || 'Waroeng Kami';
+  const storeAddress = settings?.store_address?.address || 'Alamat toko belum diatur';
+  const storePhone = settings?.store_phone?.phone || 'Nomor telepon belum diatur';
+  const storeEmail = settings?.store_email?.email || 'Email belum diatur';
+  const storeDescription = settings?.store_info?.description || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan sehari-hari Anda.';
+  const storeLogo = settings?.store_logo?.url || '';
 
   return (
     <footer className="bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 text-white">
@@ -30,51 +35,39 @@ const EnhancedFooter = () => {
           {/* Store Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              {storeInfo.logo_url && (
+              {storeLogo && (
                 <img 
-                  src={storeInfo.logo_url} 
-                  alt={storeInfo.name || 'Store Logo'} 
+                  src={storeLogo} 
+                  alt={storeName} 
                   className="h-10 w-10 rounded-full"
                 />
               )}
               <h3 className="text-xl font-bold text-white">
-                {storeInfo.name || 'Waroeng Kami'}
+                {storeName}
               </h3>
             </div>
             <p className="text-gray-300 leading-relaxed">
-              {storeInfo.description || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan sehari-hari Anda.'}
+              {storeDescription}
             </p>
             <div className="flex space-x-4">
-              {contactInfo.facebook && (
-                <a 
-                  href={contactInfo.facebook} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
-                >
-                  <Facebook className="h-4 w-4" />
-                </a>
-              )}
-              {contactInfo.instagram && (
-                <a 
-                  href={contactInfo.instagram} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="p-2 bg-pink-600 hover:bg-pink-700 rounded-full transition-colors"
-                >
-                  <Instagram className="h-4 w-4" />
-                </a>
-              )}
-              {contactInfo.twitter && (
-                <a 
-                  href={contactInfo.twitter} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="p-2 bg-blue-500 hover:bg-blue-600 rounded-full transition-colors"
-                >
-                  <Twitter className="h-4 w-4" />
-                </a>
-              )}
+              <a 
+                href="#" 
+                className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+              >
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a 
+                href="#" 
+                className="p-2 bg-pink-600 hover:bg-pink-700 rounded-full transition-colors"
+              >
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a 
+                href="#" 
+                className="p-2 bg-blue-500 hover:bg-blue-600 rounded-full transition-colors"
+              >
+                <Twitter className="h-4 w-4" />
+              </a>
             </div>
           </div>
 
@@ -82,24 +75,18 @@ const EnhancedFooter = () => {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold text-white">Hubungi Kami</h4>
             <div className="space-y-3">
-              {contactInfo.phone && (
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-4 w-4 text-blue-400" />
-                  <span className="text-gray-300">{contactInfo.phone}</span>
-                </div>
-              )}
-              {contactInfo.email && (
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-blue-400" />
-                  <span className="text-gray-300">{contactInfo.email}</span>
-                </div>
-              )}
-              {contactInfo.address && (
-                <div className="flex items-start space-x-3">
-                  <MapPin className="h-4 w-4 text-blue-400 mt-1" />
-                  <span className="text-gray-300">{contactInfo.address}</span>
-                </div>
-              )}
+              <div className="flex items-center space-x-3">
+                <Phone className="h-4 w-4 text-blue-400" />
+                <span className="text-gray-300">{storePhone}</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Mail className="h-4 w-4 text-blue-400" />
+                <span className="text-gray-300">{storeEmail}</span>
+              </div>
+              <div className="flex items-start space-x-3">
+                <MapPin className="h-4 w-4 text-blue-400 mt-1" />
+                <span className="text-gray-300">{storeAddress}</span>
+              </div>
             </div>
           </div>
 
@@ -147,7 +134,7 @@ const EnhancedFooter = () => {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} {storeInfo.name || 'Waroeng Kami'}. Semua hak dilindungi.
+              © {new Date().getFullYear()} {storeName}. Semua hak dilindungi.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">

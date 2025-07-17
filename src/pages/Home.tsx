@@ -3,17 +3,17 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import BannerCarousel from '@/components/home/BannerCarousel';
 import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider';
 import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
-import ProductGrid from '@/components/home/ProductGrid';
 import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
 import BestSellingSlider from '@/components/home/BestSellingSlider';
 import CartModal from '@/components/CartModal';
 import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
 import EnhancedFooter from '@/components/home/EnhancedFooter';
-import { useState } from 'react';
 
 const Home = () => {
   const { user } = useAuth();
@@ -136,17 +136,15 @@ const Home = () => {
                   Hapus Filter
                 </button>
               )}
-              <a 
-                href="/products" 
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Lihat Semua
-              </a>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {featuredProducts?.map((product) => (
-              <div key={product.id} className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow">
+              <Link 
+                to={`/products/${product.id}`} 
+                key={product.id} 
+                className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow"
+              >
                 <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
                   {product.image_url ? (
                     <img 
@@ -168,7 +166,7 @@ const Home = () => {
                     minimumFractionDigits: 0,
                   }).format(product.selling_price)}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

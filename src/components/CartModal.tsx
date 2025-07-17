@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import FrontendCart from './FrontendCart';
@@ -20,9 +20,10 @@ interface CartModalProps {
 }
 
 const CartModal = ({ open, onOpenChange }: CartModalProps) => {
-  const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo } = useCart();
+  const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo, clearCart } = useCart();
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showShippingInfo, setShowShippingInfo] = useState(false);
 
   // Auto-fill customer info from user profile
   useEffect(() => {
@@ -96,6 +97,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       });
 
       // Clear cart and close modal
+      clearCart();
       onOpenChange(false);
       
     } catch (error) {
@@ -107,6 +109,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       });
     } finally {
       setIsSubmitting(false);
+      setShowShippingInfo(false);
     }
   };
 
@@ -126,112 +129,117 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
             <FrontendCart />
           </div>
 
-          {/* Customer Information */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-4">Informasi Pengiriman</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Nama Lengkap *</Label>
-                  <Input
-                    id="name"
-                    value={customerInfo.name}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Masukkan nama lengkap"
-                  />
+          {showShippingInfo ? (
+            /* Customer Information */
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4">Informasi Pengiriman</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Nama Lengkap *</Label>
+                    <Input
+                      id="name"
+                      value={customerInfo.name}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Masukkan nama lengkap"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Nomor Telepon *</Label>
+                    <Input
+                      id="phone"
+                      value={customerInfo.phone}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Masukkan nomor telepon"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={customerInfo.email}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Masukkan email"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="address">Alamat Lengkap *</Label>
+                    <Textarea
+                      id="address"
+                      value={customerInfo.address}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Masukkan alamat lengkap dengan detail"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center justify-between bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="bg-blue-100 rounded-full p-2">
+                  <Package className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Nomor Telepon *</Label>
-                  <Input
-                    id="phone"
-                    value={customerInfo.phone}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Masukkan nomor telepon"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={customerInfo.email}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="Masukkan email"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="address">Alamat Lengkap *</Label>
-                  <Textarea
-                    id="address"
-                    value={customerInfo.address}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="Masukkan alamat lengkap dengan detail"
-                    rows={3}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Order Summary */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-4">Ringkasan Pesanan</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="font-medium">
+                  <h3 className="font-medium">Total Pembayaran:</h3>
+                  <p className="text-lg font-bold text-blue-700">
                     {new Intl.NumberFormat('id-ID', {
                       style: 'currency',
                       currency: 'IDR',
                       minimumFractionDigits: 0,
                     }).format(getTotalPrice())}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Ongkos Kirim:</span>
-                  <span className="font-medium">Gratis</span>
-                </div>
-                <hr />
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span>
-                    {new Intl.NumberFormat('id-ID', {
-                      style: 'currency',
-                      currency: 'IDR',
-                      minimumFractionDigits: 0,
-                    }).format(getTotalPrice())}
-                  </span>
+                  </p>
                 </div>
               </div>
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Metode Pembayaran:</strong> Cash on Delivery (COD)
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Bayar saat barang sampai di tempat Anda
-                </p>
+              <div className="mt-4 sm:mt-0">
+                <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 mb-2 font-normal">
+                  Cash on Delivery (COD)
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            className="flex-1"
-          >
-            Lanjut Belanja
-          </Button>
-          <Button 
-            onClick={handleSubmitOrder}
-            disabled={isSubmitting || items.length === 0}
-            className="flex-1"
-          >
-            {isSubmitting ? 'Memproses...' : 'Pesan Sekarang'}
-          </Button>
+          {showShippingInfo ? (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowShippingInfo(false)}
+                className="flex-1"
+              >
+                Kembali
+              </Button>
+              <Button 
+                onClick={handleSubmitOrder}
+                disabled={isSubmitting || items.length === 0}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? 'Memproses...' : 'Pesan Sekarang'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="flex-1"
+              >
+                Lanjut Belanja
+              </Button>
+              <Button 
+                onClick={() => setShowShippingInfo(true)}
+                disabled={items.length === 0}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                Pesan Sekarang
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

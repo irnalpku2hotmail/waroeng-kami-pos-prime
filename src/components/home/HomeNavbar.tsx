@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,56 +64,11 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     }
   };
 
-  const getStoreName = (storeInfo: any) => {
-    if (!storeInfo) return 'Waroeng Kami';
-    
-    if (typeof storeInfo === 'string') {
-      try {
-        const parsed = JSON.parse(storeInfo);
-        return parsed.name || 'Waroeng Kami';
-      } catch {
-        return storeInfo;
-      }
-    }
-    
-    return storeInfo.name || 'Waroeng Kami';
-  };
-
-  const getStoreTagline = (storeInfo: any) => {
-    if (!storeInfo) return 'Toko online terpercaya';
-    
-    if (typeof storeInfo === 'string') {
-      try {
-        const parsed = JSON.parse(storeInfo);
-        return parsed.tagline || 'Toko online terpercaya';
-      } catch {
-        return 'Toko online terpercaya';
-      }
-    }
-    
-    return storeInfo.tagline || 'Toko online terpercaya';
-  };
-
-  const getLogoUrl = (storeInfo: any) => {
-    if (!storeInfo) return null;
-    
-    if (typeof storeInfo === 'string') {
-      try {
-        const parsed = JSON.parse(storeInfo);
-        return parsed.logo_url || null;
-      } catch {
-        return null;
-      }
-    }
-    
-    return storeInfo.logo_url || null;
-  };
-
   // Get store info from settings
   const storeInfo = settings?.store_info || {};
-  const storeName = getStoreName(storeInfo);
-  const storeTagline = getStoreTagline(storeInfo);
-  const logoUrl = getLogoUrl(storeInfo);
+  const storeName = settings?.store_name?.name || 'Waroeng Kami';
+  const storeTagline = settings?.store_tagline?.tagline || 'Toko online terpercaya';
+  const logoUrl = settings?.store_logo?.url || null;
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg border-b sticky top-0 z-50">
