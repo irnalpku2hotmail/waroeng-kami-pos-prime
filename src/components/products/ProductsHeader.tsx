@@ -1,45 +1,34 @@
 
 import { Button } from '@/components/ui/button';
-import { Plus, FileDown } from 'lucide-react';
-import ExcelImport from './ExcelImport';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Plus, Download } from 'lucide-react';
 
 interface ProductsHeaderProps {
   onExport: () => void;
   open: boolean;
-  setOpen: (open: boolean) => void;
-  setEditProduct: (product: any) => void;
+  setOpen: (v: boolean) => void;
+  setEditProduct: (v: any) => void;
   editProduct: any;
   children: React.ReactNode;
 }
 
-const ProductsHeader = ({ 
-  onExport, 
-  open, 
-  setOpen, 
-  setEditProduct, 
+const ProductsHeader = ({
+  onExport,
+  open,
+  setOpen,
+  setEditProduct,
   editProduct,
-  children 
-}: ProductsHeaderProps) => {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Produk</h1>
-        <p className="text-gray-600">Kelola produk di toko Anda</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <ExcelImport onImportSuccess={() => window.location.reload()} />
-        <Button 
-          variant="outline" 
-          onClick={onExport}
-          className="flex items-center gap-2"
-        >
-          <FileDown className="h-4 w-4" />
-          Export Excel
-        </Button>
-        {children}
-      </div>
+  children
+}: ProductsHeaderProps) => (
+  <div className="flex items-center justify-between">
+    <h1 className="text-3xl font-bold text-blue-800">Manajemen Produk</h1>
+    <div className="flex gap-2">
+      <Button variant="outline" onClick={onExport}>
+        <Download className="h-4 w-4 mr-2" /> Export Excel
+      </Button>
+      {children}
     </div>
-  );
-};
+  </div>
+);
 
 export default ProductsHeader;
