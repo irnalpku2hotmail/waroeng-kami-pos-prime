@@ -1,4 +1,3 @@
-
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,7 +72,8 @@ const ProductDetail = () => {
       name: product.name,
       price: finalPrice,
       image: product.image_url || '/placeholder.svg',
-      quantity
+      quantity,
+      stock: product.current_stock
     });
 
     toast({

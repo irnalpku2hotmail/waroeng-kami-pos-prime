@@ -26,10 +26,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_reviews')
-        .select(`
-          *,
-          profiles!inner(full_name)
-        `)
+        .select('*')
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
       
@@ -70,9 +67,9 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
         .select('*')
         .eq('product_id', productId)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data;
     },
     enabled: !!user
@@ -211,7 +208,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-medium">{review.profiles?.full_name || 'Anonymous'}</span>
+                      <span className="font-medium">User</span>
                       <div className="flex space-x-1">
                         {renderStars(review.rating)}
                       </div>
