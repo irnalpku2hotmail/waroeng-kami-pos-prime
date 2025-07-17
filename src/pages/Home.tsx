@@ -1,18 +1,17 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import HomeNavbar from '@/components/home/HomeNavbar';
+import EnhancedNavbar from '@/components/home/EnhancedNavbar';
 import BannerCarousel from '@/components/home/BannerCarousel';
 import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider';
 import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
 import ProductGrid from '@/components/home/ProductGrid';
-import HomeFooter from '@/components/home/HomeFooter';
+import EnhancedFooter from '@/components/home/EnhancedFooter';
 import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
 import BestSellingSlider from '@/components/home/BestSellingSlider';
 import CartModal from '@/components/CartModal';
-import ShippingInfoDisplay from '@/components/home/ShippingInfoDisplay';
+import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
 import BrandCarousel from '@/components/BrandCarousel';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -98,7 +97,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar 
+      <EnhancedNavbar 
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -109,8 +108,8 @@ const Home = () => {
         {/* Banner Carousel */}
         <BannerCarousel />
         
-        {/* Shipping Info Display */}
-        <ShippingInfoDisplay />
+        {/* Enhanced Shipping Info Display */}
+        <EnhancedShippingInfo />
         
         {/* Enhanced Categories Slider */}
         <EnhancedCategoriesSlider onCategorySelect={handleCategorySelect} />
@@ -164,8 +163,8 @@ const Home = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <HomeFooter />
+      {/* Enhanced Footer */}
+      <EnhancedFooter />
 
       {/* Cart Modal */}
       <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
