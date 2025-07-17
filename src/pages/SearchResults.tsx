@@ -26,6 +26,7 @@ const SearchResults = () => {
     queryFn: async () => {
       if (!query.trim()) return [];
 
+      // Search in products and categories
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -34,7 +35,7 @@ const SearchResults = () => {
           units (name, abbreviation)
         `)
         .eq('is_active', true)
-        .ilike('name', `%${query}%`)
+        .or(`name.ilike.%${query}%,categories.name.ilike.%${query}%`)
         .order('name');
 
       if (error) throw error;
@@ -131,7 +132,7 @@ const SearchResults = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
               {products.map((product) => (
                 <Card 
                   key={product.id} 

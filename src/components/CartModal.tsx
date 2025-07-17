@@ -1,12 +1,17 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import FrontendCart from './FrontendCart';
 
 interface CartModalProps {
@@ -15,19 +20,218 @@ interface CartModalProps {
 }
 
 const CartModal = ({ open, onOpenChange }: CartModalProps) => {
-  const { items, getTotalItems } = useCart();
+  const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo } = useCart();
+  const { user, profile } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-fill customer info from user profile
+  useEffect(() => {
+    if (user && profile) {
+      setCustomerInfo({
+        name: profile.full_name || '',
+        phone: profile.phone || '',
+        email: profile.email || user.email || '',
+        address: profile.address || ''
+      });
+    }
+  }, [user, profile, setCustomerInfo]);
+
+  const handleSubmitOrder = async () => {
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+      toast({
+        title: 'Error',
+        description: 'Mohon lengkapi semua data pengiriman',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (items.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Keranjang belanja kosong',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          customer_name: customerInfo.name,
+          customer_phone: customerInfo.phone,
+          customer_address: customerInfo.address,
+          total_amount: getTotalPrice(),
+          payment_method: 'cod',
+          status: 'pending',
+          notes: 'Pesanan dari website'
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      toast({
+        title: 'Berhasil!',
+        description: 'Pesanan berhasil dibuat. Kami akan menghubungi Anda segera.',
+      });
+
+      // Clear cart and close modal
+      onOpenChange(false);
+      
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast({
+        title: 'Error',
+        description: 'Gagal membuat pesanan. Silakan coba lagi.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
             Keranjang Belanja ({getTotalItems()})
           </DialogTitle>
         </DialogHeader>
-        <div className="overflow-y-auto">
-          <FrontendCart />
+        
+        <div className="overflow-y-auto max-h-[70vh] space-y-6">
+          {/* Cart Items */}
+          <div>
+            <FrontendCart />
+          </div>
+
+          {/* Customer Information */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-4">Informasi Pengiriman</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Nama Lengkap *</Label>
+                  <Input
+                    id="name"
+                    value={customerInfo.name}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Masukkan nama lengkap"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Nomor Telepon *</Label>
+                  <Input
+                    id="phone"
+                    value={customerInfo.phone}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Masukkan nomor telepon"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={customerInfo.email}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Masukkan email"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="address">Alamat Lengkap *</Label>
+                  <Textarea
+                    id="address"
+                    value={customerInfo.address}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Masukkan alamat lengkap dengan detail"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Order Summary */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-4">Ringkasan Pesanan</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="font-medium">
+                    {new Intl.NumberFormat('id-ID', {
+                      style: 'currency',
+                      currency: 'IDR',
+                      minimumFractionDigits: 0,
+                    }).format(getTotalPrice())}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Ongkos Kirim:</span>
+                  <span className="font-medium">Gratis</span>
+                </div>
+                <hr />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total:</span>
+                  <span>
+                    {new Intl.NumberFormat('id-ID', {
+                      style: 'currency',
+                      currency: 'IDR',
+                      minimumFractionDigits: 0,
+                    }).format(getTotalPrice())}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Metode Pembayaran:</strong> Cash on Delivery (COD)
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Bayar saat barang sampai di tempat Anda
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="flex-1"
+          >
+            Lanjut Belanja
+          </Button>
+          <Button 
+            onClick={handleSubmitOrder}
+            disabled={isSubmitting || items.length === 0}
+            className="flex-1"
+          >
+            {isSubmitting ? 'Memproses...' : 'Pesan Sekarang'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

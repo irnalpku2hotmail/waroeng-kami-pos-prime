@@ -8,11 +8,11 @@ import BannerCarousel from '@/components/home/BannerCarousel';
 import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider';
 import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
 import ProductGrid from '@/components/home/ProductGrid';
-import HomeFooter from '@/components/home/HomeFooter';
 import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
 import BestSellingSlider from '@/components/home/BestSellingSlider';
 import CartModal from '@/components/CartModal';
-import ShippingInfoDisplay from '@/components/home/ShippingInfoDisplay';
+import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
+import EnhancedFooter from '@/components/home/EnhancedFooter';
 import { useState } from 'react';
 
 const Home = () => {
@@ -68,7 +68,7 @@ const Home = () => {
 
       const { data, error } = await query
         .order('created_at', { ascending: false })
-        .limit(12);
+        .limit(16);
 
       if (error) throw error;
       return data;
@@ -81,7 +81,6 @@ const Home = () => {
   };
 
   const handleSearch = () => {
-    // Search functionality is handled by the query above
     console.log('Searching for:', searchTerm);
   };
 
@@ -103,15 +102,17 @@ const Home = () => {
         {/* Banner Carousel */}
         <BannerCarousel />
         
-        {/* Shipping Info Display */}
-        <ShippingInfoDisplay />
+        {/* Enhanced Shipping Info Display */}
+        <EnhancedShippingInfo />
         
         {/* Enhanced Categories Slider */}
         <EnhancedCategoriesSlider onCategorySelect={handleCategorySelect} />
         
-        {/* Enhanced Flash Sale Section */}
+        {/* Enhanced Flash Sale Section - Smaller Display */}
         {flashSales && flashSales.length > 0 && (
-          <EnhancedFlashSale flashSales={flashSales} />
+          <div className="mb-8">
+            <EnhancedFlashSale flashSales={flashSales} />
+          </div>
         )}
         
         {/* Purchase History Slider */}
@@ -120,7 +121,7 @@ const Home = () => {
         {/* Best Selling Slider */}
         <BestSellingSlider />
         
-        {/* Featured Products */}
+        {/* Featured Products - Smaller Grid */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
@@ -143,12 +144,38 @@ const Home = () => {
               </a>
             </div>
           </div>
-          <ProductGrid products={featuredProducts || []} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {featuredProducts?.map((product) => (
+              <div key={product.id} className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow">
+                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <span className="text-xs">No Image</span>
+                    </div>
+                  )}
+                </div>
+                <h3 className="font-medium text-sm line-clamp-2 mb-1">{product.name}</h3>
+                <p className="text-blue-600 font-bold text-sm">
+                  {new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                  }).format(product.selling_price)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <HomeFooter />
+      {/* Enhanced Footer */}
+      <EnhancedFooter />
 
       {/* Cart Modal */}
       <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />

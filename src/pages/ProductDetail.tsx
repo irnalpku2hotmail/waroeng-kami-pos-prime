@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Star, Heart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
@@ -15,6 +16,7 @@ import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
 import CartModal from '@/components/CartModal';
 import ProductSimilarCarousel from '@/components/ProductSimilarCarousel';
+import ProductReviews from '@/components/ProductReviews';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ProductDetail = () => {
@@ -279,12 +281,6 @@ const ProductDetail = () => {
               {product.name}
             </h1>
 
-            {product.description && (
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                {product.description}
-              </p>
-            )}
-
             <div className="mb-6">
               <div className="flex items-center gap-4 mb-2">
                 <span className="text-3xl font-bold text-blue-600">
@@ -321,11 +317,6 @@ const ProductDetail = () => {
               >
                 {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
               </Badge>
-              
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                <span className="text-sm text-gray-600">4.5</span>
-              </div>
             </div>
 
             <div className="space-y-4">
@@ -390,6 +381,32 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Product Details & Reviews Tabs */}
+        <Tabs defaultValue="description" className="mb-8">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="description">Deskripsi</TabsTrigger>
+            <TabsTrigger value="reviews">Review & Rating</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="description" className="space-y-4">
+            <Card>
+              <CardContent className="p-6">
+                {product.description ? (
+                  <div className="prose max-w-none">
+                    <p className="text-gray-700 leading-relaxed">{product.description}</p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">Belum ada deskripsi untuk produk ini.</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="reviews" className="space-y-4">
+            <ProductReviews productId={product.id} />
+          </TabsContent>
+        </Tabs>
 
         {/* Similar Products */}
         {product.categories && (
