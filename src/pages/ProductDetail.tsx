@@ -273,7 +273,7 @@ const ProductDetail = () => {
         </div>
 
         {/* Similar Products */}
-        <ProductSimilarCarousel productId={product.id} categoryId={product.category_id} />
+        <ProductSimilarCarousel currentProductId={product.id} categoryId={product.category_id} />
 
         {/* Reviews */}
         <ProductReviews productId={product.id} />
