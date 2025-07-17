@@ -42,31 +42,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     }
   });
 
-  // Safely extract store name and handle potential object values
-  const getStoreName = (): string => {
-    if (!settings?.store_name) return 'Toko Online';
-    
-    const storeNameValue = settings.store_name;
-    
-    // Handle case where store_name might be an object with a name property
-    if (typeof storeNameValue === 'object' && storeNameValue !== null) {
-      if ('name' in storeNameValue && typeof storeNameValue.name === 'string') {
-        return storeNameValue.name;
-      }
-      // If it's an object but doesn't have a name property, return default
-      return 'Toko Online';
-    }
-    
-    // Handle case where store_name is a direct string
-    if (typeof storeNameValue === 'string') {
-      return storeNameValue;
-    }
-    
-    // Convert any other type to string safely
-    return String(storeNameValue) || 'Toko Online';
-  };
-
-  const storeName = getStoreName();
+  const storeName = settings?.store_name || 'Toko Online';
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -116,7 +92,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               <div className="absolute right-2 top-1 flex items-center space-x-1">
-                <VoiceSearch onVoiceResult={handleVoiceSearch} />
+                <VoiceSearch onResult={handleVoiceSearch} />
                 <Button
                   size="sm"
                   onClick={handleSearch}
@@ -177,7 +153,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             <div className="absolute right-2 top-1 flex items-center space-x-1">
-              <VoiceSearch onVoiceResult={handleVoiceSearch} />
+              <VoiceSearch onResult={handleVoiceSearch} />
               <Button
                 size="sm"
                 onClick={handleSearch}

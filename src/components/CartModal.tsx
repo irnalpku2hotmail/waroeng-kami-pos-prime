@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -57,18 +58,11 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     }
   });
 
-  const generateOrderNumber = () => {
-    const timestamp = Date.now();
-    return `ORD-${timestamp}`;
-  };
-
   const createOrder = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      const orderNumber = generateOrderNumber();
       const orderData = {
-        order_number: orderNumber,
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_address: customerAddress,
