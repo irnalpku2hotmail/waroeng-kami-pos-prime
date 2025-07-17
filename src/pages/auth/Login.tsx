@@ -162,35 +162,6 @@ const Login = () => {
           </div>
         </CardContent>
       </Card>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        
-        @keyframes float-delayed {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-30px); }
-        }
-        
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-15px); }
-        }
-        
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-        
-        .animate-float-delayed {
-          animation: float-delayed 8s ease-in-out infinite 2s;
-        }
-        
-        .animate-float-slow {
-          animation: float-slow 10s ease-in-out infinite 4s;
-        }
-      `}</style>
     </div>
   );
 };
