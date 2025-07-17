@@ -25,7 +25,7 @@ interface FlashSaleItem {
     image_url: string | null;
     current_stock: number;
     description: string | null;
-  };
+  } | null;
 }
 
 interface FlashSale {
@@ -69,6 +69,8 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
   };
 
   const handleAddToCart = (item: FlashSaleItem) => {
+    if (!item.products) return;
+    
     addToCart({
       id: item.product_id,
       product_id: item.product_id,
@@ -99,6 +101,13 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
   }
 
   const activeFlashSale = flashSales[0];
+
+  // Filter out items with null products
+  const validFlashSaleItems = activeFlashSale.flash_sale_items.filter(item => item.products !== null);
+
+  if (validFlashSaleItems.length === 0) {
+    return null;
+  }
 
   return (
     <div className="mb-8">
@@ -153,86 +162,91 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
         className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {activeFlashSale.flash_sale_items.map((item) => (
-          <Card key={item.id} className="flex-none w-64 group hover:shadow-xl transition-all duration-300 border-2 border-red-100 hover:border-red-300">
-            <CardContent className="p-4">
-              <div className="relative mb-4">
-                <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
-                  {item.products.image_url ? (
-                    <img 
-                      src={item.products.image_url} 
-                      alt={item.products.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
+        {validFlashSaleItems.map((item) => {
+          // Additional safety check
+          if (!item.products) return null;
+          
+          return (
+            <Card key={item.id} className="flex-none w-64 group hover:shadow-xl transition-all duration-300 border-2 border-red-100 hover:border-red-300">
+              <CardContent className="p-4">
+                <div className="relative mb-4">
+                  <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
+                    {item.products.image_url ? (
+                      <img 
+                        src={item.products.image_url} 
+                        alt={item.products.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-16 w-16 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    <Badge className="bg-red-500 hover:bg-red-600 text-white font-bold px-3 py-1">
+                      -{item.discount_percentage}%
+                    </Badge>
+                    <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
+                      <Zap className="h-3 w-3 mr-1" />
+                      FLASH
+                    </Badge>
+                  </div>
+                </div>
+                
+                <h3 className="font-bold text-lg mb-3 line-clamp-2 leading-tight">
+                  {item.products.name}
+                </h3>
+                
+                <div className="mb-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl font-bold text-red-600">
+                      {formatPrice(item.sale_price)}
+                    </span>
+                    <span className="text-lg text-gray-500 line-through">
+                      {formatPrice(item.original_price)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-green-600 font-medium">
+                    Hemat {formatPrice(item.original_price - item.sale_price)}
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>Terjual: {item.sold_quantity}</span>
+                    <span>Sisa: {item.stock_quantity}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-red-500 to-orange-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min((item.sold_quantity / (item.sold_quantity + item.stock_quantity)) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={() => handleAddToCart(item)}
+                  disabled={item.stock_quantity === 0}
+                  className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 rounded-xl transition-all duration-200 transform hover:scale-105"
+                >
+                  {item.stock_quantity === 0 ? (
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Habis
+                    </span>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="h-16 w-16 text-gray-400" />
-                    </div>
+                    <span className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Beli Sekarang
+                    </span>
                   )}
-                </div>
-                <div className="absolute top-3 left-3 flex gap-2">
-                  <Badge className="bg-red-500 hover:bg-red-600 text-white font-bold px-3 py-1">
-                    -{item.discount_percentage}%
-                  </Badge>
-                  <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
-                    <Zap className="h-3 w-3 mr-1" />
-                    FLASH
-                  </Badge>
-                </div>
-              </div>
-              
-              <h3 className="font-bold text-lg mb-3 line-clamp-2 leading-tight">
-                {item.products.name}
-              </h3>
-              
-              <div className="mb-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl font-bold text-red-600">
-                    {formatPrice(item.sale_price)}
-                  </span>
-                  <span className="text-lg text-gray-500 line-through">
-                    {formatPrice(item.original_price)}
-                  </span>
-                </div>
-                <div className="text-sm text-green-600 font-medium">
-                  Hemat {formatPrice(item.original_price - item.sale_price)}
-                </div>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="mb-4">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>Terjual: {item.sold_quantity}</span>
-                  <span>Sisa: {item.stock_quantity}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-red-500 to-orange-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((item.sold_quantity / (item.sold_quantity + item.stock_quantity)) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <Button
-                onClick={() => handleAddToCart(item)}
-                disabled={item.stock_quantity === 0}
-                className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 rounded-xl transition-all duration-200 transform hover:scale-105"
-              >
-                {item.stock_quantity === 0 ? (
-                  <span className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Habis
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Beli Sekarang
-                  </span>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

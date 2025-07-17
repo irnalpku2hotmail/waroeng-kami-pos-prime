@@ -34,8 +34,10 @@ const BestSellingSlider = () => {
 
       if (error) throw error;
 
-      // Group by product and sum quantities
-      const productSales = data.reduce((acc: any, item) => {
+      // Filter out items with null products and group by product
+      const validData = data.filter(item => item.products !== null);
+      
+      const productSales = validData.reduce((acc: any, item) => {
         const productId = item.product_id;
         if (!acc[productId]) {
           acc[productId] = {
@@ -137,67 +139,72 @@ const BestSellingSlider = () => {
         className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {bestSelling.map((item: any, index) => (
-          <Card 
-            key={item.product?.id} 
-            className="flex-none w-48 cursor-pointer hover:shadow-lg transition-shadow duration-200 group relative"
-          >
-            <div className="absolute top-2 left-2 z-10">
-              <Badge className="bg-red-500 text-white text-xs px-2 py-1">
-                #{index + 1}
-              </Badge>
-            </div>
-            
-            <CardContent className="p-4">
-              <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100 relative">
-                <img
-                  src={item.product?.image_url || '/placeholder.svg'}
-                  alt={item.product?.name || 'Product'}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-                {(item.product?.current_stock || 0) <= 0 && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <Badge variant="destructive" className="text-xs">
-                      Habis
-                    </Badge>
-                  </div>
-                )}
+        {bestSelling.map((item: any, index) => {
+          // Additional safety check
+          if (!item.product) return null;
+          
+          return (
+            <Card 
+              key={item.product?.id} 
+              className="flex-none w-48 cursor-pointer hover:shadow-lg transition-shadow duration-200 group relative"
+            >
+              <div className="absolute top-2 left-2 z-10">
+                <Badge className="bg-red-500 text-white text-xs px-2 py-1">
+                  #{index + 1}
+                </Badge>
               </div>
               
-              <div className="space-y-2">
-                <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                  {item.product?.name}
-                </h3>
-                
-                {item.product?.categories && (
-                  <Badge variant="secondary" className="text-xs">
-                    {item.product.categories.name}
-                  </Badge>
-                )}
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-blue-600 text-sm">
-                      Rp {item.product?.selling_price?.toLocaleString('id-ID') || '0'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      Terjual: {item.totalSold}
-                    </span>
-                  </div>
-                  
-                  <Button
-                    size="sm"
-                    onClick={() => handleAddToCart(item)}
-                    className="h-8 w-8 p-0"
-                    disabled={(item.product?.current_stock || 0) <= 0}
-                  >
-                    <ShoppingCart className="h-3 w-3" />
-                  </Button>
+              <CardContent className="p-4">
+                <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100 relative">
+                  <img
+                    src={item.product?.image_url || '/placeholder.svg'}
+                    alt={item.product?.name || 'Product'}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  />
+                  {(item.product?.current_stock || 0) <= 0 && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <Badge variant="destructive" className="text-xs">
+                        Habis
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                
+                <div className="space-y-2">
+                  <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+                    {item.product?.name}
+                  </h3>
+                  
+                  {item.product?.categories && (
+                    <Badge variant="secondary" className="text-xs">
+                      {item.product.categories.name}
+                    </Badge>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-blue-600 text-sm">
+                        Rp {item.product?.selling_price?.toLocaleString('id-ID') || '0'}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        Terjual: {item.totalSold}
+                      </span>
+                    </div>
+                    
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddToCart(item)}
+                      className="h-8 w-8 p-0"
+                      disabled={(item.product?.current_stock || 0) <= 0}
+                    >
+                      <ShoppingCart className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
