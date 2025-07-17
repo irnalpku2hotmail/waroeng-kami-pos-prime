@@ -46,6 +46,21 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['store-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
+    }
+  });
+
   // Search suggestions query
   const { data: searchData } = useQuery({
     queryKey: ['search-suggestions', searchTerm],
@@ -124,7 +139,8 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setShowSuggestions(false);
     if (suggestion.type === 'category') {
-      navigate(`/search?category=${suggestion.id}`);
+      onSearchChange(suggestion.name);
+      if (onSearch) onSearch();
     } else {
       onSearchChange(suggestion.name);
       navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
@@ -143,6 +159,12 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     setShowSuggestions(value.length >= 2);
   };
 
+  // Get store info from settings
+  const storeInfo = settings?.store_info || {};
+  const storeName = storeInfo.name || 'Waroeng Kami';
+  const storeTagline = storeInfo.tagline || 'Toko online terpercaya';
+  const logoUrl = storeInfo.logo_url;
+
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -151,14 +173,22 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
           {/* Logo and Store Name */}
           <Link to="/" className="flex items-center space-x-3 group">
             <div className="bg-white p-2 rounded-full shadow-md group-hover:shadow-lg transition-shadow">
-              <Store className="h-6 w-6 text-blue-600" />
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt={storeName} 
+                  className="h-6 w-6 object-cover rounded-full"
+                />
+              ) : (
+                <Store className="h-6 w-6 text-blue-600" />
+              )}
             </div>
             <div className="text-white">
               <h1 className="text-xl font-bold leading-tight">
-                Waroeng Kami
+                {storeName}
               </h1>
               <p className="text-blue-100 text-xs hidden md:block">
-                Toko online terpercaya
+                {storeTagline}
               </p>
             </div>
           </Link>
