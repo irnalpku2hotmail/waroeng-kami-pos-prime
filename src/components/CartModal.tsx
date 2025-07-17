@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,12 @@ import { toast } from '@/hooks/use-toast';
 interface CartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface CODSettings {
+  is_enabled?: boolean;
+  minimum_order_amount?: number;
+  additional_fee?: number;
 }
 
 const CartModal = ({ open, onOpenChange }: CartModalProps) => {
@@ -58,7 +64,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         .eq('key', 'cod_settings')
         .single();
       if (error) throw error;
-      return data?.value || {};
+      return (data?.value as CODSettings) || {};
     }
   });
 
@@ -313,9 +319,9 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                     )}
                   </Label>
                 </div>
-                {codSettings?.additional_fee > 0 && (
+                {(codSettings?.additional_fee || 0) > 0 && (
                   <p className="text-sm text-gray-600 ml-6">
-                    Biaya tambahan: {formatPrice(codSettings.additional_fee)}
+                    Biaya tambahan: {formatPrice(codSettings?.additional_fee || 0)}
                   </p>
                 )}
               </RadioGroup>
@@ -333,10 +339,10 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                 <span>Biaya Pengiriman</span>
                 <span>{formatPrice(deliveryFee)}</span>
               </div>
-              {paymentMethod === 'cod' && codSettings?.additional_fee > 0 && (
+              {paymentMethod === 'cod' && (codSettings?.additional_fee || 0) > 0 && (
                 <div className="flex justify-between">
                   <span>Biaya COD</span>
-                  <span>{formatPrice(codSettings.additional_fee)}</span>
+                  <span>{formatPrice(codSettings?.additional_fee || 0)}</span>
                 </div>
               )}
               <Separator />
