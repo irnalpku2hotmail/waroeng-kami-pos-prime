@@ -13,13 +13,17 @@ import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
 import BestSellingSlider from '@/components/home/BestSellingSlider';
 import CartModal from '@/components/CartModal';
 import ShippingInfoDisplay from '@/components/home/ShippingInfoDisplay';
+import BrandCarousel from '@/components/BrandCarousel';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   // Fetch flash sales
   const { data: flashSales } = useQuery({
@@ -45,7 +49,7 @@ const Home = () => {
 
   // Fetch featured products with search and category filter
   const { data: featuredProducts } = useQuery({
-    queryKey: ['featured-products', searchTerm, selectedCategory],
+    queryKey: ['featured-products', searchTerm, selectedCategory, showAllProducts],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -68,7 +72,7 @@ const Home = () => {
 
       const { data, error } = await query
         .order('created_at', { ascending: false })
-        .limit(12);
+        .limit(showAllProducts ? 50 : 10);
 
       if (error) throw error;
       return data;
@@ -81,13 +85,15 @@ const Home = () => {
   };
 
   const handleSearch = () => {
-    // Search functionality is handled by the query above
-    console.log('Searching for:', searchTerm);
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategory(null);
+    setShowAllProducts(false);
   };
 
   return (
@@ -108,6 +114,9 @@ const Home = () => {
         
         {/* Enhanced Categories Slider */}
         <EnhancedCategoriesSlider onCategorySelect={handleCategorySelect} />
+        
+        {/* Brand Carousel */}
+        <BrandCarousel />
         
         {/* Enhanced Flash Sale Section */}
         {flashSales && flashSales.length > 0 && (
@@ -133,6 +142,14 @@ const Home = () => {
                   className="text-blue-600 hover:text-blue-700 font-medium text-sm"
                 >
                   Hapus Filter
+                </button>
+              )}
+              {!showAllProducts && featuredProducts && featuredProducts.length >= 10 && (
+                <button
+                  onClick={() => setShowAllProducts(true)}
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                >
+                  Lihat Lebih Banyak
                 </button>
               )}
               <a 
