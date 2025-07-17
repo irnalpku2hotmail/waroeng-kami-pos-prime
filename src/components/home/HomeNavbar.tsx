@@ -92,7 +92,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               <div className="absolute right-2 top-1 flex items-center space-x-1">
-                <VoiceSearch onResult={handleVoiceSearch} />
+                <VoiceSearch onVoiceResult={handleVoiceSearch} />
                 <Button
                   size="sm"
                   onClick={handleSearch}
@@ -153,7 +153,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             <div className="absolute right-2 top-1 flex items-center space-x-1">
-              <VoiceSearch onResult={handleVoiceSearch} />
+              <VoiceSearch onVoiceResult={handleVoiceSearch} />
               <Button
                 size="sm"
                 onClick={handleSearch}
