@@ -1,33 +1,43 @@
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Plus, FileUp } from 'lucide-react';
 import ExcelImport from './ExcelImport';
 
 interface ProductsHeaderProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  onAddProduct: () => void;
+  onExport: () => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  setEditProduct: (product: any) => void;
+  editProduct: any;
+  children?: React.ReactNode;
 }
 
-const ProductsHeader = ({ searchTerm, onSearchChange, onAddProduct }: ProductsHeaderProps) => {
+const ProductsHeader = ({ 
+  onExport, 
+  open, 
+  setOpen, 
+  setEditProduct, 
+  editProduct,
+  children 
+}: ProductsHeaderProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-      <div className="flex-1 relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Cari produk..."
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <h1 className="text-2xl font-bold">Manajemen Produk</h1>
+      
       <div className="flex gap-2">
+        <Button
+          onClick={onExport}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Export Excel
+        </Button>
+        
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2">
-              <FileUp className="h-4 w-4" />
               Import Excel
             </Button>
           </DialogTrigger>
@@ -38,10 +48,8 @@ const ProductsHeader = ({ searchTerm, onSearchChange, onAddProduct }: ProductsHe
             <ExcelImport />
           </DialogContent>
         </Dialog>
-        <Button onClick={onAddProduct} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Tambah Produk
-        </Button>
+
+        {children}
       </div>
     </div>
   );
