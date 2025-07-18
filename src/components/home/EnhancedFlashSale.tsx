@@ -42,6 +42,15 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
     e.stopPropagation();
     
     const product = item.products;
+    if (!product) {
+      toast({
+        title: 'Error',
+        description: 'Product information not available',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     addToCart({
       id: product.id,
       name: product.name,
@@ -152,6 +161,12 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {saleItems.slice(0, 12).map((item) => {
             const product = item.products;
+            
+            // Skip items without valid product data
+            if (!product) {
+              return null;
+            }
+
             const discountPercent = Math.round(item.discount_percentage);
             const originalPrice = item.original_price;
             const salePrice = item.sale_price;
@@ -167,7 +182,7 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
                   <div className="aspect-square bg-gray-100 overflow-hidden rounded-t-2xl">
                     <img
                       src={product.image_url || '/placeholder.svg'}
-                      alt={product.name}
+                      alt={product.name || 'Product'}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                   </div>
@@ -194,7 +209,7 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
                 
                 <CardContent className="p-4">
                   <h3 className="font-bold text-sm line-clamp-2 mb-2 text-gray-800 group-hover:text-red-600 transition-colors">
-                    {product.name}
+                    {product.name || 'Unnamed Product'}
                   </h3>
                   
                   <div className="space-y-3">
