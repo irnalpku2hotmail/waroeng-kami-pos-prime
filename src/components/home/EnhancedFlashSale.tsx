@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Zap, Clock, ShoppingCart, Fire, Star, Timer } from 'lucide-react';
+import { Zap, Clock, ShoppingCart, Flame, Star, Timer } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
@@ -89,7 +89,7 @@ const EnhancedFlashSale = ({ flashSales }: EnhancedFlashSaleProps) => {
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-4 mb-4">
               <div className="relative">
-                <Fire className="h-12 w-12 text-yellow-300 animate-pulse" />
+                <Flame className="h-12 w-12 text-yellow-300 animate-pulse" />
                 <div className="absolute inset-0 bg-yellow-300/30 rounded-full animate-ping"></div>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-white tracking-wide">
