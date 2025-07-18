@@ -2,9 +2,11 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Truck, Clock, Shield, Zap, Package } from 'lucide-react';
+import { MapPin, Navigation, RefreshCw, Truck, Clock, Shield, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 const EnhancedShippingInfo = () => {
   const { user } = useAuth();
@@ -12,7 +14,6 @@ const EnhancedShippingInfo = () => {
   const [locationAddress, setLocationAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
 
   // Fetch settings data for shipping info
   const { data: settings } = useQuery({
@@ -52,8 +53,6 @@ const EnhancedShippingInfo = () => {
             longitude: data.longitude
           });
           setLocationAddress(data.address_text || null);
-        } else {
-          setShowLocationPrompt(true);
         }
       }
     };
@@ -61,7 +60,7 @@ const EnhancedShippingInfo = () => {
     checkProfileLocation();
   }, [user]);
 
-  const detectLocation = () => {
+  const detectLocation = async () => {
     setIsLoading(true);
     setError(null);
     
@@ -93,6 +92,11 @@ const EnhancedShippingInfo = () => {
                 .eq('id', user.id);
             }
             
+            toast({
+              title: 'Lokasi Berhasil Diperbarui',
+              description: 'Lokasi pengiriman Anda telah diperbarui'
+            });
+            
             setIsLoading(false);
           } catch (err) {
             console.error('Error getting address:', err);
@@ -114,122 +118,126 @@ const EnhancedShippingInfo = () => {
 
   return (
     <div className="mb-8">
-      {/* Location detection on mobile - Simplified version */}
-      <div className="md:hidden mb-4">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <MapPin className="h-5 w-5 text-blue-600" />
+      {/* Enhanced Location Detection */}
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 shadow-lg border border-blue-100">
+        <div className="flex flex-col lg:flex-row gap-6">
+          
+          {/* Location Section with Beautiful Design */}
+          <div className="flex-1 bg-white/80 rounded-2xl p-6 backdrop-blur-sm shadow-md border border-white/50">
+            <div className="flex items-start space-x-4">
+              <div className="relative">
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-4 rounded-2xl shadow-lg">
+                  <MapPin className="h-7 w-7 text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-ping"></div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full"></div>
               </div>
               <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                  Lokasi Pengiriman
+                  {locationAddress && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                      Aktif
+                    </span>
+                  )}
+                </h3>
+                
                 {locationAddress ? (
-                  <>
-                    <p className="font-medium text-sm text-gray-700">Lokasi Pengiriman</p>
-                    <p className="text-xs text-gray-500 line-clamp-2">{locationAddress}</p>
-                  </>
+                  <div className="space-y-3">
+                    <p className="text-gray-600 text-sm leading-relaxed bg-gray-50 p-3 rounded-xl border">
+                      📍 {locationAddress}
+                    </p>
+                    <Button 
+                      onClick={detectLocation}
+                      disabled={isLoading}
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-2 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Memperbarui...
+                        </>
+                      ) : (
+                        <>
+                          <Navigation className="h-4 w-4 mr-2" />
+                          Perbarui Lokasi
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 ) : (
-                  <p className="text-sm text-gray-700">Deteksi lokasi untuk pengiriman</p>
+                  <div className="space-y-3">
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      Deteksi lokasi Anda untuk informasi pengiriman yang lebih akurat dan estimasi waktu yang tepat.
+                    </p>
+                    <Button 
+                      onClick={detectLocation}
+                      disabled={isLoading}
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-2 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Mendeteksi...
+                        </>
+                      ) : (
+                        <>
+                          <Navigation className="h-4 w-4 mr-2" />
+                          Deteksi Lokasi
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+                
+                {error && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-red-600 text-sm font-medium">{error}</p>
+                  </div>
                 )}
               </div>
             </div>
-            
-            <button 
-              onClick={detectLocation}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
-            >
-              {isLoading ? 'Mendeteksi...' : locationAddress ? 'Perbarui' : 'Deteksi'}
-            </button>
           </div>
           
-          {error && (
-            <p className="mt-2 text-red-500 text-xs">{error}</p>
-          )}
-        </div>
-      </div>
-      
-      {/* Desktop version with full shipping info */}
-      <div className="hidden md:block">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-sm">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Location detection */}
-            <div className="flex-1 bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
-              <div className="flex items-start space-x-4">
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <MapPin className="h-6 w-6 text-blue-600" />
+          {/* Shipping Features with Beautiful Icons */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 lg:w-80 gap-4">
+            {/* Fast Delivery */}
+            <div className="bg-white/80 rounded-2xl p-4 backdrop-blur-sm shadow-md border border-white/50 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-3 rounded-xl shadow-lg">
+                  <Truck className="h-6 w-6 text-white" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800 mb-1">Lokasi Pengiriman</h3>
-                  {locationAddress ? (
-                    <>
-                      <p className="text-gray-600 mb-3 line-clamp-2">{locationAddress}</p>
-                      <button 
-                        onClick={detectLocation}
-                        disabled={isLoading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm"
-                      >
-                        {isLoading ? 'Mendeteksi...' : 'Perbarui Lokasi'}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-gray-600 mb-3">Deteksi lokasi Anda untuk pengiriman lebih akurat</p>
-                      <button 
-                        onClick={detectLocation}
-                        disabled={isLoading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm"
-                      >
-                        {isLoading ? 'Mendeteksi...' : 'Deteksi Lokasi'}
-                      </button>
-                    </>
-                  )}
-                  
-                  {error && (
-                    <p className="mt-2 text-red-500 text-sm">{error}</p>
-                  )}
+                <div>
+                  <h3 className="font-bold text-gray-800 text-sm">Pengiriman Cepat</h3>
+                  <p className="text-xs text-gray-600 mt-1">Sampai dalam 1-3 hari kerja</p>
                 </div>
               </div>
             </div>
             
-            {/* Shipping Features */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
-              {/* Fast Delivery */}
-              <div className="bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
-                <div className="flex items-start space-x-3">
-                  <div className="bg-green-100 p-2 rounded-full">
-                    <Truck className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-800">Pengiriman Cepat</h3>
-                    <p className="text-xs text-gray-500 mt-1">Sampai dalam 1-3 hari kerja</p>
-                  </div>
+            {/* Free Shipping */}
+            <div className="bg-white/80 rounded-2xl p-4 backdrop-blur-sm shadow-md border border-white/50 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-br from-purple-400 to-violet-500 p-3 rounded-xl shadow-lg">
+                  <Zap className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-800 text-sm">Gratis Ongkir</h3>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Min. {codSettings.free_shipping_min ? `Rp${codSettings.free_shipping_min.toLocaleString()}` : 'Rp100.000'}
+                  </p>
                 </div>
               </div>
-              
-              {/* Free Shipping */}
-              <div className="bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
-                <div className="flex items-start space-x-3">
-                  <div className="bg-purple-100 p-2 rounded-full">
-                    <Package className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-800">Gratis Ongkir</h3>
-                    <p className="text-xs text-gray-500 mt-1">Minimal pembelian {codSettings.free_shipping_min ? `Rp${codSettings.free_shipping_min.toLocaleString()}` : 'Rp100.000'}</p>
-                  </div>
+            </div>
+            
+            {/* Cash on Delivery */}
+            <div className="bg-white/80 rounded-2xl p-4 backdrop-blur-sm shadow-md border border-white/50 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-br from-blue-400 to-cyan-500 p-3 rounded-xl shadow-lg">
+                  <Shield className="h-6 w-6 text-white" />
                 </div>
-              </div>
-              
-              {/* Cash on Delivery */}
-              <div className="bg-white/80 rounded-xl p-4 backdrop-blur-sm shadow-sm">
-                <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-full">
-                    <Shield className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-800">Bayar di Tempat</h3>
-                    <p className="text-xs text-gray-500 mt-1">COD tersedia untuk semua area</p>
-                  </div>
+                <div>
+                  <h3 className="font-bold text-gray-800 text-sm">Bayar di Tempat</h3>
+                  <p className="text-xs text-gray-600 mt-1">COD tersedia semua area</p>
                 </div>
               </div>
             </div>
