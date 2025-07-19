@@ -2,341 +2,236 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProductReviewsProps {
   productId: string;
 }
 
-interface Review {
-  id: string;
-  user_id: string;
-  rating: number;
-  review_text: string;
-  full_name: string;
-  created_at: string;
-}
-
 const ProductReviews = ({ productId }: ProductReviewsProps) => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Fetch reviews
-  const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
-    queryKey: ['product-reviews', productId, sortBy],
+  const { data: reviews } = useQuery({
+    queryKey: ['product-reviews', productId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_reviews')
         .select('*')
         .eq('product_id', productId)
-        .order('created_at', { ascending: sortBy === 'oldest' });
-
+        .order('created_at', { ascending: false });
+      
       if (error) throw error;
-      return data as Review[];
+      return data;
     }
   });
 
-  // Check if user can review (has purchased this product)
-  const { data: canReview = false } = useQuery({
-    queryKey: ['can-review', productId, user?.id],
+  // Check if user can review (has purchased the product)
+  const { data: canReview } = useQuery({
+    queryKey: ['can-review', productId],
     queryFn: async () => {
-      if (!user?.id) return false;
-
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-
-      if (!customer) return false;
-
+      if (!user) return false;
+      
       const { data, error } = await supabase
         .from('order_items')
         .select(`
-          id,
-          orders!inner (
-            id,
-            customer_id,
-            status
-          )
+          orders!inner(*)
         `)
         .eq('product_id', productId)
-        .eq('orders.customer_id', customer.id)
+        .eq('orders.customer_id', user.id)
         .eq('orders.status', 'delivered');
-
+      
       if (error) throw error;
-      return data && data.length > 0;
+      return data.length > 0;
     },
-    enabled: !!user?.id
+    enabled: !!user
   });
 
-  // Check if user has already reviewed this product
+  // Check if user has already reviewed
   const { data: existingReview } = useQuery({
-    queryKey: ['existing-review', productId, user?.id],
+    queryKey: ['existing-review', productId],
     queryFn: async () => {
-      if (!user?.id) return null;
-
+      if (!user) return null;
+      
       const { data, error } = await supabase
         .from('product_reviews')
         .select('*')
         .eq('product_id', productId)
         .eq('user_id', user.id)
         .maybeSingle();
-
+      
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user
   });
 
+  // Submit review mutation
   const submitReview = useMutation({
-    mutationFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-      if (rating === 0) throw new Error('Rating is required');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-
+    mutationFn: async ({ rating, reviewText }: { rating: number; reviewText: string }) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const { error } = await supabase
         .from('product_reviews')
         .insert({
           user_id: user.id,
           product_id: productId,
           rating,
-          review_text: reviewText,
-          full_name: profile?.full_name || 'Anonymous'
+          review_text: reviewText
         });
-
+      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-reviews', productId] });
-      queryClient.invalidateQueries({ queryKey: ['existing-review', productId, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['existing-review', productId] });
       setRating(0);
       setReviewText('');
-      toast({
-        title: 'Berhasil!',
-        description: 'Review Anda telah berhasil dikirim'
-      });
+      setShowReviewForm(false);
+      toast({ title: 'Review berhasil dikirim!' });
     },
     onError: (error) => {
-      console.error('Error submitting review:', error);
-      toast({
-        title: 'Error',
-        description: 'Gagal mengirim review',
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
-  const updateReview = useMutation({
-    mutationFn: async () => {
-      if (!user?.id || !existingReview) throw new Error('Invalid update');
-
-      const { error } = await supabase
-        .from('product_reviews')
-        .update({
-          rating,
-          review_text: reviewText
-        })
-        .eq('id', existingReview.id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-reviews', productId] });
-      queryClient.invalidateQueries({ queryKey: ['existing-review', productId, user?.id] });
-      toast({
-        title: 'Berhasil!',
-        description: 'Review Anda telah berhasil diperbarui'
-      });
-    },
-    onError: (error) => {
-      console.error('Error updating review:', error);
-      toast({
-        title: 'Error',
-        description: 'Gagal memperbarui review',
-        variant: 'destructive'
-      });
+  const handleSubmitReview = () => {
+    if (rating === 0) {
+      toast({ title: 'Error', description: 'Pilih rating terlebih dahulu', variant: 'destructive' });
+      return;
     }
-  });
-
-  // Calculate average rating
-  const averageRating = reviews.length > 0 
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
-    : 0;
-
-  const StarRating = ({ rating: currentRating, interactive = false, onRatingChange }: {
-    rating: number;
-    interactive?: boolean;
-    onRatingChange?: (rating: number) => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`h-4 w-4 ${
-              star <= currentRating
-                ? 'fill-yellow-400 text-yellow-400'
-                : 'text-gray-300'
-            } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-            onClick={() => interactive && onRatingChange?.(star)}
-          />
-        ))}
-      </div>
-    );
+    
+    submitReview.mutate({ rating, reviewText });
   };
 
-  // Set initial values for editing
-  useState(() => {
-    if (existingReview) {
-      setRating(existingReview.rating);
-      setReviewText(existingReview.review_text || '');
-    }
-  });
+  const averageRating = reviews?.length ? 
+    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
+
+  const renderStars = (rating: number, interactive = false, size = 'h-4 w-4') => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`${size} ${
+          i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+        } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
+        onClick={interactive ? () => setRating(i + 1) : undefined}
+      />
+    ));
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Review Summary */}
+    <div className="mt-8">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Review Produk</span>
-            <div className="flex items-center gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest')}
-                className="text-sm border rounded px-2 py-1"
+            <span>Reviews & Rating</span>
+            {canReview && !existingReview && (
+              <Button
+                onClick={() => setShowReviewForm(!showReviewForm)}
+                variant="outline"
+                size="sm"
               >
-                <option value="newest">Terbaru</option>
-                <option value="oldest">Terlama</option>
-              </select>
-            </div>
+                Tulis Review
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <StarRating rating={averageRating} />
-              <span className="text-lg font-semibold">{averageRating.toFixed(1)}</span>
+          {/* Rating Summary */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
+                <div className="flex justify-center space-x-1 mt-1">
+                  {renderStars(Math.round(averageRating))}
+                </div>
+              </div>
+              <div className="text-sm text-gray-600">
+                {reviews?.length || 0} review{(reviews?.length || 0) !== 1 ? 's' : ''}
+              </div>
             </div>
-            <span className="text-gray-600">
-              {reviews.length} review{reviews.length !== 1 ? 's' : ''}
-            </span>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Write Review Form */}
-      {user && canReview && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {existingReview ? 'Edit Review Anda' : 'Tulis Review'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Rating</label>
-              <StarRating
-                rating={rating}
-                interactive
-                onRatingChange={setRating}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Review</label>
-              <Textarea
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Tulis review Anda tentang produk ini..."
-                rows={4}
-              />
-            </div>
-            <Button
-              onClick={() => existingReview ? updateReview.mutate() : submitReview.mutate()}
-              disabled={rating === 0 || submitReview.isPending || updateReview.isPending}
-            >
-              {existingReview ? 'Perbarui Review' : 'Kirim Review'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Login prompt for non-authenticated users */}
-      {!user && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-gray-600">Silakan login untuk memberikan review</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Can't review message */}
-      {user && !canReview && !existingReview && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-gray-600">
-              Anda hanya dapat memberikan review setelah membeli dan menerima produk ini
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Reviews List */}
-      <div className="space-y-4">
-        {reviewsLoading ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600">Memuat review...</p>
-          </div>
-        ) : reviews.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-gray-600">Belum ada review untuk produk ini</p>
-            </CardContent>
-          </Card>
-        ) : (
-          reviews.map((review) => (
-            <Card key={review.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    <User className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium">{review.full_name}</span>
-                      <StarRating rating={review.rating} />
-                    </div>
-                    {review.review_text && (
-                      <p className="text-gray-700 mb-2">{review.review_text}</p>
-                    )}
-                    <p className="text-sm text-gray-500">
-                      {new Date(review.created_at).toLocaleDateString('id-ID', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
+          {/* Review Form */}
+          {showReviewForm && (
+            <div className="mb-6 p-4 border rounded-lg">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Rating</label>
+                  <div className="flex space-x-1">
+                    {renderStars(rating, true, 'h-6 w-6')}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Review</label>
+                  <Textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Tulis review Anda..."
+                    rows={4}
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleSubmitReview}
+                    disabled={submitReview.isPending}
+                  >
+                    {submitReview.isPending ? 'Mengirim...' : 'Kirim Review'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowReviewForm(false)}
+                  >
+                    Batal
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reviews List */}
+          <div className="space-y-4">
+            {reviews?.map((review) => (
+              <div key={review.id} className="border-b pb-4 last:border-b-0">
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                    <User className="h-5 w-5 text-gray-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="font-medium">User</span>
+                      <div className="flex space-x-1">
+                        {renderStars(review.rating)}
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">
+                      {new Date(review.created_at).toLocaleDateString('id-ID')}
+                    </p>
+                    {review.review_text && (
+                      <p className="text-sm">{review.review_text}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {reviews?.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              Belum ada review untuk produk ini
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

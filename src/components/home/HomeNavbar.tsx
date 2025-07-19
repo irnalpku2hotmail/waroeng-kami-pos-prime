@@ -1,233 +1,202 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Heart, ShoppingCart, User, Search, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { useCartWithShipping } from '@/hooks/useCartWithShipping';
+import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Search, User, Menu, X } from 'lucide-react';
-import VoiceSearch from '@/components/VoiceSearch';
+import FrontendCartModal from '@/components/frontend/FrontendCartModal';
+import StoreInfo from '@/components/home/StoreInfo';
 
-interface HomeNavbarProps {
-  onCartClick: () => void;
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  onSearch: () => void;
-}
-
-const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeNavbarProps) => {
+const HomeNavbar = () => {
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const { items } = useCartWithShipping();
   const { user } = useAuth();
-  const { items } = useCart();
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Fetch store name from settings
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Fetch search suggestions
+  const { data: suggestions } = useQuery({
+    queryKey: ['search-suggestions', searchQuery],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*');
-
-      if (error) throw error;
+      if (!searchQuery.trim()) return [];
       
-      const settingsMap = data.reduce((acc, setting) => {
-        acc[setting.key] = setting.value;
-        return acc;
-      }, {} as Record<string, any>);
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('id, name, image_url')
+        .ilike('name', `%${searchQuery}%`)
+        .eq('is_active', true)
+        .limit(5);
       
-      return settingsMap;
-    }
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select('id, name')
+        .ilike('name', `%${searchQuery}%`)
+        .limit(3);
+      
+      if (productsError || categoriesError) return [];
+      
+      return [
+        ...products.map(p => ({ ...p, type: 'product' })),
+        ...categories.map(c => ({ ...c, type: 'category' }))
+      ];
+    },
+    enabled: searchQuery.length > 0
   });
 
-  // Safely extract store name and handle potential object values
-  const getStoreName = (): string => {
-    if (!settings?.store_name) return 'Toko Online';
-    
-    const storeNameValue = settings.store_name;
-    
-    // Handle case where store_name might be an object with a name property
-    if (typeof storeNameValue === 'object' && storeNameValue !== null) {
-      if ('name' in storeNameValue && typeof storeNameValue.name === 'string') {
-        return storeNameValue.name;
-      }
-      // If it's an object but doesn't have a name property, return default
-      return 'Toko Online';
+  useEffect(() => {
+    setSearchSuggestions(suggestions || []);
+  }, [suggestions]);
+
+  const handleSearch = (query: string) => {
+    if (query.trim()) {
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+      setShowSuggestions(false);
+      setSearchQuery('');
     }
-    
-    // Handle case where store_name is a direct string
-    if (typeof storeNameValue === 'string') {
-      return storeNameValue;
-    }
-    
-    // Convert any other type to string safely
-    return String(storeNameValue) || 'Toko Online';
   };
 
-  const storeName = getStoreName();
+  const handleSuggestionClick = (suggestion: any) => {
+    if (suggestion.type === 'product') {
+      navigate(`/product/${suggestion.id}`);
+    } else if (suggestion.type === 'category') {
+      navigate(`/search?category=${suggestion.id}`);
+    }
+    setShowSuggestions(false);
+    setSearchQuery('');
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
-  const handleVoiceSearch = (transcript: string) => {
-    onSearchChange(transcript);
-    if (transcript.trim()) {
-      navigate(`/search?q=${encodeURIComponent(transcript.trim())}`);
+      handleSearch(searchQuery);
     }
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo and Store Name */}
-          <div className="flex items-center space-x-4">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">T</span>
-              </div>
-              <span className="font-bold text-xl text-gray-900 hidden sm:block">
-                {storeName}
-              </span>
-            </Link>
-          </div>
+    <nav className="bg-white shadow-md sticky top-0 z-50">
+      {/* Store Info Bar */}
+      <div className="bg-blue-50 border-b">
+        <div className="container mx-auto px-4 py-2">
+          <StoreInfo />
+        </div>
+      </div>
 
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
-            <div className="relative w-full">
-              <input
+      {/* Main Navigation */}
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="text-2xl font-bold text-blue-600">
+            TokoKu
+          </Link>
+
+          {/* Search Bar */}
+          <div className="flex-1 max-w-2xl mx-8 relative">
+            <div className="relative">
+              <Input
                 type="text"
-                placeholder="Cari produk..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Cari produk atau kategori..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
                 onKeyPress={handleKeyPress}
-                className="w-full pl-10 pr-20 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onFocus={() => setShowSuggestions(true)}
+                className="w-full pl-10 pr-4 py-2 border rounded-full"
               />
-              <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              <div className="absolute right-2 top-1 flex items-center space-x-1">
-                <VoiceSearch onVoiceResult={handleVoiceSearch} />
-                <Button
-                  size="sm"
-                  onClick={handleSearch}
-                  className="h-8 px-3"
-                >
-                  Cari
-                </Button>
-              </div>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             </div>
+
+            {/* Search Suggestions */}
+            {showSuggestions && searchQuery && searchSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-96 overflow-y-auto z-50">
+                {searchSuggestions.map((suggestion) => (
+                  <div
+                    key={`${suggestion.type}-${suggestion.id}`}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                  >
+                    {suggestion.type === 'product' && suggestion.image_url && (
+                      <img
+                        src={suggestion.image_url}
+                        alt={suggestion.name}
+                        className="w-8 h-8 object-cover rounded mr-3"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="font-medium">{suggestion.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {suggestion.type === 'product' ? 'Produk' : 'Kategori'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Right side buttons */}
+          {/* Action Buttons */}
           <div className="flex items-center space-x-4">
-            {/* Cart Button */}
+            {/* Search Button for Mobile */}
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
-              onClick={onCartClick}
+              onClick={() => handleSearch(searchQuery)}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+
+            {/* Wishlist */}
+            <Button variant="ghost" size="icon">
+              <Heart className="h-5 w-5" />
+            </Button>
+
+            {/* Cart */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCartOpen(true)}
               className="relative"
             >
               <ShoppingCart className="h-5 w-5" />
-              {items.length > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                  {items.length}
+              {totalItems > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  {totalItems}
                 </Badge>
               )}
             </Button>
 
-            {/* User Button */}
-            <Link to={user ? "/profile" : "/auth/login"}>
-              <Button variant="outline" size="icon">
+            {/* User */}
+            <Button variant="ghost" size="icon" asChild>
+              <Link to={user ? "/profile" : "/login"}>
                 <User className="h-5 w-5" />
-              </Button>
-            </Link>
-
-            {/* Mobile Menu Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden"
-            >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Link>
             </Button>
           </div>
         </div>
-
-        {/* Mobile Search Bar */}
-        <div className="md:hidden pb-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Cari produk..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="w-full pl-10 pr-20 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <div className="absolute right-2 top-1 flex items-center space-x-1">
-              <VoiceSearch onVoiceResult={handleVoiceSearch} />
-              <Button
-                size="sm"
-                onClick={handleSearch}
-                className="h-8 px-3"
-              >
-                Cari
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t bg-white py-4">
-            <div className="flex flex-col space-y-2">
-              <Link
-                to="/"
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Beranda
-              </Link>
-              <Link
-                to="/order-history"
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Riwayat Pesanan
-              </Link>
-              {user ? (
-                <Link
-                  to="/profile"
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Profil
-                </Link>
-              ) : (
-                <Link
-                  to="/auth/login"
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Masuk
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Cart Modal */}
+      <FrontendCartModal
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+      />
+
+      {/* Overlay for suggestions */}
+      {showSuggestions && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowSuggestions(false)}
+        />
+      )}
     </nav>
   );
 };
