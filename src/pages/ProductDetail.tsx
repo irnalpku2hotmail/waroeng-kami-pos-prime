@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -404,13 +405,11 @@ const ProductDetail = () => {
         </div>
 
         {/* Product Recommendations */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-900">Produk Serupa</h2>
-          <ProductRecommendations 
-            currentProductId={id || ''} 
-            categoryId={product.category_id}
-          />
-        </div>
+        <ProductRecommendations 
+          currentProductId={id || ''} 
+          categoryId={product.category_id}
+          onProductClick={(productId) => navigate(`/product/${productId}`)}
+        />
       </main>
 
       <HomeFooter storeInfo={storeInfo} />
