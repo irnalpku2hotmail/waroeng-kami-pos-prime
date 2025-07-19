@@ -100,14 +100,14 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     setSuggestions([...categorySuggestions, ...productSuggestions]);
   }, [productsData, categoriesData]);
 
-  // Show suggestions logic
+  // Show suggestions logic - Fixed the boolean logic
   useEffect(() => {
-    const shouldShow = isFocused && (
-      (debouncedSearchTerm.length >= 2 && suggestions.length > 0) ||
-      (searchTerm.length >= 2 && (productsData || categoriesData))
-    );
+    const shouldShow = isFocused && 
+      debouncedSearchTerm.length >= 2 && 
+      suggestions.length > 0;
+    
     setShowSuggestions(shouldShow);
-  }, [isFocused, debouncedSearchTerm, suggestions, searchTerm, productsData, categoriesData]);
+  }, [isFocused, debouncedSearchTerm, suggestions]);
 
   // Click outside handler
   useEffect(() => {
