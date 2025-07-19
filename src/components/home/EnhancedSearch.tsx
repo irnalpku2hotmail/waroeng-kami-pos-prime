@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Mic, MicOff } from 'lucide-react';
+import { Search, Mic, MicOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface SearchSuggestion {
@@ -25,10 +25,11 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isListening, setIsListening] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Search suggestions query
+  // Enhanced search suggestions with better logic
   const { data: searchData } = useQuery({
     queryKey: ['search-suggestions', searchTerm],
     queryFn: async () => {
@@ -37,15 +38,15 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
       const [productsResult, categoriesResult] = await Promise.all([
         supabase
           .from('products')
-          .select('id, name')
-          .ilike('name', `%${searchTerm}%`)
+          .select('id, name, selling_price, image_url, categories!inner(name)')
+          .or(`name.ilike.%${searchTerm}%,categories.name.ilike.%${searchTerm}%`)
           .eq('is_active', true)
-          .limit(5),
+          .limit(6),
         supabase
           .from('categories')
           .select('id, name')
           .ilike('name', `%${searchTerm}%`)
-          .limit(3)
+          .limit(4)
       ]);
 
       return {
@@ -78,6 +79,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
+        setIsFocused(false);
       }
     };
 
@@ -85,8 +87,8 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Voice search setup
   useEffect(() => {
-    // Setup speech recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -98,6 +100,10 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
         const transcript = event.results[0][0].transcript;
         onSearchChange(transcript);
         setIsListening(false);
+        // Auto search after voice input
+        setTimeout(() => {
+          handleSearch();
+        }, 500);
       };
 
       recognitionRef.current.onerror = () => {
@@ -125,9 +131,10 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setShowSuggestions(false);
+    setIsFocused(false);
     if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
@@ -135,12 +142,18 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setShowSuggestions(false);
-    onSearchChange(suggestion.name);
-    navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
+    setIsFocused(false);
+    
+    if (suggestion.type === 'category') {
+      navigate(`/search?category=${encodeURIComponent(suggestion.name)}`);
+    } else {
+      navigate(`/product/${suggestion.id}`);
+    }
   };
 
   const handleInputFocus = () => {
-    if (suggestions.length > 0) {
+    setIsFocused(true);
+    if (suggestions.length > 0 || searchTerm.length >= 2) {
       setShowSuggestions(true);
     }
   };
@@ -151,47 +164,102 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     setShowSuggestions(value.length >= 2);
   };
 
+  const clearSearch = () => {
+    onSearchChange('');
+    setShowSuggestions(false);
+  };
+
   return (
     <div className="flex-1 max-w-2xl mx-8 hidden md:block" ref={searchRef}>
       <form onSubmit={handleSearch} className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className={`relative transition-all duration-300 ${isFocused ? 'scale-105' : ''}`}>
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 transition-colors duration-200" />
+          
           <Input
             type="search"
-            placeholder="Cari produk atau kategori..."
+            placeholder="Cari produk, kategori, atau brand..."
             value={searchTerm}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
-            className="pl-10 pr-16 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300 rounded-full"
-          />
-          <Button
-            type="button"
-            onClick={handleVoiceSearch}
-            className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full ${
-              isListening 
-                ? 'bg-red-500 hover:bg-red-600 text-white' 
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            className={`pl-12 pr-20 py-3 w-full transition-all duration-300 rounded-2xl shadow-lg ${
+              isFocused 
+                ? 'bg-white border-2 border-blue-400 shadow-xl ring-4 ring-blue-100' 
+                : 'bg-white/95 backdrop-blur-sm border-white/20 hover:bg-white hover:border-blue-300'
             }`}
-          >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </Button>
+          />
+          
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+            {searchTerm && (
+              <Button
+                type="button"
+                onClick={clearSearch}
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                size="sm"
+                variant="ghost"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            
+            <Button
+              type="button"
+              onClick={handleVoiceSearch}
+              className={`p-2 rounded-full transition-all duration-200 ${
+                isListening 
+                  ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+              }`}
+              size="sm"
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
 
-        {/* Search Suggestions */}
+        {/* Enhanced Search Suggestions */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={`${suggestion.type}-${suggestion.id}`}
-                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
-                onClick={() => handleSuggestionClick(suggestion)}
+          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto mt-2 backdrop-blur-md bg-white/95">
+            <div className="p-2">
+              {suggestions.map((suggestion, index) => (
+                <div
+                  key={`${suggestion.type}-${suggestion.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 cursor-pointer rounded-xl transition-all duration-200 group"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  <div className="flex-shrink-0">
+                    <Badge 
+                      variant={suggestion.type === 'category' ? 'default' : 'outline'} 
+                      className={`text-xs font-medium px-2 py-1 ${
+                        suggestion.type === 'category' 
+                          ? 'bg-blue-100 text-blue-700 border-blue-200' 
+                          : 'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {suggestion.type === 'category' ? 'Kategori' : 'Produk'}
+                    </Badge>
+                  </div>
+                  <span className="text-gray-900 font-medium group-hover:text-blue-700 transition-colors flex-1">
+                    {suggestion.name}
+                  </span>
+                  {suggestion.type === 'category' && (
+                    <span className="text-xs text-gray-500 group-hover:text-blue-500">
+                      Lihat semua →
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Quick search actions */}
+            <div className="border-t border-gray-100 p-3 bg-gray-50/50">
+              <button
+                onClick={handleSearch}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors duration-200"
               >
-                <Badge variant={suggestion.type === 'category' ? 'secondary' : 'outline'} className="text-xs">
-                  {suggestion.type === 'category' ? 'Kategori' : 'Produk'}
-                </Badge>
-                <span className="text-gray-900">{suggestion.name}</span>
-              </div>
-            ))}
+                <Search className="h-4 w-4" />
+                Cari "{searchTerm}"
+              </button>
+            </div>
           </div>
         )}
       </form>
