@@ -9,10 +9,10 @@ import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider
 import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
 import ProductGrid from '@/components/home/ProductGrid';
 import HomeFooter from '@/components/home/HomeFooter';
+import InteractiveLocationPicker from '@/components/home/InteractiveLocationPicker';
 import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
 import BestSellingSlider from '@/components/home/BestSellingSlider';
 import CartModal from '@/components/CartModal';
-import ShippingInfoDisplay from '@/components/home/ShippingInfoDisplay';
 import { useState } from 'react';
 
 const Home = () => {
@@ -58,40 +58,7 @@ const Home = () => {
 
       // Apply search filter
       if (searchTerm.trim()) {
-        // Search in product names
-        const productSearch = supabase
-          .from('products')
-          .select(`
-            *,
-            categories (name, id),
-            units (name, abbreviation)
-          `)
-          .eq('is_active', true)
-          .ilike('name', `%${searchTerm}%`);
-
-        // Search in categories
-        const categorySearch = supabase
-          .from('products')
-          .select(`
-            *,
-            categories!inner (name, id),
-            units (name, abbreviation)
-          `)
-          .eq('is_active', true)
-          .ilike('categories.name', `%${searchTerm}%`);
-
-        const [productResults, categoryResults] = await Promise.all([
-          productSearch,
-          categorySearch
-        ]);
-
-        // Combine and deduplicate results
-        const allProducts = [...(productResults.data || []), ...(categoryResults.data || [])];
-        const uniqueProducts = allProducts.filter((product, index, self) => 
-          index === self.findIndex(p => p.id === product.id)
-        );
-
-        return uniqueProducts.slice(0, 12);
+        query = query.or(`name.ilike.%${searchTerm}%,categories.name.ilike.%${searchTerm}%`);
       }
 
       // Apply category filter
@@ -110,7 +77,7 @@ const Home = () => {
 
   const handleCategorySelect = (categoryId: string, categoryName: string) => {
     setSelectedCategory(categoryId);
-    setSearchTerm(categoryName);
+    setSearchTerm(categoryName); // Set search term to show what's being filtered
   };
 
   const handleSearch = () => {
@@ -136,8 +103,10 @@ const Home = () => {
         {/* Banner Carousel */}
         <BannerCarousel />
         
-        {/* Shipping Info Display */}
-        <ShippingInfoDisplay />
+        {/* Interactive Location Picker */}
+        <div className="mb-8">
+          <InteractiveLocationPicker />
+        </div>
         
         {/* Enhanced Categories Slider */}
         <EnhancedCategoriesSlider onCategorySelect={handleCategorySelect} />
