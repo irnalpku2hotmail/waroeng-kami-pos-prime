@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tag, Package } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Search, Tag, Package } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CategoriesTab from '@/components/categories/CategoriesTab';
 import UnitsTab from '@/components/units/UnitsTab';
@@ -13,17 +14,24 @@ import PaginationComponent from '@/components/PaginationComponent';
 const ITEMS_PER_PAGE = 10;
 
 const CategoriesUnits = () => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['categories', currentPage],
+    queryKey: ['categories', searchTerm, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
       
-      const { data, error, count } = await supabase
+      let query = supabase
         .from('categories')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'exact' });
+      
+      if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+      
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
       
@@ -33,14 +41,20 @@ const CategoriesUnits = () => {
   });
 
   const { data: unitsData, isLoading: unitsLoading } = useQuery({
-    queryKey: ['units', currentPage],
+    queryKey: ['units', searchTerm, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
       
-      const { data, error, count } = await supabase
+      let query = supabase
         .from('units')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'exact' });
+      
+      if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+      
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
       
@@ -104,6 +118,24 @@ const CategoriesUnits = () => {
           </Card>
         </div>
 
+        {/* Search */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Cari kategori atau unit..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Tabs */}
         <Tabs defaultValue="categories" className="space-y-4">
           <TabsList>
@@ -115,7 +147,7 @@ const CategoriesUnits = () => {
             <CategoriesTab 
               categories={categories}
               isLoading={categoriesLoading}
-              searchTerm=""
+              searchTerm={searchTerm}
             />
             {totalPages > 1 && (
               <PaginationComponent
@@ -132,7 +164,7 @@ const CategoriesUnits = () => {
             <UnitsTab 
               units={units}
               isLoading={unitsLoading}
-              searchTerm=""
+              searchTerm={searchTerm}
             />
             {totalPages > 1 && (
               <PaginationComponent

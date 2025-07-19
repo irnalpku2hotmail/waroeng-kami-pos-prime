@@ -1,6 +1,5 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,11 +8,10 @@ import { Star } from 'lucide-react';
 interface ProductRecommendationsProps {
   categoryId: string | null;
   currentProductId: string;
+  onProductClick: (product: any) => void;
 }
 
-const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecommendationsProps) => {
-  const navigate = useNavigate();
-
+const ProductRecommendations = ({ categoryId, currentProductId, onProductClick }: ProductRecommendationsProps) => {
   const { data: recommendations = [], isLoading } = useQuery({
     queryKey: ['product-recommendations', categoryId, currentProductId],
     queryFn: async () => {
@@ -36,10 +34,6 @@ const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecomme
     },
     enabled: !!categoryId
   });
-
-  const handleProductClick = (productId: string) => {
-    navigate(`/product/${productId}`);
-  };
 
   if (isLoading) {
     return (
@@ -69,7 +63,7 @@ const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecomme
         <Card 
           key={product.id} 
           className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden"
-          onClick={() => handleProductClick(product.id)}
+          onClick={() => onProductClick(product)}
         >
           <div className="relative">
             <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 p-2 flex items-center justify-center">
