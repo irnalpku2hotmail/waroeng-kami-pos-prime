@@ -1,19 +1,27 @@
 
-import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Heart, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCartWithShipping } from '@/hooks/useCartWithShipping';
+import { Badge } from '@/components/ui/badge';
+import { Package, ShoppingCart } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface Product {
   id: string;
   name: string;
   selling_price: number;
-  image_url?: string;
   current_stock: number;
-  min_quantity: number;
+  image_url: string | null;
+  description: string | null;
+  categories?: {
+    id: string;
+    name: string;
+  };
+  units?: {
+    name: string;
+    abbreviation: string;
+  };
 }
 
 interface ProductGridProps {
@@ -21,89 +29,115 @@ interface ProductGridProps {
 }
 
 const ProductGrid = ({ products }: ProductGridProps) => {
-  const { addItem } = useCartWithShipping();
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
-    e.preventDefault();
     e.stopPropagation();
     
-    if (product.current_stock < product.min_quantity) {
-      toast({
-        title: 'Stok tidak mencukupi',
-        description: `Stok tersedia: ${product.current_stock}`,
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    addItem({
+    addToCart({
       id: product.id,
       name: product.name,
       price: product.selling_price,
-      image: product.image_url || '/placeholder.svg',
-      quantity: product.min_quantity
+      quantity: 1,
+      image: product.image_url || undefined,
+      stock: product.current_stock,
+      product_id: product.id,
+      unit_price: product.selling_price,
+      total_price: product.selling_price * 1,
+      product: {
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url
+      }
     });
 
     toast({
-      title: 'Berhasil ditambahkan',
-      description: `${product.name} telah ditambahkan ke keranjang`
+      title: 'Berhasil!',
+      description: `${product.name} telah ditambahkan ke keranjang`,
     });
   };
 
+  const handleProductClick = (productId: string) => {
+    navigate(`/product/${productId}`);
+  };
+
+  if (!products || products.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-500">Tidak ada produk tersedia</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {products.map((product) => (
-        <Link key={product.id} to={`/product/${product.id}`}>
-          <Card className="group hover:shadow-lg transition-shadow duration-200 h-full">
-            <CardContent className="p-3">
-              <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100">
-                <img
-                  src={product.image_url || '/placeholder.svg'}
+        <Card 
+          key={product.id} 
+          className="group hover:shadow-lg transition-shadow cursor-pointer"
+          onClick={() => handleProductClick(product.id)}
+        >
+          <CardContent className="p-4">
+            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+              {product.image_url ? (
+                <img 
+                  src={product.image_url} 
                   alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
-              </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Package className="h-12 w-12 text-gray-400" />
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              {product.categories && (
+                <Badge variant="secondary" className="text-xs">
+                  {product.categories.name}
+                </Badge>
+              )}
               
-              <div className="space-y-2">
-                <h3 className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">
-                  {product.name}
-                </h3>
+              <h3 className="font-semibold text-sm line-clamp-2">
+                {product.name}
+              </h3>
+              
+              <p className="text-lg font-bold text-blue-600">
+                {formatPrice(product.selling_price)}
+              </p>
+              
+              <div className="flex items-center justify-between">
+                <Badge 
+                  variant={product.current_stock > 0 ? 'default' : 'destructive'}
+                  className="text-xs"
+                >
+                  {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
+                </Badge>
                 
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-bold text-blue-600">
-                    Rp {product.selling_price.toLocaleString('id-ID')}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Heart className="h-3 w-3" />
-                  </Button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-xs">
-                    Stok: {product.current_stock}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={(e) => handleAddToCart(product, e)}
-                    disabled={product.current_stock < product.min_quantity}
-                  >
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    +
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  onClick={(e) => handleAddToCart(product, e)}
+                  disabled={product.current_stock === 0}
+                  className="flex items-center gap-1"
+                >
+                  <ShoppingCart className="h-3 w-3" />
+                  Beli
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </Link>
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

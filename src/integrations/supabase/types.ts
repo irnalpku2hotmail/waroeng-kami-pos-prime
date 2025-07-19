@@ -532,79 +532,10 @@ export type Database = {
           },
         ]
       }
-      product_brands: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          logo_url: string | null
-          name: string
-          updated_at: string
-          website_url: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          logo_url?: string | null
-          name: string
-          updated_at?: string
-          website_url?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          logo_url?: string | null
-          name?: string
-          updated_at?: string
-          website_url?: string | null
-        }
-        Relationships: []
-      }
-      product_reviews: {
-        Row: {
-          created_at: string
-          id: string
-          product_id: string
-          rating: number
-          review_text: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          product_id: string
-          rating: number
-          review_text?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          product_id?: string
-          rating?: number
-          review_text?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_reviews_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       products: {
         Row: {
           barcode: string | null
           base_price: number
-          brand_id: string | null
           category_id: string | null
           created_at: string
           current_stock: number
@@ -623,7 +554,6 @@ export type Database = {
         Insert: {
           barcode?: string | null
           base_price?: number
-          brand_id?: string | null
           category_id?: string | null
           created_at?: string
           current_stock?: number
@@ -642,7 +572,6 @@ export type Database = {
         Update: {
           barcode?: string | null
           base_price?: number
-          brand_id?: string | null
           category_id?: string | null
           created_at?: string
           current_stock?: number
@@ -659,13 +588,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "products_brand_id_fkey"
-            columns: ["brand_id"]
-            isOneToOne: false
-            referencedRelation: "product_brands"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "products_category_id_fkey"
             columns: ["category_id"]
