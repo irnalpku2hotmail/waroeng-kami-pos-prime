@@ -1,20 +1,10 @@
 
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ShoppingCart, Star, Package } from 'lucide-react';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Product {
   id: string;
@@ -22,163 +12,130 @@ interface Product {
   selling_price: number;
   image_url: string | null;
   current_stock: number;
-  min_stock: number;
-  loyalty_points: number;
   categories?: { name: string } | null;
 }
 
-interface ProductCarouselProps {
-  onProductClick?: (product: Product) => void;
-}
-
-const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
-  const { user } = useAuth();
-  const { addItem } = useCart();
+const ProductCarousel = () => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 4;
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['all-products'],
+    queryKey: ['products-carousel'],
     queryFn: async () => {
+      console.log('Fetching products for carousel...');
       const { data, error } = await supabase
         .from('products')
         .select(`
-          *,
-          categories(name)
+          id,
+          name,
+          selling_price,
+          image_url,
+          current_stock,
+          categories (name)
         `)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .gt('current_stock', 0)
+        .order('created_at', { ascending: false })
+        .limit(20);
 
-      if (error) throw error;
-      return data || [];
-    }
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+      
+      console.log('Products data:', data);
+      return data as Product[];
+    },
   });
 
-  const handleAddToCart = (product: Product, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Silakan login untuk menambahkan produk ke keranjang',
-        variant: 'destructive'
-      });
-      return;
-    }
+  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const currentProducts = useMemo(() => {
+    const start = currentPage * itemsPerPage;
+    return products.slice(start, start + itemsPerPage);
+  }, [products, currentPage]);
 
-    addItem(product);
-    toast({
-      title: 'Berhasil',
-      description: `${product.name} telah ditambahkan ke keranjang`
-    });
-  };
-
-  const handleProductClick = (product: Product) => {
-    if (onProductClick) {
-      onProductClick(product);
+  const nextPage = useCallback(() => {
+    if (totalPages > 1) {
+      setCurrentPage((prev) => (prev + 1) % totalPages);
     }
-  };
+  }, [totalPages]);
+
+  const prevPage = useCallback(() => {
+    if (totalPages > 1) {
+      setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages);
+    }
+  }, [totalPages]);
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="w-full">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-48"></div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative">
-      <Carousel
-        opts={{
-          align: "start",
-          loop: true,
-        }}
-        className="w-full"
-      >
-        <CarouselContent>
-          {products.map((product) => (
-            <CarouselItem key={product.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-              <Card 
-                className="group hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border-0 bg-gradient-to-br from-white to-gray-50"
-                onClick={() => handleProductClick(product)}
-              >
-                <div className="relative">
-                  <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex items-center justify-center">
-                    {product.image_url ? (
-                      <img 
-                        src={product.image_url} 
-                        alt={product.name}
-                        className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="text-6xl text-blue-300">📦</div>
-                    )}
-                  </div>
-                  
-                  {/* Category Badge */}
-                  {product.categories && (
-                    <Badge className="absolute top-2 left-2 bg-blue-100 text-blue-800 text-xs">
-                      {product.categories.name}
-                    </Badge>
-                  )}
-                  
-                  {/* Stock Status */}
-                  {product.current_stock <= 0 ? (
-                    <Badge variant="destructive" className="absolute top-2 right-2 text-xs">
-                      Habis
-                    </Badge>
-                  ) : product.current_stock <= product.min_stock ? (
-                    <Badge variant="secondary" className="absolute top-2 right-2 text-xs bg-orange-100 text-orange-800">
-                      Sisa {product.current_stock}
-                    </Badge>
-                  ) : null}
-                </div>
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900">Produk Terbaru</h2>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={prevPage}
+            disabled={totalPages <= 1}
+            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={nextPage}
+            disabled={totalPages <= 1}
+            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 h-10">
-                    {product.name}
-                  </h3>
-                  
-                  <div className="flex items-center gap-1 mb-2">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                    <span className="text-xs text-gray-500 ml-1">(4.5)</span>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {currentProducts.map((product) => (
+          <Card key={product.id} className="bg-white shadow-sm hover:shadow-md transition-shadow border border-gray-200">
+            <CardContent className="p-3">
+              <div className="aspect-square bg-white rounded-lg mb-3 overflow-hidden">
+                {product.image_url ? (
+                  <img 
+                    src={product.image_url} 
+                    alt={String(product.name || 'Product')}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <span className="text-gray-400 text-xs">No Image</span>
                   </div>
-
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-lg font-bold text-blue-600">
-                      Rp {product.selling_price.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-xs text-green-600 font-medium">
-                      +{product.loyalty_points} poin
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Package className="h-3 w-3" />
-                      Stok: {product.current_stock}
-                    </span>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    className="w-full text-xs h-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    onClick={(e) => handleAddToCart(product, e)}
-                    disabled={product.current_stock <= 0}
-                  >
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    {product.current_stock <= 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
-                  </Button>
-                </CardContent>
-              </Card>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
-      </Carousel>
+                )}
+              </div>
+              
+              <h3 className="font-medium text-sm text-gray-900 mb-1 line-clamp-2">
+                {String(product.name || 'Unnamed Product')}
+              </h3>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-bold text-blue-600">
+                  Rp {(product.selling_price || 0).toLocaleString('id-ID')}
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  Stok: {product.current_stock || 0}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

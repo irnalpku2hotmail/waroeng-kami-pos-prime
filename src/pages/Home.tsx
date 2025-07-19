@@ -4,25 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeHero from '@/components/home/HomeHero';
 import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
 import ProductCarousel from '@/components/home/ProductCarousel';
 import FlashSaleCarousel from '@/components/home/FlashSaleCarousel';
-import BestSellingProducts from '@/components/home/BestSellingProducts';
-import RecentlyBoughtProducts from '@/components/home/RecentlyBoughtProducts';
+import OrderHistory from '@/components/home/OrderHistory';
 import HomeFooter from '@/components/home/HomeFooter';
 import LocationPermissionModal from '@/components/home/LocationPermissionModal';
-import ProductGrid from '@/components/home/ProductGrid';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Check for location permission on component mount
   useEffect(() => {
@@ -33,9 +24,11 @@ const Home = () => {
           if (permission.state === 'prompt') {
             setShowLocationModal(true);
           } else if (permission.state === 'granted') {
+            // Optionally get and store location
             navigator.geolocation.getCurrentPosition(
               (position) => {
                 console.log('Location:', position.coords);
+                // Store location if needed
               },
               (error) => {
                 console.log('Location error:', error);
@@ -66,10 +59,12 @@ const Home = () => {
         settings[setting.key] = setting.value;
       });
 
+      // Helper function to safely extract string values from potentially object values
       const extractStringValue = (value: any, defaultValue: string): string => {
         if (!value) return defaultValue;
         
         if (typeof value === 'object' && value !== null) {
+          // Check if it has common properties like name, email, address, phone
           if ('name' in value && typeof value.name === 'string') {
             return value.name;
           }
@@ -82,6 +77,7 @@ const Home = () => {
           if ('phone' in value && typeof value.phone === 'string') {
             return value.phone;
           }
+          // If it's an object but doesn't have expected properties, return default
           return defaultValue;
         }
         
@@ -89,6 +85,7 @@ const Home = () => {
           return value;
         }
         
+        // Convert any other type to string safely
         return String(value) || defaultValue;
       };
 
@@ -113,118 +110,31 @@ const Home = () => {
     console.log('Location access denied');
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim() || selectedCategory) {
-      setShowSearchResults(true);
-    }
-  };
-
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setShowSearchResults(true);
-  };
-
-  const resetSearch = () => {
-    setSearchTerm('');
-    setSelectedCategory(null);
-    setShowSearchResults(false);
-  };
-
   return (
     <div className="min-h-screen bg-white">
       <HomeNavbar storeInfo={storeInfo} />
       
       <main className="bg-white">
-        {/* Hero Section with Banner/Slider */}
-        <HomeHero 
-          storeName={storeInfo?.name}
-          storeDescription="Temukan produk berkualitas dengan harga terbaik"
-          onProductClick={handleProductClick}
-        />
-
         <div className="container mx-auto px-4 py-8 space-y-8">
-          {/* Enhanced Search Bar */}
-          <section className="max-w-2xl mx-auto">
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Cari produk..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 rounded-full border-2 border-gray-200 focus:border-blue-500"
-                />
-              </div>
-              <Button type="submit" className="rounded-full px-6">
-                Cari
-              </Button>
-            </form>
-            {showSearchResults && (
-              <div className="mt-4 text-center">
-                <Button 
-                  variant="outline" 
-                  onClick={resetSearch}
-                  className="rounded-full"
-                >
-                  Lihat Semua Produk
-                </Button>
-              </div>
-            )}
+          {/* Categories Section */}
+          <section>
+            <HomeCategoriesSlider />
           </section>
 
-          {showSearchResults ? (
-            <section>
-              <ProductGrid 
-                searchTerm={searchTerm}
-                selectedCategory={selectedCategory}
-                onProductClick={handleProductClick}
-              />
-            </section>
-          ) : (
-            <>
-              {/* Categories Section */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  Kategori Produk
-                </h2>
-                <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
-              </section>
+          {/* Flash Sale Section */}
+          <section>
+            <FlashSaleCarousel />
+          </section>
 
-              {/* Flash Sale Section */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  ⚡ Flash Sale
-                </h2>
-                <FlashSaleCarousel onProductClick={handleProductClick} />
-              </section>
+          {/* Products Section */}
+          <section>
+            <ProductCarousel />
+          </section>
 
-              {/* Best Selling Products */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  🏆 Produk Terlaris
-                </h2>
-                <BestSellingProducts onProductClick={handleProductClick} />
-              </section>
-
-              {/* Recently Bought Products */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  🔄 Beli Lagi
-                </h2>
-                <RecentlyBoughtProducts onProductClick={handleProductClick} />
-              </section>
-
-              {/* All Products Section */}
-              <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  Semua Produk
-                </h2>
-                <ProductCarousel onProductClick={handleProductClick} />
-              </section>
-            </>
-          )}
+          {/* Order History Section */}
+          <section>
+            <OrderHistory />
+          </section>
         </div>
       </main>
 
