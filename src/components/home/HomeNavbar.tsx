@@ -72,6 +72,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
           .from('products')
           .select('id, name')
           .ilike('name', `%${searchTerm}%`)
+          .eq('is_active', true)
           .limit(5),
         supabase
           .from('categories')
@@ -129,7 +130,9 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setShowSuggestions(false);
-    if (searchTerm.trim()) {
+    if (onSearch) {
+      onSearch();
+    } else if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
@@ -137,7 +140,11 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setShowSuggestions(false);
     onSearchChange(suggestion.name);
-    navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
+    if (suggestion.type === 'category') {
+      if (onSearch) onSearch();
+    } else {
+      navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
+    }
   };
 
   const handleInputFocus = () => {
@@ -152,17 +159,11 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     setShowSuggestions(value.length >= 2);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch(e as any);
-    }
-  };
-
   // Get store info from settings
-  const storeInfo = settings?.store_info || {};
-  const storeName = storeInfo.name || 'Waroeng Kami';
-  const storeTagline = storeInfo.tagline || 'Toko online terpercaya';
-  const logoUrl = storeInfo.logo_url;
+  const storeInfo = settings?.store_info || settings?.store_name || {};
+  const storeName = typeof storeInfo === 'object' ? storeInfo.name || 'Waroeng Kami' : storeInfo || 'Waroeng Kami';
+  const storeTagline = typeof storeInfo === 'object' ? storeInfo.tagline || 'Toko online terpercaya' : 'Toko online terpercaya';
+  const logoUrl = typeof storeInfo === 'object' ? storeInfo.logo_url : null;
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg border-b sticky top-0 z-50">
@@ -203,7 +204,6 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
                   value={searchTerm}
                   onChange={handleInputChange}
                   onFocus={handleInputFocus}
-                  onKeyDown={handleKeyDown}
                   className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
                 />
               </div>
@@ -312,7 +312,6 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
                 value={searchTerm}
                 onChange={handleInputChange}
                 onFocus={handleInputFocus}
-                onKeyDown={handleKeyDown}
                 className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
               />
             </div>

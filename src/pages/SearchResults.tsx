@@ -5,28 +5,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Search, Package } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Search, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
-import CartModal from '@/components/CartModal';
 import { useState } from 'react';
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const [cartModalOpen, setCartModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const query = searchParams.get('q') || '';
+  const [searchTerm, setSearchTerm] = useState(query);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['search-products', query],
     queryFn: async () => {
       if (!query.trim()) return [];
 
-      const { data, error } = await supabase
+      // Search in product names
+      const productSearch = supabase
         .from('products')
         .select(`
           *,
@@ -34,11 +33,31 @@ const SearchResults = () => {
           units (name, abbreviation)
         `)
         .eq('is_active', true)
-        .ilike('name', `%${query}%`)
-        .order('name');
+        .ilike('name', `%${query}%`);
 
-      if (error) throw error;
-      return data || [];
+      // Search in categories
+      const categorySearch = supabase
+        .from('products')
+        .select(`
+          *,
+          categories!inner (name, id),
+          units (name, abbreviation)
+        `)
+        .eq('is_active', true)
+        .ilike('categories.name', `%${query}%`);
+
+      const [productResults, categoryResults] = await Promise.all([
+        productSearch,
+        categorySearch
+      ]);
+
+      // Combine and deduplicate results
+      const allProducts = [...(productResults.data || []), ...(categoryResults.data || [])];
+      const uniqueProducts = allProducts.filter((product, index, self) => 
+        index === self.findIndex(p => p.id === product.id)
+      );
+
+      return uniqueProducts;
     },
     enabled: !!query.trim()
   });
@@ -90,18 +109,26 @@ const SearchResults = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <HomeNavbar 
-        onCartClick={() => setCartModalOpen(true)}
+        onCartClick={() => {}}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onSearch={handleSearch}
       />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Hasil Pencarian
-          </h1>
-          <p className="text-gray-600">"{query}"</p>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-gray-900">Hasil Pencarian</h1>
+            <p className="text-gray-600">"{query}"</p>
+          </div>
         </div>
 
         {isLoading && (
@@ -131,7 +158,7 @@ const SearchResults = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
               {products.map((product) => (
                 <Card 
                   key={product.id} 
@@ -195,7 +222,6 @@ const SearchResults = () => {
       </div>
 
       <HomeFooter />
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </div>
   );
 };

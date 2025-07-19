@@ -2,17 +2,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { MapPin, Clock, Truck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from '@/hooks/use-toast';
 
 const ShippingInfoDisplay = () => {
   const { user } = useAuth();
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
-  const { data: profile, refetch: refetchProfile } = useQuery({
+  // Fetch user profile
+  const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -27,101 +24,39 @@ const ShippingInfoDisplay = () => {
     enabled: !!user?.id
   });
 
-  const detectLocation = async () => {
-    if (!user?.id) return;
-    
-    setIsDetectingLocation(true);
-    
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000
-        });
-      });
-
-      const { latitude, longitude } = position.coords;
-
-      // Reverse geocoding to get address
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
-      );
-      const data = await response.json();
-      
-      const address = data.display_name || `${latitude}, ${longitude}`;
-
-      // Update profile with location
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          latitude,
-          longitude,
-          address_text: address,
-          location_updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      await refetchProfile();
-      
-      toast({
-        title: 'Lokasi Terdeteksi',
-        description: 'Lokasi Anda berhasil diperbarui',
-      });
-    } catch (error) {
-      console.error('Error detecting location:', error);
-      toast({
-        title: 'Error',
-        description: 'Gagal mendeteksi lokasi. Pastikan GPS aktif.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsDetectingLocation(false);
-    }
-  };
-
-  if (!user) return null;
+  if (!user || !profile) return null;
 
   return (
     <div className="mb-8">
-      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-blue-100 p-3 rounded-full">
-                <MapPin className="h-6 w-6 text-blue-600" />
-              </div>
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardContent className="p-4">
+          <h3 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
+            <Truck className="h-5 w-5" />
+            Informasi Pengiriman
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Informasi Pengiriman
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {profile?.address_text || profile?.address || 'Alamat belum diatur'}
+                <p className="font-medium text-blue-700">Alamat Pengiriman</p>
+                <p className="text-blue-600 text-sm">
+                  {profile.address_text || profile.address || 'Belum ada alamat'}
                 </p>
-                {profile?.location_updated_at && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Terakhir diperbarui: {new Date(profile.location_updated_at).toLocaleString('id-ID')}
-                  </p>
-                )}
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={detectLocation}
-                disabled={isDetectingLocation}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                {isDetectingLocation ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Navigation className="h-4 w-4" />
-                )}
-                {isDetectingLocation ? 'Mendeteksi...' : 'Deteksi Lokasi'}
-              </Button>
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-blue-700">Estimasi Pengiriman</p>
+                <p className="text-blue-600 text-sm">1-2 hari kerja</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Truck className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-blue-700">Ongkos Kirim</p>
+                <p className="text-blue-600 text-sm">Rp 10.000</p>
+              </div>
             </div>
           </div>
         </CardContent>

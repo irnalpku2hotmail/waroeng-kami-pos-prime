@@ -58,7 +58,40 @@ const Home = () => {
 
       // Apply search filter
       if (searchTerm.trim()) {
-        query = query.or(`name.ilike.%${searchTerm}%,categories.name.ilike.%${searchTerm}%`);
+        // Search in product names
+        const productSearch = supabase
+          .from('products')
+          .select(`
+            *,
+            categories (name, id),
+            units (name, abbreviation)
+          `)
+          .eq('is_active', true)
+          .ilike('name', `%${searchTerm}%`);
+
+        // Search in categories
+        const categorySearch = supabase
+          .from('products')
+          .select(`
+            *,
+            categories!inner (name, id),
+            units (name, abbreviation)
+          `)
+          .eq('is_active', true)
+          .ilike('categories.name', `%${searchTerm}%`);
+
+        const [productResults, categoryResults] = await Promise.all([
+          productSearch,
+          categorySearch
+        ]);
+
+        // Combine and deduplicate results
+        const allProducts = [...(productResults.data || []), ...(categoryResults.data || [])];
+        const uniqueProducts = allProducts.filter((product, index, self) => 
+          index === self.findIndex(p => p.id === product.id)
+        );
+
+        return uniqueProducts.slice(0, 12);
       }
 
       // Apply category filter

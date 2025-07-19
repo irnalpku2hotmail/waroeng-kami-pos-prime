@@ -1,40 +1,39 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, Filter, X } from 'lucide-react';
+import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, CheckCircle, Filter, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ITEMS_PER_PAGE = 20;
 
 const Notifications = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [selectedPriority, setSelectedPriority] = useState<string>('all');
 
   const { data: notificationsData } = useQuery({
-    queryKey: ['notifications', currentPage, priorityFilter, typeFilter],
+    queryKey: ['notifications', currentPage],
     queryFn: async () => {
-      // Get low stock products
+      // Get low stock products - compare current_stock with min_stock directly
       const { data: lowStockProducts } = await supabase
         .from('products')
         .select('*')
         .eq('is_active', true);
 
+      // Filter low stock products in JavaScript
       const filteredLowStock = lowStockProducts?.filter(p => p.current_stock <= p.min_stock) || [];
 
-      // Get overdue credit transactions
+      // Get overdue credit transactions - compare total_amount with paid_amount directly
       const { data: overdueCredits } = await supabase
         .from('transactions')
         .select('*, customers(name)')
         .eq('is_credit', true)
         .lt('due_date', new Date().toISOString().split('T')[0]);
 
+      // Filter overdue credits in JavaScript
       const filteredOverdueCredits = overdueCredits?.filter(t => t.total_amount > t.paid_amount) || [];
 
       // Get overdue purchase payments
@@ -61,7 +60,7 @@ const Notifications = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      let notifications = [
+      const notifications = [
         ...(filteredLowStock?.map(product => ({
           id: `low-stock-${product.id}`,
           type: 'low_stock',
@@ -109,14 +108,6 @@ const Notifications = () => {
         })) || [])
       ];
 
-      // Apply filters
-      if (priorityFilter !== 'all') {
-        notifications = notifications.filter(n => n.priority === priorityFilter);
-      }
-      if (typeFilter !== 'all') {
-        notifications = notifications.filter(n => n.type === typeFilter);
-      }
-
       // Sort by priority and time
       const sortedNotifications = notifications.sort((a, b) => {
         const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
@@ -127,14 +118,19 @@ const Notifications = () => {
         return new Date(b.time).getTime() - new Date(a.time).getTime();
       });
 
+      // Filter by priority if selected
+      const filteredNotifications = selectedPriority === 'all' 
+        ? sortedNotifications 
+        : sortedNotifications.filter(n => n.priority === selectedPriority);
+
       // Pagination
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE;
-      const paginatedNotifications = sortedNotifications.slice(from, to);
+      const paginatedNotifications = filteredNotifications.slice(from, to);
 
       return {
         data: paginatedNotifications,
-        count: sortedNotifications.length
+        count: filteredNotifications.length
       };
     }
   });
@@ -172,87 +168,86 @@ const Notifications = () => {
     return labels[priority as keyof typeof labels] || priority;
   };
 
-  const clearFilters = () => {
-    setPriorityFilter('all');
-    setTypeFilter('all');
-    setCurrentPage(1);
-  };
-
   return (
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Bell className="h-6 w-6 text-blue-600" />
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-3 rounded-full">
+                <Bell className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Notifikasi & Peringatan</h1>
+                <p className="text-blue-100">Pantau status penting sistem Anda</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Notifikasi</h1>
-              <p className="text-gray-600 mt-1">
-                {notificationsCount} notifikasi ditemukan
-              </p>
+            <div className="text-right">
+              <div className="text-3xl font-bold">{notificationsCount}</div>
+              <div className="text-blue-100">Total notifikasi</div>
             </div>
-          </div>
-          
-          {/* Filters */}
-          <div className="flex items-center gap-3">
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Prioritas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="urgent">Mendesak</SelectItem>
-                <SelectItem value="high">Tinggi</SelectItem>
-                <SelectItem value="medium">Sedang</SelectItem>
-                <SelectItem value="low">Rendah</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Jenis" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Jenis</SelectItem>
-                <SelectItem value="low_stock">Stok Rendah</SelectItem>
-                <SelectItem value="overdue_payment">Piutang Terlambat</SelectItem>
-                <SelectItem value="overdue_purchase">Hutang Terlambat</SelectItem>
-                <SelectItem value="pending_order">Pesanan Baru</SelectItem>
-                <SelectItem value="pending_return">Return Proses</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(priorityFilter !== 'all' || typeFilter !== 'all') && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearFilters}
-                className="flex items-center gap-2"
-              >
-                <X className="h-4 w-4" />
-                Bersihkan
-              </Button>
-            )}
           </div>
         </div>
 
-        {/* Notifications Grid */}
-        <div className="grid gap-4">
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filter Notifikasi
+              </CardTitle>
+              <Button variant="outline" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus Semua
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={selectedPriority === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('all')}
+              >
+                Semua
+              </Button>
+              <Button
+                variant={selectedPriority === 'urgent' ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('urgent')}
+              >
+                Mendesak
+              </Button>
+              <Button
+                variant={selectedPriority === 'high' ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('high')}
+              >
+                Tinggi
+              </Button>
+              <Button
+                variant={selectedPriority === 'medium' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedPriority('medium')}
+              >
+                Sedang
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notifications List */}
+        <div className="space-y-3">
           {notifications.length === 0 ? (
-            <Card className="bg-gray-50">
+            <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Bell className="h-16 w-16 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                  Tidak ada notifikasi
-                </h3>
-                <p className="text-gray-500 text-center">
-                  {priorityFilter !== 'all' || typeFilter !== 'all' 
-                    ? 'Tidak ada notifikasi yang sesuai dengan filter yang dipilih'
-                    : 'Semua notifikasi sudah clear'
-                  }
-                </p>
+                <div className="bg-green-100 p-4 rounded-full mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Semua Terkendali!</h3>
+                <p className="text-gray-500 text-center">Tidak ada notifikasi yang memerlukan perhatian saat ini.</p>
               </CardContent>
             </Card>
           ) : (
@@ -260,30 +255,25 @@ const Notifications = () => {
               {notifications.map((notification) => {
                 const IconComponent = notification.icon;
                 return (
-                  <Card 
-                    key={notification.id} 
-                    className={`${getPriorityColor(notification.priority)} border-l-4 hover:shadow-md transition-shadow`}
-                  >
-                    <CardContent className="p-6">
+                  <Card key={notification.id} className={`border-l-4 ${getPriorityColor(notification.priority)} hover:shadow-md transition-shadow`}>
+                    <CardContent className="p-4">
                       <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 p-2 bg-white rounded-lg shadow-sm">
-                          <IconComponent className="h-6 w-6 text-gray-700" />
+                        <div className="flex-shrink-0 p-2 rounded-full bg-white shadow-sm">
+                          <IconComponent className="h-5 w-5 text-gray-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {notification.title}
-                            </h3>
-                            <Badge variant={getPriorityBadge(notification.priority) as "default" | "destructive" | "outline" | "secondary"}>
-                              {getPriorityLabel(notification.priority)}
-                            </Badge>
+                            <h3 className="text-sm font-semibold text-gray-900">{notification.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={getPriorityBadge(notification.priority) as "default" | "destructive" | "outline" | "secondary"} className="text-xs">
+                                {getPriorityLabel(notification.priority)}
+                              </Badge>
+                            </div>
                           </div>
-                          <p className="text-gray-700 mb-3 leading-relaxed">
-                            {notification.message}
-                          </p>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Calendar className="h-4 w-4" />
-                            <span>
+                          <p className="text-sm text-gray-700 mb-3">{notification.message}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock className="h-3 w-3" />
                               {new Date(notification.time).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'long',
@@ -291,7 +281,10 @@ const Notifications = () => {
                                 hour: '2-digit',
                                 minute: '2-digit'
                               })}
-                            </span>
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-xs h-6">
+                              Tandai Dibaca
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -301,15 +294,13 @@ const Notifications = () => {
               })}
               
               {totalPages > 1 && (
-                <div className="flex justify-center mt-8">
-                  <PaginationComponent
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    itemsPerPage={ITEMS_PER_PAGE}
-                    totalItems={notificationsCount}
-                  />
-                </div>
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  totalItems={notificationsCount}
+                />
               )}
             </>
           )}

@@ -1,32 +1,24 @@
 
-import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Grid3X3, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
-interface Category {
-  id: string;
-  name: string;
-  description: string | null;
-  icon_url: string | null;
-}
+import { Card } from '@/components/ui/card';
+import { Package } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface EnhancedCategoriesSliderProps {
-  onCategorySelect?: (categoryId: string, categoryName: string) => void;
+  onCategorySelect: (categoryId: string, categoryName: string) => void;
 }
 
 const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSliderProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: categories = [], isLoading } = useQuery({
-    queryKey: ['categories-enhanced'],
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .order('name');
-
       if (error) throw error;
       return data;
     }
@@ -34,113 +26,80 @@ const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSlider
 
   // Auto scroll effect
   useEffect(() => {
-    if (!scrollRef.current || categories.length === 0) return;
-
     const scrollContainer = scrollRef.current;
-    let scrollPosition = 0;
-    const scrollStep = 2;
-    const scrollDelay = 50;
+    if (!scrollContainer || categories.length === 0) return;
+
+    let scrollAmount = 0;
+    const scrollStep = 1;
+    const scrollDelay = 30;
 
     const autoScroll = () => {
       if (scrollContainer) {
-        scrollPosition += scrollStep;
+        scrollAmount += scrollStep;
+        scrollContainer.scrollLeft = scrollAmount;
         
-        // Reset scroll position when reaching the end
-        if (scrollPosition >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
-          scrollPosition = 0;
+        // Reset when reaching the end
+        if (scrollAmount >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
+          scrollAmount = 0;
         }
-        
-        scrollContainer.scrollTo({
-          left: scrollPosition,
-          behavior: 'smooth'
-        });
       }
     };
 
-    const interval = setInterval(autoScroll, scrollDelay);
+    const intervalId = setInterval(autoScroll, scrollDelay);
 
-    // Pause auto-scroll on hover
-    const handleMouseEnter = () => clearInterval(interval);
+    // Pause on hover
+    const handleMouseEnter = () => clearInterval(intervalId);
     const handleMouseLeave = () => {
-      const newInterval = setInterval(autoScroll, scrollDelay);
-      return newInterval;
+      clearInterval(intervalId);
+      const newIntervalId = setInterval(autoScroll, scrollDelay);
+      return newIntervalId;
     };
 
     scrollContainer.addEventListener('mouseenter', handleMouseEnter);
     scrollContainer.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
-      clearInterval(interval);
-      scrollContainer.removeEventListener('mouseenter', handleMouseEnter);
-      scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
+      clearInterval(intervalId);
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('mouseenter', handleMouseEnter);
+        scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
+      }
     };
   }, [categories]);
 
-  const scrollLeft = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-    }
-  };
-
-  const handleCategoryClick = (categoryId: string, categoryName: string) => {
-    if (onCategorySelect) {
-      onCategorySelect(categoryId, categoryName);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  if (categories.length === 0) return null;
 
   return (
     <div className="mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Kategori</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={scrollLeft}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={scrollRight}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
       <div 
         ref={scrollRef}
-        className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="flex gap-4 pb-4 overflow-x-auto scrollbar-hide"
+        style={{ scrollBehavior: 'smooth' }}
       >
-        {categories.map((category) => (
-          <div
-            key={category.id}
-            className="flex-none group cursor-pointer"
-            onClick={() => handleCategoryClick(category.id, category.name)}
+        {/* Duplicate categories for seamless loop */}
+        {[...categories, ...categories].map((category, index) => (
+          <Card
+            key={`${category.id}-${index}`}
+            className="min-w-[100px] h-24 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105 group"
+            onClick={() => onCategorySelect(category.id, category.name)}
           >
-            <div className="relative">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
+            <div className="h-full flex flex-col items-center justify-center p-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-2 group-hover:from-blue-200 group-hover:to-purple-200 transition-colors">
                 {category.icon_url ? (
                   <img 
                     src={category.icon_url} 
                     alt={category.name}
-                    className="w-8 h-8 object-cover rounded-full"
+                    className="w-6 h-6 object-contain"
                   />
                 ) : (
-                  <Grid3X3 className="h-8 w-8 text-blue-600" />
+                  <Package className="w-6 h-6 text-blue-600" />
                 )}
               </div>
+              <p className="text-xs font-medium text-center text-gray-700 group-hover:text-blue-600 transition-colors line-clamp-2">
+                {category.name}
+              </p>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>
