@@ -30,9 +30,10 @@ import PointsRewards from "./pages/PointsRewards";
 import PointExchange from "./pages/PointExchange";
 import CreditManagement from "./pages/CreditManagement";
 import UserManagement from "./pages/UserManagement";
+import UserLocations from "./pages/UserLocations";
 import Inventory from "./pages/Inventory";
-import Frontend from "./pages/Frontend";
 import SearchResults from "./pages/SearchResults";
+import OrderHistory from "./pages/OrderHistory";
 import Notifications from "./pages/Notifications";
 
 // Auth pages
@@ -58,6 +59,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/search" element={<SearchResults />} />
+                <Route path="/order-history" element={<OrderHistory />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
@@ -81,8 +83,8 @@ function App() {
                 <Route path="/point-exchange" element={<ProtectedRoute><PointExchange /></ProtectedRoute>} />
                 <Route path="/credit-management" element={<ProtectedRoute><CreditManagement /></ProtectedRoute>} />
                 <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                <Route path="/user-locations" element={<ProtectedRoute><UserLocations /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-                <Route path="/frontend" element={<ProtectedRoute><Frontend /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 
                 {/* 404 route */}

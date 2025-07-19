@@ -1,5 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,10 +9,11 @@ import { Star } from 'lucide-react';
 interface ProductRecommendationsProps {
   categoryId: string | null;
   currentProductId: string;
-  onProductClick: (product: any) => void;
 }
 
-const ProductRecommendations = ({ categoryId, currentProductId, onProductClick }: ProductRecommendationsProps) => {
+const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecommendationsProps) => {
+  const navigate = useNavigate();
+
   const { data: recommendations = [], isLoading } = useQuery({
     queryKey: ['product-recommendations', categoryId, currentProductId],
     queryFn: async () => {
@@ -34,6 +36,21 @@ const ProductRecommendations = ({ categoryId, currentProductId, onProductClick }
     },
     enabled: !!categoryId
   });
+
+  const handleProductClick = (productId: string) => {
+    navigate(`/product/${productId}`);
+  };
+
+  const getImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return '/placeholder.svg';
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(imageUrl);
+    
+    return data.publicUrl;
+  };
 
   if (isLoading) {
     return (
@@ -63,21 +80,15 @@ const ProductRecommendations = ({ categoryId, currentProductId, onProductClick }
         <Card 
           key={product.id} 
           className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden"
-          onClick={() => onProductClick(product)}
+          onClick={() => handleProductClick(product.id)}
         >
           <div className="relative">
             <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 p-2 flex items-center justify-center">
-              {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="w-full h-full object-cover rounded"
-                />
-              ) : (
-                <div className="text-gray-400 text-xs text-center">
-                  No Image
-                </div>
-              )}
+              <img
+                src={getImageUrl(product.image_url)}
+                alt={product.name}
+                className="w-full h-full object-cover rounded"
+              />
             </div>
             {product.current_stock <= 0 && (
               <Badge variant="destructive" className="absolute top-2 right-2 text-xs">

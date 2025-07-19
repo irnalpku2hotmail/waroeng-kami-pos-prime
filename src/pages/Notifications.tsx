@@ -4,35 +4,37 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, Filter, X } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ITEMS_PER_PAGE = 20;
 
 const Notifications = () => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   const { data: notificationsData } = useQuery({
-    queryKey: ['notifications', currentPage],
+    queryKey: ['notifications', currentPage, priorityFilter, typeFilter],
     queryFn: async () => {
-      // Get low stock products - compare current_stock with min_stock directly
+      // Get low stock products
       const { data: lowStockProducts } = await supabase
         .from('products')
         .select('*')
         .eq('is_active', true);
 
-      // Filter low stock products in JavaScript
       const filteredLowStock = lowStockProducts?.filter(p => p.current_stock <= p.min_stock) || [];
 
-      // Get overdue credit transactions - compare total_amount with paid_amount directly
+      // Get overdue credit transactions
       const { data: overdueCredits } = await supabase
         .from('transactions')
         .select('*, customers(name)')
         .eq('is_credit', true)
         .lt('due_date', new Date().toISOString().split('T')[0]);
 
-      // Filter overdue credits in JavaScript
       const filteredOverdueCredits = overdueCredits?.filter(t => t.total_amount > t.paid_amount) || [];
 
       // Get overdue purchase payments
@@ -59,7 +61,7 @@ const Notifications = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      const notifications = [
+      let notifications = [
         ...(filteredLowStock?.map(product => ({
           id: `low-stock-${product.id}`,
           type: 'low_stock',
@@ -107,6 +109,14 @@ const Notifications = () => {
         })) || [])
       ];
 
+      // Apply filters
+      if (priorityFilter !== 'all') {
+        notifications = notifications.filter(n => n.priority === priorityFilter);
+      }
+      if (typeFilter !== 'all') {
+        notifications = notifications.filter(n => n.type === typeFilter);
+      }
+
       // Sort by priority and time
       const sortedNotifications = notifications.sort((a, b) => {
         const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
@@ -135,10 +145,10 @@ const Notifications = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 border-red-200 text-red-800';
-      case 'high': return 'bg-orange-100 border-orange-200 text-orange-800';
-      case 'medium': return 'bg-blue-100 border-blue-200 text-blue-800';
-      default: return 'bg-gray-100 border-gray-200 text-gray-800';
+      case 'urgent': return 'bg-red-50 border-red-200';
+      case 'high': return 'bg-orange-50 border-orange-200';
+      case 'medium': return 'bg-blue-50 border-blue-200';
+      default: return 'bg-gray-50 border-gray-200';
     }
   };
 
@@ -162,25 +172,87 @@ const Notifications = () => {
     return labels[priority as keyof typeof labels] || priority;
   };
 
+  const clearFilters = () => {
+    setPriorityFilter('all');
+    setTypeFilter('all');
+    setCurrentPage(1);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Notifikasi & Peringatan</h1>
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {notificationsCount} notifikasi
-            </span>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 p-3 rounded-full">
+              <Bell className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Notifikasi</h1>
+              <p className="text-gray-600 mt-1">
+                {notificationsCount} notifikasi ditemukan
+              </p>
+            </div>
+          </div>
+          
+          {/* Filters */}
+          <div className="flex items-center gap-3">
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Prioritas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                <SelectItem value="urgent">Mendesak</SelectItem>
+                <SelectItem value="high">Tinggi</SelectItem>
+                <SelectItem value="medium">Sedang</SelectItem>
+                <SelectItem value="low">Rendah</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Jenis" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Jenis</SelectItem>
+                <SelectItem value="low_stock">Stok Rendah</SelectItem>
+                <SelectItem value="overdue_payment">Piutang Terlambat</SelectItem>
+                <SelectItem value="overdue_purchase">Hutang Terlambat</SelectItem>
+                <SelectItem value="pending_order">Pesanan Baru</SelectItem>
+                <SelectItem value="pending_return">Return Proses</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(priorityFilter !== 'all' || typeFilter !== 'all') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Bersihkan
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Notifications Grid */}
+        <div className="grid gap-4">
           {notifications.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <Bell className="h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-gray-500">Tidak ada notifikasi</p>
+            <Card className="bg-gray-50">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Bell className="h-16 w-16 text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                  Tidak ada notifikasi
+                </h3>
+                <p className="text-gray-500 text-center">
+                  {priorityFilter !== 'all' || typeFilter !== 'all' 
+                    ? 'Tidak ada notifikasi yang sesuai dengan filter yang dipilih'
+                    : 'Semua notifikasi sudah clear'
+                  }
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -188,29 +260,38 @@ const Notifications = () => {
               {notifications.map((notification) => {
                 const IconComponent = notification.icon;
                 return (
-                  <Card key={notification.id} className={`border ${getPriorityColor(notification.priority)}`}>
-                    <CardContent className="p-4">
+                  <Card 
+                    key={notification.id} 
+                    className={`${getPriorityColor(notification.priority)} border-l-4 hover:shadow-md transition-shadow`}
+                  >
+                    <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
-                          <IconComponent className="h-5 w-5" />
+                        <div className="flex-shrink-0 p-2 bg-white rounded-lg shadow-sm">
+                          <IconComponent className="h-6 w-6 text-gray-700" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium">{notification.title}</h3>
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {notification.title}
+                            </h3>
                             <Badge variant={getPriorityBadge(notification.priority) as "default" | "destructive" | "outline" | "secondary"}>
                               {getPriorityLabel(notification.priority)}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                          <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(notification.time).toLocaleDateString('id-ID', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                          <p className="text-gray-700 mb-3 leading-relaxed">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {new Date(notification.time).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -220,13 +301,15 @@ const Notifications = () => {
               })}
               
               {totalPages > 1 && (
-                <PaginationComponent
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  itemsPerPage={ITEMS_PER_PAGE}
-                  totalItems={notificationsCount}
-                />
+                <div className="flex justify-center mt-8">
+                  <PaginationComponent
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={notificationsCount}
+                  />
+                </div>
               )}
             </>
           )}

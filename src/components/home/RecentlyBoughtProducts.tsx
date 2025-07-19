@@ -5,23 +5,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCart, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Star, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
 
-interface ProductCarouselProps {
+interface RecentlyBoughtProductsProps {
   onProductClick: (product: any) => void;
 }
 
-const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
+const RecentlyBoughtProducts = ({ onProductClick }: RecentlyBoughtProductsProps) => {
   const { addItem } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftButton, setShowLeftButton] = useState(false);
   const [showRightButton, setShowRightButton] = useState(true);
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['recently-bought-products'],
     queryFn: async () => {
+      // Get products that were recently sold
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -31,7 +32,8 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
           )
         `)
         .eq('is_active', true)
-        .limit(12);
+        .order('updated_at', { ascending: false })
+        .limit(8);
 
       if (error) throw error;
       return data;
@@ -77,7 +79,7 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
   if (isLoading) {
     return (
       <div className="flex gap-3 overflow-x-auto pb-2">
-        {[...Array(6)].map((_, i) => (
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="flex-none w-36 md:w-44 animate-pulse">
             <div className="bg-gray-200 aspect-square rounded-lg mb-2"></div>
             <div className="h-3 bg-gray-200 rounded mb-1"></div>
@@ -141,6 +143,10 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
                     Terbatas
                   </Badge>
                 )}
+                <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                  <RotateCcw className="h-2 w-2" />
+                  Beli Lagi
+                </div>
               </div>
               
               <div className="space-y-1 md:space-y-2">
@@ -187,4 +193,4 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
   );
 };
 
-export default ProductCarousel;
+export default RecentlyBoughtProducts;

@@ -1,119 +1,119 @@
 
+import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { Grid3X3 } from 'lucide-react';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 interface Category {
   id: string;
   name: string;
+  description: string | null;
   icon_url: string | null;
 }
 
-const HomeCategoriesSlider = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+interface HomeCategoriesSliderProps {
+  onCategorySelect?: (categoryId: string) => void;
+}
+
+const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) => {
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ['categories-home'],
+    queryKey: ['categories-slider'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, icon_url')
+        .select('*')
         .order('name');
 
       if (error) throw error;
-      return data as Category[];
-    },
+      console.log('Categories data:', data);
+      return data;
+    }
   });
 
-  const itemsPerView = 6;
-  const maxIndex = Math.max(0, categories.length - itemsPerView);
+  // Auto scroll effect
+  useEffect(() => {
+    if (!carouselRef.current) return;
 
-  const nextSlide = useCallback(() => {
-    setCurrentIndex(prev => Math.min(prev + 1, maxIndex));
-  }, [maxIndex]);
+    const interval = setInterval(() => {
+      const nextButton = carouselRef.current?.querySelector('[data-testid="carousel-next"]') as HTMLButtonElement;
+      if (nextButton) {
+        nextButton.click();
+      }
+    }, 3000); // Auto scroll every 3 seconds
 
-  const prevSlide = useCallback(() => {
-    setCurrentIndex(prev => Math.max(prev - 1, 0));
-  }, []);
+    return () => clearInterval(interval);
+  }, [categories]);
+
+  const handleCategoryClick = (categoryId: string) => {
+    console.log('Category clicked:', categoryId);
+    if (onCategorySelect) {
+      onCategorySelect(categoryId);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="w-full">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Kategori</h2>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-20"></div>
-          ))}
-        </div>
+      <div className="flex justify-center items-center h-20">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  if (categories.length === 0) {
-    return null;
-  }
+  console.log('Rendering categories:', categories);
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Kategori</h2>
-        {categories.length > itemsPerView && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={prevSlide}
-              disabled={currentIndex === 0}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={nextSlide}
-              disabled={currentIndex >= maxIndex}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="overflow-hidden">
-        <div 
-          className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)` }}
-        >
-          {categories.map((category) => (
-            <div 
-              key={category.id} 
-              className="flex-shrink-0 w-1/3 md:w-1/6 px-2"
-            >
-              <div className="bg-white rounded-lg border border-gray-200 p-4 text-center hover:shadow-md transition-shadow cursor-pointer">
-                <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 rounded-lg flex items-center justify-center">
-                  {category.icon_url ? (
-                    <img 
-                      src={category.icon_url} 
-                      alt={category.name}
-                      className="w-8 h-8 object-contain"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                      <span className="text-blue-600 text-sm font-bold">
-                        {category.name.charAt(0)}
+    <div className="relative" ref={carouselRef}>
+      <Carousel
+        opts={{
+          align: "start",
+          loop: true,
+        }}
+        className="w-full"
+      >
+        <CarouselContent>
+          {categories.map((category) => {
+            console.log('Rendering category:', category);
+            return (
+              <CarouselItem key={category.id} className="basis-1/4 md:basis-1/6 lg:basis-1/8">
+                <div 
+                  className="group cursor-pointer p-2"
+                  onClick={() => handleCategoryClick(category.id)}
+                >
+                  <div className="relative">
+                    <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-md">
+                      {category.icon_url ? (
+                        <img 
+                          src={category.icon_url} 
+                          alt={String(category.name)}
+                          className="w-10 h-10 object-cover rounded-full"
+                        />
+                      ) : (
+                        <Grid3X3 className="h-8 w-8 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="text-center mt-2">
+                      <span className="text-xs font-medium text-gray-700">
+                        {String(category.name || 'Category')}
                       </span>
                     </div>
-                  )}
+                  </div>
                 </div>
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {category.name}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+              </CarouselItem>
+            );
+          })}
+        </CarouselContent>
+        <CarouselPrevious className="hidden md:flex" />
+        <CarouselNext className="hidden md:flex" data-testid="carousel-next" />
+      </Carousel>
     </div>
   );
 };
