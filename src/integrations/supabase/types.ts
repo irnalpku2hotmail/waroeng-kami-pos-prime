@@ -1058,21 +1058,21 @@ export type Database = {
           id: string
           key: string
           updated_at: string
-          value: Json | null
+          value: Json
         }
         Insert: {
           created_at?: string
           id?: string
           key: string
           updated_at?: string
-          value?: Json | null
+          value?: Json
         }
         Update: {
           created_at?: string
           id?: string
           key?: string
           updated_at?: string
-          value?: Json | null
+          value?: Json
         }
         Relationships: []
       }
