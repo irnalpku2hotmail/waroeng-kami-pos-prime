@@ -92,7 +92,7 @@ const BestSellingSlider = () => {
 
     toast({
       title: 'Produk ditambahkan',
-      description: `${item.product.name} telah ditambahkan ke keranjang`,
+      description: `${String(item.product.name)} telah ditambahkan ke keranjang`,
     });
   };
 
@@ -158,7 +158,7 @@ const BestSellingSlider = () => {
                 <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100 relative">
                   <img
                     src={item.product?.image_url || '/placeholder.svg'}
-                    alt={item.product?.name || 'Product'}
+                    alt={String(item.product?.name || 'Product')}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                   />
                   {(item.product?.current_stock || 0) <= 0 && (
@@ -172,12 +172,12 @@ const BestSellingSlider = () => {
                 
                 <div className="space-y-2">
                   <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                    {item.product?.name}
+                    {String(item.product?.name || 'Product')}
                   </h3>
                   
                   {item.product?.categories && (
                     <Badge variant="secondary" className="text-xs">
-                      {item.product.categories.name}
+                      {String(item.product.categories.name || 'Kategori')}
                     </Badge>
                   )}
                   
