@@ -41,8 +41,7 @@ const ProductGrid = ({ products }: ProductGridProps) => {
       name: product.name,
       price: product.selling_price,
       image: product.image_url || '/placeholder.svg',
-      quantity: product.min_quantity,
-      stock: product.current_stock
+      quantity: product.min_quantity
     });
 
     toast({

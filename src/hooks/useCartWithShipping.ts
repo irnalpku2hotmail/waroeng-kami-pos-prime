@@ -26,10 +26,6 @@ export const useCartWithShipping = () => {
     enabled: !!user
   });
 
-  if (!cartContext) {
-    throw new Error('useCartWithShipping must be used within a CartProvider');
-  }
-
   return {
     ...cartContext,
     shippingInfo: profile ? {

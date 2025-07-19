@@ -1,3 +1,4 @@
+
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,8 +73,7 @@ const ProductDetail = () => {
       name: product.name,
       price: finalPrice,
       image: product.image_url || '/placeholder.svg',
-      quantity,
-      stock: product.current_stock
+      quantity
     });
 
     toast({
@@ -273,7 +273,7 @@ const ProductDetail = () => {
         </div>
 
         {/* Similar Products */}
-        <ProductSimilarCarousel currentProductId={product.id} categoryId={product.category_id} />
+        <ProductSimilarCarousel productId={product.id} categoryId={product.category_id} />
 
         {/* Reviews */}
         <ProductReviews productId={product.id} />

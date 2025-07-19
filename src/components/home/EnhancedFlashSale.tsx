@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -54,8 +55,7 @@ const EnhancedFlashSale = () => {
       name: item.products.name,
       price: item.sale_price,
       image: item.products.image_url || '/placeholder.svg',
-      quantity: 1,
-      stock: item.stock_quantity
+      quantity: 1
     });
 
     toast({
