@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useMemo } from "react";
 
 // Import pages
 import Home from "./pages/Home";
@@ -44,16 +43,9 @@ import Register from "./pages/auth/Register";
 // 404 page
 import NotFound from "./pages/NotFound";
 
-function App() {
-  const queryClient = useMemo(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-      },
-    },
-  }), []);
+const queryClient = new QueryClient();
 
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
