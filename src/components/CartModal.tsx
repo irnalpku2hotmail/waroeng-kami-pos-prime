@@ -56,10 +56,15 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     setIsSubmitting(true);
 
     try {
+      // Generate order number
+      const timestamp = Date.now();
+      const orderNumber = `ORD${timestamp}`;
+
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
+          order_number: orderNumber,
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
