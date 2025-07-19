@@ -125,14 +125,14 @@ const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSlider
           <div
             key={category.id}
             className="flex-none group cursor-pointer"
-            onClick={() => handleCategoryClick(category.id, category.name)}
+            onClick={() => handleCategoryClick(category.id, String(category.name))}
           >
             <div className="relative">
               <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
                 {category.icon_url ? (
                   <img 
                     src={category.icon_url} 
-                    alt={category.name}
+                    alt={String(category.name)}
                     className="w-8 h-8 object-cover rounded-full"
                   />
                 ) : (

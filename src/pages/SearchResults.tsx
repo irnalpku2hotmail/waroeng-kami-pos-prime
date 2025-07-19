@@ -160,7 +160,7 @@ const SearchResults = () => {
                       <div className="space-y-2">
                         {product.categories && (
                           <Badge variant="secondary" className="text-xs">
-                            {String(product.categories?.name || 'Kategori')}
+                            {String(product.categories.name || 'Kategori')}
                           </Badge>
                         )}
                         
