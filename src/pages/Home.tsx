@@ -1,159 +1,215 @@
 
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
 import HomeNavbar from '@/components/home/HomeNavbar';
-import BannerCarousel from '@/components/home/BannerCarousel';
-import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider';
-import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
-import ProductGrid from '@/components/home/ProductGrid';
+import FrontendHero from '@/components/frontend/FrontendHero';
+import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
+import ProductCarousel from '@/components/home/ProductCarousel';
+import FlashSaleCarousel from '@/components/home/FlashSaleCarousel';
+import BestSellingProducts from '@/components/home/BestSellingProducts';
+import RecentlyBoughtProducts from '@/components/home/RecentlyBoughtProducts';
 import HomeFooter from '@/components/home/HomeFooter';
-import InteractiveLocationPicker from '@/components/home/InteractiveLocationPicker';
-import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
-import BestSellingSlider from '@/components/home/BestSellingSlider';
-import CartModal from '@/components/CartModal';
-import { useState } from 'react';
+import LocationPermissionModal from '@/components/home/LocationPermissionModal';
+import FrontendCartModal from '@/components/frontend/FrontendCartModal';
 
 const Home = () => {
-  const { user } = useAuth();
-  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
 
-  // Fetch flash sales
-  const { data: flashSales } = useQuery({
-    queryKey: ['active-flash-sales'],
+  // Check for location permission on component mount
+  useEffect(() => {
+    const checkLocationPermission = async () => {
+      if ('geolocation' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          if (permission.state === 'prompt') {
+            setShowLocationModal(true);
+          } else if (permission.state === 'granted') {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                console.log('Location:', position.coords);
+              },
+              (error) => {
+                console.log('Location error:', error);
+              }
+            );
+          }
+        } catch (error) {
+          console.log('Permission query error:', error);
+        }
+      }
+    };
+
+    checkLocationPermission();
+  }, []);
+
+  const { data: storeInfo } = useQuery({
+    queryKey: ['store-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('flash_sales')
-        .select(`
-          *,
-          flash_sale_items (
-            *,
-            products (*)
-          )
-        `)
-        .eq('is_active', true)
-        .gte('end_date', new Date().toISOString())
-        .order('created_at', { ascending: false });
+        .from('settings')
+        .select('*')
+        .in('key', ['store_name', 'store_address', 'store_phone', 'store_email']);
 
       if (error) throw error;
-      return data;
-    }
+
+      const settings: Record<string, any> = {};
+      data.forEach(setting => {
+        settings[setting.key] = setting.value;
+      });
+
+      const extractStringValue = (value: any, defaultValue: string): string => {
+        if (!value) return defaultValue;
+        
+        if (typeof value === 'object' && value !== null) {
+          if ('name' in value && typeof value.name === 'string') {
+            return value.name;
+          }
+          if ('email' in value && typeof value.email === 'string') {
+            return value.email;
+          }
+          if ('address' in value && typeof value.address === 'string') {
+            return value.address;
+          }
+          if ('phone' in value && typeof value.phone === 'string') {
+            return value.phone;
+          }
+          return defaultValue;
+        }
+        
+        if (typeof value === 'string') {
+          return value;
+        }
+        
+        return String(value) || defaultValue;
+      };
+
+      return {
+        name: extractStringValue(settings.store_name, 'Waroeng Kami'),
+        address: extractStringValue(settings.store_address, 'Jl. Contoh No. 123, Jakarta'),
+        phone: extractStringValue(settings.store_phone, '+62 812-3456-7890'),
+        email: extractStringValue(settings.store_email, 'info@waroengkami.com')
+      };
+    },
   });
 
-  // Fetch featured products with search and category filter
-  const { data: featuredProducts } = useQuery({
-    queryKey: ['featured-products', searchTerm, selectedCategory],
+  // Fetch frontend settings for banner
+  const { data: frontendSettings } = useQuery({
+    queryKey: ['frontend-settings'],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          categories (name, id),
-          units (name, abbreviation)
-        `)
-        .eq('is_active', true);
-
-      // Apply search filter
-      if (searchTerm.trim()) {
-        query = query.or(`name.ilike.%${searchTerm}%,categories.name.ilike.%${searchTerm}%`);
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('key', 'frontend_settings')
+        .single();
+      if (error) {
+        console.log('No frontend settings found');
+        return null;
       }
-
-      // Apply category filter
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
-      }
-
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .limit(12);
-
-      if (error) throw error;
-      return data;
+      return data.value;
     }
   });
 
-  const handleCategorySelect = (categoryId: string, categoryName: string) => {
-    setSelectedCategory(categoryId);
-    setSearchTerm(categoryName); // Set search term to show what's being filtered
+  const handleProductClick = (product: any) => {
+    navigate(`/product/${product.id}`);
+  };
+
+  const handleLocationAllow = () => {
+    console.log('Location access allowed');
+  };
+
+  const handleLocationDeny = () => {
+    console.log('Location access denied');
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    navigate(`/search?category=${categoryId}`);
   };
 
   const handleSearch = () => {
-    // Search functionality is handled by the query above
-    console.log('Searching for:', searchTerm);
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory(null);
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <HomeNavbar 
+        storeInfo={storeInfo} 
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onSearch={handleSearch}
       />
       
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Banner Carousel */}
-        <BannerCarousel />
-        
-        {/* Interactive Location Picker */}
-        <div className="mb-8">
-          <InteractiveLocationPicker />
-        </div>
-        
-        {/* Enhanced Categories Slider */}
-        <EnhancedCategoriesSlider onCategorySelect={handleCategorySelect} />
-        
-        {/* Enhanced Flash Sale Section */}
-        {flashSales && flashSales.length > 0 && (
-          <EnhancedFlashSale flashSales={flashSales} />
-        )}
-        
-        {/* Purchase History Slider */}
-        <PurchaseHistorySlider />
-        
-        {/* Best Selling Slider */}
-        <BestSellingSlider />
-        
-        {/* Featured Products */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {selectedCategory ? `Produk ${searchTerm}` : 'Produk Pilihan'}
+      <main className="bg-white">
+        {/* Hero Section with Banner from Frontend Settings */}
+        <FrontendHero 
+          storeName={storeInfo?.name || 'Waroeng Kami'}
+          storeDescription="Temukan produk berkualitas dengan harga terbaik"
+          frontendSettings={frontendSettings}
+        />
+
+        <div className="container mx-auto px-4 py-8 space-y-8">
+          {/* Categories Section */}
+          <section>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+              Kategori Produk
             </h2>
-            <div className="flex gap-2">
-              {selectedCategory && (
-                <button 
-                  onClick={clearFilters}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                >
-                  Hapus Filter
-                </button>
-              )}
-              <a 
-                href="/products" 
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Lihat Semua
-              </a>
-            </div>
-          </div>
-          <ProductGrid products={featuredProducts || []} />
+            <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
+          </section>
+
+          {/* Flash Sale Section */}
+          <section>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+              ⚡ Flash Sale
+            </h2>
+            <FlashSaleCarousel onProductClick={handleProductClick} />
+          </section>
+
+          {/* Best Selling Products */}
+          <section>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+              🏆 Produk Terlaris
+            </h2>
+            <BestSellingProducts onProductClick={handleProductClick} />
+          </section>
+
+          {/* Recently Bought Products */}
+          <section>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+              🔄 Beli Lagi
+            </h2>
+            <RecentlyBoughtProducts onProductClick={handleProductClick} />
+          </section>
+
+          {/* All Products Section */}
+          <section>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+              Semua Produk
+            </h2>
+            <ProductCarousel onProductClick={handleProductClick} />
+          </section>
         </div>
       </main>
 
-      {/* Footer */}
-      <HomeFooter />
+      <HomeFooter storeInfo={storeInfo} />
+      
+      <LocationPermissionModal 
+        open={showLocationModal} 
+        onOpenChange={setShowLocationModal}
+        onAllow={handleLocationAllow}
+        onDeny={handleLocationDeny}
+      />
 
-      {/* Cart Modal */}
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+      <FrontendCartModal 
+        open={cartModalOpen} 
+        onOpenChange={setCartModalOpen} 
+      />
     </div>
   );
 };

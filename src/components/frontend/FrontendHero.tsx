@@ -1,138 +1,196 @@
 
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { ChevronRight, Star, Users, ShoppingBag } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, ShoppingBag, Star, Zap, Play, Pause } from 'lucide-react';
 
 interface FrontendHeroProps {
   storeName: string;
+  storeDescription?: string;
+  frontendSettings?: any;
 }
 
-const FrontendHero = ({ storeName }: FrontendHeroProps) => {
-  // Fetch banner images from frontend settings
-  const { data: settings } = useQuery({
-    queryKey: ['frontend-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .in('key', ['hero_banner_1', 'hero_banner_2', 'hero_banner_3']);
-      
-      if (error) throw error;
-      
-      const settingsMap: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsMap[setting.key] = setting.value;
-      });
-      return settingsMap;
-    }
-  });
+const FrontendHero = ({ storeName, storeDescription, frontendSettings }: FrontendHeroProps) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
 
-  const bannerImages = [
-    settings?.hero_banner_1?.url || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=80',
-    settings?.hero_banner_2?.url || 'https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?auto=format&fit=crop&w=2000&q=80',
-    settings?.hero_banner_3?.url || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?auto=format&fit=crop&w=2000&q=80'
+  // Get carousel images from frontend settings
+  const carouselImages = frontendSettings?.banner_urls || [];
+
+  const slides = carouselImages.length > 0 ? carouselImages.map((imageUrl: string, index: number) => ({
+    id: index + 1,
+    title: `Selamat Datang di ${storeName}`,
+    subtitle: storeDescription || "Temukan produk berkualitas dengan harga terbaik",
+    image: imageUrl,
+    cta: "Belanja Sekarang",
+    bgGradient: index === 0 ? "from-blue-500 to-purple-600" : index === 1 ? "from-red-500 to-orange-500" : "from-green-500 to-teal-500"
+  })) : [
+    {
+      id: 1,
+      title: `Selamat Datang di ${storeName}`,
+      subtitle: storeDescription || "Temukan produk berkualitas dengan harga terbaik",
+      image: "/api/placeholder/1200/400",
+      cta: "Belanja Sekarang",
+      bgGradient: "from-blue-500 to-purple-600"
+    },
+    {
+      id: 2,
+      title: "Flash Sale Hari Ini!",
+      subtitle: "Dapatkan diskon hingga 50% untuk produk pilihan",
+      image: "/api/placeholder/1200/400",
+      cta: "Lihat Penawaran",
+      bgGradient: "from-red-500 to-orange-500"
+    },
+    {
+      id: 3,
+      title: "Produk Terbaru",
+      subtitle: "Koleksi terlengkap dan terpercaya untuk kebutuhan Anda",
+      image: "/api/placeholder/1200/400",
+      cta: "Jelajahi Produk",
+      bgGradient: "from-green-500 to-teal-500"
+    }
   ];
 
-  const backgroundPattern = "data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='20' cy='20' r='1'/%3E%3Ccircle cx='40' cy='40' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E";
+  useEffect(() => {
+    if (!isAutoPlay || slides.length <= 1) return;
+    
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [slides.length, isAutoPlay]);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+  };
+
+  if (slides.length === 0) {
+    return (
+      <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden mx-4 my-6 rounded-2xl shadow-2xl bg-gradient-to-r from-blue-500 to-purple-600">
+        <div className="absolute inset-0 bg-black bg-opacity-20" />
+        <div className="relative h-full flex items-center justify-center">
+          <div className="text-center text-white px-6 max-w-4xl">
+            <div className="mb-6 flex justify-center">
+              <ShoppingBag className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4 animate-fade-in leading-tight">
+              Selamat Datang di {storeName}
+            </h1>
+            <p className="text-base md:text-lg lg:text-xl mb-8 opacity-90 max-w-2xl mx-auto leading-relaxed">
+              {storeDescription || "Temukan produk berkualitas dengan harga terbaik"}
+            </p>
+            <Button 
+              size="lg"
+              className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 md:px-8 py-2 md:py-3 text-base md:text-lg shadow-xl transform hover:scale-105 transition-all duration-300 rounded-full"
+            >
+              Belanja Sekarang
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 text-white overflow-hidden">
-      {/* Background Pattern */}
-      <div 
-        className="absolute inset-0 animate-pulse" 
-        style={{ backgroundImage: `url("${backgroundPattern}")` }}
-      ></div>
-      
-      <div className="relative max-w-7xl mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-2 gap-6 items-center">
-          {/* Content */}
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
-                Selamat Datang di{' '}
-                <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                  {storeName}
-                </span>
-              </h1>
-              <p className="text-base md:text-lg text-blue-100 leading-relaxed">
-                Temukan produk terbaik dengan harga terjangkau. Belanja mudah, cepat, dan terpercaya.
-              </p>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 py-3">
-              <div className="text-center">
-                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
-                  <ShoppingBag className="h-4 w-4" />
-                </div>
-                <div className="text-lg font-bold">1000+</div>
-                <div className="text-xs text-blue-200">Produk</div>
+    <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden mx-4 my-6 rounded-2xl shadow-2xl group">
+      {slides.map((slide, index) => (
+        <div
+          key={slide.id}
+          className={`absolute inset-0 transition-all duration-1000 ease-in-out transform ${
+            index === currentSlide ? 'translate-x-0 opacity-100 scale-100' : 
+            index < currentSlide ? '-translate-x-full opacity-0 scale-95' : 'translate-x-full opacity-0 scale-95'
+          }`}
+        >
+          <div className={`h-full bg-gradient-to-r ${slide.bgGradient} relative overflow-hidden`}>
+            {slide.image && slide.image !== "/api/placeholder/1200/400" && (
+              <div className="absolute inset-0">
+                <img
+                  src={slide.image}
+                  alt={slide.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
               </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
-                  <Users className="h-4 w-4" />
+            )}
+            <div className="absolute inset-0 bg-black bg-opacity-20" />
+            <div className="relative h-full flex items-center justify-center">
+              <div className="text-center text-white px-4 md:px-6 max-w-4xl">
+                <div className="mb-4 md:mb-6 flex justify-center">
+                  {index === 1 && <Zap className="h-6 w-6 md:h-8 md:w-8 animate-pulse text-yellow-400" />}
+                  {index === 2 && <Star className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
+                  {index === 0 && <ShoppingBag className="h-6 w-6 md:h-8 md:w-8 text-white" />}
                 </div>
-                <div className="text-lg font-bold">5000+</div>
-                <div className="text-xs text-blue-200">Pelanggan</div>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full mx-auto mb-1">
-                  <Star className="h-4 w-4" />
-                </div>
-                <div className="text-lg font-bold">4.8</div>
-                <div className="text-xs text-blue-200">Rating</div>
-              </div>
-            </div>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
-                Mulai Belanja
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
-                Lihat Produk
-              </Button>
-            </div>
-          </div>
-
-          {/* Hero Images - Reduced height */}
-          <div className="relative h-48 lg:h-60">
-            <div className="grid grid-cols-2 gap-3 h-full">
-              <div className="space-y-3">
-                <div className="relative h-24 lg:h-32 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
-                  <img 
-                    src={bannerImages[0]}
-                    alt="Hero 1" 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </div>
-                <div className="relative h-20 lg:h-24 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
-                  <img 
-                    src={bannerImages[1]}
-                    alt="Hero 2" 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </div>
-              </div>
-              <div className="mt-6">
-                <div className="relative h-36 lg:h-48 rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
-                  <img 
-                    src={bannerImages[2]}
-                    alt="Hero 3" 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </div>
+                <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 animate-fade-in leading-tight">
+                  {slide.title}
+                </h1>
+                <p className="text-base md:text-lg lg:text-xl mb-6 md:mb-8 opacity-90 max-w-2xl mx-auto leading-relaxed">
+                  {slide.subtitle}
+                </p>
+                <Button 
+                  size="lg"
+                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 md:px-8 py-2 md:py-3 text-base md:text-lg shadow-xl transform hover:scale-105 transition-all duration-300 rounded-full"
+                >
+                  {slide.cta}
+                </Button>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      ))}
+
+      {/* Navigation Buttons - Only show if more than 1 slide */}
+      {slides.length > 1 && (
+        <>
+          <button
+            onClick={prevSlide}
+            className="absolute left-4 md:left-6 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 md:p-3 rounded-full transition-all duration-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+          >
+            <ChevronLeft className="h-4 w-4 md:h-6 md:w-6" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 md:right-6 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 md:p-3 rounded-full transition-all duration-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+          >
+            <ChevronRight className="h-4 w-4 md:h-6 md:w-6" />
+          </button>
+
+          {/* Auto-play control */}
+          <button
+            onClick={() => setIsAutoPlay(!isAutoPlay)}
+            className="absolute top-4 md:top-6 right-4 md:right-6 bg-black/30 hover:bg-black/50 text-white p-1.5 md:p-2 rounded-full transition-all duration-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+          >
+            {isAutoPlay ? <Pause className="h-3 w-3 md:h-4 md:w-4" /> : <Play className="h-3 w-3 md:h-4 md:w-4" />}
+          </button>
+
+          {/* Slide Indicators */}
+          <div className="absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 md:space-x-3">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`transition-all duration-300 rounded-full ${
+                  index === currentSlide 
+                    ? 'w-6 md:w-8 h-2 md:h-3 bg-white' 
+                    : 'w-2 md:w-3 h-2 md:h-3 bg-white/50 hover:bg-white/75'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Slide counter */}
+          <div className="absolute bottom-4 md:bottom-6 right-4 md:right-6 bg-black/30 text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm backdrop-blur-sm">
+            {currentSlide + 1} / {slides.length}
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 

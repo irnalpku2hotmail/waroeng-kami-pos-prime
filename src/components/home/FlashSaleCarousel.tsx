@@ -57,8 +57,7 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
       name: item.products.name,
       price: item.sale_price,
       image: item.products.image_url,
-      quantity: 1,
-      stock: item.stock_quantity || 0
+      quantity: 1
     });
     toast({
       title: "Produk Flash Sale ditambahkan",

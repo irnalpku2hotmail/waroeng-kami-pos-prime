@@ -84,14 +84,7 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
     }
 
     const price = flashSaleItem ? flashSaleItem.sale_price : product.selling_price;
-    addItem({ 
-      id: product.id,
-      name: product.name,
-      price: price,
-      image: product.image_url,
-      quantity: 1,
-      stock: flashSaleItem ? flashSaleItem.stock_quantity : product.current_stock
-    });
+    addItem({ ...product, selling_price: price });
     toast({
       title: 'Added to Cart',
       description: `${String(product.name || 'Product')} has been added to your cart`

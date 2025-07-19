@@ -14,7 +14,7 @@ import Layout from '@/components/Layout';
 import CODSettings from '@/components/CODSettings';
 import FrontendSettings from '@/components/FrontendSettings';
 import SEOSettings from '@/components/SEOSettings';
-import PermissionManagement from '@/components/settings/PermissionManagement';
+import RoleManagement from '@/components/settings/RoleManagement';
 
 const Settings = () => {
   const queryClient = useQueryClient();
@@ -110,7 +110,7 @@ const Settings = () => {
             <TabsTrigger value="cod">COD</TabsTrigger>
             <TabsTrigger value="frontend">Frontend</TabsTrigger>
             <TabsTrigger value="seo">SEO</TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="roles">Role</TabsTrigger>
           </TabsList>
 
           <TabsContent value="store-info">
@@ -251,8 +251,8 @@ const Settings = () => {
             <SEOSettings />
           </TabsContent>
 
-          <TabsContent value="permissions">
-            <PermissionManagement />
+          <TabsContent value="roles">
+            <RoleManagement />
           </TabsContent>
         </Tabs>
       </div>

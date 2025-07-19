@@ -1,24 +1,19 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { useAuth } from './AuthContext';
 
 export interface CartItem {
   id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-  stock: number;
-  flashSalePrice?: number;
-  isFlashSale?: boolean;
   product_id: string;
-  unit_price: number;
-  total_price: number;
   product?: {
     id: string;
     name: string;
     image_url?: string;
+    selling_price: number;
+    current_stock: number;
   };
+  quantity: number;
+  unit_price: number;
+  total_price: number;
 }
 
 interface CustomerInfo {
@@ -30,14 +25,13 @@ interface CustomerInfo {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (item: CartItem) => void;
-  addItem: (item: Omit<CartItem, 'id' | 'product_id' | 'unit_price' | 'total_price'> & { id: string }) => void;
-  removeFromCart: (id: string) => void;
+  addItem: (product: any) => void;
   removeItem: (productId: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  getTotalAmount: () => number; // Alias for getTotalPrice
   customerInfo: CustomerInfo;
   setCustomerInfo: React.Dispatch<React.SetStateAction<CustomerInfo>>;
   shippingCost: number;
@@ -46,7 +40,16 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { profile } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
@@ -54,129 +57,95 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: '',
     address: ''
   });
-  const [shippingCost, setShippingCost] = useState(0);
+  const [shippingCost, setShippingCost] = useState<number>(0);
 
   // Load cart from localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+    try {
+      const savedCart = localStorage.getItem('smartpos_cart');
+      if (savedCart) {
+        const parsedCart = JSON.parse(savedCart);
+        if (Array.isArray(parsedCart)) {
+          setItems(parsedCart);
+        }
       }
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
+      localStorage.removeItem('smartpos_cart');
     }
   }, []);
 
   // Save cart to localStorage whenever items change
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    try {
+      localStorage.setItem('smartpos_cart', JSON.stringify(items));
+    } catch (error) {
+      console.error('Error saving cart to localStorage:', error);
+    }
   }, [items]);
 
-  const addToCart = (newItem: CartItem) => {
-    setItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(item => item.id === newItem.id);
+  const addItem = (product: any) => {
+    setItems(currentItems => {
+      const existingItem = currentItems.find(i => i.product_id === product.id);
       
-      if (existingItemIndex > -1) {
-        const updatedItems = [...prevItems];
-        const existingItem = updatedItems[existingItemIndex];
-        const newQuantity = existingItem.quantity + newItem.quantity;
-        
-        if (newQuantity > newItem.stock) {
-          toast({
-            title: 'Stok tidak mencukupi',
-            description: `Stok tersedia: ${newItem.stock}`,
-            variant: 'destructive',
-          });
-          return prevItems;
-        }
-        
-        updatedItems[existingItemIndex] = {
-          ...existingItem,
-          quantity: newQuantity,
-          total_price: newItem.unit_price * newQuantity
-        };
-        return updatedItems;
-      } else {
-        if (newItem.quantity > newItem.stock) {
-          toast({
-            title: 'Stok tidak mencukupi',
-            description: `Stok tersedia: ${newItem.stock}`,
-            variant: 'destructive',
-          });
-          return prevItems;
-        }
-        
-        const cartItem: CartItem = {
-          ...newItem,
-          product_id: newItem.id,
-          unit_price: newItem.price,
-          total_price: newItem.price * newItem.quantity,
-          product: {
-            id: newItem.id,
-            name: newItem.name,
-            image_url: newItem.image
-          }
-        };
-        
-        return [...prevItems, cartItem];
+      if (existingItem) {
+        const newQuantity = existingItem.quantity + 1;
+        return currentItems.map(i =>
+          i.product_id === product.id
+            ? {
+                ...i,
+                quantity: newQuantity,
+                total_price: newQuantity * i.unit_price
+              }
+            : i
+        );
       }
+      
+      const newItem: CartItem = {
+        id: `cart_${product.id}_${Date.now()}`,
+        product_id: product.id,
+        product: {
+          id: product.id,
+          name: product.name,
+          image_url: product.image_url,
+          selling_price: product.selling_price,
+          current_stock: product.current_stock
+        },
+        quantity: 1,
+        unit_price: product.selling_price,
+        total_price: product.selling_price
+      };
+      
+      return [...currentItems, newItem];
     });
   };
 
-  const addItem = (item: Omit<CartItem, 'id' | 'product_id' | 'unit_price' | 'total_price'> & { id: string }) => {
-    const cartItem: CartItem = {
-      ...item,
-      product_id: item.id,
-      unit_price: item.price,
-      total_price: item.price * item.quantity,
-      product: {
-        id: item.id,
-        name: item.name,
-        image_url: item.image
-      }
-    };
-    addToCart(cartItem);
-  };
-
-  const removeFromCart = (id: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== id));
-  };
-
   const removeItem = (productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.product_id !== productId));
+    setItems(currentItems => currentItems.filter(item => item.product_id !== productId));
   };
 
-  const updateQuantity = (id: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(id);
+      removeItem(productId);
       return;
     }
 
-    setItems(prevItems => 
-      prevItems.map(item => {
-        if (item.id === id || item.product_id === id) {
-          if (quantity > item.stock) {
-            toast({
-              title: 'Stok tidak mencukupi',
-              description: `Stok tersedia: ${item.stock}`,
-              variant: 'destructive',
-            });
-            return item;
-          }
-          return { 
-            ...item, 
-            quantity,
-            total_price: item.unit_price * quantity
-          };
-        }
-        return item;
-      })
+    setItems(currentItems =>
+      currentItems.map(item =>
+        item.product_id === productId
+          ? {
+              ...item,
+              quantity,
+              total_price: quantity * item.unit_price
+            }
+          : item
+      )
     );
   };
 
   const clearCart = () => {
     setItems([]);
+    localStorage.removeItem('smartpos_cart');
   };
 
   const getTotalItems = () => {
@@ -184,37 +153,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const getTotalPrice = () => {
-    return items.reduce((total, item) => {
-      const price = item.isFlashSale && item.flashSalePrice ? item.flashSalePrice : item.unit_price;
-      return total + (price * item.quantity);
-    }, 0);
+    return items.reduce((total, item) => total + item.total_price, 0);
+  };
+
+  const getTotalAmount = () => {
+    return getTotalPrice(); // Alias for compatibility
+  };
+
+  const value: CartContextType = {
+    items,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    getTotalItems,
+    getTotalPrice,
+    getTotalAmount,
+    customerInfo,
+    setCustomerInfo,
+    shippingCost,
+    setShippingCost
   };
 
   return (
-    <CartContext.Provider value={{
-      items,
-      addToCart,
-      addItem,
-      removeFromCart,
-      removeItem,
-      updateQuantity,
-      clearCart,
-      getTotalItems,
-      getTotalPrice,
-      customerInfo,
-      setCustomerInfo,
-      shippingCost,
-      setShippingCost,
-    }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );
-};
-
-export const useCart = (): CartContextType => {
-  const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
-  return context;
 };

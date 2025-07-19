@@ -1,261 +1,278 @@
 
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ShoppingCart, Plus, Minus, Heart } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ShoppingCart, Package, Star, ArrowLeft, Heart, Truck, Minus, Plus } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
-import { toast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import ProductRecommendations from '@/components/ProductRecommendations';
+import { useProductLikes } from '@/hooks/useProductLikes';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Link } from 'react-router-dom';
 
 const ProductDetails = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { addItem } = useCart();
-  const [quantity, setQuantity] = useState(1);
+    const { productId } = useParams<{ productId: string }>();
+    const { addItem } = useCart();
+    const { isLiked, toggleLike } = useProductLikes();
+    const [quantity, setQuantity] = useState(1);
+    const navigate = useNavigate();
 
-  const { data: product, isLoading } = useQuery({
-    queryKey: ['product-details', id],
-    queryFn: async () => {
-      if (!id) return null;
-      
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories (name),
-          units (name, abbreviation),
-          price_variants (
-            id,
-            name,
-            price,
-            minimum_quantity,
-            is_active
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id
-  });
-
-  const getBestPrice = (qty: number) => {
-    if (!product?.price_variants || product.price_variants.length === 0) {
-      return {
-        price: product?.selling_price || 0,
-        isWholesale: false,
-        variantName: null
-      };
-    }
-
-    const activeVariants = product.price_variants
-      .filter(variant => variant.is_active)
-      .sort((a, b) => b.minimum_quantity - a.minimum_quantity);
-
-    for (const variant of activeVariants) {
-      if (qty >= variant.minimum_quantity) {
-        return {
-          price: variant.price,
-          isWholesale: true,
-          variantName: variant.name
-        };
-      }
-    }
-
-    return {
-      price: product.selling_price,
-      isWholesale: false,
-      variantName: null
-    };
-  };
-
-  const handleAddToCart = () => {
-    if (!product) return;
-
-    const priceInfo = getBestPrice(quantity);
+    const { data: product, isLoading, error } = useQuery({
+        queryKey: ['product', productId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('products')
+                .select(`
+                    *,
+                    categories(name),
+                    units(name, abbreviation),
+                    price_variants(
+                        id,
+                        name,
+                        price,
+                        minimum_quantity,
+                        is_active
+                    )
+                `)
+                .eq('id', productId)
+                .single();
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!productId,
+    });
     
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: priceInfo.price,
-      image: product.image_url,
-      quantity: quantity,
-      stock: product.current_stock
-    });
+    const getImageUrl = (imageUrl: string | null | undefined) => {
+        if (!imageUrl) return null;
+        if (imageUrl.startsWith('http')) return imageUrl;
+        
+        const { data } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(imageUrl);
+        
+        return data.publicUrl;
+    };
 
-    toast({
-      title: 'Berhasil!',
-      description: `${product.name} (${quantity} pcs) telah ditambahkan ke keranjang`,
-    });
-  };
+    const getBestPrice = (product: any, quantity: number = 1) => {
+        if (!product.price_variants || product.price_variants.length === 0) {
+            return {
+                price: product.selling_price,
+                isWholesale: false,
+                variantName: null,
+                minQuantity: 1
+            };
+        }
+    
+        const activeVariants = product.price_variants
+            .filter((variant: any) => variant.is_active)
+            .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity);
+    
+        for (const variant of activeVariants) {
+            if (quantity >= variant.minimum_quantity) {
+                return {
+                    price: variant.price,
+                    isWholesale: true,
+                    variantName: variant.name,
+                    minQuantity: variant.minimum_quantity
+                };
+            }
+        }
+    
+        return {
+            price: product.selling_price,
+            isWholesale: false,
+            variantName: null,
+            minQuantity: 1
+        };
+    };
 
-  if (isLoading) {
-    return <div className="p-4">Loading...</div>;
-  }
+    const handleAddToCart = () => {
+        if (!product) return;
+        const priceInfo = getBestPrice(product, quantity);
+        
+        const cartItem = {
+            id: Date.now().toString(),
+            product_id: product.id,
+            name: product.name,
+            image_url: product.image_url,
+            quantity: quantity,
+            unit_price: priceInfo.price,
+            total_price: priceInfo.price * quantity,
+            current_stock: product.current_stock,
+            loyalty_points: product.loyalty_points || 1,
+            original_price: product.selling_price,
+            is_wholesale: priceInfo.isWholesale,
+            wholesale_min_qty: priceInfo.minQuantity
+        };
+        
+        addItem(cartItem);
+    };
 
-  if (!product) {
-    return <div className="p-4">Product not found</div>;
-  }
+    const increaseQuantity = () => {
+        if(product && quantity < product.current_stock) {
+            setQuantity(q => q + 1);
+        }
+    }
 
-  const currentPrice = getBestPrice(quantity);
+    const decreaseQuantity = () => {
+        if(quantity > 1) {
+            setQuantity(q => q - 1);
+        }
+    }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm p-4 sticky top-0 z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="h-4 w-4" />
+    if (isLoading) {
+        return (
+            <div className="bg-gray-50 min-h-screen">
+                <div className="container mx-auto px-4 py-8">
+                    <Skeleton className="h-10 w-48 mb-4" />
+                    <Card>
+                        <div className="grid md:grid-cols-2 gap-8 p-8">
+                            <Skeleton className="w-full aspect-square rounded-lg" />
+                            <div className="space-y-6">
+                                <Skeleton className="h-10 w-3/4" />
+                                <Skeleton className="h-6 w-1/4" />
+                                <Skeleton className="h-12 w-1/2" />
+                                <Skeleton className="h-20 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+    if (error) return (
+        <div className="container mx-auto px-4 py-8 text-center">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+            <p>Could not load product details. Please try again later.</p>
+            <Button onClick={() => navigate('/')} className="mt-4">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Home
             </Button>
-            <h1 className="font-semibold">Detail Produk</h1>
-          </div>
-          <Button variant="ghost" size="sm">
-            <Heart className="h-4 w-4" />
-          </Button>
         </div>
-      </div>
-
-      <div className="p-4 space-y-6">
-        {/* Product Image and Basic Info */}
-        <Card>
-          <CardContent className="p-0">
-            <div className="aspect-square bg-gray-100 overflow-hidden">
-              <img 
-                src={product.image_url || '/placeholder.svg'} 
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                {product.categories && (
-                  <Badge variant="secondary" className="mb-2">
-                    {product.categories.name}
-                  </Badge>
-                )}
-                <h1 className="text-xl font-bold">{product.name}</h1>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    Rp {currentPrice.price.toLocaleString('id-ID')}
-                  </div>
-                  {currentPrice.isWholesale && (
-                    <Badge variant="secondary" className="bg-orange-100 text-orange-700 mt-1">
-                      {currentPrice.variantName}
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">Stok</div>
-                  <div className="font-semibold">{product.current_stock}</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quantity and Add to Cart */}
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Kuantitas</span>
-              <div className="flex items-center gap-3">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-12 text-center font-medium">{quantity}</span>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between pt-4 border-t">
-              <span className="font-medium">Total</span>
-              <span className="text-xl font-bold text-blue-600">
-                Rp {(currentPrice.price * quantity).toLocaleString('id-ID')}
-              </span>
-            </div>
-
-            <Button 
-              className="w-full" 
-              size="lg"
-              onClick={handleAddToCart}
-              disabled={product.current_stock === 0}
-            >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+    );
+    if (!product) return (
+        <div className="container mx-auto px-4 py-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Product Not Found</h2>
+            <p>The product you are looking for does not exist.</p>
+            <Button onClick={() => navigate('/')} className="mt-4">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Home
             </Button>
-          </CardContent>
-        </Card>
+        </div>
+    );
+    
+    const productImageUrl = getImageUrl(product.image_url);
+    const productIsLiked = isLiked(product.id);
+    const priceInfo = getBestPrice(product, quantity);
+    const hasWholesalePrice = product.price_variants && product.price_variants.some((v: any) => v.is_active);
 
-        {/* Description */}
-        {product.description && (
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="font-semibold mb-3">Deskripsi</h2>
-              <p className="text-gray-600 text-sm leading-relaxed">{product.description}</p>
-            </CardContent>
-          </Card>
-        )}
+    return (
+        <div className="bg-gray-50 min-h-screen">
+            <div className="container mx-auto px-4 py-8">
+                <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to products
+                </Button>
 
-        {/* Price Variants */}
-        {product.price_variants && product.price_variants.length > 0 && (
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="font-semibold mb-3">Harga Grosir</h2>
-              <div className="space-y-2">
-                {product.price_variants
-                  .filter(variant => variant.is_active)
-                  .sort((a, b) => a.minimum_quantity - b.minimum_quantity)
-                  .map(variant => (
-                    <div key={variant.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium">{variant.name}</span>
-                      <div className="text-right">
-                        <div className="font-semibold text-blue-600">
-                          Rp {variant.price.toLocaleString('id-ID')}
+                <Card>
+                    <div className="grid md:grid-cols-2 gap-8 p-8">
+                        <div className="relative">
+                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                                {productImageUrl ? (
+                                    <img src={productImageUrl} alt={product.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Package className="h-24 w-24 text-gray-400" />
+                                    </div>
+                                )}
+                            </div>
+                            <Button 
+                                size="sm" 
+                                variant="secondary"
+                                onClick={() => toggleLike(product.id)}
+                                className={`absolute top-4 left-4 h-10 w-10 p-0 rounded-full transition-colors ${
+                                productIsLiked 
+                                    ? 'bg-red-500 hover:bg-red-600 text-white' 
+                                    : 'bg-white/80 hover:bg-white'
+                                }`}
+                            >
+                                <Heart className={`h-5 w-5 ${productIsLiked ? 'fill-current' : ''}`} />
+                            </Button>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          Min. {variant.minimum_quantity} pcs
+
+                        <div className="flex flex-col space-y-4">
+                            <h1 className="text-3xl font-bold">{product.name}</h1>
+                            
+                            <div className="flex items-center gap-4">
+                                <Badge variant="outline">{product.categories?.name || 'Uncategorized'}</Badge>
+                                <div className="flex items-center gap-1">
+                                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                                    <span className="text-sm text-gray-500">{product.loyalty_points || 1} pts</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <span className="text-3xl font-bold text-blue-600">
+                                    Rp {priceInfo.price?.toLocaleString('id-ID')}
+                                </span>
+                                {priceInfo.isWholesale && (
+                                    <div className="text-sm text-orange-600 font-medium">
+                                        {priceInfo.variantName} (min. {priceInfo.minQuantity})
+                                    </div>
+                                )}
+                                {hasWholesalePrice && !priceInfo.isWholesale && product.selling_price > priceInfo.price && (
+                                  <span className="text-sm text-gray-500 line-through ml-2">
+                                    Rp {product.selling_price?.toLocaleString('id-ID')}
+                                  </span>
+                                )}
+                                {hasWholesalePrice && (
+                                    <div className="text-sm text-gray-500 mt-1">
+                                        Harga grosir tersedia untuk pembelian dalam jumlah besar.
+                                    </div>
+                                )}
+                            </div>
+
+                            <p className="text-gray-600">{product.description || 'No description available.'}</p>
+                            
+                            <div className="flex items-center space-x-4">
+                                <span className="font-medium">Kuantitas:</span>
+                                <div className="flex items-center border rounded-md">
+                                    <Button variant="ghost" size="sm" onClick={decreaseQuantity}><Minus className="h-4 w-4"/></Button>
+                                    <Input 
+                                        type="number" 
+                                        className="w-16 text-center border-x-0 focus-visible:ring-0" 
+                                        value={quantity}
+                                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                        min="1"
+                                        max={product.current_stock}
+                                    />
+                                    <Button variant="ghost" size="sm" onClick={increaseQuantity}><Plus className="h-4 w-4"/></Button>
+                                </div>
+                                <span className="text-sm text-gray-500">Stok: {product.current_stock}</span>
+                            </div>
+
+                            <Button 
+                                size="lg" 
+                                onClick={handleAddToCart} 
+                                disabled={product.current_stock <= 0 || quantity > product.current_stock}
+                                className="w-full"
+                            >
+                                <ShoppingCart className="mr-2 h-5 w-5" />
+                                {product.current_stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis'}
+                            </Button>
+
+                            <div className="flex items-center gap-2 text-sm text-green-600 pt-4">
+                                <Truck className="h-5 w-5" />
+                                <span>Tersedia untuk Bayar di Tempat (COD)</span>
+                            </div>
                         </div>
-                      </div>
                     </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Product Recommendations */}
-        <ProductRecommendations 
-          categoryId={product.category_id} 
-          currentProductId={product.id} 
-        />
-      </div>
-    </div>
-  );
+                </Card>
+            </div>
+        </div>
+    );
 };
 
 export default ProductDetails;

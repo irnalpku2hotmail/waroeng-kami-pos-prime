@@ -46,8 +46,7 @@ const BestSellingProducts = ({ onProductClick }: BestSellingProductsProps) => {
       name: product.name,
       price: product.selling_price,
       image: product.image_url,
-      quantity: 1,
-      stock: product.current_stock || 0
+      quantity: 1
     });
     toast({
       title: "Produk ditambahkan",
