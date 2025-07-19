@@ -6,48 +6,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Package, Minus, Plus, Trash2, Truck, Info } from 'lucide-react';
+import { ShoppingCart, Package, Minus, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
 
 interface CartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface CODSettings {
-  enabled: boolean;
-  delivery_fee: number;
-  min_order: number;
-}
-
 const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo, clearCart, updateQuantity, removeItem } = useCart();
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Fetch COD settings
-  const { data: codSettings } = useQuery({
-    queryKey: ['cod-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'cod_settings')
-        .single();
-      
-      if (error) {
-        console.log('No COD settings found, using defaults');
-        return { enabled: true, delivery_fee: 10000, min_order: 50000 } as CODSettings;
-      }
-      
-      return data.value as unknown as CODSettings;
-    }
-  });
 
   // Auto-fill customer info from user profile
   useEffect(() => {
@@ -60,12 +33,6 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       });
     }
   }, [user, profile, setCustomerInfo]);
-
-  const cartTotal = getTotalPrice();
-  const deliveryFee = codSettings?.delivery_fee || 10000;
-  const minOrder = codSettings?.min_order || 50000;
-  const isFreeShipping = cartTotal >= minOrder;
-  const finalTotal = cartTotal + (isFreeShipping ? 0 : deliveryFee);
 
   const handleSubmitOrder = async () => {
     if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
@@ -101,8 +68,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
-          total_amount: finalTotal,
-          delivery_fee: isFreeShipping ? 0 : deliveryFee,
+          total_amount: getTotalPrice(),
           payment_method: 'cod',
           status: 'pending',
           notes: 'Pesanan dari website'
@@ -183,9 +149,9 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           <DialogTitle className="flex items-center gap-2 text-xl">
             <ShoppingCart className="h-6 w-6 text-blue-600" />
             Keranjang Belanja
-            <Badge className="bg-blue-100 text-blue-800">
+            <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2 py-1 rounded-full">
               {getTotalItems()} item
-            </Badge>
+            </span>
           </DialogTitle>
         </DialogHeader>
         
@@ -261,30 +227,6 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
             ))}
           </div>
 
-          {/* COD Information */}
-          {codSettings?.enabled && (
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-blue-900 mb-2">Informasi COD (Cash on Delivery)</h3>
-                    <div className="space-y-1 text-sm text-blue-800">
-                      <p>• Pembayaran dilakukan saat barang tiba</p>
-                      <p>• Ongkos kirim: Rp {deliveryFee.toLocaleString('id-ID')}</p>
-                      <p>• Gratis ongkir untuk pembelian minimal Rp {minOrder.toLocaleString('id-ID')}</p>
-                      {!isFreeShipping && (
-                        <p className="font-medium">
-                          Belanja Rp {(minOrder - cartTotal).toLocaleString('id-ID')} lagi untuk gratis ongkir!
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Customer Information */}
           <Card className="bg-gray-50">
             <CardContent className="p-4">
@@ -347,38 +289,23 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
         {/* Order Summary & Action */}
         <div className="border-t pt-4 space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Subtotal ({getTotalItems()} item)</span>
-              <span>Rp {cartTotal.toLocaleString('id-ID')}</span>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm text-gray-600">Total ({getTotalItems()} item)</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR',
+                  minimumFractionDigits: 0,
+                }).format(getTotalPrice())}
+              </p>
             </div>
-            <div className="flex justify-between">
-              <span className="flex items-center gap-1">
-                <Truck className="h-4 w-4" />
-                Ongkos Kirim
-              </span>
-              <span>
-                {isFreeShipping ? (
-                  <Badge variant="secondary" className="text-green-600">Gratis</Badge>
-                ) : (
-                  `Rp ${deliveryFee.toLocaleString('id-ID')}`
-                )}
-              </span>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 mb-1">Pembayaran</p>
+              <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                Cash on Delivery (COD)
+              </div>
             </div>
-            <div className="flex justify-between text-lg font-bold border-t pt-2">
-              <span>Total Pembayaran</span>
-              <span className="text-blue-600">Rp {finalTotal.toLocaleString('id-ID')}</span>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 text-green-800 text-sm">
-              <Truck className="h-4 w-4" />
-              <span className="font-medium">Cash on Delivery (COD)</span>
-            </div>
-            <p className="text-green-700 text-xs mt-1">
-              Bayar langsung saat barang tiba di tempat Anda
-            </p>
           </div>
 
           <Button 
@@ -386,7 +313,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
             disabled={isSubmitting || !customerInfo.name || !customerInfo.phone || !customerInfo.address}
             className="w-full bg-blue-600 hover:bg-blue-700 py-3 text-lg font-semibold"
           >
-            {isSubmitting ? 'Memproses Pesanan...' : 'Pesan Sekarang (COD)'}
+            {isSubmitting ? 'Memproses Pesanan...' : 'Pesan Sekarang'}
           </Button>
           
           <p className="text-xs text-gray-500 text-center">
