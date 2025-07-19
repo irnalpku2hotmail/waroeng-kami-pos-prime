@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,12 +64,6 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     }
   });
 
-  const generateOrderNumber = () => {
-    const timestamp = Date.now();
-    const randomNum = Math.floor(Math.random() * 1000);
-    return `ORD-${timestamp}-${randomNum}`;
-  };
-
   const handleCreateOrder = async () => {
     if (items.length === 0) {
       toast({
@@ -92,13 +87,11 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     try {
       const deliveryFee = 10000;
       const totalAmount = getTotalPrice() + deliveryFee;
-      const orderNumber = generateOrderNumber();
 
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          order_number: orderNumber,
           customer_name: customerName,
           customer_phone: customerPhone,
           customer_address: customerAddress,
