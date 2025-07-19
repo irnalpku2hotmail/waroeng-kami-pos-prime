@@ -205,7 +205,10 @@ const SearchResults = () => {
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Kategori</h2>
-          <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
+          <HomeCategoriesSlider
+            selectedCategory={categoryId}
+            onCategorySelect={handleCategorySelect}
+          />
         </div>
       </div>
 

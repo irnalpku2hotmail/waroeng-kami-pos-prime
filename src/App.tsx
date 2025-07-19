@@ -31,6 +31,7 @@ import PointExchange from "./pages/PointExchange";
 import CreditManagement from "./pages/CreditManagement";
 import UserManagement from "./pages/UserManagement";
 import Inventory from "./pages/Inventory";
+import Frontend from "./pages/Frontend";
 import SearchResults from "./pages/SearchResults";
 import OrderHistory from "./pages/OrderHistory";
 import Notifications from "./pages/Notifications";
@@ -83,6 +84,7 @@ function App() {
                 <Route path="/credit-management" element={<ProtectedRoute><CreditManagement /></ProtectedRoute>} />
                 <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                <Route path="/frontend" element={<ProtectedRoute><Frontend /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 
                 {/* 404 route */}
