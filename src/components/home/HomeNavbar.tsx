@@ -16,7 +16,8 @@ import {
   History,
   Home,
   Menu,
-  X
+  X,
+  Search
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,7 +26,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import EnhancedSearch from './EnhancedSearch';
+import { Input } from '@/components/ui/input';
 
 interface HomeNavbarProps {
   onCartClick: () => void;
@@ -64,6 +65,13 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     }
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
   // Get store info from settings
   const storeInfo = settings?.store_info || {};
   const storeName = settings?.store_name?.name || 'Waroeng Kami';
@@ -71,171 +79,197 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   const logoUrl = settings?.store_logo?.url || null;
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg border-b sticky top-0 z-50">
+    <nav className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 shadow-xl border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
         {/* Main Navigation Bar */}
-        <div className="flex items-center justify-between py-3">
-          {/* Logo and Store Name */}
-          <Link to="/" className="flex items-center space-x-3 group">
-            <div className="bg-white p-2 rounded-full shadow-md group-hover:shadow-lg transition-shadow">
-              {logoUrl ? (
-                <img 
-                  src={logoUrl} 
-                  alt={storeName} 
-                  className="h-6 w-6 object-cover rounded-full"
-                />
-              ) : (
-                <Store className="h-6 w-6 text-blue-600" />
-              )}
+        <div className="flex items-center justify-between py-4">
+          {/* Logo and Store Name with Enhanced Design */}
+          <Link to="/" className="flex items-center space-x-4 group">
+            <div className="relative">
+              <div className="bg-white p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                {logoUrl ? (
+                  <img 
+                    src={logoUrl} 
+                    alt={storeName} 
+                    className="h-8 w-8 object-cover rounded-lg"
+                  />
+                ) : (
+                  <Store className="h-8 w-8 text-blue-600" />
+                )}
+              </div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
             <div className="text-white hidden md:block">
-              <h1 className="text-xl font-bold leading-tight">
+              <h1 className="text-2xl font-bold leading-tight tracking-wide">
                 {storeName}
               </h1>
-              <p className="text-blue-100 text-xs">
+              <p className="text-blue-100 text-sm font-medium">
                 {storeTagline}
               </p>
             </div>
           </Link>
 
-          {/* Enhanced Search Bar */}
-          <EnhancedSearch 
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-            onSearch={onSearch || (() => {})}
-          />
+          {/* Enhanced Search Bar for Desktop */}
+          <div className="flex-1 max-w-2xl mx-8 hidden md:block">
+            <form onSubmit={handleSearch} className="relative">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+                <Input
+                  type="search"
+                  placeholder="Cari produk atau kategori..."
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+            </form>
+          </div>
           
-          {/* User Actions */}
+          {/* Enhanced User Actions */}
           <div className="flex items-center space-x-3">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-white hover:bg-white/10">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-3 text-white hover:bg-white/10 px-4 py-2 rounded-xl transition-all duration-300">
                     {profile?.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
                         alt="Avatar" 
-                        className="w-6 h-6 rounded-full border-2 border-white/20"
+                        className="w-8 h-8 rounded-full border-2 border-white/30"
                       />
                     ) : (
-                      <UserCircle className="h-5 w-5" />
+                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                        <UserCircle className="h-5 w-5" />
+                      </div>
                     )}
-                    <span className="hidden md:inline font-medium">{profile?.full_name || 'User'}</span>
+                    <span className="hidden md:inline font-semibold">{profile?.full_name || 'User'}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate('/')}>
-                    <Home className="h-4 w-4 mr-2" />
-                    Beranda
+                <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-md border-0 shadow-xl rounded-xl">
+                  <DropdownMenuItem onClick={() => navigate('/')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
+                    <Home className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium">Beranda</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/order-history')}>
-                    <History className="h-4 w-4 mr-2" />
-                    Riwayat Pesanan
+                  <DropdownMenuItem onClick={() => navigate('/order-history')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
+                    <History className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium">Riwayat Pesanan</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <User className="h-4 w-4 mr-2" />
-                    Profil
+                  <DropdownMenuItem onClick={() => navigate('/profile')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
+                    <User className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium">Profil</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
+                  <DropdownMenuSeparator className="my-2" />
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg text-red-600">
+                    <LogOut className="h-4 w-4" />
+                    <span className="font-medium">Logout</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={() => navigate('/login')}
-                  className="text-white hover:bg-white/10"
+                  className="text-white hover:bg-white/10 font-semibold px-4 py-2 rounded-xl transition-all duration-300"
                 >
                   Login
                 </Button>
                 <Button 
                   size="sm" 
                   onClick={() => navigate('/register')}
-                  className="bg-white text-blue-600 hover:bg-blue-50"
+                  className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-4 py-2 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
                 >
                   Register
                 </Button>
               </div>
             )}
             
-            {/* Cart Button */}
+            {/* Enhanced Cart Button */}
             <Button
               variant="ghost"
               size="sm"
-              className="relative text-white hover:bg-white/10"
+              className="relative text-white hover:bg-white/10 p-3 rounded-xl transition-all duration-300 hover:scale-105"
               onClick={onCartClick}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-6 w-6" />
               {getTotalItems() > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                <Badge className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600 rounded-full animate-bounce">
                   {getTotalItems()}
                 </Badge>
               )}
             </Button>
 
-            {/* Mobile Menu Button */}
+            {/* Enhanced Mobile Menu Button */}
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden text-white hover:bg-white/10"
+              className="md:hidden text-white hover:bg-white/10 p-3 rounded-xl transition-all duration-300"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
-        <div className="md:hidden pb-3">
-          <EnhancedSearch 
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-            onSearch={onSearch || (() => {})}
-          />
+        {/* Enhanced Mobile Search Bar */}
+        <div className="md:hidden pb-4">
+          <form onSubmit={handleSearch} className="relative">
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+              <Input
+                type="search"
+                placeholder="Cari produk atau kategori..."
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
+              />
+            </div>
+          </form>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Enhanced Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-blue-700 rounded-lg mb-3 p-4">
-            <div className="space-y-2">
+          <div className="md:hidden bg-white/10 backdrop-blur-md rounded-2xl mb-4 p-4 shadow-xl">
+            <div className="space-y-3">
               {user ? (
                 <>
                   <Link 
                     to="/" 
-                    className="block py-2 text-white hover:text-blue-200"
+                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Beranda
+                    <Home className="h-5 w-5" />
+                    <span className="font-medium">Beranda</span>
                   </Link>
                   <Link 
                     to="/order-history" 
-                    className="block py-2 text-white hover:text-blue-200"
+                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Riwayat Pesanan
+                    <History className="h-5 w-5" />
+                    <span className="font-medium">Riwayat Pesanan</span>
                   </Link>
                   <Link 
                     to="/profile" 
-                    className="block py-2 text-white hover:text-blue-200"
+                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Profil
+                    <User className="h-5 w-5" />
+                    <span className="font-medium">Profil</span>
                   </Link>
-                  <hr className="border-blue-600 my-2" />
+                  <hr className="border-white/20 my-2" />
                   <button 
                     onClick={handleSignOut}
-                    className="block py-2 text-white hover:text-blue-200"
+                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-red-500/20 rounded-xl transition-all duration-300 w-full text-left"
                   >
-                    Logout
+                    <LogOut className="h-5 w-5" />
+                    <span className="font-medium">Logout</span>
                   </button>
                 </>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -243,7 +277,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
                       navigate('/login');
                       setMobileMenuOpen(false);
                     }}
-                    className="w-full justify-start text-white hover:bg-white/10"
+                    className="w-full justify-start text-white hover:bg-white/10 font-medium py-3 rounded-xl"
                   >
                     Login
                   </Button>
@@ -253,7 +287,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
                       navigate('/register');
                       setMobileMenuOpen(false);
                     }}
-                    className="w-full bg-white text-blue-600 hover:bg-blue-50"
+                    className="w-full bg-white text-blue-600 hover:bg-blue-50 font-medium py-3 rounded-xl"
                   >
                     Register
                   </Button>
