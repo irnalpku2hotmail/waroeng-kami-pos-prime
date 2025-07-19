@@ -23,58 +23,93 @@ interface EnhancedSearchProps {
 const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearchProps) => {
   const navigate = useNavigate();
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Enhanced search suggestions with better logic
-  const { data: searchData } = useQuery({
-    queryKey: ['search-suggestions', searchTerm],
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Separate queries for products and categories
+  const { data: productsData } = useQuery({
+    queryKey: ['search-products', debouncedSearchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return { products: [], categories: [] };
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
 
-      const [productsResult, categoriesResult] = await Promise.all([
-        supabase
-          .from('products')
-          .select('id, name, selling_price, image_url, categories!inner(name)')
-          .or(`name.ilike.%${searchTerm}%,categories.name.ilike.%${searchTerm}%`)
-          .eq('is_active', true)
-          .limit(6),
-        supabase
-          .from('categories')
-          .select('id, name')
-          .ilike('name', `%${searchTerm}%`)
-          .limit(4)
-      ]);
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name')
+        .ilike('name', `%${debouncedSearchTerm}%`)
+        .eq('is_active', true)
+        .limit(6);
 
-      return {
-        products: productsResult.data || [],
-        categories: categoriesResult.data || []
-      };
+      if (error) {
+        console.error('Error fetching products:', error);
+        return [];
+      }
+
+      return data || [];
     },
-    enabled: searchTerm.length >= 2
+    enabled: debouncedSearchTerm.length >= 2
   });
 
+  const { data: categoriesData } = useQuery({
+    queryKey: ['search-categories', debouncedSearchTerm],
+    queryFn: async () => {
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .ilike('name', `%${debouncedSearchTerm}%`)
+        .limit(4);
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        return [];
+      }
+
+      return data || [];
+    },
+    enabled: debouncedSearchTerm.length >= 2
+  });
+
+  // Combine and format suggestions
   useEffect(() => {
-    if (searchData && searchData.products && searchData.categories) {
-      const categorySuggestions: SearchSuggestion[] = searchData.categories.map(c => ({
-        type: 'category',
-        id: c.id,
-        name: c.name
-      }));
+    const productSuggestions: SearchSuggestion[] = (productsData || []).map(p => ({
+      type: 'product' as const,
+      id: p.id,
+      name: p.name
+    }));
 
-      const productSuggestions: SearchSuggestion[] = searchData.products.map(p => ({
-        type: 'product',
-        id: p.id,
-        name: p.name
-      }));
+    const categorySuggestions: SearchSuggestion[] = (categoriesData || []).map(c => ({
+      type: 'category' as const,
+      id: c.id,
+      name: c.name
+    }));
 
-      setSuggestions([...categorySuggestions, ...productSuggestions]);
-    }
-  }, [searchData]);
+    setSuggestions([...categorySuggestions, ...productSuggestions]);
+  }, [productsData, categoriesData]);
 
+  // Show suggestions logic
+  useEffect(() => {
+    const shouldShow = isFocused && (
+      (debouncedSearchTerm.length >= 2 && suggestions.length > 0) ||
+      (searchTerm.length >= 2 && (productsData || categoriesData))
+    );
+    setShowSuggestions(shouldShow);
+  }, [isFocused, debouncedSearchTerm, suggestions, searchTerm, productsData, categoriesData]);
+
+  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -100,7 +135,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
         const transcript = event.results[0][0].transcript;
         onSearchChange(transcript);
         setIsListening(false);
-        // Auto search after voice input
+        // Auto focus to results after voice input
         setTimeout(() => {
           handleSearch();
         }, 500);
@@ -153,15 +188,11 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
 
   const handleInputFocus = () => {
     setIsFocused(true);
-    if (suggestions.length > 0 || searchTerm.length >= 2) {
-      setShowSuggestions(true);
-    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     onSearchChange(value);
-    setShowSuggestions(value.length >= 2);
   };
 
   const clearSearch = () => {
@@ -218,7 +249,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
 
         {/* Enhanced Search Suggestions */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto mt-2 backdrop-blur-md bg-white/95">
+          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="p-2">
               {suggestions.map((suggestion, index) => (
                 <div
@@ -239,7 +270,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
                     </Badge>
                   </div>
                   <span className="text-gray-900 font-medium group-hover:text-blue-700 transition-colors flex-1">
-                    {suggestion.name}
+                    {String(suggestion.name)}
                   </span>
                   {suggestion.type === 'category' && (
                     <span className="text-xs text-gray-500 group-hover:text-blue-500">
