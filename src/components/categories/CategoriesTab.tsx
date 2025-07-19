@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,12 +12,12 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 
 interface CategoriesTabProps {
-  categories?: any[];
-  isLoading?: boolean;
-  searchTerm?: string;
+  categories: any[];
+  isLoading: boolean;
+  searchTerm: string;
 }
 
-const CategoriesTab = ({ categories: externalCategories = [], isLoading: externalLoading = false, searchTerm: externalSearchTerm = '' }: CategoriesTabProps) => {
+const CategoriesTab = ({ categories: externalCategories, isLoading: externalLoading, searchTerm: externalSearchTerm }: CategoriesTabProps) => {
   const [open, setOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState(externalSearchTerm || '');
@@ -41,7 +42,7 @@ const CategoriesTab = ({ categories: externalCategories = [], isLoading: externa
       if (error) throw error;
       return data;
     },
-    enabled: externalCategories.length === 0 // Only fetch if external data is not provided
+    enabled: !externalCategories.length // Only fetch if external data is not provided
   });
 
   const finalCategories = externalCategories.length > 0 ? externalCategories : categories;
