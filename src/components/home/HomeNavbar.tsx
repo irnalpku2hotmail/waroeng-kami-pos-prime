@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,10 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, History, Search } from 'lucide-react';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, History } from 'lucide-react';
 import AuthModal from '@/components/AuthModal';
 
 interface HomeNavbarProps {
@@ -20,11 +18,9 @@ interface HomeNavbarProps {
     email?: string;
   } | null;
   onCartClick?: () => void;
-  searchTerm?: string;
-  onSearchChange?: (term: string) => void;
 }
 
-const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }: HomeNavbarProps) => {
+const HomeNavbar = ({ storeInfo, onCartClick }: HomeNavbarProps) => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
@@ -69,13 +65,15 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }:
       return value;
     }
     
+    // If it's an object with a name property, handle it safely
     if (typeof value === 'object' && value !== null && 'name' in value) {
-      const nameValue = (value as any).name;
-      if (typeof nameValue === 'string') {
-        return nameValue;
+      const objectName = (value as any).name;
+      if (typeof objectName === 'string') {
+        return objectName;
       }
     }
     
+    // Fallback
     return 'Waroeng Kami';
   };
 
@@ -84,12 +82,13 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }:
     setMobileMenuOpen(false);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
+  const navLinks = [
+    { label: 'Beranda', href: '#home' },
+    { label: 'Produk', href: '#products' },
+    { label: 'Kategori', href: '#categories' },
+    { label: 'Flash Sale', href: '#flash-sale' },
+    { label: 'Tentang', href: '#about' }
+  ];
 
   return (
     <>
@@ -126,23 +125,18 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }:
               </div>
             </div>
 
-            {/* Search Bar - Desktop */}
-            <div className="flex-1 max-w-lg mx-8 hidden md:block">
-              <form onSubmit={handleSearch} className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    type="text"
-                    placeholder="Cari produk..."
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange?.(e.target.value)}
-                    className="pl-10 rounded-full border-2 border-gray-200 focus:border-blue-500"
-                  />
-                </div>
-                <Button type="submit" className="rounded-full px-6">
-                  Cari
-                </Button>
-              </form>
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-8">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
+                >
+                  {link.label}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+              ))}
             </div>
 
             {/* Actions */}
@@ -187,10 +181,6 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }:
                         <User className="h-4 w-4 mr-2" />
                         {profile?.full_name || user.email?.split('@')[0]}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/profile')}>
-                        <User className="h-4 w-4 mr-2" />
-                        Profile
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate('/order-history')}>
                         <History className="h-4 w-4 mr-2" />
                         Riwayat Pesanan
@@ -225,31 +215,23 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }:
               </Button>
             </div>
           </div>
-
-          {/* Mobile Search */}
-          <div className="md:hidden pb-4">
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Cari produk..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange?.(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button type="submit" className="px-6">
-                Cari
-              </Button>
-            </form>
-          </div>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-t shadow-lg">
             <div className="px-4 py-4 space-y-4">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="block text-gray-700 hover:text-blue-600 font-medium py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </a>
+              ))}
+              
               <div className="border-t pt-4">
                 {user ? (
                   <div className="space-y-2">
@@ -267,18 +249,6 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }:
                         {profile?.full_name || user.email?.split('@')[0]}
                       </span>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigate('/profile');
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full justify-start"
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
-                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

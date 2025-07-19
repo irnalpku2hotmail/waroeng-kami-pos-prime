@@ -4,115 +4,218 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ShoppingCart, Star, RotateCcw } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCart } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+
+interface Product {
+  id: string;
+  name: string;
+  selling_price: number;
+  image_url: string | null;
+  current_stock: number;
+  last_bought?: string;
+}
 
 interface RecentlyBoughtProductsProps {
-  onProductClick: (product: any) => void;
+  onProductClick?: (product: Product) => void;
 }
 
 const RecentlyBoughtProducts = ({ onProductClick }: RecentlyBoughtProductsProps) => {
+  const { user } = useAuth();
   const { addItem } = useCart();
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['recently-bought-products'],
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['recently-bought-products', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+
       const { data, error } = await supabase
-        .from('products')
+        .from('transaction_items')
         .select(`
-          *,
-          categories (
-            name
+          product_id,
+          created_at,
+          products (
+            id,
+            name,
+            selling_price,
+            image_url,
+            current_stock,
+            is_active
+          ),
+          transactions!inner (
+            cashier_id
           )
         `)
-        .eq('is_active', true)
+        .eq('transactions.cashier_id', user.id)
+        .eq('products.is_active', true)
         .order('created_at', { ascending: false })
-        .limit(8);
+        .limit(20);
 
       if (error) throw error;
-      return data;
-    }
+
+      // Group by product and get unique products with last bought date
+      const uniqueProducts = data.reduce((acc: any[], item: any) => {
+        if (!item.products) return acc;
+        
+        const existingIndex = acc.findIndex(p => p.id === item.products.id);
+        if (existingIndex === -1) {
+          acc.push({
+            ...item.products,
+            last_bought: item.created_at
+          });
+        }
+        return acc;
+      }, []);
+
+      return uniqueProducts.slice(0, 10);
+    },
+    enabled: !!user
   });
 
-  const handleAddToCart = (e: React.MouseEvent, product: any) => {
+  const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      image: product.image_url,
-      quantity: 1
-    });
+    if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Silakan login untuk menambahkan produk ke keranjang',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    addItem(product);
     toast({
-      title: "Produk ditambahkan",
-      description: `${product.name} telah ditambahkan ke keranjang`,
+      title: 'Berhasil',
+      description: `${product.name} telah ditambahkan ke keranjang`
     });
   };
 
+  const handleProductClick = (product: Product) => {
+    if (onProductClick) {
+      onProductClick(product);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Silakan login untuk melihat produk yang pernah dibeli</p>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-gray-200 aspect-square rounded-lg mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded mb-1"></div>
-            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-          </div>
-        ))}
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Belum ada produk yang pernah dibeli</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {products?.map((product) => (
-        <Card 
-          key={product.id} 
-          className="cursor-pointer hover:shadow-md transition-shadow duration-200 group"
-          onClick={() => onProductClick(product)}
-        >
-          <CardContent className="p-3">
-            <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100">
-              <img
-                src={product.image_url || '/placeholder.svg'}
-                alt={product.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                {product.name}
-              </h3>
-              
-              {product.categories && (
-                <Badge variant="secondary" className="text-xs">
-                  {product.categories.name}
-                </Badge>
-              )}
-              
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-blue-600 text-sm">
-                  Rp {product.selling_price?.toLocaleString('id-ID') || '0'}
-                </span>
-                
-                <Button
-                  size="sm"
-                  onClick={(e) => handleAddToCart(e, product)}
-                  className="h-8 w-8 p-0"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="text-xs text-gray-500">
-                Stok: {product.current_stock || 0}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="relative">
+      <Carousel
+        opts={{
+          align: "start",
+          loop: true,
+        }}
+        className="w-full"
+      >
+        <CarouselContent>
+          {products.map((product) => (
+            <CarouselItem key={product.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+              <Card 
+                className="group hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border-0 bg-gradient-to-br from-white to-gray-50"
+                onClick={() => handleProductClick(product)}
+              >
+                <div className="relative">
+                  <div className="aspect-square bg-gradient-to-br from-green-50 to-teal-100 p-4 flex items-center justify-center">
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="text-6xl text-green-300">📦</div>
+                    )}
+                  </div>
+                  
+                  {/* Rebuy Badge */}
+                  <Badge className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-teal-500 text-white text-xs px-2 py-1 flex items-center gap-1">
+                    <RotateCcw className="h-3 w-3" />
+                    Beli Lagi
+                  </Badge>
+                  
+                  {/* Stock Status */}
+                  {product.current_stock <= 0 ? (
+                    <Badge variant="destructive" className="absolute top-2 right-2 text-xs">
+                      Habis
+                    </Badge>
+                  ) : product.current_stock <= 10 ? (
+                    <Badge variant="secondary" className="absolute top-2 right-2 text-xs bg-orange-100 text-orange-800">
+                      Sisa {product.current_stock}
+                    </Badge>
+                  ) : null}
+                </div>
+
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 h-10">
+                    {product.name}
+                  </h3>
+                  
+                  <div className="flex items-center gap-1 mb-2">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-500 ml-1">(4.5)</span>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-lg font-bold text-blue-600">
+                      Rp {product.selling_price.toLocaleString('id-ID')}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {product.last_bought && new Date(product.last_bought).toLocaleDateString('id-ID')}
+                    </span>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="w-full text-xs h-8 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700"
+                    onClick={(e) => handleAddToCart(product, e)}
+                    disabled={product.current_stock <= 0}
+                  >
+                    <ShoppingCart className="h-3 w-3 mr-1" />
+                    {product.current_stock <= 0 ? 'Stok Habis' : 'Beli Lagi'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
     </div>
   );
 };
