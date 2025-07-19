@@ -34,7 +34,6 @@ const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) =
         .order('name');
 
       if (error) throw error;
-      console.log('Categories data:', data);
       return data;
     }
   });
@@ -54,7 +53,6 @@ const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) =
   }, [categories]);
 
   const handleCategoryClick = (categoryId: string) => {
-    console.log('Category clicked:', categoryId);
     if (onCategorySelect) {
       onCategorySelect(categoryId);
     }
@@ -68,8 +66,6 @@ const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) =
     );
   }
 
-  console.log('Rendering categories:', categories);
-
   return (
     <div className="relative" ref={carouselRef}>
       <Carousel
@@ -80,36 +76,28 @@ const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) =
         className="w-full"
       >
         <CarouselContent>
-          {categories.map((category) => {
-            console.log('Rendering category:', category);
-            return (
-              <CarouselItem key={category.id} className="basis-1/4 md:basis-1/6 lg:basis-1/8">
-                <div 
-                  className="group cursor-pointer p-2"
-                  onClick={() => handleCategoryClick(category.id)}
-                >
-                  <div className="relative">
-                    <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-md">
-                      {category.icon_url ? (
-                        <img 
-                          src={category.icon_url} 
-                          alt={String(category.name)}
-                          className="w-10 h-10 object-cover rounded-full"
-                        />
-                      ) : (
-                        <Grid3X3 className="h-8 w-8 text-blue-600" />
-                      )}
-                    </div>
-                    <div className="text-center mt-2">
-                      <span className="text-xs font-medium text-gray-700">
-                        {String(category.name || 'Category')}
-                      </span>
-                    </div>
+          {categories.map((category) => (
+            <CarouselItem key={category.id} className="basis-1/4 md:basis-1/6 lg:basis-1/8">
+              <div 
+                className="group cursor-pointer p-2"
+                onClick={() => handleCategoryClick(category.id)}
+              >
+                <div className="relative">
+                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-md">
+                    {category.icon_url ? (
+                      <img 
+                        src={category.icon_url} 
+                        alt={category.name}
+                        className="w-10 h-10 object-cover rounded-full"
+                      />
+                    ) : (
+                      <Grid3X3 className="h-8 w-8 text-blue-600" />
+                    )}
                   </div>
                 </div>
-              </CarouselItem>
-            );
-          })}
+              </div>
+            </CarouselItem>
+          ))}
         </CarouselContent>
         <CarouselPrevious className="hidden md:flex" />
         <CarouselNext className="hidden md:flex" data-testid="carousel-next" />

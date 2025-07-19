@@ -28,7 +28,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, addToCar
   return (
     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[calc(100vh-220px)] overflow-y-auto">
       {products.map((product) => {
-        console.log('POS ProductGrid - Rendering product:', product);
         const productImageUrl = getImageUrl(product.image_url);
         return (
           <Card 
