@@ -2,7 +2,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Package } from 'lucide-react';
+import { Package, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -12,10 +12,15 @@ interface Product {
   name: string;
   selling_price: number;
   current_stock: number;
-  image_url: string;
+  image_url: string | null;
+  description: string | null;
   categories?: {
-    name: string;
     id: string;
+    name: string;
+  };
+  units?: {
+    name: string;
+    abbreviation: string;
   };
 }
 
@@ -38,14 +43,12 @@ const ProductGrid = ({ products }: ProductGridProps) => {
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    console.log('Adding product to cart:', product);
-    
     addToCart({
       id: product.id,
       name: product.name,
       price: product.selling_price,
-      image: product.image_url,
       quantity: 1,
+      image: product.image_url || undefined,
       stock: product.current_stock,
       product_id: product.id,
       unit_price: product.selling_price,
@@ -67,81 +70,75 @@ const ProductGrid = ({ products }: ProductGridProps) => {
     navigate(`/product/${productId}`);
   };
 
-  if (products.length === 0) {
+  if (!products || products.length === 0) {
     return (
       <div className="text-center py-8">
         <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">Tidak ada produk ditemukan</p>
+        <p className="text-gray-500">Tidak ada produk tersedia</p>
       </div>
     );
   }
 
-  console.log('Rendering products in grid:', products);
-
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-      {products.map((product) => {
-        console.log('Rendering product:', product);
-        console.log('Product categories:', product.categories);
-        
-        return (
-          <Card 
-            key={product.id} 
-            className="group hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => handleProductClick(product.id)}
-          >
-            <CardContent className="p-2">
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
-                {product.image_url ? (
-                  <img 
-                    src={product.image_url} 
-                    alt={String(product.name)}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="h-6 w-6 text-gray-400" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-1">
-                {product.categories && (
-                  <Badge variant="secondary" className="text-xs">
-                    {String(product.categories.name || 'Kategori')}
-                  </Badge>
-                )}
-                
-                <h3 className="font-medium text-xs line-clamp-2 h-8">
-                  {String(product.name)}
-                </h3>
-                
-                <p className="text-sm font-bold text-blue-600">
-                  {formatPrice(product.selling_price)}
-                </p>
-                
-                <div className="flex items-center justify-between">
-                  <Badge 
-                    variant={product.current_stock > 0 ? 'default' : 'destructive'}
-                    className="text-xs"
-                  >
-                    {product.current_stock > 0 ? `${product.current_stock}` : 'Habis'}
-                  </Badge>
-                  
-                  <Button
-                    size="sm"
-                    onClick={(e) => handleAddToCart(product, e)}
-                    disabled={product.current_stock === 0}
-                    className="h-6 w-6 p-0"
-                  >
-                    <ShoppingCart className="h-3 w-3" />
-                  </Button>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {products.map((product) => (
+        <Card 
+          key={product.id} 
+          className="group hover:shadow-lg transition-shadow cursor-pointer"
+          onClick={() => handleProductClick(product.id)}
+        >
+          <CardContent className="p-4">
+            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+              {product.image_url ? (
+                <img 
+                  src={product.image_url} 
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Package className="h-12 w-12 text-gray-400" />
                 </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              {product.categories && (
+                <Badge variant="secondary" className="text-xs">
+                  {product.categories.name}
+                </Badge>
+              )}
+              
+              <h3 className="font-semibold text-sm line-clamp-2">
+                {product.name}
+              </h3>
+              
+              <p className="text-lg font-bold text-blue-600">
+                {formatPrice(product.selling_price)}
+              </p>
+              
+              <div className="flex items-center justify-between">
+                <Badge 
+                  variant={product.current_stock > 0 ? 'default' : 'destructive'}
+                  className="text-xs"
+                >
+                  {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
+                </Badge>
+                
+                <Button
+                  size="sm"
+                  onClick={(e) => handleAddToCart(product, e)}
+                  disabled={product.current_stock === 0}
+                  className="flex items-center gap-1"
+                >
+                  <ShoppingCart className="h-3 w-3" />
+                  Beli
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };

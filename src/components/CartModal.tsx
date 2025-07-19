@@ -1,99 +1,124 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { ShoppingCart, Package, Minus, Plus, Trash2, Truck, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Minus, Plus, Trash2, Package, ShoppingCart } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 interface CartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+interface CODSettings {
+  enabled: boolean;
+  delivery_fee: number;
+  min_order: number;
+}
+
 const CartModal = ({ open, onOpenChange }: CartModalProps) => {
-  const { items, updateQuantity, removeFromCart, clearCart, getTotalPrice } = useCart();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [showOrderForm, setShowOrderForm] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [notes, setNotes] = useState('');
+  const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo, clearCart, updateQuantity, removeItem } = useCart();
+  const { user, profile } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get user profile data
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
+  // Fetch COD settings
+  const { data: codSettings } = useQuery({
+    queryKey: ['cod-settings'],
     queryFn: async () => {
-      if (!user?.id) return null;
-      
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+        .from('settings')
+        .select('value')
+        .eq('key', 'cod_settings')
         .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
-  // Auto-fill form when profile data is loaded
-  useState(() => {
-    if (profile) {
-      setCustomerName(profile.full_name || '');
-      setCustomerPhone(profile.phone || '');
-      setCustomerEmail(profile.email || '');
-      setCustomerAddress(profile.address_text || '');
+      
+      if (error) {
+        console.log('No COD settings found, using defaults');
+        return { enabled: true, delivery_fee: 10000, min_order: 50000 } as CODSettings;
+      }
+      
+      return data.value as unknown as CODSettings;
     }
   });
 
-  const generateOrderNumber = () => {
-    const timestamp = Date.now();
-    return `ORD-${timestamp}`;
-  };
+  // Auto-fill customer info from user profile
+  useEffect(() => {
+    if (user && profile) {
+      setCustomerInfo({
+        name: profile.full_name || '',
+        phone: profile.phone || '',
+        email: profile.email || user.email || '',
+        address: profile.address || ''
+      });
+    }
+  }, [user, profile, setCustomerInfo]);
 
-  const createOrder = useMutation({
-    mutationFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
+  const cartTotal = getTotalPrice();
+  const deliveryFee = codSettings?.delivery_fee || 10000;
+  const minOrder = codSettings?.min_order || 50000;
+  const isFreeShipping = cartTotal >= minOrder;
+  const finalTotal = cartTotal + (isFreeShipping ? 0 : deliveryFee);
 
-      const orderNumber = generateOrderNumber();
-      const orderData = {
-        order_number: orderNumber,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        customer_address: customerAddress,
-        notes,
-        total_amount: getTotalPrice() + 10000, // Including delivery fee
-        delivery_fee: 10000,
-        payment_method: 'cod',
-        status: 'pending'
-      };
+  const handleSubmitOrder = async () => {
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+      toast({
+        title: 'Error',
+        description: 'Mohon lengkapi semua data pengiriman',
+        variant: 'destructive',
+      });
+      return;
+    }
 
+    if (items.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Keranjang belanja kosong',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Generate order number
+      const timestamp = Date.now();
+      const orderNumber = `ORD${timestamp}`;
+
+      // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert(orderData)
+        .insert({
+          order_number: orderNumber,
+          customer_name: customerInfo.name,
+          customer_phone: customerInfo.phone,
+          customer_address: customerInfo.address,
+          total_amount: finalTotal,
+          delivery_fee: isFreeShipping ? 0 : deliveryFee,
+          payment_method: 'cod',
+          status: 'pending',
+          notes: 'Pesanan dari website'
+        })
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // Insert order items
+      // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
-        product_id: item.product_id,
+        product_id: item.id,
         quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price
+        unit_price: item.price,
+        total_price: item.price * item.quantity
       }));
 
       const { error: itemsError } = await supabase
@@ -102,160 +127,49 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
       if (itemsError) throw itemsError;
 
-      return order;
-    },
-    onSuccess: (order) => {
       toast({
-        title: 'Pesanan berhasil dibuat!',
-        description: `Pesanan #${order.order_number} akan segera diproses`,
+        title: 'Berhasil!',
+        description: 'Pesanan berhasil dibuat. Kami akan menghubungi Anda segera.',
       });
+
       clearCart();
-      setShowOrderForm(false);
       onOpenChange(false);
-      navigate('/order-history');
-    },
-    onError: (error) => {
+      
+    } catch (error) {
       console.error('Error creating order:', error);
       toast({
         title: 'Error',
         description: 'Gagal membuat pesanan. Silakan coba lagi.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
-  });
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
   };
 
-  const handleOrder = () => {
-    if (!user) {
-      toast({
-        title: 'Silakan login terlebih dahulu',
-        description: 'Anda harus login untuk melakukan pemesanan',
-        variant: 'destructive'
-      });
-      return;
-    }
-    setShowOrderForm(true);
-  };
-
-  const handleSubmitOrder = () => {
-    if (!customerName || !customerPhone || !customerAddress) {
-      toast({
-        title: 'Data tidak lengkap',
-        description: 'Silakan lengkapi semua data yang diperlukan',
-        variant: 'destructive'
-      });
-      return;
-    }
-    createOrder.mutate();
-  };
-
-  if (showOrderForm) {
+  if (items.length === 0) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md mx-4">
           <DialogHeader>
-            <DialogTitle>Informasi Pengiriman</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <ShoppingCart className="h-5 w-5" />
+              Keranjang Belanja
+            </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="customerName">Nama Lengkap *</Label>
-                <Input
-                  id="customerName"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Masukkan nama lengkap"
-                />
-              </div>
-              <div>
-                <Label htmlFor="customerPhone">Nomor Telepon *</Label>
-                <Input
-                  id="customerPhone"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="Masukkan nomor telepon"
-                />
-              </div>
+          <div className="text-center py-8">
+            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <ShoppingCart className="h-12 w-12 text-gray-400" />
             </div>
-
-            <div>
-              <Label htmlFor="customerEmail">Email</Label>
-              <Input
-                id="customerEmail"
-                type="email"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-                placeholder="Masukkan email"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="customerAddress">Alamat Pengiriman *</Label>
-              <Textarea
-                id="customerAddress"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                placeholder="Masukkan alamat lengkap"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Catatan Pesanan</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Catatan tambahan untuk pesanan"
-                rows={2}
-              />
-            </div>
-
-            {/* Order Summary */}
-            <Card>
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4">Ringkasan Pesanan</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{formatPrice(getTotalPrice())}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Biaya Pengiriman:</span>
-                    <span>{formatPrice(10000)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total:</span>
-                    <span>{formatPrice(getTotalPrice() + 10000)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowOrderForm(false)}
-                className="flex-1"
-              >
-                Kembali
-              </Button>
-              <Button
-                onClick={handleSubmitOrder}
-                disabled={createOrder.isPending}
-                className="flex-1"
-              >
-                {createOrder.isPending ? 'Memproses...' : 'Pesan Sekarang'}
-              </Button>
-            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Keranjang Kosong</h3>
+            <p className="text-gray-600 mb-6">Belum ada produk di keranjang Anda</p>
+            <Button 
+              onClick={() => onOpenChange(false)}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              Mulai Belanja
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -264,31 +178,29 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Keranjang Belanja ({items.length})
+      <DialogContent className="max-w-2xl max-h-[90vh] mx-4 overflow-hidden">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <ShoppingCart className="h-6 w-6 text-blue-600" />
+            Keranjang Belanja
+            <Badge className="bg-blue-100 text-blue-800">
+              {getTotalItems()} item
+            </Badge>
           </DialogTitle>
         </DialogHeader>
         
-        {items.length === 0 ? (
-          <div className="text-center py-8">
-            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">Keranjang belanja kosong</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Cart Items */}
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {items.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+        <div className="overflow-y-auto max-h-[60vh] space-y-6">
+          {/* Cart Items */}
+          <div className="space-y-3">
+            {items?.map((item) => (
+              <Card key={item.id} className="border-gray-200 hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
                         {item.image ? (
-                          <img 
-                            src={item.image} 
+                          <img
+                            src={item.image}
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />
@@ -298,86 +210,189 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                           </div>
                         )}
                       </div>
-                      
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">{item.name}</h3>
-                        <p className="text-blue-600 font-semibold">
-                          {formatPrice(item.unit_price)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Stok: {item.stock}
-                        </p>
-                      </div>
-                      
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
+                      <p className="text-sm text-gray-600">
+                        {new Intl.NumberFormat('id-ID', {
+                          style: 'currency',
+                          currency: 'IDR',
+                          minimumFractionDigits: 0,
+                        }).format(item.price)}
+                      </p>
+                      <p className="text-xs text-gray-500">Stok: {item.stock}</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2">
                         <Button
+                          size="sm"
                           variant="outline"
-                          size="icon"
                           onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                          disabled={item.quantity <= 1}
-                          className="h-8 w-8"
+                          className="h-8 w-8 p-0 rounded-full"
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
+                        <span className="w-8 text-center font-medium">{item.quantity}</span>
                         <Button
+                          size="sm"
                           variant="outline"
-                          size="icon"
                           onClick={() => updateQuantity(item.id, Math.min(item.stock, item.quantity + 1))}
+                          className="h-8 w-8 p-0 rounded-full"
                           disabled={item.quantity >= item.stock}
-                          className="h-8 w-8"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => removeFromCart(item.id)}
-                          className="h-8 w-8 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
                       </div>
+                      
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeItem(item.id)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    
-                    <div className="mt-2 text-right">
-                      <p className="font-semibold text-blue-600">
-                        {formatPrice(item.total_price)}
-                      </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* COD Information */}
+          {codSettings?.enabled && (
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-blue-900 mb-2">Informasi COD (Cash on Delivery)</h3>
+                    <div className="space-y-1 text-sm text-blue-800">
+                      <p>• Pembayaran dilakukan saat barang tiba</p>
+                      <p>• Ongkos kirim: Rp {deliveryFee.toLocaleString('id-ID')}</p>
+                      <p>• Gratis ongkir untuk pembelian minimal Rp {minOrder.toLocaleString('id-ID')}</p>
+                      {!isFreeShipping && (
+                        <p className="font-medium">
+                          Belanja Rp {(minOrder - cartTotal).toLocaleString('id-ID')} lagi untuk gratis ongkir!
+                        </p>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            
-            {/* Total */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total:</span>
-                  <span className="text-blue-600">{formatPrice(getTotalPrice())}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={clearCart}
-                className="flex-1"
-              >
-                Kosongkan Keranjang
-              </Button>
-              <Button
-                onClick={handleOrder}
-                className="flex-1"
-              >
-                Pesan Sekarang
-              </Button>
+          )}
+
+          {/* Customer Information */}
+          <Card className="bg-gray-50">
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-4 text-gray-900">Informasi Pengiriman</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                    Nama Lengkap *
+                  </Label>
+                  <Input
+                    id="name"
+                    value={customerInfo.name}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Masukkan nama lengkap"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                    Nomor Telepon *
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={customerInfo.phone}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Masukkan nomor telepon"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={customerInfo.email}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Masukkan email"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="address" className="text-sm font-medium text-gray-700">
+                    Alamat Lengkap *
+                  </Label>
+                  <Textarea
+                    id="address"
+                    value={customerInfo.address}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Masukkan alamat lengkap dengan detail"
+                    rows={3}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Order Summary & Action */}
+        <div className="border-t pt-4 space-y-4">
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Subtotal ({getTotalItems()} item)</span>
+              <span>Rp {cartTotal.toLocaleString('id-ID')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="flex items-center gap-1">
+                <Truck className="h-4 w-4" />
+                Ongkos Kirim
+              </span>
+              <span>
+                {isFreeShipping ? (
+                  <Badge variant="secondary" className="text-green-600">Gratis</Badge>
+                ) : (
+                  `Rp ${deliveryFee.toLocaleString('id-ID')}`
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between text-lg font-bold border-t pt-2">
+              <span>Total Pembayaran</span>
+              <span className="text-blue-600">Rp {finalTotal.toLocaleString('id-ID')}</span>
             </div>
           </div>
-        )}
+
+          <div className="bg-green-50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 text-green-800 text-sm">
+              <Truck className="h-4 w-4" />
+              <span className="font-medium">Cash on Delivery (COD)</span>
+            </div>
+            <p className="text-green-700 text-xs mt-1">
+              Bayar langsung saat barang tiba di tempat Anda
+            </p>
+          </div>
+
+          <Button 
+            onClick={handleSubmitOrder}
+            disabled={isSubmitting || !customerInfo.name || !customerInfo.phone || !customerInfo.address}
+            className="w-full bg-blue-600 hover:bg-blue-700 py-3 text-lg font-semibold"
+          >
+            {isSubmitting ? 'Memproses Pesanan...' : 'Pesan Sekarang (COD)'}
+          </Button>
+          
+          <p className="text-xs text-gray-500 text-center">
+            Dengan memesan, Anda menyetujui syarat dan ketentuan kami
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );

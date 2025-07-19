@@ -3,27 +3,24 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import BannerCarousel from '@/components/home/BannerCarousel';
 import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider';
 import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
-import ProductGrid from '@/components/home/ProductGrid';
-import HomeFooter from '@/components/home/HomeFooter';
 import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
 import BestSellingSlider from '@/components/home/BestSellingSlider';
+import ProductSearchSection from '@/components/home/ProductSearchSection';
+import CompactProductGrid from '@/components/home/CompactProductGrid';
 import CartModal from '@/components/CartModal';
-import ShippingInfoDisplay from '@/components/home/ShippingInfoDisplay';
-import BrandCarousel from '@/components/BrandCarousel';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
+import EnhancedFooter from '@/components/home/EnhancedFooter';
 
 const Home = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showAllProducts, setShowAllProducts] = useState(false);
 
   // Fetch flash sales
   const { data: flashSales } = useQuery({
@@ -47,53 +44,13 @@ const Home = () => {
     }
   });
 
-  // Fetch featured products with search and category filter
-  const { data: featuredProducts } = useQuery({
-    queryKey: ['featured-products', searchTerm, selectedCategory, showAllProducts],
-    queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          categories (name, id),
-          units (name, abbreviation)
-        `)
-        .eq('is_active', true);
-
-      // Apply search filter
-      if (searchTerm.trim()) {
-        query = query.or(`name.ilike.%${searchTerm}%,categories.name.ilike.%${searchTerm}%`);
-      }
-
-      // Apply category filter
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
-      }
-
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .limit(showAllProducts ? 50 : 10);
-
-      if (error) throw error;
-      return data;
-    }
-  });
-
   const handleCategorySelect = (categoryId: string, categoryName: string) => {
-    setSelectedCategory(categoryId);
-    setSearchTerm(categoryName);
+    // This will be handled by the search component
+    console.log('Category selected:', categoryId, categoryName);
   };
 
   const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory(null);
-    setShowAllProducts(false);
+    console.log('Searching for:', searchTerm);
   };
 
   return (
@@ -109,14 +66,11 @@ const Home = () => {
         {/* Banner Carousel */}
         <BannerCarousel />
         
-        {/* Shipping Info Display */}
-        <ShippingInfoDisplay />
+        {/* Enhanced Shipping Info Display */}
+        <EnhancedShippingInfo />
         
         {/* Enhanced Categories Slider */}
         <EnhancedCategoriesSlider onCategorySelect={handleCategorySelect} />
-        
-        {/* Brand Carousel */}
-        <BrandCarousel />
         
         {/* Enhanced Flash Sale Section */}
         {flashSales && flashSales.length > 0 && (
@@ -129,43 +83,15 @@ const Home = () => {
         {/* Best Selling Slider */}
         <BestSellingSlider />
         
-        {/* Featured Products */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {selectedCategory ? `Produk ${searchTerm}` : 'Produk Pilihan'}
-            </h2>
-            <div className="flex gap-2">
-              {selectedCategory && (
-                <button 
-                  onClick={clearFilters}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                >
-                  Hapus Filter
-                </button>
-              )}
-              {!showAllProducts && featuredProducts && featuredProducts.length >= 10 && (
-                <button
-                  onClick={() => setShowAllProducts(true)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                >
-                  Lihat Lebih Banyak
-                </button>
-              )}
-              <a 
-                href="/products" 
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Lihat Semua
-              </a>
-            </div>
-          </div>
-          <ProductGrid products={featuredProducts || []} />
-        </div>
+        {/* Product Search Section */}
+        <ProductSearchSection />
+        
+        {/* Compact Product Grid */}
+        <CompactProductGrid />
       </main>
 
-      {/* Footer */}
-      <HomeFooter />
+      {/* Enhanced Footer */}
+      <EnhancedFooter />
 
       {/* Cart Modal */}
       <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
