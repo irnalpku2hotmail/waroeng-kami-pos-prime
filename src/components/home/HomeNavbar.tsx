@@ -1,97 +1,87 @@
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ShoppingCart, 
-  User, 
-  LogOut, 
-  Search, 
-  History,
-  UserCircle
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-
-interface StoreInfo {
-  name: string;
-  address: string;
-  phone: string;
-  email: string;
-}
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, History, Search } from 'lucide-react';
+import AuthModal from '@/components/AuthModal';
 
 interface HomeNavbarProps {
-  storeInfo?: StoreInfo;
-  onCartClick: () => void;
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
+  storeInfo?: {
+    name?: string;
+    address?: string;
+    phone?: string;  
+    email?: string;
+  } | null;
+  onCartClick?: () => void;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
-const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange }: HomeNavbarProps) => {
-  const { user, signOut, profile } = useAuth();
-  const { getTotalItems } = useCart();
+const HomeNavbar = ({ storeInfo, onCartClick, searchTerm = '', onSearchChange }: HomeNavbarProps) => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { getTotalItems } = useCart();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Helper function to safely extract string values from potentially object values
-  const extractStringValue = (value: any, defaultValue: string): string => {
-    if (!value) return defaultValue;
-    
-    if (typeof value === 'object' && value !== null) {
-      // Check if it has common properties like name, email, address, phone
-      if ('name' in value && typeof value.name === 'string') {
-        return value.name;
-      }
-      if ('email' in value && typeof value.email === 'string') {
-        return value.email;
-      }
-      if ('address' in value && typeof value.address === 'string') {
-        return value.address;
-      }
-      if ('phone' in value && typeof value.phone === 'string') {
-        return value.phone;
-      }
-      // If it's an object but doesn't have expected properties, return default
-      return defaultValue;
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
     }
+  });
+
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  const extractNameValue = (value: any): string => {
+    if (!value) return 'Waroeng Kami';
     
     if (typeof value === 'string') {
       return value;
     }
     
-    // Convert any other type to string safely
-    return String(value) || defaultValue;
+    if (typeof value === 'object' && value !== null && 'name' in value) {
+      const nameValue = (value as any).name;
+      if (typeof nameValue === 'string') {
+        return nameValue;
+      }
+    }
+    
+    return 'Waroeng Kami';
   };
-
-  const defaultStoreInfo = {
-    name: 'Waroeng Kami',
-    address: 'Jl. Contoh No. 123, Jakarta',
-    phone: '+62 812-3456-7890',
-    email: 'info@waroengkami.com'
-  };
-
-  const store = storeInfo ? {
-    name: extractStringValue(storeInfo.name, defaultStoreInfo.name),
-    address: extractStringValue(storeInfo.address, defaultStoreInfo.address),
-    phone: extractStringValue(storeInfo.phone, defaultStoreInfo.phone),
-    email: extractStringValue(storeInfo.email, defaultStoreInfo.email)
-  } : defaultStoreInfo;
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
+    await signOut();
+    setMobileMenuOpen(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -102,98 +92,238 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange }: Home
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between py-2 border-b">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-bold text-gray-900">
-              {store.name}
-            </h1>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                    {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt="Avatar" 
-                        className="w-6 h-6 rounded-full"
-                      />
-                    ) : (
-                      <UserCircle className="h-5 w-5" />
-                    )}
-                    <span className="hidden md:inline">{profile?.full_name || 'User'}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <User className="h-4 w-4 mr-2" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/order-history')}>
-                    <History className="h-4 w-4 mr-2" />
-                    Riwayat Pesanan
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate('/login')}
-                >
-                  Login
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={() => navigate('/register')}
-                >
-                  Register
-                </Button>
-              </div>
-            )}
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="relative"
-              onClick={onCartClick}
-            >
-              <ShoppingCart className="h-4 w-4" />
-              {getTotalItems() > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs">
-                  {getTotalItems()}
-                </Badge>
+    <>
+      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
+        {/* Top bar with contact info */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+          <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+            <div className="flex items-center space-x-4">
+              {storeInfo?.phone && (
+                <span>📞 {storeInfo.phone}</span>
               )}
-            </Button>
+              {storeInfo?.email && (
+                <span className="hidden md:inline">✉️ {storeInfo.email}</span>
+              )}
+            </div>
+            <div className="flex items-center space-x-4">
+              <span>Selamat Datang di {extractNameValue(storeInfo?.name)}!</span>
+            </div>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="py-3">
-          <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="search"
-              placeholder="Cari produk..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full"
-            />
-          </form>
+        {/* Main navbar */}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo & Store Name */}
+            <div className="flex items-center space-x-3">
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {extractNameValue(storeInfo?.name)}
+                </h1>
+                <p className="text-xs text-gray-500 hidden md:block">
+                  Toko Online Terpercaya
+                </p>
+              </div>
+            </div>
+
+            {/* Search Bar - Desktop */}
+            <div className="flex-1 max-w-lg mx-8 hidden md:block">
+              <form onSubmit={handleSearch} className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    type="text"
+                    placeholder="Cari produk..."
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange?.(e.target.value)}
+                    className="pl-10 rounded-full border-2 border-gray-200 focus:border-blue-500"
+                  />
+                </div>
+                <Button type="submit" className="rounded-full px-6">
+                  Cari
+                </Button>
+              </form>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-4">
+              {/* Cart */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative hover:bg-blue-50"
+                onClick={onCartClick}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {getTotalItems() > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                    {getTotalItems()}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* User Menu - Desktop */}
+              <div className="hidden md:block">
+                {user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50">
+                        {profile?.avatar_url ? (
+                          <img 
+                            src={profile.avatar_url} 
+                            alt="Profile" 
+                            className="h-6 w-6 rounded-full object-cover"
+                          />
+                        ) : (
+                          <UserCircle className="h-6 w-6" />
+                        )}
+                        <span className="hidden lg:inline">
+                          {profile?.full_name || user.email?.split('@')[0]}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem disabled>
+                        <User className="h-4 w-4 mr-2" />
+                        {profile?.full_name || user.email?.split('@')[0]}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <User className="h-4 w-4 mr-2" />
+                        Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/order-history')}>
+                        <History className="h-4 w-4 mr-2" />
+                        Riwayat Pesanan
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleSignOut}>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setAuthModalOpen(true)}
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Masuk
+                  </Button>
+                )}
+              </div>
+
+              {/* Mobile menu button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="md:hidden"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Search */}
+          <div className="md:hidden pb-4">
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Cari produk..."
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange?.(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button type="submit" className="px-6">
+                Cari
+              </Button>
+            </form>
+          </div>
         </div>
-      </div>
-    </nav>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-t shadow-lg">
+            <div className="px-4 py-4 space-y-4">
+              <div className="border-t pt-4">
+                {user ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 py-2">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Profile" 
+                          className="h-6 w-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle className="h-6 w-6" />
+                      )}
+                      <span className="text-gray-700">
+                        {profile?.full_name || user.email?.split('@')[0]}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigate('/profile');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigate('/order-history');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start"
+                    >
+                      <History className="h-4 w-4 mr-2" />
+                      Riwayat Pesanan
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Masuk
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Modals */}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+    </>
   );
 };
 

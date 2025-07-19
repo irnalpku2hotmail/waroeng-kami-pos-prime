@@ -24,7 +24,6 @@ const ProductDetail = () => {
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -173,23 +172,10 @@ const ProductDetail = () => {
     navigate('/cart');
   };
 
-  const handleCartClick = () => {
-    navigate('/cart');
-  };
-
-  const handleSearchChange = (term: string) => {
-    setSearchTerm(term);
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white">
-        <HomeNavbar 
-          storeInfo={storeInfo}
-          onCartClick={handleCartClick}
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-        />
+        <HomeNavbar />
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-gray-200 rounded w-1/4"></div>
@@ -205,12 +191,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <div className="min-h-screen bg-white">
-        <HomeNavbar 
-          storeInfo={storeInfo}
-          onCartClick={handleCartClick}
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-        />
+        <HomeNavbar />
         <div className="container mx-auto px-4 py-8 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h1>
           <Button onClick={() => navigate('/')}>
@@ -225,12 +206,7 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <HomeNavbar 
-        storeInfo={storeInfo}
-        onCartClick={handleCartClick}
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-      />
+      <HomeNavbar />
       
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
