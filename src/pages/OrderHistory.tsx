@@ -1,289 +1,264 @@
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Clock, CheckCircle, XCircle, Truck, Calendar, MapPin, Phone, Mail } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Package, Search, Calendar, MapPin, Phone, User, ShoppingBag } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { useState } from 'react';
-import HomeNavbar from '@/components/home/HomeNavbar';
-import EnhancedFooter from '@/components/home/EnhancedFooter';
-import CartModal from '@/components/CartModal';
-import { useNavigate } from 'react-router-dom';
 
 const OrderHistory = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  // Fetch user's orders
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['user-orders', user?.id],
+    queryKey: ['user-orders', user?.id, searchTerm, statusFilter],
     queryFn: async () => {
-      if (!user?.email) return [];
+      if (!user) return [];
 
-      // First get customer by email
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-
-      if (!customer) return [];
-
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           *,
           order_items (
             *,
-            products (name, image_url)
+            products (
+              name,
+              image_url
+            )
           )
         `)
-        .eq('customer_id', customer.id)
         .order('created_at', { ascending: false });
 
+      if (searchTerm) {
+        query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+      }
+
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.email
+    enabled: !!user
   });
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-yellow-100 text-yellow-800';
       case 'processing':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-blue-100 text-blue-800';
       case 'shipped':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+        return 'bg-purple-100 text-purple-800';
       case 'delivered':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusText = (status: string) => {
+    switch (status) {
       case 'pending':
-        return <Clock className="h-4 w-4" />;
-      case 'confirmed':
+        return 'Menunggu';
       case 'processing':
-        return <Package className="h-4 w-4" />;
+        return 'Diproses';
       case 'shipped':
-        return <Truck className="h-4 w-4" />;
+        return 'Dikirim';
       case 'delivered':
-        return <CheckCircle className="h-4 w-4" />;
+        return 'Selesai';
       case 'cancelled':
-        return <XCircle className="h-4 w-4" />;
+        return 'Dibatalkan';
       default:
-        return <Package className="h-4 w-4" />;
+        return status;
     }
   };
 
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 mb-4">Silakan login untuk melihat riwayat pesanan</p>
+          <Button onClick={() => navigate('/login')}>
+            Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <HomeNavbar 
-        onCartClick={() => setCartModalOpen(true)}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onSearch={handleSearch}
-      />
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Kembali ke Beranda
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900">Riwayat Pesanan</h1>
+          </div>
+        </div>
+      </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20 text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-              Riwayat Pesanan
-            </h1>
-            <p className="text-gray-600">Pantau status pesanan Anda di sini</p>
+      {/* Filters */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Cari nomor pesanan atau nama..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="pending">Menunggu</SelectItem>
+                <SelectItem value="processing">Diproses</SelectItem>
+                <SelectItem value="shipped">Dikirim</SelectItem>
+                <SelectItem value="delivered">Selesai</SelectItem>
+                <SelectItem value="cancelled">Dibatalkan</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="space-y-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* No Orders */}
-        {!isLoading && orders.length === 0 && (
-          <div className="text-center py-16">
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-12 shadow-xl border border-white/20 max-w-md mx-auto">
-              <Package className="h-20 w-20 text-gray-400 mx-auto mb-6" />
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                Belum Ada Pesanan
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Anda belum memiliki riwayat pesanan. Mulai berbelanja sekarang!
-              </p>
-              <Button 
-                onClick={() => navigate('/')}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-medium shadow-lg"
-              >
-                Mulai Berbelanja
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Orders List */}
-        {!isLoading && orders.length > 0 && (
-          <div className="space-y-6">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum ada pesanan</h3>
+            <p className="text-gray-600 mb-4">Anda belum memiliki riwayat pesanan</p>
+            <Button onClick={() => navigate('/')}>
+              Mulai Belanja
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
             {orders.map((order) => (
-              <Card key={order.id} className="bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-4">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <Card key={order.id} className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-xl font-bold text-gray-800 mb-2">
-                        Pesanan #{order.order_number}
-                      </CardTitle>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <CardTitle className="text-lg">{order.order_number}</CardTitle>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {format(new Date(order.order_date), 'dd MMMM yyyy', { locale: id })}
+                          {format(new Date(order.created_at), 'dd MMMM yyyy HH:mm', { locale: id })}
                         </div>
                         <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {order.customer_address?.substring(0, 30)}...
+                          <User className="h-4 w-4" />
+                          {order.customer_name}
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className={`px-4 py-2 text-sm font-medium border ${getStatusColor(order.status)}`}>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(order.status)}
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </div>
-                      </Badge>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {formatPrice(order.total_amount)}
-                      </p>
-                    </div>
+                    <Badge className={getStatusColor(order.status)}>
+                      {getStatusText(order.status)}
+                    </Badge>
                   </div>
                 </CardHeader>
-
-                <CardContent className="p-6">
-                  {/* Order Items */}
-                  <div className="space-y-4 mb-6">
-                    <h4 className="font-semibold text-gray-800 mb-3">Item Pesanan:</h4>
-                    {order.order_items?.map((item) => (
-                      <div key={item.id} className="flex items-center gap-4 p-4 bg-gray-50/50 rounded-xl">
-                        <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg overflow-hidden flex-shrink-0">
-                          {item.products?.image_url ? (
-                            <img 
-                              src={item.products.image_url} 
-                              alt={item.products.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Informasi Pengiriman</h4>
+                      <div className="space-y-1 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          {order.customer_address}
                         </div>
-                        
-                        <div className="flex-1">
-                          <h5 className="font-medium text-gray-800 mb-1">
-                            {item.products?.name || 'Produk'}
-                          </h5>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span>Qty: {item.quantity}</span>
-                            <span>@{formatPrice(item.unit_price)}</span>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          {order.customer_phone}
                         </div>
-                        
-                        <div className="text-right">
-                          <p className="font-bold text-gray-800">
-                            {formatPrice(item.total_price)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Order Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-gray-200">
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-800 mb-3">Informasi Pengiriman:</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-gray-700">{order.customer_name}</p>
-                            <p className="text-gray-600">{order.customer_address}</p>
-                          </div>
-                        </div>
-                        {order.customer_phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4 text-gray-500" />
-                            <span className="text-gray-600">{order.customer_phone}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
-
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-800 mb-3">Detail Pembayaran:</h4>
-                      <div className="space-y-2 text-sm">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Ringkasan Pesanan</h4>
+                      <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Subtotal:</span>
-                          <span className="text-gray-800">{formatPrice(order.total_amount - order.delivery_fee)}</span>
+                          <span>Subtotal:</span>
+                          <span>Rp {(order.total_amount - order.delivery_fee).toLocaleString('id-ID')}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Ongkir:</span>
-                          <span className="text-gray-800">{formatPrice(order.delivery_fee)}</span>
+                          <span>Ongkir:</span>
+                          <span>Rp {order.delivery_fee.toLocaleString('id-ID')}</span>
                         </div>
-                        <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200">
+                        <div className="flex justify-between font-semibold">
                           <span>Total:</span>
-                          <span className="text-blue-600">{formatPrice(order.total_amount)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 pt-2">
-                          <Badge variant="outline" className="capitalize">
-                            {order.payment_method}
-                          </Badge>
+                          <span>Rp {order.total_amount.toLocaleString('id-ID')}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Order Notes */}
+                  {/* Order Items */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Produk yang Dipesan</h4>
+                    <div className="space-y-2">
+                      {order.order_items.map((item) => (
+                        <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="w-12 h-12 bg-white rounded-md flex items-center justify-center">
+                            {item.products?.image_url ? (
+                              <img 
+                                src={item.products.image_url} 
+                                alt={item.products.name}
+                                className="w-full h-full object-cover rounded-md"
+                              />
+                            ) : (
+                              <Package className="h-6 w-6 text-gray-400" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h5 className="font-medium text-gray-900">{item.products?.name}</h5>
+                            <p className="text-sm text-gray-600">
+                              {item.quantity} x Rp {item.unit_price.toLocaleString('id-ID')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">
+                              Rp {item.total_price.toLocaleString('id-ID')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {order.notes && (
-                    <div className="mt-6 p-4 bg-blue-50/50 rounded-xl">
-                      <h4 className="font-semibold text-gray-800 mb-2">Catatan Pesanan:</h4>
-                      <p className="text-gray-600 text-sm">{order.notes}</p>
+                    <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-1">Catatan:</h4>
+                      <p className="text-sm text-gray-700">{order.notes}</p>
                     </div>
                   )}
                 </CardContent>
@@ -292,9 +267,6 @@ const OrderHistory = () => {
           </div>
         )}
       </div>
-
-      <EnhancedFooter />
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </div>
   );
 };

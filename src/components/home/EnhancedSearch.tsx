@@ -98,10 +98,6 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
         const transcript = event.results[0][0].transcript;
         onSearchChange(transcript);
         setIsListening(false);
-        // Auto search after voice input
-        setTimeout(() => {
-          handleSearch(transcript);
-        }, 500);
       };
 
       recognitionRef.current.onerror = () => {
@@ -129,17 +125,12 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     }
   };
 
-  const handleSearch = (term?: string) => {
-    const searchQuery = term || searchTerm;
-    setShowSuggestions(false);
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSearch();
+    setShowSuggestions(false);
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
@@ -162,7 +153,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
 
   return (
     <div className="flex-1 max-w-2xl mx-8 hidden md:block" ref={searchRef}>
-      <form onSubmit={handleFormSubmit} className="relative">
+      <form onSubmit={handleSearch} className="relative">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
