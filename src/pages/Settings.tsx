@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +13,6 @@ import Layout from '@/components/Layout';
 import CODSettings from '@/components/CODSettings';
 import FrontendSettings from '@/components/FrontendSettings';
 import SEOSettings from '@/components/SEOSettings';
-import RoleManagement from '@/components/settings/RoleManagement';
 
 const Settings = () => {
   const queryClient = useQueryClient();
@@ -104,13 +102,12 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue="store-info" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
-            <TabsTrigger value="store-info">Info Toko</TabsTrigger>
-            <TabsTrigger value="receipt">Struk</TabsTrigger>
-            <TabsTrigger value="cod">COD</TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="store-info">Informasi Toko</TabsTrigger>
+            <TabsTrigger value="receipt">Pengaturan Struk</TabsTrigger>
+            <TabsTrigger value="cod">COD Settings</TabsTrigger>
             <TabsTrigger value="frontend">Frontend</TabsTrigger>
-            <TabsTrigger value="seo">SEO</TabsTrigger>
-            <TabsTrigger value="roles">Role</TabsTrigger>
+            <TabsTrigger value="seo">SEO Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="store-info">
@@ -249,10 +246,6 @@ const Settings = () => {
 
           <TabsContent value="seo">
             <SEOSettings />
-          </TabsContent>
-
-          <TabsContent value="roles">
-            <RoleManagement />
           </TabsContent>
         </Tabs>
       </div>

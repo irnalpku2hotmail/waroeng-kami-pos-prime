@@ -97,23 +97,6 @@ const Home = () => {
     },
   });
 
-  // Fetch frontend settings for banner
-  const { data: frontendSettings } = useQuery({
-    queryKey: ['frontend-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('key', 'frontend_settings')
-        .single();
-      if (error) {
-        console.log('No frontend settings found');
-        return null;
-      }
-      return data.value;
-    }
-  });
-
   const handleProductClick = (product: any) => {
     navigate(`/product/${product.id}`);
   };
@@ -130,12 +113,6 @@ const Home = () => {
     navigate(`/search?category=${categoryId}`);
   };
 
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white">
       <HomeNavbar 
@@ -143,21 +120,19 @@ const Home = () => {
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onSearch={handleSearch}
       />
       
       <main className="bg-white">
-        {/* Hero Section with Banner from Frontend Settings */}
+        {/* Hero Section with Banner/Slider */}
         <FrontendHero 
           storeName={storeInfo?.name || 'Waroeng Kami'}
           storeDescription="Temukan produk berkualitas dengan harga terbaik"
-          frontendSettings={frontendSettings}
         />
 
         <div className="container mx-auto px-4 py-8 space-y-8">
           {/* Categories Section */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
               Kategori Produk
             </h2>
             <HomeCategoriesSlider onCategorySelect={handleCategorySelect} />
@@ -165,7 +140,7 @@ const Home = () => {
 
           {/* Flash Sale Section */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
               ⚡ Flash Sale
             </h2>
             <FlashSaleCarousel onProductClick={handleProductClick} />
@@ -173,7 +148,7 @@ const Home = () => {
 
           {/* Best Selling Products */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
               🏆 Produk Terlaris
             </h2>
             <BestSellingProducts onProductClick={handleProductClick} />
@@ -181,7 +156,7 @@ const Home = () => {
 
           {/* Recently Bought Products */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
               🔄 Beli Lagi
             </h2>
             <RecentlyBoughtProducts onProductClick={handleProductClick} />
@@ -189,7 +164,7 @@ const Home = () => {
 
           {/* All Products Section */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
               Semua Produk
             </h2>
             <ProductCarousel onProductClick={handleProductClick} />

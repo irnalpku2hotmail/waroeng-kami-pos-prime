@@ -12,8 +12,7 @@ import {
   LogOut, 
   Search, 
   History,
-  UserCircle,
-  Store
+  UserCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,10 +34,9 @@ interface HomeNavbarProps {
   onCartClick: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  onSearch?: () => void;
 }
 
-const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSearch }: HomeNavbarProps) => {
+const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange }: HomeNavbarProps) => {
   const { user, signOut, profile } = useAuth();
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
@@ -48,6 +46,7 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
     if (!value) return defaultValue;
     
     if (typeof value === 'object' && value !== null) {
+      // Check if it has common properties like name, email, address, phone
       if ('name' in value && typeof value.name === 'string') {
         return value.name;
       }
@@ -60,6 +59,7 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
       if ('phone' in value && typeof value.phone === 'string') {
         return value.phone;
       }
+      // If it's an object but doesn't have expected properties, return default
       return defaultValue;
     }
     
@@ -67,6 +67,7 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
       return value;
     }
     
+    // Convert any other type to string safely
     return String(value) || defaultValue;
   };
 
@@ -95,68 +96,40 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (onSearch) {
-      onSearch();
-    } else if (searchTerm.trim()) {
+    if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg border-b sticky top-0 z-50">
+    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
-        {/* Main Navigation Bar */}
-        <div className="flex items-center justify-between py-3">
-          {/* Logo and Store Name */}
-          <Link to="/" className="flex items-center space-x-3 group">
-            <div className="bg-white p-2 rounded-full shadow-md group-hover:shadow-lg transition-shadow">
-              <Store className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="text-white">
-              <h1 className="text-xl font-bold leading-tight">
-                {store.name}
-              </h1>
-              <p className="text-blue-100 text-xs hidden md:block">
-                Toko online terpercaya
-              </p>
-            </div>
-          </Link>
-
-          {/* Search Bar - Hidden on mobile, shown on desktop */}
-          <div className="hidden md:block flex-1 max-w-2xl mx-8">
-            <form onSubmit={handleSearch} className="relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="search"
-                  placeholder="Cari produk favorit Anda..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
-                />
-              </div>
-            </form>
+        {/* Top Bar */}
+        <div className="flex items-center justify-between py-2 border-b">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-lg font-bold text-gray-900">
+              {store.name}
+            </h1>
           </div>
           
-          {/* User Actions */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-white hover:bg-white/10">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
                     {profile?.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
                         alt="Avatar" 
-                        className="w-6 h-6 rounded-full border-2 border-white/20"
+                        className="w-6 h-6 rounded-full"
                       />
                     ) : (
                       <UserCircle className="h-5 w-5" />
                     )}
-                    <span className="hidden md:inline font-medium">{profile?.full_name || 'User'}</span>
+                    <span className="hidden md:inline">{profile?.full_name || 'User'}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <User className="h-4 w-4 mr-2" />
                     Profile
@@ -178,30 +151,27 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
                   variant="ghost" 
                   size="sm" 
                   onClick={() => navigate('/login')}
-                  className="text-white hover:bg-white/10"
                 >
                   Login
                 </Button>
                 <Button 
                   size="sm" 
                   onClick={() => navigate('/register')}
-                  className="bg-white text-blue-600 hover:bg-blue-50"
                 >
                   Register
                 </Button>
               </div>
             )}
             
-            {/* Cart Button */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="relative text-white hover:bg-white/10"
+              className="relative"
               onClick={onCartClick}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4 w-4" />
               {getTotalItems() > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs">
                   {getTotalItems()}
                 </Badge>
               )}
@@ -209,19 +179,17 @@ const HomeNavbar = ({ storeInfo, onCartClick, searchTerm, onSearchChange, onSear
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
-        <div className="md:hidden pb-3">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="search"
-                placeholder="Cari produk..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full bg-white/90 backdrop-blur-sm border-white/20 focus:bg-white focus:border-blue-300"
-              />
-            </div>
+        {/* Search Bar */}
+        <div className="py-3">
+          <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="search"
+              placeholder="Cari produk..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full"
+            />
           </form>
         </div>
       </div>

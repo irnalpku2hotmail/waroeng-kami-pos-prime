@@ -5,9 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCart, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useState, useRef } from 'react';
 
 interface ProductCarouselProps {
   onProductClick: (product: any) => void;
@@ -15,9 +14,6 @@ interface ProductCarouselProps {
 
 const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
   const { addItem } = useCart();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showLeftButton, setShowLeftButton] = useState(false);
-  const [showRightButton, setShowRightButton] = useState(true);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['products'],
@@ -53,33 +49,13 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
     });
   };
 
-  const scrollLeft = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-    }
-  };
-
-  const handleScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setShowLeftButton(scrollLeft > 0);
-      setShowRightButton(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="flex-none w-36 md:w-44 animate-pulse">
+          <div key={i} className="animate-pulse">
             <div className="bg-gray-200 aspect-square rounded-lg mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded mb-1"></div>
+            <div className="h-4 bg-gray-200 rounded mb-1"></div>
             <div className="h-3 bg-gray-200 rounded w-2/3"></div>
           </div>
         ))}
@@ -88,100 +64,54 @@ const ProductCarousel = ({ onProductClick }: ProductCarouselProps) => {
   }
 
   return (
-    <div className="relative">
-      {/* Navigation Buttons */}
-      {showLeftButton && (
-        <button
-          onClick={scrollLeft}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+      {products?.map((product) => (
+        <Card 
+          key={product.id} 
+          className="cursor-pointer hover:shadow-md transition-shadow duration-200 group"
+          onClick={() => onProductClick(product)}
         >
-          <ChevronLeft className="h-5 w-5 text-gray-600" />
-        </button>
-      )}
-      
-      {showRightButton && (
-        <button
-          onClick={scrollRight}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
-        >
-          <ChevronRight className="h-5 w-5 text-gray-600" />
-        </button>
-      )}
-
-      {/* Products Container */}
-      <div 
-        ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
-        onScroll={handleScroll}
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {products?.map((product) => (
-          <Card 
-            key={product.id} 
-            className="flex-none w-36 md:w-44 cursor-pointer hover:shadow-md transition-shadow duration-200 group"
-            onClick={() => onProductClick(product)}
-          >
-            <CardContent className="p-2 md:p-3">
-              <div className="aspect-square mb-2 md:mb-3 overflow-hidden rounded-lg bg-gray-100 relative">
-                <img
-                  src={product.image_url || '/placeholder.svg'}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-                {product.current_stock <= 0 && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <Badge variant="destructive" className="text-xs">
-                      Habis
-                    </Badge>
-                  </div>
-                )}
-                {product.current_stock <= product.min_stock && product.current_stock > 0 && (
-                  <Badge className="absolute top-1 left-1 bg-orange-500 text-xs">
-                    Terbatas
-                  </Badge>
-                )}
+          <CardContent className="p-3">
+            <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100">
+              <img
+                src={product.image_url || '/placeholder.svg'}
+                alt={product.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+                {product.name}
+              </h3>
+              
+              {product.categories && (
+                <Badge variant="secondary" className="text-xs">
+                  {product.categories.name}
+                </Badge>
+              )}
+              
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-blue-600 text-sm">
+                  Rp {product.selling_price?.toLocaleString('id-ID') || '0'}
+                </span>
+                
+                <Button
+                  size="sm"
+                  onClick={(e) => handleAddToCart(e, product)}
+                  className="h-8 w-8 p-0"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                </Button>
               </div>
               
-              <div className="space-y-1 md:space-y-2">
-                <h3 className="font-medium text-xs md:text-sm line-clamp-2 leading-tight h-8 md:h-10">
-                  {product.name}
-                </h3>
-                
-                {product.categories && (
-                  <Badge variant="secondary" className="text-xs">
-                    {product.categories.name}
-                  </Badge>
-                )}
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-blue-600 text-xs md:text-sm">
-                      Rp {product.selling_price?.toLocaleString('id-ID') || '0'}
-                    </span>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Star className="h-3 w-3 text-yellow-500" />
-                      <span>4.5</span>
-                    </div>
-                  </div>
-                  
-                  <Button
-                    size="sm"
-                    onClick={(e) => handleAddToCart(e, product)}
-                    className="h-7 w-7 p-0"
-                    disabled={product.current_stock <= 0}
-                  >
-                    <ShoppingCart className="h-3 w-3" />
-                  </Button>
-                </div>
-                
-                <div className="text-xs text-gray-500">
-                  Stok: {product.current_stock || 0}
-                </div>
+              <div className="text-xs text-gray-500">
+                Stok: {product.current_stock || 0}
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };
