@@ -100,7 +100,7 @@ const ProductGrid = ({ products }: ProductGridProps) => {
             <div className="space-y-1">
               {product.categories && (
                 <Badge variant="secondary" className="text-xs">
-                  {product.categories.name}
+                  {typeof product.categories === 'string' ? product.categories : product.categories?.name || 'Kategori'}
                 </Badge>
               )}
               

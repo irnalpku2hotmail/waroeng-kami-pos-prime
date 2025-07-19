@@ -154,7 +154,7 @@ const BestSellingProducts = ({ onProductClick }: BestSellingProductsProps) => {
                 
                 {product.categories && (
                   <Badge variant="secondary" className="text-xs">
-                    {product.categories.name}
+                    {typeof product.categories === 'string' ? product.categories : product.categories?.name || 'Kategori'}
                   </Badge>
                 )}
                 
