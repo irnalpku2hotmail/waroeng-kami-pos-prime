@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,291 +7,198 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ShoppingCart, 
-  User, 
-  LogOut, 
-  UserCircle,
-  Store,
-  History,
-  Home,
-  Menu,
-  X,
-  Search
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { ShoppingCart, Search, User, Menu, X } from 'lucide-react';
+import VoiceSearch from '@/components/VoiceSearch';
 
 interface HomeNavbarProps {
   onCartClick: () => void;
   searchTerm: string;
-  onSearchChange: (term: string) => void;
-  onSearch?: () => void;
+  onSearchChange: (value: string) => void;
+  onSearch: () => void;
 }
 
 const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeNavbarProps) => {
-  const { user, signOut, profile } = useAuth();
-  const { getTotalItems } = useCart();
+  const { user } = useAuth();
+  const { items } = useCart();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Fetch store settings
+  // Fetch store name from settings
   const { data: settings } = useQuery({
-    queryKey: ['store-settings'],
+    queryKey: ['settings'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('settings').select('*');
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*');
+
       if (error) throw error;
       
-      const settingsMap: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsMap[setting.key] = setting.value;
-      });
+      const settingsMap = data.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
+      
       return settingsMap;
     }
   });
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
+  const storeName = settings?.store_name || 'Toko Online';
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = () => {
     if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
-  // Get store info from settings
-  const storeInfo = settings?.store_info || {};
-  const storeName = settings?.store_name?.name || 'Waroeng Kami';
-  const storeTagline = settings?.store_tagline?.tagline || 'Toko online terpercaya';
-  const logoUrl = settings?.store_logo?.url || null;
+  const handleVoiceSearch = (transcript: string) => {
+    onSearchChange(transcript);
+    if (transcript.trim()) {
+      navigate(`/search?q=${encodeURIComponent(transcript.trim())}`);
+    }
+  };
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 shadow-xl border-b sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        {/* Main Navigation Bar */}
-        <div className="flex items-center justify-between py-4">
-          {/* Logo and Store Name with Enhanced Design */}
-          <Link to="/" className="flex items-center space-x-4 group">
-            <div className="relative">
-              <div className="bg-white p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
-                    alt={storeName} 
-                    className="h-8 w-8 object-cover rounded-lg"
-                  />
-                ) : (
-                  <Store className="h-8 w-8 text-blue-600" />
-                )}
+    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo and Store Name */}
+          <div className="flex items-center space-x-4">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">T</span>
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-            </div>
-            <div className="text-white hidden md:block">
-              <h1 className="text-2xl font-bold leading-tight tracking-wide">
+              <span className="font-bold text-xl text-gray-900 hidden sm:block">
                 {storeName}
-              </h1>
-              <p className="text-blue-100 text-sm font-medium">
-                {storeTagline}
-              </p>
-            </div>
-          </Link>
-
-          {/* Enhanced Search Bar for Desktop */}
-          <div className="flex-1 max-w-2xl mx-8 hidden md:block">
-            <form onSubmit={handleSearch} className="relative">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-                <Input
-                  type="search"
-                  placeholder="Cari produk atau kategori..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-            </form>
+              </span>
+            </Link>
           </div>
-          
-          {/* Enhanced User Actions */}
-          <div className="flex items-center space-x-3">
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-3 text-white hover:bg-white/10 px-4 py-2 rounded-xl transition-all duration-300">
-                    {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt="Avatar" 
-                        className="w-8 h-8 rounded-full border-2 border-white/30"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                        <UserCircle className="h-5 w-5" />
-                      </div>
-                    )}
-                    <span className="hidden md:inline font-semibold">{profile?.full_name || 'User'}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-md border-0 shadow-xl rounded-xl">
-                  <DropdownMenuItem onClick={() => navigate('/')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
-                    <Home className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Beranda</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/order-history')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
-                    <History className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Riwayat Pesanan</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/profile')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
-                    <User className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Profil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-2" />
-                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg text-red-600">
-                    <LogOut className="h-4 w-4" />
-                    <span className="font-medium">Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate('/login')}
-                  className="text-white hover:bg-white/10 font-semibold px-4 py-2 rounded-xl transition-all duration-300"
+
+          {/* Search Bar - Desktop */}
+          <div className="hidden md:flex flex-1 max-w-md mx-4">
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder="Cari produk..."
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="w-full pl-10 pr-20 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              <div className="absolute right-2 top-1 flex items-center space-x-1">
+                <VoiceSearch onVoiceResult={handleVoiceSearch} />
+                <Button
+                  size="sm"
+                  onClick={handleSearch}
+                  className="h-8 px-3"
                 >
-                  Login
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={() => navigate('/register')}
-                  className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-4 py-2 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
-                >
-                  Register
+                  Cari
                 </Button>
               </div>
-            )}
-            
-            {/* Enhanced Cart Button */}
+            </div>
+          </div>
+
+          {/* Right side buttons */}
+          <div className="flex items-center space-x-4">
+            {/* Cart Button */}
             <Button
-              variant="ghost"
-              size="sm"
-              className="relative text-white hover:bg-white/10 p-3 rounded-xl transition-all duration-300 hover:scale-105"
+              variant="outline"
+              size="icon"
               onClick={onCartClick}
+              className="relative"
             >
-              <ShoppingCart className="h-6 w-6" />
-              {getTotalItems() > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600 rounded-full animate-bounce">
-                  {getTotalItems()}
+              <ShoppingCart className="h-5 w-5" />
+              {items.length > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                  {items.length}
                 </Badge>
               )}
             </Button>
 
-            {/* Enhanced Mobile Menu Button */}
+            {/* User Button */}
+            <Link to={user ? "/profile" : "/auth/login"}>
+              <Button variant="outline" size="icon">
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+
+            {/* Mobile Menu Button */}
             <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden text-white hover:bg-white/10 p-3 rounded-xl transition-all duration-300"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              variant="outline"
+              size="icon"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden"
             >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
         </div>
 
-        {/* Enhanced Mobile Search Bar */}
+        {/* Mobile Search Bar */}
         <div className="md:hidden pb-4">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-              <Input
-                type="search"
-                placeholder="Cari produk atau kategori..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
-              />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Cari produk..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full pl-10 pr-20 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            <div className="absolute right-2 top-1 flex items-center space-x-1">
+              <VoiceSearch onVoiceResult={handleVoiceSearch} />
+              <Button
+                size="sm"
+                onClick={handleSearch}
+                className="h-8 px-3"
+              >
+                Cari
+              </Button>
             </div>
-          </form>
+          </div>
         </div>
 
-        {/* Enhanced Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white/10 backdrop-blur-md rounded-2xl mb-4 p-4 shadow-xl">
-            <div className="space-y-3">
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t bg-white py-4">
+            <div className="flex flex-col space-y-2">
+              <Link
+                to="/"
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Beranda
+              </Link>
+              <Link
+                to="/order-history"
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Riwayat Pesanan
+              </Link>
               {user ? (
-                <>
-                  <Link 
-                    to="/" 
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <Home className="h-5 w-5" />
-                    <span className="font-medium">Beranda</span>
-                  </Link>
-                  <Link 
-                    to="/order-history" 
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <History className="h-5 w-5" />
-                    <span className="font-medium">Riwayat Pesanan</span>
-                  </Link>
-                  <Link 
-                    to="/profile" 
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="font-medium">Profil</span>
-                  </Link>
-                  <hr className="border-white/20 my-2" />
-                  <button 
-                    onClick={handleSignOut}
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-red-500/20 rounded-xl transition-all duration-300 w-full text-left"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span className="font-medium">Logout</span>
-                  </button>
-                </>
+                <Link
+                  to="/profile"
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Profil
+                </Link>
               ) : (
-                <div className="space-y-3">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => {
-                      navigate('/login');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full justify-start text-white hover:bg-white/10 font-medium py-3 rounded-xl"
-                  >
-                    Login
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      navigate('/register');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-white text-blue-600 hover:bg-blue-50 font-medium py-3 rounded-xl"
-                  >
-                    Register
-                  </Button>
-                </div>
+                <Link
+                  to="/auth/login"
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Masuk
+                </Link>
               )}
             </div>
           </div>

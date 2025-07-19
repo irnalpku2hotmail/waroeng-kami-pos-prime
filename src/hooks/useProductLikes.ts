@@ -1,116 +1,76 @@
 
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
-interface UserProductLike {
-  id: string;
-  user_id: string;
-  product_id: string;
-  created_at: string;
-}
-
-// Hook for managing product likes functionality
 export const useProductLikes = () => {
   const { user } = useAuth();
-  const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchUserLikes();
-    }
-  }, [user?.id]);
-
-  const fetchUserLikes = async () => {
-    if (!user?.id) return;
-
-    try {
+  const { data: likedProducts = [] } = useQuery({
+    queryKey: ['user-liked-products', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
       const { data, error } = await supabase
         .from('user_product_likes')
         .select('product_id')
         .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error fetching likes:', error);
-        return;
-      }
+      if (error) throw error;
+      return data.map(like => like.product_id);
+    },
+    enabled: !!user?.id
+  });
 
-      const productIds = data?.map((like: any) => like.product_id as string) || [];
-      setLikedProducts(new Set(productIds));
-    } catch (error) {
-      console.error('Error fetching user likes:', error);
-    }
-  };
+  const toggleLike = useMutation({
+    mutationFn: async (productId: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
 
-  const toggleLike = async (productId: string) => {
-    if (!user?.id) {
-      toast({
-        title: 'Login Required',
-        description: 'Silakan login untuk menyukai produk',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    const isLiked = likedProducts.has(productId);
-
-    try {
+      const isLiked = likedProducts.includes(productId);
+      
       if (isLiked) {
-        // Remove like
         const { error } = await supabase
           .from('user_product_likes')
           .delete()
           .eq('user_id', user.id)
           .eq('product_id', productId);
-
-        if (error) {
-          toast({
-            title: 'Error',
-            description: 'Gagal menghapus like',
-            variant: 'destructive'
-          });
-          return;
-        }
-
-        setLikedProducts(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(productId);
-          return newSet;
-        });
+        
+        if (error) throw error;
+        return false;
       } else {
-        // Add like
         const { error } = await supabase
           .from('user_product_likes')
           .insert({
             user_id: user.id,
             product_id: productId
           });
-
-        if (error) {
-          toast({
-            title: 'Error',
-            description: 'Gagal menambah like',
-            variant: 'destructive'
-          });
-          return;
-        }
-
-        setLikedProducts(prev => new Set([...prev, productId]));
+        
+        if (error) throw error;
+        return true;
       }
-    } catch (error) {
+    },
+    onSuccess: (isLiked, productId) => {
+      queryClient.invalidateQueries({ queryKey: ['user-liked-products', user?.id] });
+      toast({
+        title: isLiked ? 'Produk disukai' : 'Produk tidak disukai',
+        description: isLiked ? 'Produk telah ditambahkan ke favorit' : 'Produk telah dihapus dari favorit'
+      });
+    },
+    onError: (error) => {
       console.error('Error toggling like:', error);
       toast({
         title: 'Error',
-        description: 'Terjadi kesalahan saat memproses like',
+        description: 'Gagal mengubah status like produk',
         variant: 'destructive'
       });
     }
-  };
+  });
 
   return {
     likedProducts,
-    toggleLike,
-    isLiked: (productId: string) => likedProducts.has(productId)
+    toggleLike: toggleLike.mutate,
+    isLoading: toggleLike.isPending
   };
 };
