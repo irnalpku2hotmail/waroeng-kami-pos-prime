@@ -41,17 +41,6 @@ const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecomme
     navigate(`/product/${productId}`);
   };
 
-  const getImageUrl = (imageUrl: string | null | undefined) => {
-    if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(imageUrl);
-    
-    return data.publicUrl;
-  };
-
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -84,11 +73,17 @@ const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecomme
         >
           <div className="relative">
             <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 p-2 flex items-center justify-center">
-              <img
-                src={getImageUrl(product.image_url)}
-                alt={product.name}
-                className="w-full h-full object-cover rounded"
-              />
+              {product.image_url ? (
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover rounded"
+                />
+              ) : (
+                <div className="text-gray-400 text-xs text-center">
+                  No Image
+                </div>
+              )}
             </div>
             {product.current_stock <= 0 && (
               <Badge variant="destructive" className="absolute top-2 right-2 text-xs">

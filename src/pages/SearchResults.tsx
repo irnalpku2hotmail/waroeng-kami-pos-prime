@@ -80,9 +80,9 @@ const SearchResults = () => {
           units(name, abbreviation)
         `)
         .eq('is_active', true)
-        .limit(12);
+        .limit(6);
 
-      // If searching by category, get more products from the same category
+      // If searching by category, get popular products from the same category
       if (categoryId) {
         query = query.eq('category_id', categoryId);
       } else if (searchQuery) {
@@ -127,15 +127,9 @@ const SearchResults = () => {
     navigate(`/product/${product.id}`);
   };
 
-  const getImageUrl = (imageUrl: string | null | undefined) => {
-    if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(imageUrl);
-    
-    return data.publicUrl;
+  const handleCategorySearch = (categoryId: string, categoryName: string) => {
+    setSearchParams({ category: categoryId });
+    setLocalSearchTerm(categoryName);
   };
 
   return (
@@ -176,12 +170,12 @@ const SearchResults = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {categoryId && categoryName ? `Kategori: ${categoryName}` : 
-             searchQuery ? `Hasil Pencarian untuk "${searchQuery}"` : 
-             'Semua Produk'}
+            {categoryId && categoryName ? `Category: ${categoryName}` : 
+             searchQuery ? `Search Results for "${searchQuery}"` : 
+             'All Products'}
           </h1>
           <p className="text-gray-600">
-            {isLoading ? 'Mencari...' : `Ditemukan ${results.length} produk`}
+            {isLoading ? 'Searching...' : `Found ${results.length} products`}
           </p>
         </div>
 
@@ -200,8 +194,8 @@ const SearchResults = () => {
         ) : results.length === 0 ? (
           <div className="text-center py-12">
             <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 text-lg">Tidak ada produk ditemukan</p>
-            <p className="text-gray-500">Coba ubah kata kunci pencarian</p>
+            <p className="text-gray-600 text-lg">No products found</p>
+            <p className="text-gray-500">Try adjusting your search terms</p>
           </div>
         ) : (
           <>
@@ -215,20 +209,20 @@ const SearchResults = () => {
                 >
                   <div className="relative">
                     <img
-                      src={getImageUrl(product.image_url)}
+                      src={product.image_url || '/placeholder.svg'}
                       alt={product.name}
                       className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                     {product.current_stock <= 0 && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                         <Badge variant="destructive" className="text-xs">
-                          Stok Habis
+                          Out of Stock
                         </Badge>
                       </div>
                     )}
                     {product.current_stock <= product.min_stock && product.current_stock > 0 && (
                       <Badge className="absolute top-2 left-2 bg-orange-500 text-xs">
-                        Terbatas
+                        Limited
                       </Badge>
                     )}
                   </div>
@@ -262,7 +256,7 @@ const SearchResults = () => {
                       disabled={product.current_stock <= 0}
                     >
                       <ShoppingCart className="h-3 w-3 mr-1" />
-                      Tambah ke Keranjang
+                      Add to Cart
                     </Button>
                   </CardContent>
                 </Card>
@@ -270,13 +264,13 @@ const SearchResults = () => {
             </div>
 
             {/* Recommendations */}
-            {recommendations.length > 0 && (categoryId || searchQuery) && (
+            {recommendations.length > 0 && (
               <div className="mt-12">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">
                   {categoryId ? 'Produk Lainnya dalam Kategori Ini' : 'Produk yang Sering Dicari'}
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                  {recommendations.filter(rec => !results.find(res => res.id === rec.id)).slice(0, 6).map((product) => (
+                  {recommendations.map((product) => (
                     <Card 
                       key={product.id}
                       className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
@@ -284,16 +278,21 @@ const SearchResults = () => {
                     >
                       <div className="relative">
                         <img
-                          src={getImageUrl(product.image_url)}
+                          src={product.image_url || '/placeholder.svg'}
                           alt={product.name}
                           className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
                         />
                         {product.current_stock <= 0 && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                             <Badge variant="destructive" className="text-xs">
-                              Stok Habis
+                              Out of Stock
                             </Badge>
                           </div>
+                        )}
+                        {product.current_stock <= product.min_stock && product.current_stock > 0 && (
+                          <Badge className="absolute top-2 left-2 bg-orange-500 text-xs">
+                            Limited
+                          </Badge>
                         )}
                       </div>
                       
@@ -326,7 +325,7 @@ const SearchResults = () => {
                           disabled={product.current_stock <= 0}
                         >
                           <ShoppingCart className="h-3 w-3 mr-1" />
-                          Tambah ke Keranjang
+                          Add to Cart
                         </Button>
                       </CardContent>
                     </Card>
