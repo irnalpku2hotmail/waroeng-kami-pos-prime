@@ -64,9 +64,10 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
+  const handleSearch = () => {
+    if (onSearch) {
+      onSearch();
+    } else if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };

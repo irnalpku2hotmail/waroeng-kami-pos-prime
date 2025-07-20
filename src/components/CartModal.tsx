@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -45,7 +44,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         name: profile.full_name || '',
         phone: profile.phone || '',
         email: profile.email || user.email || '',
-        address: profile.address_text || '' // Mengambil dari address_text
+        address: (profile as any).address_text || profile.address || '' // Handle both possible field names
       });
     }
   }, [user, profile, setCustomerInfo]);
@@ -76,8 +75,16 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const timestamp = Date.now();
       const orderNumber = `ORD${timestamp}`;
 
-      // Get delivery fee from COD settings
-      const deliveryFee = codSettings?.delivery_fee || 10000;
+      // Get delivery fee from COD settings - handle different possible structures
+      let deliveryFee = 10000; // default
+      if (codSettings && typeof codSettings === 'object') {
+        if ('delivery_fee' in codSettings) {
+          deliveryFee = Number(codSettings.delivery_fee) || 10000;
+        } else if ('amount' in codSettings) {
+          deliveryFee = Number(codSettings.amount) || 10000;
+        }
+      }
+      
       const total = getTotalPrice() + deliveryFee;
 
       // Create order
@@ -134,7 +141,16 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     }
   };
 
-  const deliveryFee = codSettings?.delivery_fee || 10000;
+  // Get delivery fee with proper handling
+  let deliveryFee = 10000; // default
+  if (codSettings && typeof codSettings === 'object') {
+    if ('delivery_fee' in codSettings) {
+      deliveryFee = Number(codSettings.delivery_fee) || 10000;
+    } else if ('amount' in codSettings) {
+      deliveryFee = Number(codSettings.amount) || 10000;
+    }
+  }
+
   const subtotal = getTotalPrice();
   const total = subtotal + deliveryFee;
 

@@ -2,21 +2,19 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Layout } from '@/components/Layout';
+import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import ProductsFilters from '@/components/products/ProductsFilters';
 import ProductsTable from '@/components/products/ProductsTable';
-import ProductsHeader from '@/components/products/ProductsHeader';
-import ProductsStats from '@/components/products/ProductsStats';
 import ProductsEmptyState from '@/components/products/ProductsEmptyState';
 import ProductsLoading from '@/components/products/ProductsLoading';
 import ProductsPagination from '@/components/products/ProductsPagination';
 import ProductForm from '@/components/ProductForm';
 import ExcelImport from '@/components/products/ExcelImport';
-import { Plus } from 'lucide-react';
+import { Plus, TrendingUp, Package, AlertTriangle, DollarSign } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -127,12 +125,73 @@ const Products = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <ProductsHeader 
-          onAddProduct={() => setShowAddForm(true)}
-          onImport={() => setShowImportModal(true)}
-        />
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Products</h1>
+            <p className="text-muted-foreground">
+              Kelola produk dan inventory toko Anda
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowImportModal(true)}
+            >
+              Import Excel
+            </Button>
+            <Button onClick={() => setShowAddForm(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Tambah Produk
+            </Button>
+          </div>
+        </div>
         
-        <ProductsStats stats={stats} />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Produk</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalProducts}</div>
+              <p className="text-xs text-muted-foreground">produk terdaftar</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Produk Aktif</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.activeProducts}</div>
+              <p className="text-xs text-muted-foreground">produk aktif</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Stok Rendah</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.lowStockProducts}</div>
+              <p className="text-xs text-muted-foreground">produk perlu restock</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Nilai</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rp {stats.totalValue.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">nilai total inventory</p>
+            </CardContent>
+          </Card>
+        </div>
 
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList>
