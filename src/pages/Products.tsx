@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import ProductsFilters from '@/components/products/ProductsFilters';
 import ProductsTable from '@/components/products/ProductsTable';
@@ -14,7 +15,7 @@ import ProductsLoading from '@/components/products/ProductsLoading';
 import ProductsPagination from '@/components/products/ProductsPagination';
 import ProductForm from '@/components/ProductForm';
 import ExcelImport from '@/components/products/ExcelImport';
-import { Plus, TrendingUp, Package, AlertTriangle, DollarSign } from 'lucide-react';
+import { Plus, TrendingUp, Package, AlertTriangle, DollarSign, Upload } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -136,7 +137,9 @@ const Products = () => {
             <Button 
               variant="outline" 
               onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2"
             >
+              <Upload className="h-4 w-4" />
               Import Excel
             </Button>
             <Button onClick={() => setShowAddForm(true)} className="flex items-center gap-2">
@@ -227,7 +230,7 @@ const Products = () => {
                       <ProductsPagination 
                         currentPage={currentPage}
                         totalPages={totalPages}
-                        onPageChange={setCurrentPage}
+                        setCurrentPage={setCurrentPage}
                       />
                     )}
                   </>
@@ -248,15 +251,14 @@ const Products = () => {
           />
         )}
 
-        {showImportModal && (
-          <ExcelImport
-            open={showImportModal}
-            onOpenChange={setShowImportModal}
-            onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ['products'] });
-            }}
-          />
-        )}
+        <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Import Produk dari Excel</DialogTitle>
+            </DialogHeader>
+            <ExcelImport />
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
