@@ -1,102 +1,73 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, Edit, Trash2, Package } from 'lucide-react';
 
-interface UnitsTabProps {
-  units?: any[];
-  isLoading?: boolean;
-  searchTerm?: string;
-}
-
-const UnitsTab = ({ units: externalUnits = [], isLoading: externalLoading = false, searchTerm: externalSearchTerm = '' }: UnitsTabProps) => {
-  const [open, setOpen] = useState(false);
-  const [editUnit, setEditUnit] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState(externalSearchTerm || '');
-  const [unitData, setUnitData] = useState({
-    name: '',
-    abbreviation: ''
-  });
+const UnitsTab = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<any>(null);
+  const [formData, setFormData] = useState({ name: '', abbreviation: '' });
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // Use external data if provided, otherwise fetch our own
-  const { data: units = [], isLoading } = useQuery({
+  const { data: units, isLoading } = useQuery({
     queryKey: ['units', searchTerm],
     queryFn: async () => {
-      let query = supabase.from('units').select('*');
-      
-      if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
+      let query = supabase
+        .from('units')
+        .select(`
+          *,
+          products!inner(id)
+        `);
+
+      if (searchTerm.trim()) {
+        query = query.or(`name.ilike.%${searchTerm}%,abbreviation.ilike.%${searchTerm}%`);
       }
-      
+
       const { data, error } = await query.order('name');
+      
       if (error) throw error;
       return data;
-    },
-    enabled: externalUnits.length === 0 // Only fetch if external data is not provided
+    }
   });
 
-  const finalUnits = externalUnits.length > 0 ? externalUnits : units;
-  const finalLoading = externalUnits.length > 0 ? externalLoading : isLoading;
-
-  const checkDuplicateName = async (name: string, excludeId?: string) => {
-    const { data, error } = await supabase
-      .from('units')
-      .select('id')
-      .ilike('name', name);
-    
-    if (error) throw error;
-    
-    if (excludeId) {
-      return data.some(unit => unit.id !== excludeId);
-    }
-    
-    return data.length > 0;
-  };
-
   const saveUnit = useMutation({
-    mutationFn: async (data: { name: string; abbreviation: string }) => {
-      // Check for duplicate name
-      const isDuplicate = await checkDuplicateName(data.name, editUnit?.id);
-      if (isDuplicate) {
-        throw new Error('Nama unit sudah ada, silakan gunakan nama lain');
-      }
-
-      if (editUnit) {
+    mutationFn: async (unitData: any) => {
+      if (editingUnit) {
         const { error } = await supabase
           .from('units')
-          .update(data)
-          .eq('id', editUnit.id);
+          .update(unitData)
+          .eq('id', editingUnit.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('units')
-          .insert([data]);
+        const { error } = await supabase.from('units').insert(unitData);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
-      toast({ 
-        title: 'Berhasil', 
-        description: `Unit berhasil ${editUnit ? 'diperbarui' : 'ditambahkan'}` 
+      toast({
+        title: 'Berhasil',
+        description: `Unit berhasil ${editingUnit ? 'diperbarui' : 'ditambahkan'}`,
       });
-      setOpen(false);
-      resetForm();
+      handleCloseForm();
     },
-    onError: (error: any) => {
-      toast({ 
-        title: 'Error', 
-        description: error.message, 
-        variant: 'destructive' 
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Gagal ${editingUnit ? 'memperbarui' : 'menambahkan'} unit`,
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   const deleteUnit = useMutation({
@@ -108,147 +79,181 @@ const UnitsTab = ({ units: externalUnits = [], isLoading: externalLoading = fals
       queryClient.invalidateQueries({ queryKey: ['units'] });
       toast({ title: 'Berhasil', description: 'Unit berhasil dihapus' });
     },
-    onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Gagal menghapus unit',
+        variant: 'destructive',
+      });
+    },
   });
 
   const handleEdit = (unit: any) => {
-    setEditUnit(unit);
-    setUnitData({
-      name: String(unit.name || ''),
-      abbreviation: String(unit.abbreviation || '')
-    });
-    setOpen(true);
+    setEditingUnit(unit);
+    setFormData({ name: unit.name, abbreviation: unit.abbreviation });
+    setShowAddForm(true);
   };
 
-  const resetForm = () => {
-    setEditUnit(null);
-    setUnitData({
-      name: '',
-      abbreviation: ''
-    });
+  const handleCloseForm = () => {
+    setShowAddForm(false);
+    setEditingUnit(null);
+    setFormData({ name: '', abbreviation: '' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!unitData.name.trim() || !unitData.abbreviation.trim()) {
-      toast({ 
-        title: 'Error', 
-        description: 'Nama dan singkatan unit harus diisi', 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    saveUnit.mutate(unitData);
+    saveUnit.mutate(formData);
   };
 
+  const handleDelete = (id: string) => {
+    if (confirm('Apakah Anda yakin ingin menghapus unit ini?')) {
+      deleteUnit.mutate(id);
+    }
+  };
+
+  const totalUnits = units?.length || 0;
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex gap-4 flex-1">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Cari unit..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold tracking-tight">Unit Satuan</h2>
+          <p className="text-muted-foreground">
+            Kelola unit satuan untuk produk Anda
+          </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Unit
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editUnit ? 'Edit Unit' : 'Tambah Unit Baru'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nama Unit</Label>
-                <Input
-                  id="name"
-                  value={unitData.name}
-                  onChange={(e) => setUnitData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Kilogram"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="abbreviation">Singkatan</Label>
-                <Input
-                  id="abbreviation"
-                  value={unitData.abbreviation}
-                  onChange={(e) => setUnitData(prev => ({ ...prev, abbreviation: e.target.value }))}
-                  placeholder="kg"
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  Batal
-                </Button>
-                <Button type="submit" disabled={saveUnit.isPending}>
-                  {saveUnit.isPending ? 'Menyimpan...' : (editUnit ? 'Update' : 'Simpan')}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setShowAddForm(true)} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Tambah Unit
+        </Button>
       </div>
 
-      <div className="border rounded-lg">
-        {finalLoading ? (
-          <div className="text-center py-8">Loading...</div>
-        ) : finalUnits.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">
-              {searchTerm ? 'Tidak ada unit yang ditemukan' : 'Belum ada unit'}
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead>Singkatan</TableHead>
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {finalUnits.map((unit) => (
-                <TableRow key={unit.id}>
-                  <TableCell className="font-medium">{String(unit.name || '')}</TableCell>
-                  <TableCell>{String(unit.abbreviation || '')}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEdit(unit)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => deleteUnit.mutate(unit.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Jumlah Unit</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalUnits}</div>
+            <p className="text-xs text-muted-foreground">unit tersedia</p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Daftar Unit</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Input
+            placeholder="Cari unit..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+
+          {isLoading ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-12 bg-gray-100 rounded animate-pulse"></div>
+              ))}
+            </div>
+          ) : units && units.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama Unit</TableHead>
+                  <TableHead>Singkatan</TableHead>
+                  <TableHead>Jumlah Produk</TableHead>
+                  <TableHead className="w-[100px]">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {units.map((unit) => (
+                  <TableRow key={unit.id}>
+                    <TableCell className="font-medium">{unit.name}</TableCell>
+                    <TableCell>{unit.abbreviation}</TableCell>
+                    <TableCell>{unit.products?.length || 0} produk</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(unit)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(unit.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8">
+              <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Belum ada unit</h3>
+              <p className="text-gray-600 mb-4">
+                Mulai dengan menambahkan unit pertama Anda
+              </p>
+              <Button onClick={() => setShowAddForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Unit
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingUnit ? 'Edit Unit' : 'Tambah Unit Baru'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nama Unit</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Contoh: Kilogram"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="abbreviation">Singkatan</Label>
+              <Input
+                id="abbreviation"
+                value={formData.abbreviation}
+                onChange={(e) => setFormData(prev => ({ ...prev, abbreviation: e.target.value }))}
+                placeholder="Contoh: kg"
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleCloseForm}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={saveUnit.isPending}>
+                {saveUnit.isPending ? 'Menyimpan...' : editingUnit ? 'Perbarui' : 'Simpan'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
