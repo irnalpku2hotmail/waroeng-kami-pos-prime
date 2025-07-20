@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, FolderTree, FileImage } from 'lucide-react';
+import { Plus, Edit, Trash2, Tag, Package } from 'lucide-react';
 import CategoryForm from '@/components/CategoryForm';
 
 const CategoriesTab = () => {
@@ -36,6 +35,29 @@ const CategoriesTab = () => {
     }
   });
 
+  // Fetch product counts for each category
+  const { data: productCounts } = useQuery({
+    queryKey: ['category-product-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('category_id, id')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      
+      // Count products by category
+      const counts: Record<string, number> = {};
+      data?.forEach(product => {
+        if (product.category_id) {
+          counts[product.category_id] = (counts[product.category_id] || 0) + 1;
+        }
+      });
+      
+      return counts;
+    }
+  });
+
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('categories').delete().eq('id', id);
@@ -43,6 +65,7 @@ const CategoriesTab = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['category-product-counts'] });
       toast({ title: 'Berhasil', description: 'Kategori berhasil dihapus' });
     },
     onError: (error) => {
@@ -57,15 +80,32 @@ const CategoriesTab = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Tag className="h-8 w-8 text-blue-600" />
+        <h1 className="text-3xl font-bold text-blue-800">Manajemen Kategori</h1>
+      </div>
+
+      {/* Stats Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Kategori</CardTitle>
+          <Tag className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{categories?.length || 0}</div>
+          <p className="text-xs text-muted-foreground">
+            Kategori yang terdaftar
+          </p>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Input
-            placeholder="Cari kategori..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
+        <Input
+          placeholder="Cari kategori..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -91,10 +131,7 @@ const CategoriesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FolderTree className="h-5 w-5" />
-            Daftar Kategori
-          </CardTitle>
+          <CardTitle>Daftar Kategori</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -110,6 +147,7 @@ const CategoriesTab = () => {
                   <TableHead>Icon</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>Deskripsi</TableHead>
+                  <TableHead>Jumlah Produk</TableHead>
                   <TableHead>Tanggal Dibuat</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
@@ -118,24 +156,26 @@ const CategoriesTab = () => {
                 {categories?.map((category) => (
                   <TableRow key={category.id}>
                     <TableCell>
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                        {category.icon_url ? (
-                          <img 
-                            src={category.icon_url} 
-                            alt={category.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <FileImage className="h-5 w-5 text-gray-400" />
-                        )}
-                      </div>
+                      {category.icon_url ? (
+                        <img 
+                          src={category.icon_url} 
+                          alt={category.name}
+                          className="w-8 h-8 object-cover rounded"
+                        />
+                      ) : (
+                        <Tag className="h-6 w-6 text-gray-400" />
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {category.description || '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{category.name}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-gray-600">
-                        {category.description || '-'}
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-gray-400" />
+                        <span className="font-medium">
+                          {productCounts?.[category.id] || 0} produk
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>

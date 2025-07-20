@@ -52,32 +52,6 @@ const SearchResults = () => {
     }).format(price);
   };
 
-  const handleAddToCart = (product: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      quantity: 1,
-      image: product.image_url,
-      stock: product.current_stock,
-      product_id: product.id,
-      unit_price: product.selling_price,
-      total_price: product.selling_price * 1,
-      product: {
-        id: product.id,
-        name: product.name,
-        image_url: product.image_url
-      }
-    });
-
-    toast({
-      title: 'Berhasil!',
-      description: `${product.name} telah ditambahkan ke keranjang`,
-    });
-  };
-
   const handleProductClick = (productId: string) => {
     navigate(`/product/${productId}`);
   };
@@ -176,15 +150,6 @@ const SearchResults = () => {
                         >
                           {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
                         </Badge>
-                        
-                        <Button
-                          size="sm"
-                          onClick={(e) => handleAddToCart(product, e)}
-                          disabled={product.current_stock === 0}
-                          className="h-8 w-8 p-0"
-                        >
-                          <ShoppingCart className="h-3 w-3" />
-                        </Button>
                       </div>
                     </div>
                   </CardContent>
