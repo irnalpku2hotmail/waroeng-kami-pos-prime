@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import PerfectSearch from './PerfectSearch';
 
 interface HomeNavbarProps {
   onCartClick: () => void;
@@ -65,9 +66,10 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
+  const handleSearch = () => {
+    if (onSearch) {
+      onSearch();
+    } else if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
@@ -109,22 +111,12 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
             </div>
           </Link>
 
-          {/* Enhanced Search Bar for Desktop */}
-          <div className="flex-1 max-w-2xl mx-8 hidden md:block">
-            <form onSubmit={handleSearch} className="relative">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-                <Input
-                  type="search"
-                  placeholder="Cari produk atau kategori..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-            </form>
-          </div>
+          {/* Enhanced Search Bar for Desktop - Using PerfectSearch */}
+          <PerfectSearch
+            searchTerm={searchTerm}
+            onSearchChange={onSearchChange}
+            onSearch={handleSearch}
+          />
           
           {/* Enhanced User Actions */}
           <div className="flex items-center space-x-3">
@@ -215,18 +207,21 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
 
         {/* Enhanced Mobile Search Bar */}
         <div className="md:hidden pb-4">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-              <Input
-                type="search"
-                placeholder="Cari produk atau kategori..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
-              />
-            </div>
-          </form>
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+            <Input
+              type="search"
+              placeholder="Cari produk atau kategori..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
+            />
+          </div>
         </div>
 
         {/* Enhanced Mobile Menu */}

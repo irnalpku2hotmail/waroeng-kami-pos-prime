@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Package, Minus, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 interface CartModalProps {
   open: boolean;
@@ -21,6 +22,21 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo, clearCart, updateQuantity, removeItem } = useCart();
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch COD settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
+    }
+  });
 
   // Auto-fill customer info from user profile
   useEffect(() => {
@@ -56,6 +72,9 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     setIsSubmitting(true);
 
     try {
+      // Get delivery fee from settings
+      const deliveryFee = settings?.cod_settings?.delivery_fee || 10000;
+      
       // Generate order number
       const timestamp = Date.now();
       const orderNumber = `ORD${timestamp}`;
@@ -68,7 +87,8 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
-          total_amount: getTotalPrice(),
+          total_amount: getTotalPrice() + deliveryFee,
+          delivery_fee: deliveryFee,
           payment_method: 'cod',
           status: 'pending',
           notes: 'Pesanan dari website'
@@ -112,6 +132,11 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       setIsSubmitting(false);
     }
   };
+
+  // Calculate totals with delivery fee
+  const subtotal = getTotalPrice();
+  const deliveryFee = settings?.cod_settings?.delivery_fee || 10000;
+  const total = subtotal + deliveryFee;
 
   if (items.length === 0) {
     return (
@@ -289,22 +314,43 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
         {/* Order Summary & Action */}
         <div className="border-t pt-4 space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-600">Total ({getTotalItems()} item)</p>
-              <p className="text-2xl font-bold text-blue-600">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Subtotal ({getTotalItems()} item)</span>
+              <span className="font-medium">
                 {new Intl.NumberFormat('id-ID', {
                   style: 'currency',
                   currency: 'IDR',
                   minimumFractionDigits: 0,
-                }).format(getTotalPrice())}
-              </p>
+                }).format(subtotal)}
+              </span>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500 mb-1">Pembayaran</p>
-              <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                Cash on Delivery (COD)
-              </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Ongkos Kirim</span>
+              <span className="font-medium">
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR',
+                  minimumFractionDigits: 0,
+                }).format(deliveryFee)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center border-t pt-2">
+              <span className="text-lg font-bold text-gray-900">Total</span>
+              <span className="text-2xl font-bold text-blue-600">
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR',
+                  minimumFractionDigits: 0,
+                }).format(total)}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <p className="text-xs text-gray-500 mb-1">Pembayaran</p>
+            <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium inline-block">
+              Cash on Delivery (COD)
             </div>
           </div>
 

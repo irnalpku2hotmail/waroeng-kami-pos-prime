@@ -21,11 +21,12 @@ const Products = () => {
   const [open, setOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', searchTerm, currentPage],
+    queryKey: ['products', searchTerm, selectedCategory, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -37,9 +38,17 @@ const Products = () => {
           units(name),
           price_variants(*)
         `, { count: 'exact' });
+
+      // Apply search filter
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
       }
+
+      // Apply category filter
+      if (selectedCategory && selectedCategory !== 'all') {
+        query = query.eq('category_id', selectedCategory);
+      }
+
       const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -108,6 +117,17 @@ const Products = () => {
     setEditProduct(null);
   };
 
+  // Reset page when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    setCurrentPage(1);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -137,7 +157,12 @@ const Products = () => {
           </Dialog>
         </ProductsHeader>
 
-        <ProductsFilters searchTerm={searchTerm} setSearchTerm={v => {setSearchTerm(v); setCurrentPage(1)}} />
+        <ProductsFilters 
+          searchTerm={searchTerm} 
+          setSearchTerm={handleSearchChange}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={handleCategoryChange}
+        />
 
         <div className="border rounded-lg overflow-hidden">
           {isLoading ? (
