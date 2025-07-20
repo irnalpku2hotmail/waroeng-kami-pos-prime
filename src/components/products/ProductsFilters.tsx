@@ -36,10 +36,10 @@ const ProductsFilters = ({
 
   const clearFilters = () => {
     setSearchTerm('');
-    setCategoryFilter('');
+    setCategoryFilter('all');
   };
 
-  const hasActiveFilters = searchTerm || categoryFilter;
+  const hasActiveFilters = searchTerm || (categoryFilter && categoryFilter !== 'all');
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -50,12 +50,12 @@ const ProductsFilters = ({
         className="max-w-sm"
       />
       
-      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+      <Select value={categoryFilter || 'all'} onValueChange={setCategoryFilter}>
         <SelectTrigger className="max-w-sm">
           <SelectValue placeholder="Filter Kategori" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Semua Kategori</SelectItem>
+          <SelectItem value="all">Semua Kategori</SelectItem>
           {categories?.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name}

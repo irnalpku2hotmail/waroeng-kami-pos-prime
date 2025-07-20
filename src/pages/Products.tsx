@@ -21,7 +21,7 @@ const ITEMS_PER_PAGE = 10;
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -47,8 +47,8 @@ const Products = () => {
         query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
       }
 
-      // Apply category filter
-      if (categoryFilter) {
+      // Apply category filter - only filter if not "all"
+      if (categoryFilter && categoryFilter !== 'all') {
         query = query.eq('category_id', categoryFilter);
       }
 
