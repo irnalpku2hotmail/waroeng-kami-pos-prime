@@ -3,8 +3,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package } from 'lucide-react';
+import { ShoppingCart, Search, Package } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from '@/hooks/use-toast';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
 import CartModal from '@/components/CartModal';
@@ -13,39 +16,32 @@ import { useState } from 'react';
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const query = searchParams.get('q') || '';
-  const categoryQuery = searchParams.get('category') || '';
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['search-products', query, categoryQuery],
+    queryKey: ['search-products', query],
     queryFn: async () => {
-      if (!query.trim() && !categoryQuery.trim()) return [];
+      if (!query.trim()) return [];
 
-      let queryBuilder = supabase
+      // Search in products and categories
+      const { data, error } = await supabase
         .from('products')
         .select(`
           *,
           categories (name, id),
           units (name, abbreviation)
         `)
-        .eq('is_active', true);
-
-      if (categoryQuery.trim()) {
-        // Search by category name
-        queryBuilder = queryBuilder.or(`categories.name.ilike.%${categoryQuery}%`);
-      } else if (query.trim()) {
-        // Search in products and categories
-        queryBuilder = queryBuilder.or(`name.ilike.%${query}%,categories.name.ilike.%${query}%`);
-      }
-
-      const { data, error } = await queryBuilder.order('name');
+        .eq('is_active', true)
+        .or(`name.ilike.%${query}%,categories.name.ilike.%${query}%`)
+        .order('name');
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!(query.trim() || categoryQuery.trim())
+    enabled: !!query.trim()
   });
 
   const formatPrice = (price: number) => {
@@ -54,6 +50,32 @@ const SearchResults = () => {
       currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const handleAddToCart = (product: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: 1,
+      image: product.image_url,
+      stock: product.current_stock,
+      product_id: product.id,
+      unit_price: product.selling_price,
+      total_price: product.selling_price * 1,
+      product: {
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url
+      }
+    });
+
+    toast({
+      title: 'Berhasil!',
+      description: `${product.name} telah ditambahkan ke keranjang`,
+    });
   };
 
   const handleProductClick = (productId: string) => {
@@ -65,8 +87,6 @@ const SearchResults = () => {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
-
-  const displayQuery = categoryQuery || query;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,7 +102,7 @@ const SearchResults = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Hasil Pencarian
           </h1>
-          <p className="text-gray-600">"{displayQuery}"</p>
+          <p className="text-gray-600">"{query}"</p>
         </div>
 
         {isLoading && (
@@ -92,7 +112,7 @@ const SearchResults = () => {
           </div>
         )}
 
-        {!isLoading && products.length === 0 && (query.trim() || categoryQuery.trim()) && (
+        {!isLoading && products.length === 0 && query.trim() && (
           <div className="text-center py-8">
             <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-gray-700 mb-2">
@@ -108,7 +128,7 @@ const SearchResults = () => {
           <>
             <div className="mb-4">
               <p className="text-sm text-gray-600">
-                Ditemukan {products.length} produk untuk "{displayQuery}"
+                Ditemukan {products.length} produk untuk "{query}"
               </p>
             </div>
 
@@ -149,13 +169,22 @@ const SearchResults = () => {
                         {formatPrice(product.selling_price)}
                       </p>
                       
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-between">
                         <Badge 
                           variant={product.current_stock > 0 ? 'default' : 'destructive'}
                           className="text-xs"
                         >
                           {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
                         </Badge>
+                        
+                        <Button
+                          size="sm"
+                          onClick={(e) => handleAddToCart(product, e)}
+                          disabled={product.current_stock === 0}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ShoppingCart className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

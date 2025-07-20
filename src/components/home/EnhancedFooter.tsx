@@ -1,21 +1,20 @@
 
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
+  MapPin, 
   Phone, 
   Mail, 
-  MapPin, 
-  Facebook, 
-  Instagram, 
-  Twitter,
+  Clock, 
   Store,
-  Clock,
-  ShieldCheck
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
+  Globe
 } from 'lucide-react';
 
 const EnhancedFooter = () => {
-  // Fetch store settings
   const { data: settings } = useQuery({
     queryKey: ['footer-settings'],
     queryFn: async () => {
@@ -32,146 +31,190 @@ const EnhancedFooter = () => {
 
   const storeInfo = settings?.store_info || {};
   const storeName = settings?.store_name?.name || 'Waroeng Kami';
-  const contactInfo = settings?.contact_info || {};
-  const socialMedia = settings?.social_media || {};
+  const logoUrl = settings?.store_logo?.url || null;
 
   return (
-    <footer className="bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-12">
+    <footer className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
+      {/* Main Footer Content */}
+      <div className="container mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Store Info */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Store className="h-6 w-6" />
+          
+          {/* Store Information */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="bg-white p-3 rounded-xl shadow-lg">
+                {logoUrl ? (
+                  <img 
+                    src={logoUrl} 
+                    alt={storeName} 
+                    className="h-10 w-10 object-cover rounded-lg"
+                  />
+                ) : (
+                  <Store className="h-10 w-10 text-blue-600" />
+                )}
               </div>
-              <h3 className="text-xl font-bold">{storeName}</h3>
+              <div>
+                <h2 className="text-2xl font-bold text-white">{storeName}</h2>
+                <p className="text-blue-200 font-medium">Toko Online Terpercaya</p>
+              </div>
             </div>
-            <p className="text-gray-300 leading-relaxed">
-              {storeInfo.description || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan sehari-hari Anda.'}
+            
+            <p className="text-gray-300 mb-6 leading-relaxed max-w-md">
+              {storeInfo.description || 'Menyediakan berbagai produk berkualitas dengan pelayanan terbaik untuk kepuasan pelanggan.'}
             </p>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <ShieldCheck className="h-4 w-4" />
-              <span>Terpercaya sejak 2020</span>
-            </div>
-          </div>
 
-          {/* Contact Info */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Hubungi Kami
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-gray-300">
-                <Phone className="h-4 w-4 text-blue-400" />
-                <span>{contactInfo.phone || '+62 812-3456-7890'}</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-300">
-                <Mail className="h-4 w-4 text-blue-400" />
-                <span>{contactInfo.email || 'info@waroengkami.com'}</span>
-              </div>
-              <div className="flex items-start gap-3 text-gray-300">
-                <MapPin className="h-4 w-4 text-blue-400 mt-1" />
-                <span>{contactInfo.address || 'Jl. Contoh No. 123, Jakarta Selatan, DKI Jakarta'}</span>
-              </div>
+            {/* Contact Information */}
+            <div className="space-y-4">
+              {storeInfo.address && (
+                <div className="flex items-start space-x-3">
+                  <div className="bg-blue-600/20 p-2 rounded-lg">
+                    <MapPin className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Alamat</p>
+                    <p className="text-gray-300 text-sm">{storeInfo.address}</p>
+                  </div>
+                </div>
+              )}
+              
+              {storeInfo.phone && (
+                <div className="flex items-center space-x-3">
+                  <div className="bg-green-600/20 p-2 rounded-lg">
+                    <Phone className="h-5 w-5 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Telepon</p>
+                    <p className="text-gray-300 text-sm">{storeInfo.phone}</p>
+                  </div>
+                </div>
+              )}
+              
+              {storeInfo.email && (
+                <div className="flex items-center space-x-3">
+                  <div className="bg-purple-600/20 p-2 rounded-lg">
+                    <Mail className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Email</p>
+                    <p className="text-gray-300 text-sm">{storeInfo.email}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Operating Hours */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+          <div>
+            <h3 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-400" />
               Jam Operasional
             </h3>
-            <div className="space-y-2 text-gray-300">
-              <div className="flex justify-between">
-                <span>Senin - Jumat</span>
-                <span>08:00 - 20:00</span>
+            <div className="space-y-3">
+              <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm">
+                <p className="font-medium text-white">Senin - Jumat</p>
+                <p className="text-blue-200 text-sm">{storeInfo.weekday_hours || '08:00 - 21:00'}</p>
               </div>
-              <div className="flex justify-between">
-                <span>Sabtu</span>
-                <span>08:00 - 18:00</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Minggu</span>
-                <span>10:00 - 16:00</span>
-              </div>
-              <div className="mt-3 p-3 bg-green-600/20 rounded-lg">
-                <p className="text-green-300 text-sm">
-                  💬 Customer service online 24/7
-                </p>
+              <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm">
+                <p className="font-medium text-white">Sabtu - Minggu</p>
+                <p className="text-blue-200 text-sm">{storeInfo.weekend_hours || '09:00 - 22:00'}</p>
               </div>
             </div>
           </div>
 
-          {/* Social Media & Links */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Ikuti Kami</h3>
-            <div className="flex gap-3">
-              {socialMedia.facebook && (
+          {/* Quick Links & Social Media */}
+          <div>
+            <h3 className="text-xl font-bold mb-6 text-white">Ikuti Kami</h3>
+            
+            {/* Social Media Links */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {storeInfo.facebook && (
                 <a 
-                  href={socialMedia.facebook} 
+                  href={storeInfo.facebook} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="bg-blue-600 p-3 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="bg-blue-600/20 hover:bg-blue-600 p-3 rounded-xl transition-all duration-300 flex items-center justify-center group"
                 >
-                  <Facebook className="h-5 w-5" />
+                  <Facebook className="h-5 w-5 text-blue-400 group-hover:text-white" />
                 </a>
               )}
-              {socialMedia.instagram && (
+              
+              {storeInfo.instagram && (
                 <a 
-                  href={socialMedia.instagram} 
+                  href={storeInfo.instagram} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="bg-pink-600 p-3 rounded-lg hover:bg-pink-700 transition-colors"
+                  className="bg-pink-600/20 hover:bg-pink-600 p-3 rounded-xl transition-all duration-300 flex items-center justify-center group"
                 >
-                  <Instagram className="h-5 w-5" />
+                  <Instagram className="h-5 w-5 text-pink-400 group-hover:text-white" />
                 </a>
               )}
-              {socialMedia.twitter && (
+              
+              {storeInfo.twitter && (
                 <a 
-                  href={socialMedia.twitter} 
+                  href={storeInfo.twitter} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="bg-sky-600 p-3 rounded-lg hover:bg-sky-700 transition-colors"
+                  className="bg-sky-600/20 hover:bg-sky-600 p-3 rounded-xl transition-all duration-300 flex items-center justify-center group"
                 >
-                  <Twitter className="h-5 w-5" />
+                  <Twitter className="h-5 w-5 text-sky-400 group-hover:text-white" />
+                </a>
+              )}
+              
+              {storeInfo.website && (
+                <a 
+                  href={storeInfo.website} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-green-600/20 hover:bg-green-600 p-3 rounded-xl transition-all duration-300 flex items-center justify-center group"
+                >
+                  <Globe className="h-5 w-5 text-green-400 group-hover:text-white" />
                 </a>
               )}
             </div>
 
-            {/* Information Links */}
+            {/* Quick Links */}
             <div className="space-y-2">
-              <h4 className="font-medium">Informasi</h4>
-              <div className="space-y-1 text-sm">
-                <Link to="/about" className="block text-gray-300 hover:text-white transition-colors">
-                  Tentang Kami
-                </Link>
-                <Link to="/terms" className="block text-gray-300 hover:text-white transition-colors">
-                  Syarat & Ketentuan
-                </Link>
-                <Link to="/privacy" className="block text-gray-300 hover:text-white transition-colors">
-                  Kebijakan Privasi
-                </Link>
-                <Link to="/faq" className="block text-gray-300 hover:text-white transition-colors">
-                  FAQ
-                </Link>
-              </div>
+              <h4 className="font-semibold text-white mb-3">Menu Cepat</h4>
+              <a href="/" className="block text-gray-300 hover:text-blue-400 transition-colors duration-300 py-1">
+                Beranda
+              </a>
+              <a href="/products" className="block text-gray-300 hover:text-blue-400 transition-colors duration-300 py-1">
+                Produk
+              </a>
+              <a href="/order-history" className="block text-gray-300 hover:text-blue-400 transition-colors duration-300 py-1">
+                Riwayat Pesanan
+              </a>
+              <a href="/profile" className="block text-gray-300 hover:text-blue-400 transition-colors duration-300 py-1">
+                Profil
+              </a>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Bottom Section */}
-        <div className="border-t border-gray-700 mt-8 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-gray-400 text-sm">
-              © 2024 {storeName}. Semua hak dilindungi.
+      {/* Bottom Footer */}
+      <div className="border-t border-white/10 bg-black/20 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="text-center md:text-left">
+              <p className="text-gray-300 text-sm">
+                © {new Date().getFullYear()} {storeName}. Semua hak dilindungi.
+              </p>
+              <p className="text-gray-400 text-xs mt-1">
+                Dibuat dengan ❤️ untuk pelanggan terbaik
+              </p>
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-400">
-              <span>🚚 Gratis Ongkir</span>
-              <span>💳 Bayar di Tempat</span>
-              <span>🔒 Aman & Terpercaya</span>
+            
+            <div className="flex items-center space-x-6 text-sm text-gray-400">
+              <a href="#" className="hover:text-blue-400 transition-colors duration-300">
+                Syarat & Ketentuan
+              </a>
+              <a href="#" className="hover:text-blue-400 transition-colors duration-300">
+                Kebijakan Privasi
+              </a>
+              <a href="#" className="hover:text-blue-400 transition-colors duration-300">
+                Bantuan
+              </a>
             </div>
           </div>
         </div>
