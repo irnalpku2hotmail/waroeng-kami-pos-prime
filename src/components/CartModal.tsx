@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Package, Minus, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
 interface CartModalProps {
@@ -22,21 +22,6 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch COD settings
-  const { data: codSettings } = useQuery({
-    queryKey: ['cod-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('key', 'cod_settings')
-        .single();
-
-      if (error) throw error;
-      return data?.value || {};
-    }
-  });
-
   // Auto-fill customer info from user profile
   useEffect(() => {
     if (user && profile) {
@@ -44,7 +29,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         name: profile.full_name || '',
         phone: profile.phone || '',
         email: profile.email || user.email || '',
-        address: (profile as any).address_text || profile.address || '' // Handle both possible field names
+        address: profile.address || ''
       });
     }
   }, [user, profile, setCustomerInfo]);
@@ -75,18 +60,6 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const timestamp = Date.now();
       const orderNumber = `ORD${timestamp}`;
 
-      // Get delivery fee from COD settings - handle different possible structures
-      let deliveryFee = 10000; // default
-      if (codSettings && typeof codSettings === 'object') {
-        if ('delivery_fee' in codSettings) {
-          deliveryFee = Number(codSettings.delivery_fee) || 10000;
-        } else if ('amount' in codSettings) {
-          deliveryFee = Number(codSettings.amount) || 10000;
-        }
-      }
-      
-      const total = getTotalPrice() + deliveryFee;
-
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -95,8 +68,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
-          total_amount: total,
-          delivery_fee: deliveryFee,
+          total_amount: getTotalPrice(),
           payment_method: 'cod',
           status: 'pending',
           notes: 'Pesanan dari website'
@@ -140,19 +112,6 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       setIsSubmitting(false);
     }
   };
-
-  // Get delivery fee with proper handling
-  let deliveryFee = 10000; // default
-  if (codSettings && typeof codSettings === 'object') {
-    if ('delivery_fee' in codSettings) {
-      deliveryFee = Number(codSettings.delivery_fee) || 10000;
-    } else if ('amount' in codSettings) {
-      deliveryFee = Number(codSettings.amount) || 10000;
-    }
-  }
-
-  const subtotal = getTotalPrice();
-  const total = subtotal + deliveryFee;
 
   if (items.length === 0) {
     return (
@@ -330,37 +289,22 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
         {/* Order Summary & Action */}
         <div className="border-t pt-4 space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR',
-                minimumFractionDigits: 0,
-              }).format(subtotal)}</span>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm text-gray-600">Total ({getTotalItems()} item)</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR',
+                  minimumFractionDigits: 0,
+                }).format(getTotalPrice())}
+              </p>
             </div>
-            <div className="flex justify-between">
-              <span>Ongkos Kirim</span>
-              <span>{new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR',
-                minimumFractionDigits: 0,
-              }).format(deliveryFee)}</span>
-            </div>
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
-              <span>Total</span>
-              <span className="text-blue-600">{new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR',
-                minimumFractionDigits: 0,
-              }).format(total)}</span>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <p className="text-xs text-gray-500 mb-1">Pembayaran</p>
-            <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium inline-block">
-              Cash on Delivery (COD)
+            <div className="text-right">
+              <p className="text-xs text-gray-500 mb-1">Pembayaran</p>
+              <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                Cash on Delivery (COD)
+              </div>
             </div>
           </div>
 
