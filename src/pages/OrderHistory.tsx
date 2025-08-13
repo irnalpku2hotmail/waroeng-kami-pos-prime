@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { OrderDetailsModal } from '@/components/OrderDetailsModal';
+import OrderDetailsModal from '@/components/OrderDetailsModal';
 import { Package, Search, Calendar, MapPin, Phone, User, CreditCard } from 'lucide-react';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
