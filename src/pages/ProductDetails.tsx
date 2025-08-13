@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -83,14 +84,14 @@ const ProductDetails = () => {
   useEffect(() => {
     // Check if the user has liked the product
     const checkLikeStatus = async () => {
-      if (!user) return;
+      if (!user || !id) return;
 
       const { data, error } = await supabase
-        .from('likes')
+        .from('user_product_likes')
         .select('*')
         .eq('user_id', user.id)
         .eq('product_id', id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching like status:', error);
@@ -128,7 +129,23 @@ const ProductDetails = () => {
   const handleAddToCart = () => {
     if (!product) return;
     
-    addToCart();
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: quantity,
+      image: product.image_url,
+      stock: product.current_stock,
+      product_id: product.id,
+      unit_price: product.selling_price,
+      total_price: product.selling_price * quantity,
+      product: {
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url
+      }
+    });
+    
     toast({
       title: "Produk ditambahkan",
       description: `${product.name} telah ditambahkan ke keranjang`,
@@ -148,7 +165,7 @@ const ProductDetails = () => {
     if (isLiked) {
       // Unlike the product
       const { error } = await supabase
-        .from('likes')
+        .from('user_product_likes')
         .delete()
         .eq('user_id', user.id)
         .eq('product_id', id);
@@ -170,7 +187,7 @@ const ProductDetails = () => {
     } else {
       // Like the product
       const { error } = await supabase
-        .from('likes')
+        .from('user_product_likes')
         .insert([{ user_id: user.id, product_id: id }]);
 
       if (error) {
@@ -208,13 +225,19 @@ const ProductDetails = () => {
     }
   };
 
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <HomeNavbar 
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onSearch={() => {}}
+        onSearch={handleSearch}
       />
 
       {isLoading && (
@@ -297,9 +320,9 @@ const ProductDetails = () => {
                   <span className="text-2xl md:text-3xl font-bold text-blue-600">
                     {formatPrice(product.selling_price)}
                   </span>
-                  {product.purchase_price < product.selling_price && (
+                  {product.base_price < product.selling_price && (
                     <span className="text-lg text-gray-500 line-through">
-                      {formatPrice(product.purchase_price)}
+                      {formatPrice(product.base_price)}
                     </span>
                   )}
                 </div>
