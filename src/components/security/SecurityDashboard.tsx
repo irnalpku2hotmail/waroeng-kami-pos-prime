@@ -20,13 +20,20 @@ const SecurityDashboard = () => {
 
       if (profilesError) throw profilesError;
 
-      // Get recent role changes - use a safer approach
+      // Get recent role changes - use a simpler approach
       let recentChanges = 0;
       try {
-        const { data: changes } = await supabase.rpc('count_recent_role_changes');
-        recentChanges = changes || 0;
+        // Try to count recent role changes from audit table
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: changes } = await supabase
+          .from('role_change_audit' as any)
+          .select('id', { count: 'exact' })
+          .gte('changed_at', sevenDaysAgo);
+        
+        recentChanges = changes?.length || 0;
       } catch (err) {
         console.log('Recent role changes query not available:', err);
+        recentChanges = 0;
       }
 
       const roleDistribution = profiles?.reduce((acc: any, profile) => {

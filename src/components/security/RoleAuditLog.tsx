@@ -12,11 +12,18 @@ const RoleAuditLog = () => {
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ['role-audit-logs'],
     queryFn: async () => {
-      // Since role_change_audit table might not be in types yet, use rpc call or direct query
+      // For now, return empty array since the audit table may not be available yet
+      // This will be populated once role changes start happening
       try {
-        const { data, error } = await supabase.rpc('get_role_audit_logs');
+        // Try to query the audit table directly if it exists
+        const { data, error } = await supabase
+          .from('role_change_audit' as any)
+          .select('*')
+          .order('changed_at', { ascending: false })
+          .limit(50);
+
         if (error) {
-          console.log('RPC not available, returning empty array:', error);
+          console.log('Audit table not available yet:', error);
           return [];
         }
         return data || [];
