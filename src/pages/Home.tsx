@@ -10,12 +10,13 @@ import HomeFooter from '@/components/home/HomeFooter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 
-interface Product {
+interface HomeProduct {
   id: string;
   name: string;
-  base_price: number;
+  selling_price: number;
   image_url: string;
   current_stock: number;
+  description: string | null;
   categories: { id: string; name: string };
   units: { name: string; abbreviation: string };
   price_variants: any[];
@@ -100,7 +101,7 @@ const Home = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Semua Produk</h2>
           </div>
-          <ProductGrid products={products as Product[]} isLoading={isLoading} />
+          <ProductGrid products={products as HomeProduct[]} isLoading={isLoading} />
         </section>
       </main>
 

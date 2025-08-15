@@ -52,9 +52,9 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
     enabled: !!profile?.role
   });
 
-  const hasPermission = (permission: string) => {
+  const hasPermission = (resource: string) => {
     if (!permissions) return false;
-    return permissions.some(p => p.permission === permission && p.allowed);
+    return permissions.some(p => p.resource === resource && p.can_read);
   };
 
   const menuItems = [
@@ -62,132 +62,132 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
       path: '/dashboard',
       icon: LayoutDashboard,
       label: 'Dashboard',
-      permission: 'view_dashboard'
+      resource: 'dashboard'
     },
     {
       path: '/products',
       icon: Package,
       label: 'Produk',
-      permission: 'view_products'
+      resource: 'products'
     },
     {
       path: '/categories',
       icon: Archive,
       label: 'Kategori & Unit',
-      permission: 'view_categories'
+      resource: 'categories'
     },
     {
       path: '/suppliers',
       icon: Truck,
       label: 'Supplier',
-      permission: 'view_suppliers'
+      resource: 'suppliers'
     },
     {
       path: '/customers',
       icon: Users,
       label: 'Pelanggan',
-      permission: 'view_customers'
+      resource: 'customers'
     },
     {
       path: '/purchases',
       icon: ShoppingCart,
       label: 'Pembelian',
-      permission: 'view_purchases'
+      resource: 'purchases'
     },
     {
       path: '/returns',
       icon: RotateCcw,
       label: 'Return',
-      permission: 'view_returns'
+      resource: 'returns'
     },
     {
       path: '/pos',
       icon: Calculator,
       label: 'Point of Sale',
-      permission: 'view_pos'
+      resource: 'pos'
     },
     {
       path: '/orders',
       icon: ClipboardList,
       label: 'Pesanan',
-      permission: 'view_orders'
+      resource: 'orders'
     },
     {
       path: '/flash-sales',
       icon: Zap,
       label: 'Flash Sale',
-      permission: 'view_flash_sales'
+      resource: 'flash_sales'
     },
     {
       path: '/points-rewards',
       icon: Gift,
       label: 'Point & Reward',
-      permission: 'view_points_rewards'
+      resource: 'points_rewards'
     },
     {
       path: '/point-exchange',
       icon: Coins,
       label: 'Tukar Point',
-      permission: 'view_point_exchange'
+      resource: 'point_exchange'
     },
     {
       path: '/credit-management',
       icon: CreditCard,
       label: 'Manajemen Kredit',
-      permission: 'view_credit_management'
+      resource: 'credit_management'
     },
     {
       path: '/user-management',
       icon: UserCheck,
       label: 'Manajemen User',
-      permission: 'view_user_management'
+      resource: 'user_management'
     },
     {
       path: '/user-locations',
       icon: MapPin,
       label: 'Lokasi User',
-      permission: 'view_user_locations'
+      resource: 'user_locations'
     },
     {
       path: '/inventory',
       icon: Archive,
       label: 'Inventori',
-      permission: 'view_inventory'
+      resource: 'inventory'
     },
     {
       path: '/expenses',
       icon: DollarSign,
       label: 'Pengeluaran',
-      permission: 'view_expenses'
+      resource: 'expenses'
     },
     {
       path: '/reports',
       icon: BarChart3,
       label: 'Laporan',
-      permission: 'view_reports'
+      resource: 'reports'
     },
     {
       path: '/notifications',
       icon: Bell,
       label: 'Notifikasi',
-      permission: 'view_notifications'
+      resource: 'notifications'
     },
     {
       path: '/settings',
       icon: Settings,
       label: 'Pengaturan',
-      permission: 'view_settings'
+      resource: 'settings'
     },
     {
       path: '/profile',
       icon: User,
       label: 'Profil',
-      permission: 'view_profile'
+      resource: 'profile'
     }
   ];
 
   // Filter menu items based on permissions
-  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
+  const visibleMenuItems = menuItems.filter(item => hasPermission(item.resource));
 
   return (
     <nav className="space-y-2">
