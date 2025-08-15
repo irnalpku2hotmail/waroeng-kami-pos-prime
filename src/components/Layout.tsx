@@ -1,91 +1,58 @@
 
-import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { ReactNode, useState } from 'react';
 import NavigationSidebar from '@/components/layout/NavigationSidebar';
-import UserDropdown from '@/components/layout/UserDropdown';
-import NotificationDropdown from '@/components/layout/NotificationDropdown';
-import DateTimeDisplay from '@/components/layout/DateTimeDisplay';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
+import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Home } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const Layout = () => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+interface LayoutProps {
+  children: ReactNode;
+}
+
+const Layout = ({ children }: LayoutProps) => {
   const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleMobileMenuClose = () => {
-    setMobileMenuOpen(false);
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <NavigationSidebar />
+    <div className="min-h-screen bg-gray-50">
+      {isMobile ? (
+        // Mobile Layout
+        <div className="flex flex-col">
+          <header className="bg-white border-b border-gray-200 p-4">
+            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64">
+                <NavigationSidebar onLinkClick={handleLinkClick} />
+              </SheetContent>
+            </Sheet>
+          </header>
+          <main className="flex-1 p-4">
+            {children}
+          </main>
+        </div>
+      ) : (
+        // Desktop Layout
+        <div className="flex">
+          <div className="w-64 fixed inset-y-0 left-0 z-50">
+            <NavigationSidebar onLinkClick={handleLinkClick} />
+          </div>
+          <main className={cn("flex-1 ml-64 p-6")}>
+            {children}
+          </main>
+        </div>
       )}
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Navigation */}
-        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {/* Mobile Menu Button */}
-            {isMobile && (
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="p-2">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-64">
-                  <NavigationSidebar onLinkClick={handleMobileMenuClose} />
-                </SheetContent>
-              </Sheet>
-            )}
-
-            {/* Home Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center space-x-2"
-            >
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Button>
-
-            {/* Date Time Display */}
-            <DateTimeDisplay />
-          </div>
-
-          {/* Right Side Actions */}
-          <div className="flex items-center space-x-3">
-            <NotificationDropdown />
-            <UserDropdown />
-          </div>
-        </header>
-
-        {/* Page Content */}
-        <main className="flex-1 p-6 overflow-auto">
-          <Outlet />
-        </main>
-      </div>
     </div>
   );
 };
