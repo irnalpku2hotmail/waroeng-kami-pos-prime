@@ -16,8 +16,7 @@ import {
   History,
   Home,
   Menu,
-  X,
-  Search
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -26,8 +25,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import PerfectSearch from './PerfectSearch';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileSearchBar from './MobileSearchBar';
 
 interface HomeNavbarProps {
   onCartClick: () => void;
@@ -41,6 +40,7 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Fetch store settings
   const { data: settings } = useQuery({
@@ -82,60 +82,68 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 shadow-xl border-b sticky top-0 z-50">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-3 sm:px-4">
         {/* Main Navigation Bar */}
         <div className="flex items-center justify-between py-4">
           {/* Logo and Store Name with Enhanced Design */}
-          <Link to="/" className="flex items-center space-x-4 group">
+          <Link to="/" className="flex items-center space-x-3 sm:space-x-4 group">
             <div className="relative">
-              <div className="bg-white p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+              <div className="bg-white p-2 sm:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
                     alt={storeName} 
-                    className="h-8 w-8 object-cover rounded-lg"
+                    className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} object-cover rounded-lg`}
                   />
                 ) : (
-                  <Store className="h-8 w-8 text-blue-600" />
+                  <Store className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} text-blue-600`} />
                 )}
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
-            <div className="text-white hidden md:block">
-              <h1 className="text-2xl font-bold leading-tight tracking-wide">
-                {storeName}
+            <div className="text-white">
+              <h1 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold leading-tight tracking-wide`}>
+                {isMobile ? storeName.slice(0, 12) + (storeName.length > 12 ? '...' : '') : storeName}
               </h1>
-              <p className="text-blue-100 text-sm font-medium">
-                {storeTagline}
-              </p>
+              {!isMobile && (
+                <p className="text-blue-100 text-sm font-medium">
+                  {storeTagline}
+                </p>
+              )}
             </div>
           </Link>
 
-          {/* Enhanced Search Bar for Desktop - Using PerfectSearch */}
-          <PerfectSearch
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-            onSearch={handleSearch}
-          />
+          {/* Enhanced Search Bar for Desktop */}
+          {!isMobile && (
+            <div className="flex-1 max-w-2xl mx-8">
+              <MobileSearchBar
+                searchTerm={searchTerm}
+                onSearchChange={onSearchChange}
+                onSearch={handleSearch}
+                placeholder="Cari produk, kategori, atau brand..."
+                showVoiceSearch={true}
+              />
+            </div>
+          )}
           
           {/* Enhanced User Actions */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-3 text-white hover:bg-white/10 px-4 py-2 rounded-xl transition-all duration-300">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 sm:gap-3 text-white hover:bg-white/10 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300">
                     {profile?.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
                         alt="Avatar" 
-                        className="w-8 h-8 rounded-full border-2 border-white/30"
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-white/30"
                       />
                     ) : (
-                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                        <UserCircle className="h-5 w-5" />
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
+                        <UserCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                     )}
-                    <span className="hidden md:inline font-semibold">{profile?.full_name || 'User'}</span>
+                    {!isMobile && <span className="font-semibold">{profile?.full_name || 'User'}</span>}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-md border-0 shadow-xl rounded-xl">
@@ -159,19 +167,19 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 sm:space-x-3">
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={() => navigate('/login')}
-                  className="text-white hover:bg-white/10 font-semibold px-4 py-2 rounded-xl transition-all duration-300"
+                  className="text-white hover:bg-white/10 font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all duration-300"
                 >
                   Login
                 </Button>
                 <Button 
                   size="sm" 
                   onClick={() => navigate('/register')}
-                  className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-4 py-2 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
+                  className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-3 sm:px-4 py-2 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
                 >
                   Register
                 </Button>
@@ -182,51 +190,47 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
             <Button
               variant="ghost"
               size="sm"
-              className="relative text-white hover:bg-white/10 p-3 rounded-xl transition-all duration-300 hover:scale-105"
+              className="relative text-white hover:bg-white/10 p-2 sm:p-3 rounded-xl transition-all duration-300 hover:scale-105"
               onClick={onCartClick}
             >
-              <ShoppingCart className="h-6 w-6" />
+              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
               {getTotalItems() > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600 rounded-full animate-bounce">
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600 rounded-full animate-bounce">
                   {getTotalItems()}
                 </Badge>
               )}
             </Button>
 
             {/* Enhanced Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden text-white hover:bg-white/10 p-3 rounded-xl transition-all duration-300"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/10 p-2 rounded-xl transition-all duration-300"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Enhanced Mobile Search Bar */}
-        <div className="md:hidden pb-4">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-            <Input
-              type="search"
+        {isMobile && (
+          <div className="pb-4">
+            <MobileSearchBar
+              searchTerm={searchTerm}
+              onSearchChange={onSearchChange}
+              onSearch={handleSearch}
               placeholder="Cari produk atau kategori..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-12 pr-6 py-3 w-full bg-white/95 backdrop-blur-sm border-0 focus:bg-white focus:ring-2 focus:ring-blue-300 rounded-2xl shadow-lg text-gray-800 placeholder-gray-500 font-medium"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch();
-                }
-              }}
+              showVoiceSearch={true}
             />
           </div>
-        </div>
+        )}
 
         {/* Enhanced Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white/10 backdrop-blur-md rounded-2xl mb-4 p-4 shadow-xl">
+        {mobileMenuOpen && isMobile && (
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl mb-4 p-4 shadow-xl">
             <div className="space-y-3">
               {user ? (
                 <>

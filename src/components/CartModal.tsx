@@ -8,10 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Package, Minus, Plus, Trash2 } from 'lucide-react';
+import { ShoppingCart, Package, Minus, Plus, Trash2, MapPin, User, Phone, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CartModalProps {
   open: boolean;
@@ -22,6 +23,8 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo, clearCart, updateQuantity, removeItem } = useCart();
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
 
   // Fetch COD settings
   const { data: settings } = useQuery({
@@ -38,46 +41,35 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     }
   });
 
-  // Auto-fill customer info from user profile
+  // Auto-fill customer info from user profile including address_text
   useEffect(() => {
     if (user && profile) {
       setCustomerInfo({
         name: profile.full_name || '',
         phone: profile.phone || '',
         email: profile.email || user.email || '',
-        address: profile.address || ''
+        address: profile.address_text || profile.address || '' // Prioritize address_text
       });
     }
   }, [user, profile, setCustomerInfo]);
 
-  const handleSubmitOrder = async () => {
-    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
-      toast({
-        title: 'Error',
-        description: 'Mohon lengkapi semua data pengiriman',
-        variant: 'destructive',
-      });
-      return;
-    }
+  // Create order mutation
+  const createOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+        throw new Error('Mohon lengkapi semua data pengiriman');
+      }
 
-    if (items.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Keranjang belanja kosong',
-        variant: 'destructive',
-      });
-      return;
-    }
+      if (items.length === 0) {
+        throw new Error('Keranjang belanja kosong');
+      }
 
-    setIsSubmitting(true);
-
-    try {
       // Get delivery fee from settings
       const deliveryFee = settings?.cod_settings?.delivery_fee || 10000;
       
       // Generate order number
       const timestamp = Date.now();
-      const orderNumber = `ORD${timestamp}`;
+      const orderNumber = `WEB${timestamp}`;
 
       // Create order
       const { data: order, error: orderError } = await supabase
@@ -91,7 +83,8 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           delivery_fee: deliveryFee,
           payment_method: 'cod',
           status: 'pending',
-          notes: 'Pesanan dari website'
+          notes: 'Pesanan dari website',
+          customer_id: user?.id || null
         })
         .select()
         .single();
@@ -113,24 +106,31 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
       if (itemsError) throw itemsError;
 
+      return order;
+    },
+    onSuccess: (order) => {
       toast({
-        title: 'Berhasil!',
-        description: 'Pesanan berhasil dibuat. Kami akan menghubungi Anda segera.',
+        title: 'Pesanan Berhasil Dibuat! 🎉',
+        description: `Nomor pesanan: ${order.order_number}. Kami akan menghubungi Anda segera.`,
       });
-
       clearCart();
       onOpenChange(false);
-      
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    onError: (error: any) => {
       console.error('Error creating order:', error);
       toast({
-        title: 'Error',
-        description: 'Gagal membuat pesanan. Silakan coba lagi.',
+        title: 'Gagal Membuat Pesanan',
+        description: error.message || 'Terjadi kesalahan. Silakan coba lagi.',
         variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
     }
+  });
+
+  const handleSubmitOrder = () => {
+    setIsSubmitting(true);
+    createOrderMutation.mutate();
+    setIsSubmitting(false);
   };
 
   // Calculate totals with delivery fee
@@ -141,7 +141,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   if (items.length === 0) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md mx-4">
+        <DialogContent className={`${isMobile ? 'max-w-[95vw] mx-2' : 'max-w-md'}`}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <ShoppingCart className="h-5 w-5" />
@@ -150,11 +150,11 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           </DialogHeader>
           
           <div className="text-center py-8">
-            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <ShoppingCart className="h-12 w-12 text-gray-400" />
+            <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <ShoppingCart className="h-10 w-10 text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Keranjang Kosong</h3>
-            <p className="text-gray-600 mb-6">Belum ada produk di keranjang Anda</p>
+            <p className="text-gray-600 mb-6 text-sm">Belum ada produk di keranjang Anda</p>
             <Button 
               onClick={() => onOpenChange(false)}
               className="w-full bg-blue-600 hover:bg-blue-700"
@@ -169,26 +169,30 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] mx-4 overflow-hidden">
+      <DialogContent className={`${isMobile ? 'max-w-[95vw] max-h-[95vh] mx-2' : 'max-w-2xl max-h-[90vh]'} overflow-hidden`}>
         <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <ShoppingCart className="h-6 w-6 text-blue-600" />
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             Keranjang Belanja
-            <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2 py-1 rounded-full">
+            <span className="bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium px-2 py-1 rounded-full">
               {getTotalItems()} item
             </span>
           </DialogTitle>
         </DialogHeader>
         
-        <div className="overflow-y-auto max-h-[60vh] space-y-6">
+        <div className="overflow-y-auto max-h-[60vh] space-y-4 sm:space-y-6">
           {/* Cart Items */}
           <div className="space-y-3">
+            <h3 className="font-medium text-gray-900 flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Produk Pesanan
+            </h3>
             {items?.map((item) => (
               <Card key={item.id} className="border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
+                <CardContent className="p-3 sm:p-4">
+                  <div className={`flex items-center gap-3 ${isMobile ? 'flex-col space-y-3' : ''}`}>
                     <div className="flex-shrink-0">
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                      <div className={`${isMobile ? 'w-20 h-20' : 'w-16 h-16'} bg-gray-100 rounded-lg overflow-hidden`}>
                         {item.image ? (
                           <img
                             src={item.image}
@@ -203,8 +207,8 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                       </div>
                     </div>
                     
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
+                    <div className={`flex-1 min-w-0 ${isMobile ? 'text-center' : ''}`}>
+                      <h4 className="font-medium text-gray-900 truncate text-sm sm:text-base">{item.name}</h4>
                       <p className="text-sm text-gray-600">
                         {new Intl.NumberFormat('id-ID', {
                           style: 'currency',
@@ -215,7 +219,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                       <p className="text-xs text-gray-500">Stok: {item.stock}</p>
                     </div>
                     
-                    <div className="flex items-center gap-3">
+                    <div className={`flex items-center gap-3 ${isMobile ? 'justify-center w-full' : ''}`}>
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
@@ -225,7 +229,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                        <span className="w-8 text-center font-medium text-sm">{item.quantity}</span>
                         <Button
                           size="sm"
                           variant="outline"
@@ -255,34 +259,42 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           {/* Customer Information */}
           <Card className="bg-gray-50">
             <CardContent className="p-4">
-              <h3 className="font-semibold mb-4 text-gray-900">Informasi Pengiriman</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                    Nama Lengkap *
-                  </Label>
-                  <Input
-                    id="name"
-                    value={customerInfo.name}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Masukkan nama lengkap"
-                    className="mt-1"
-                  />
+              <h3 className="font-semibold mb-4 text-gray-900 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Informasi Pengiriman
+              </h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+                  <div>
+                    <Label htmlFor="name" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      Nama Lengkap *
+                    </Label>
+                    <Input
+                      id="name"
+                      value={customerInfo.name}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Masukkan nama lengkap"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      Nomor Telepon *
+                    </Label>
+                    <Input
+                      id="phone"
+                      value={customerInfo.phone}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Masukkan nomor telepon"
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                    Nomor Telepon *
-                  </Label>
-                  <Input
-                    id="phone"
-                    value={customerInfo.phone}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Masukkan nomor telepon"
-                    className="mt-1"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
                     Email
                   </Label>
                   <Input
@@ -294,18 +306,24 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                     className="mt-1"
                   />
                 </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="address" className="text-sm font-medium text-gray-700">
+                <div>
+                  <Label htmlFor="address" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
                     Alamat Lengkap *
                   </Label>
                   <Textarea
                     id="address"
                     value={customerInfo.address}
                     onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="Masukkan alamat lengkap dengan detail"
-                    rows={3}
+                    placeholder="Alamat akan terisi otomatis dari profil, atau masukkan alamat lengkap"
+                    rows={isMobile ? 2 : 3}
                     className="mt-1"
                   />
+                  {profile?.address_text && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      📍 Alamat dari profil: {profile.address_text.slice(0, 50)}...
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -315,7 +333,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         {/* Order Summary & Action */}
         <div className="border-t pt-4 space-y-4">
           <div className="space-y-2">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Subtotal ({getTotalItems()} item)</span>
               <span className="font-medium">
                 {new Intl.NumberFormat('id-ID', {
@@ -325,8 +343,11 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                 }).format(subtotal)}
               </span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Ongkos Kirim</span>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-600 flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                Ongkos Kirim
+              </span>
               <span className="font-medium">
                 {new Intl.NumberFormat('id-ID', {
                   style: 'currency',
@@ -336,8 +357,8 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
               </span>
             </div>
             <div className="flex justify-between items-center border-t pt-2">
-              <span className="text-lg font-bold text-gray-900">Total</span>
-              <span className="text-2xl font-bold text-blue-600">
+              <span className={`${isMobile ? 'text-base' : 'text-lg'} font-bold text-gray-900`}>Total</span>
+              <span className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-blue-600`}>
                 {new Intl.NumberFormat('id-ID', {
                   style: 'currency',
                   currency: 'IDR',
@@ -347,20 +368,29 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
             </div>
           </div>
 
-          <div className="text-right">
+          <div className="text-center">
             <p className="text-xs text-gray-500 mb-1">Pembayaran</p>
-            <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium inline-block">
-              Cash on Delivery (COD)
+            <div className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium inline-block">
+              💰 Cash on Delivery (COD)
             </div>
           </div>
 
-          <Button 
-            onClick={handleSubmitOrder}
-            disabled={isSubmitting || !customerInfo.name || !customerInfo.phone || !customerInfo.address}
-            className="w-full bg-blue-600 hover:bg-blue-700 py-3 text-lg font-semibold"
-          >
-            {isSubmitting ? 'Memproses Pesanan...' : 'Pesan Sekarang'}
-          </Button>
+          <div className={`flex gap-3 ${isMobile ? 'flex-col' : ''}`}>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              Lanjut Belanja
+            </Button>
+            <Button 
+              onClick={handleSubmitOrder}
+              disabled={isSubmitting || createOrderMutation.isPending || !customerInfo.name || !customerInfo.phone || !customerInfo.address}
+              className={`flex-1 bg-blue-600 hover:bg-blue-700 ${isMobile ? 'py-3' : ''} text-base font-semibold`}
+            >
+              {isSubmitting || createOrderMutation.isPending ? 'Memproses Pesanan...' : '🛒 Pesan Sekarang'}
+            </Button>
+          </div>
           
           <p className="text-xs text-gray-500 text-center">
             Dengan memesan, Anda menyetujui syarat dan ketentuan kami

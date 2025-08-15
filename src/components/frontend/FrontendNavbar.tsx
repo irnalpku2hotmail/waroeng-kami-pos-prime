@@ -5,12 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X } from 'lucide-react';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
+import MobileSearchBar from '@/components/home/MobileSearchBar';
 
 interface FrontendNavbarProps {
   storeName: string;
@@ -28,6 +29,7 @@ const FrontendNavbar = ({
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Fetch store settings
   const { data: settings } = useQuery({
@@ -80,25 +82,27 @@ const FrontendNavbar = ({
   return (
     <>
       <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
-        {/* Top bar with contact info */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
-          <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
-            <div className="flex items-center space-x-4">
-              {contactInfo.phone && (
-                <span>📞 {contactInfo.phone}</span>
-              )}
-              {contactInfo.email && (
-                <span className="hidden md:inline">✉️ {contactInfo.email}</span>
-              )}
-            </div>
-            <div className="flex items-center space-x-4">
-              <span>Selamat Datang di {storeName}!</span>
+        {/* Top bar with contact info - Hidden on mobile */}
+        {!isMobile && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+              <div className="flex items-center space-x-4">
+                {contactInfo.phone && (
+                  <span>📞 {contactInfo.phone}</span>
+                )}
+                {contactInfo.email && (
+                  <span className="hidden md:inline">✉️ {contactInfo.email}</span>
+                )}
+              </div>
+              <div className="flex items-center space-x-4">
+                <span>Selamat Datang di {storeName}!</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main navbar */}
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Store Name */}
             <div className="flex items-center space-x-3">
@@ -107,55 +111,61 @@ const FrontendNavbar = ({
                   <img 
                     src={logoUrl} 
                     alt={storeName} 
-                    className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-500" 
+                    className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} 
                   />
                 </div>
               )}
+              {!logoUrl && (
+                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
+                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                </div>
+              )}
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {storeName}
+                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
+                  {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
                 </h1>
-                <p className="text-xs text-gray-500 hidden md:block">
-                  {storeInfo.tagline || 'Toko Online Terpercaya'}
-                </p>
+                {!isMobile && (
+                  <p className="text-xs text-gray-500">
+                    {storeInfo.tagline || 'Toko Online Terpercaya'}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center space-x-8">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
-                >
-                  {link.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
-                </a>
-              ))}
-            </div>
+            {!isMobile && (
+              <div className="hidden lg:flex items-center space-x-8">
+                {navLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
+                  >
+                    {link.label}
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                  </a>
+                ))}
+              </div>
+            )}
 
-            {/* Search Bar */}
-            <div className="flex-1 max-w-lg mx-8 hidden md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Cari produk, kategori..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-10 pr-4 border-2 border-gray-200 focus:border-blue-500 rounded-full"
+            {/* Desktop Search Bar */}
+            {!isMobile && (
+              <div className="flex-1 max-w-lg mx-8">
+                <MobileSearchBar
+                  searchTerm={searchTerm}
+                  onSearchChange={onSearchChange}
+                  showVoiceSearch={true}
                 />
               </div>
-            </div>
+            )}
 
             {/* Actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Cart */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="relative hover:bg-blue-50"
+                className="relative hover:bg-blue-50 p-2"
                 onClick={() => setCartModalOpen(true)}
               >
                 <ShoppingCart className="h-5 w-5" />
@@ -167,85 +177,93 @@ const FrontendNavbar = ({
               </Button>
 
               {/* User Menu - Desktop */}
-              <div className="hidden md:block">
-                {user ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50">
-                        {profile?.avatar_url ? (
-                          <img 
-                            src={profile.avatar_url} 
-                            alt="Profile" 
-                            className="h-6 w-6 rounded-full object-cover"
-                          />
-                        ) : (
-                          <UserCircle className="h-6 w-6" />
-                        )}
-                        <span className="hidden lg:inline">
+              {!isMobile && (
+                <div>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
+                          {profile?.avatar_url ? (
+                            <img 
+                              src={profile.avatar_url} 
+                              alt="Profile" 
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserCircle className="h-6 w-6" />
+                          )}
+                          <span className="hidden lg:inline text-sm font-medium">
+                            {profile?.full_name || user.email?.split('@')[0]}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem disabled>
+                          <User className="h-4 w-4 mr-2" />
                           {profile?.full_name || user.email?.split('@')[0]}
-                        </span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem disabled>
-                        <User className="h-4 w-4 mr-2" />
-                        {profile?.full_name || user.email?.split('@')[0]}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleSignOut}>
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setAuthModalOpen(true)}
-                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Masuk
-                  </Button>
-                )}
-              </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setAuthModalOpen(true)}
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50 px-4"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Masuk
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Mobile menu button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </Button>
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-2"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Mobile Search */}
-          <div className="md:hidden pb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Cari produk..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 pr-4 w-full"
+          {isMobile && (
+            <div className="pb-4">
+              <MobileSearchBar
+                searchTerm={searchTerm}
+                onSearchChange={onSearchChange}
+                showVoiceSearch={true}
               />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t shadow-lg">
+        {mobileMenuOpen && isMobile && (
+          <div className="bg-white border-t shadow-lg">
             <div className="px-4 py-4 space-y-4">
+              {/* Contact info on mobile */}
+              {contactInfo.phone && (
+                <div className="text-sm text-gray-600 pb-2 border-b">
+                  📞 {contactInfo.phone}
+                </div>
+              )}
+              
               {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  className="block text-gray-700 hover:text-blue-600 font-medium py-2"
+                  className="block text-gray-700 hover:text-blue-600 font-medium py-2 text-base"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
@@ -254,20 +272,25 @@ const FrontendNavbar = ({
               
               <div className="border-t pt-4">
                 {user ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 py-2">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 py-2">
                       {profile?.avatar_url ? (
                         <img 
                           src={profile.avatar_url} 
                           alt="Profile" 
-                          className="h-6 w-6 rounded-full object-cover"
+                          className="h-8 w-8 rounded-full object-cover"
                         />
                       ) : (
-                        <UserCircle className="h-6 w-6" />
+                        <UserCircle className="h-8 w-8 text-gray-400" />
                       )}
-                      <span className="text-gray-700">
-                        {profile?.full_name || user.email?.split('@')[0]}
-                      </span>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {profile?.full_name || 'User'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
+                      </div>
                     </div>
                     <Button
                       variant="outline"

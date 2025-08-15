@@ -3,12 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
-import { Menu } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import NotificationDropdown from '@/components/layout/NotificationDropdown';
 import UserDropdown from '@/components/layout/UserDropdown';
 import DateTimeDisplay from '@/components/layout/DateTimeDisplay';
 import NavigationSidebar from '@/components/layout/NavigationSidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Fetch store settings for store name
   const { data: settings } = useQuery({
@@ -62,46 +64,65 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+      {/* Header - Mobile Optimized */}
+      <header className="bg-white border-b border-gray-200 px-3 sm:px-4 py-3 sticky top-0 z-40">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Mobile menu trigger */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden">
+                <Button variant="ghost" size="sm" className="md:hidden p-2">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-64 p-0">
-                <div className="p-6">
-                  <h2 className="text-xl font-bold text-blue-800 mb-6">{storeName}</h2>
+              <SheetContent side="left" className="w-72 p-0">
+                <div className="flex items-center justify-between p-4 border-b">
+                  <h2 className="text-lg font-bold text-blue-800">{storeName}</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-1"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="p-4 overflow-y-auto">
                   <NavigationSidebar onLinkClick={() => setIsMobileMenuOpen(false)} />
                 </div>
               </SheetContent>
             </Sheet>
 
-            <h1 className="text-xl font-bold text-blue-800">{storeName}</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-blue-800 truncate max-w-[200px] sm:max-w-none">
+              {storeName}
+            </h1>
           </div>
 
-          <div className="flex items-center gap-4">
-            <DateTimeDisplay />
+          <div className="flex items-center gap-2 sm:gap-4">
+            {!isMobile && <DateTimeDisplay />}
             <NotificationDropdown />
             <UserDropdown />
           </div>
         </div>
+        
+        {/* Mobile DateTime Display */}
+        {isMobile && (
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <DateTimeDisplay />
+          </div>
+        )}
       </header>
 
-      <div className="flex">
+      <div className="flex min-h-[calc(100vh-80px)]">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 bg-white border-r border-gray-200 min-h-screen">
-          <div className="p-6">
+        <aside className="hidden md:block w-64 bg-white border-r border-gray-200 min-h-full">
+          <div className="p-4 sm:p-6">
             <NavigationSidebar />
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6">
+        {/* Main Content - Mobile Optimized */}
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-hidden">
           {children}
         </main>
       </div>

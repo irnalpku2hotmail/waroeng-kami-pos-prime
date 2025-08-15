@@ -10,10 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Mail, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface FrontendCartModalProps {
   open: boolean;
@@ -22,13 +23,14 @@ interface FrontendCartModalProps {
 
 const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   
   const [customerInfo, setCustomerInfo] = useState({
-    name: '',
-    phone: '',
-    address: '',
+    name: profile?.full_name || '',
+    phone: profile?.phone || '',
+    address: profile?.address_text || profile?.address || '', // Prioritize address_text
     notes: ''
   });
 
@@ -48,13 +50,17 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
 
   const generateOrderNumber = () => {
     const timestamp = Date.now();
-    return `ORD-${timestamp}`;
+    return `WEB-${timestamp}`;
   };
 
   const createOrder = useMutation({
     mutationFn: async () => {
       if (!user) {
         throw new Error('Silakan login terlebih dahulu');
+      }
+
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+        throw new Error('Mohon lengkapi semua data pengiriman yang wajib diisi');
       }
 
       const deliveryFee = settings?.delivery_fee?.amount || 10000;
@@ -68,11 +74,12 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
-          notes: customerInfo.notes,
+          notes: customerInfo.notes || 'Pesanan dari website',
           total_amount: totalAmount,
           delivery_fee: deliveryFee,
           payment_method: 'cod',
-          status: 'pending'
+          status: 'pending',
+          customer_id: user.id
         })
         .select()
         .single();
@@ -95,17 +102,17 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
 
       return order;
     },
-    onSuccess: () => {
+    onSuccess: (order) => {
       toast({
-        title: 'Pesanan Berhasil!',
-        description: 'Pesanan Anda telah diterima dan sedang diproses.'
+        title: 'Pesanan Berhasil! 🎉',
+        description: `Nomor pesanan: ${order.order_number}. Pesanan Anda sedang diproses.`
       });
       clearCart();
       setCustomerInfo({ name: '', phone: '', address: '', notes: '' });
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -132,7 +139,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
   if (!user) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={`${isMobile ? 'max-w-[95vw] mx-2' : 'max-w-md'}`}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
@@ -153,7 +160,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${isMobile ? 'max-w-[95vw] max-h-[95vh] mx-2' : 'max-w-2xl max-h-[90vh]'} overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
@@ -173,22 +180,26 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
           <div className="space-y-6">
             {/* Cart Items */}
             <div className="space-y-4">
+              <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Produk Pesanan
+              </h3>
               {items.map((item) => (
                 <Card key={item.id}>
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-4 ${isMobile ? 'flex-col space-y-3' : ''}`}>
                       <img
                         src={getImageUrl(item.product?.image_url)}
                         alt={item.product?.name || 'Product'}
-                        className="w-16 h-16 object-cover rounded-md"
+                        className={`${isMobile ? 'w-20 h-20' : 'w-16 h-16'} object-cover rounded-md`}
                       />
-                      <div className="flex-1">
+                      <div className={`flex-1 ${isMobile ? 'text-center' : ''}`}>
                         <h4 className="font-medium">{item.product?.name || 'Product'}</h4>
                         <p className="text-sm text-gray-600">
                           Rp {item.unit_price.toLocaleString('id-ID')}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
                         <Button
                           size="sm"
                           variant="outline"
@@ -227,44 +238,62 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
                 <User className="h-5 w-5" />
                 Informasi Pengiriman
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Nama Lengkap *</Label>
-                  <Input
-                    id="name"
-                    value={customerInfo.name}
-                    onChange={(e) => setCustomerInfo(prev => ({...prev, name: e.target.value}))}
-                    required
-                  />
+              <div className="grid grid-cols-1 gap-4">
+                <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+                  <div>
+                    <Label htmlFor="name" className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      Nama Lengkap *
+                    </Label>
+                    <Input
+                      id="name"
+                      value={customerInfo.name}
+                      onChange={(e) => setCustomerInfo(prev => ({...prev, name: e.target.value}))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone" className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      Nomor Telepon *
+                    </Label>
+                    <Input
+                      id="phone"
+                      value={customerInfo.phone}
+                      onChange={(e) => setCustomerInfo(prev => ({...prev, phone: e.target.value}))}
+                      required
+                    />
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="phone">Nomor Telepon *</Label>
-                  <Input
-                    id="phone"
-                    value={customerInfo.phone}
-                    onChange={(e) => setCustomerInfo(prev => ({...prev, phone: e.target.value}))}
+                  <Label htmlFor="address" className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    Alamat Lengkap *
+                  </Label>
+                  <Textarea
+                    id="address"
+                    value={customerInfo.address}
+                    onChange={(e) => setCustomerInfo(prev => ({...prev, address: e.target.value}))}
+                    placeholder="Alamat akan terisi otomatis dari profil, atau masukkan alamat lengkap untuk pengiriman"
                     required
+                    rows={isMobile ? 2 : 3}
+                  />
+                  {profile?.address_text && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      📍 Alamat dari profil: {profile.address_text.slice(0, 50)}...
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="notes">Catatan (Opsional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={customerInfo.notes}
+                    onChange={(e) => setCustomerInfo(prev => ({...prev, notes: e.target.value}))}
+                    placeholder="Catatan tambahan untuk pesanan"
+                    rows={2}
                   />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="address">Alamat Lengkap *</Label>
-                <Textarea
-                  id="address"
-                  value={customerInfo.address}
-                  onChange={(e) => setCustomerInfo(prev => ({...prev, address: e.target.value}))}
-                  placeholder="Masukkan alamat lengkap untuk pengiriman"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="notes">Catatan (Opsional)</Label>
-                <Textarea
-                  id="notes"
-                  value={customerInfo.notes}
-                  onChange={(e) => setCustomerInfo(prev => ({...prev, notes: e.target.value}))}
-                  placeholder="Catatan tambahan untuk pesanan"
-                />
               </div>
             </div>
 
@@ -288,10 +317,15 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
                 <span>Total</span>
                 <span>Rp {total.toLocaleString('id-ID')}</span>
               </div>
+              <div className="text-center">
+                <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium inline-block">
+                  💰 Cash on Delivery (COD)
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className={`flex gap-3 ${isMobile ? 'flex-col' : ''}`}>
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
@@ -302,9 +336,9 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
               <Button
                 onClick={() => createOrder.mutate()}
                 disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address || createOrder.isPending}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                className={`flex-1 bg-blue-600 hover:bg-blue-700 ${isMobile ? 'py-3 text-base' : ''} font-semibold`}
               >
-                {createOrder.isPending ? 'Memproses...' : 'Pesan Sekarang'}
+                {createOrder.isPending ? 'Memproses...' : '🛒 Pesan Sekarang'}
               </Button>
             </div>
           </div>
