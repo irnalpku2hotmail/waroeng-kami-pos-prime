@@ -1,37 +1,32 @@
-
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  Truck, 
-  RotateCcw, 
-  Calculator, 
-  BarChart3, 
-  Settings, 
-  DollarSign, 
-  User, 
-  ClipboardList, 
-  Zap, 
-  Gift, 
-  Coins, 
-  CreditCard, 
-  UserCheck, 
-  MapPin, 
-  Archive,
-  Bell
-} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  TrendingUp,
+  Settings,
+  CreditCard,
+  Package2,
+  UserCheck,
+  Gift,
+  FileText,
+  Truck,
+  RotateCcw,
+  DollarSign,
+  Home,
+  Calendar,
+  Bell,
+  MapPin,
+  Shield
+} from 'lucide-react';
 
-interface NavigationSidebarProps {
-  onLinkClick?: () => void;
-}
-
-const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
+const NavigationSidebar = () => {
   const { profile } = useAuth();
   const location = useLocation();
 
@@ -44,7 +39,7 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
       const { data, error } = await supabase
         .from('role_permissions')
         .select('*')
-        .eq('role', profile.role);
+        .eq('role', profile.role as string);
       
       if (error) {
         console.error('Error fetching permissions:', error);
@@ -61,161 +56,215 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
   };
 
   const menuItems = [
-    {
-      path: '/dashboard',
-      icon: LayoutDashboard,
-      label: 'Dashboard',
-      resource: 'dashboard'
+    { 
+      icon: Home, 
+      label: 'Frontend', 
+      path: '/', 
+      permission: null,
+      roles: ['admin', 'manager', 'staff', 'cashier', 'buyer']
     },
-    {
-      path: '/products',
-      icon: Package,
-      label: 'Produk',
-      resource: 'products'
+    { 
+      icon: LayoutDashboard, 
+      label: 'Dashboard', 
+      path: '/dashboard', 
+      permission: 'dashboard',
+      roles: ['admin', 'manager', 'staff', 'cashier']
     },
-    {
-      path: '/categories',
-      icon: Archive,
-      label: 'Kategori & Unit',
-      resource: 'categories'
+    { 
+      icon: Package, 
+      label: 'Products', 
+      path: '/products', 
+      permission: 'products',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/suppliers',
-      icon: Truck,
-      label: 'Supplier',
-      resource: 'suppliers'
+    { 
+      icon: Package2, 
+      label: 'Categories & Units', 
+      path: '/categories-units', 
+      permission: 'categories',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/customers',
-      icon: Users,
-      label: 'Pelanggan',
-      resource: 'customers'
+    { 
+      icon: ShoppingCart, 
+      label: 'POS', 
+      path: '/pos', 
+      permission: 'transactions',
+      roles: ['admin', 'manager', 'staff', 'cashier']
     },
-    {
-      path: '/purchases',
-      icon: ShoppingCart,
-      label: 'Pembelian',
-      resource: 'purchases'
+    { 
+      icon: FileText, 
+      label: 'Orders', 
+      path: '/orders', 
+      permission: 'orders',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/returns',
-      icon: RotateCcw,
-      label: 'Return',
-      resource: 'returns'
+    { 
+      icon: Calendar, 
+      label: 'Order History', 
+      path: '/order-history', 
+      permission: 'orders',
+      roles: ['admin', 'manager', 'staff', 'buyer']
     },
-    {
-      path: '/pos',
-      icon: Calculator,
-      label: 'Point of Sale',
-      resource: 'pos'
+    { 
+      icon: Users, 
+      label: 'Customers', 
+      path: '/customers', 
+      permission: 'customers',
+      roles: ['admin', 'manager', 'staff', 'cashier']
     },
-    {
-      path: '/orders',
-      icon: ClipboardList,
-      label: 'Pesanan',
-      resource: 'orders'
+    { 
+      icon: CreditCard, 
+      label: 'Credit Management', 
+      path: '/credit-management', 
+      permission: 'credit',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/flash-sales',
-      icon: Zap,
-      label: 'Flash Sale',
-      resource: 'flash_sales'
+    { 
+      icon: TrendingUp, 
+      label: 'Inventory', 
+      path: '/inventory', 
+      permission: 'inventory',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/points-rewards',
-      icon: Gift,
-      label: 'Point & Reward',
-      resource: 'points_rewards'
+    { 
+      icon: Truck, 
+      label: 'Purchases', 
+      path: '/purchases', 
+      permission: 'purchases',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/point-exchange',
-      icon: Coins,
-      label: 'Tukar Point',
-      resource: 'point_exchange'
+    { 
+      icon: RotateCcw, 
+      label: 'Returns', 
+      path: '/returns', 
+      permission: 'returns',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/credit-management',
-      icon: CreditCard,
-      label: 'Manajemen Kredit',
-      resource: 'credit_management'
+    { 
+      icon: DollarSign, 
+      label: 'Expenses', 
+      path: '/expenses', 
+      permission: 'expenses',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/user-management',
-      icon: UserCheck,
-      label: 'Manajemen User',
-      resource: 'user_management'
+    { 
+      icon: Truck, 
+      label: 'Suppliers', 
+      path: '/suppliers', 
+      permission: 'suppliers',
+      roles: ['admin', 'manager', 'staff']
     },
-    {
-      path: '/user-locations',
-      icon: MapPin,
-      label: 'Lokasi User',
-      resource: 'user_locations'
+    { 
+      icon: FileText, 
+      label: 'Reports', 
+      path: '/reports', 
+      permission: 'reports',
+      roles: ['admin', 'manager']
     },
-    {
-      path: '/inventory',
-      icon: Archive,
-      label: 'Inventori',
-      resource: 'inventory'
+    { 
+      icon: Gift, 
+      label: 'Points & Rewards', 
+      path: '/points-rewards', 
+      permission: 'rewards',
+      roles: ['admin', 'manager', 'staff', 'cashier']
     },
-    {
-      path: '/expenses',
-      icon: DollarSign,
-      label: 'Pengeluaran',
-      resource: 'expenses'
+    { 
+      icon: Gift, 
+      label: 'Point Exchange', 
+      path: '/point-exchange', 
+      permission: 'rewards',
+      roles: ['admin', 'manager', 'staff', 'cashier']
     },
-    {
-      path: '/reports',
-      icon: BarChart3,
-      label: 'Laporan',
-      resource: 'reports'
+    { 
+      icon: TrendingUp, 
+      label: 'Flash Sales', 
+      path: '/flash-sales', 
+      permission: 'flash_sales',
+      roles: ['admin', 'manager']
     },
-    {
-      path: '/notifications',
-      icon: Bell,
-      label: 'Notifikasi',
-      resource: 'notifications'
+    { 
+      icon: UserCheck, 
+      label: 'User Management', 
+      path: '/user-management', 
+      permission: 'users',
+      roles: ['admin']
     },
-    {
-      path: '/settings',
-      icon: Settings,
-      label: 'Pengaturan',
-      resource: 'settings'
+    { 
+      icon: Bell, 
+      label: 'Notifications', 
+      path: '/notifications', 
+      permission: null,
+      roles: ['admin', 'manager', 'staff', 'cashier', 'buyer']
     },
-    {
-      path: '/profile',
-      icon: User,
-      label: 'Profil',
-      resource: 'profile'
+    { 
+      icon: MapPin, 
+      label: 'User Locations', 
+      path: '/user-locations', 
+      permission: 'users',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: Shield, 
+      label: 'Security', 
+      path: '/security', 
+      permission: 'security',
+      roles: ['admin']
+    },
+    { 
+      icon: Settings, 
+      label: 'Settings', 
+      path: '/settings', 
+      permission: 'settings',
+      roles: ['admin', 'manager']
     }
   ];
 
-  // Filter menu items based on permissions
-  const visibleMenuItems = menuItems.filter(item => hasPermission(item.resource));
+  const filteredMenuItems = menuItems.filter(item => {
+    // Check if user role is allowed for this menu item
+    if (!item.roles.includes(profile?.role || '')) {
+      return false;
+    }
+    
+    // Check permission if required
+    if (item.permission && !hasPermission(item.permission)) {
+      return false;
+    }
+    
+    return true;
+  });
 
   return (
-    <nav className="space-y-2">
-      {visibleMenuItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname === item.path;
-        
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={onLinkClick}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-              isActive
-                ? "bg-blue-100 text-blue-700"
-                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full overflow-y-auto">
+      <div className="p-6">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white">TokoQu</h2>
+      </div>
+      
+      <nav className="px-4 pb-4">
+        <ul className="space-y-2">
+          {filteredMenuItems.map((item, index) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            
+            return (
+              <li key={index}>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150",
+                    isActive
+                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                  )}
+                >
+                  <Icon className="mr-3 h-5 w-5" />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
   );
 };
 
