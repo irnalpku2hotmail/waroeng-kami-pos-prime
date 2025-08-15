@@ -36,7 +36,7 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
   const location = useLocation();
 
   // Fetch role permissions
-  const { data: permissions } = useQuery({
+  const { data: permissions = [] } = useQuery({
     queryKey: ['role-permissions', profile?.role],
     queryFn: async () => {
       if (!profile?.role) return [];
@@ -44,17 +44,20 @@ const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
       const { data, error } = await supabase
         .from('role_permissions')
         .select('*')
-        .eq('role', profile.role as 'admin' | 'cashier' | 'manager' | 'staff' | 'buyer');
+        .eq('role', profile.role);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching permissions:', error);
+        return [];
+      }
       return data || [];
     },
     enabled: !!profile?.role
   });
 
-  const hasPermission = (resource: string) => {
-    if (!permissions) return false;
-    return permissions.some(p => p.resource === resource && p.can_read);
+  const hasPermission = (resource: string): boolean => {
+    if (!permissions || permissions.length === 0) return false;
+    return permissions.some(p => p.resource === resource && p.can_read === true);
   };
 
   const menuItems = [
