@@ -11,6 +11,7 @@ interface Profile {
   role: string;
   phone?: string;
   address?: string;
+  address_text?: string; // Added this property
   avatar_url?: string;
   date_of_birth?: string;
 }
