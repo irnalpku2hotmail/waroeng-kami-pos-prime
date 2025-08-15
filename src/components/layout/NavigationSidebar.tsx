@@ -1,269 +1,247 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { 
+  LayoutDashboard, 
+  Package, 
+  ShoppingCart, 
+  Users, 
+  FileText, 
+  Settings, 
   TrendingUp,
-  Settings,
-  CreditCard,
-  Package2,
   UserCheck,
-  Gift,
-  FileText,
-  Truck,
-  RotateCcw,
+  CreditCard,
+  Archive,
   DollarSign,
-  Home,
-  Calendar,
-  Bell,
+  Gift,
+  Zap,
+  BarChart3,
+  UserCog,
+  Layers,
   MapPin,
-  Shield
+  Bell,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
-const NavigationSidebar = () => {
-  const { profile } = useAuth();
+type UserRole = 'admin' | 'manager' | 'staff' | 'cashier' | 'buyer';
+
+interface NavigationSidebarProps {
+  onLinkClick?: () => void;
+}
+
+const NavigationSidebar = ({ onLinkClick }: NavigationSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Fetch role permissions
-  const { data: permissions = [] } = useQuery({
-    queryKey: ['role-permissions', profile?.role],
-    queryFn: async () => {
-      if (!profile?.role) return [];
-      
-      const { data, error } = await supabase
-        .from('role_permissions')
-        .select('*')
-        .eq('role', profile.role as string);
-      
-      if (error) {
-        console.error('Error fetching permissions:', error);
-        return [];
-      }
-      return data || [];
-    },
-    enabled: !!profile?.role
-  });
-
-  const hasPermission = (resource: string): boolean => {
-    if (!permissions || permissions.length === 0) return false;
-    return permissions.some(p => p.resource === resource && p.can_read === true);
+  // Safely get user role with fallback
+  const getUserRole = (): UserRole => {
+    if (!profile?.role) return 'staff';
+    
+    const validRoles: UserRole[] = ['admin', 'manager', 'staff', 'cashier', 'buyer'];
+    const role = profile.role as string;
+    
+    if (validRoles.includes(role as UserRole)) {
+      return role as UserRole;
+    }
+    
+    return 'staff';
   };
 
-  const menuItems = [
-    { 
-      icon: Home, 
-      label: 'Frontend', 
-      path: '/', 
-      permission: null,
-      roles: ['admin', 'manager', 'staff', 'cashier', 'buyer']
+  const userRole = getUserRole();
+
+  // Role-based access control
+  const hasAccess = (requiredRoles: UserRole[]) => {
+    return requiredRoles.includes(userRole);
+  };
+
+  const navigationItems = [
+    {
+      title: 'Dashboard',
+      href: '/dashboard',
+      icon: LayoutDashboard,
+      roles: ['admin', 'manager', 'staff', 'cashier'] as UserRole[]
     },
-    { 
-      icon: LayoutDashboard, 
-      label: 'Dashboard', 
-      path: '/dashboard', 
-      permission: 'dashboard',
-      roles: ['admin', 'manager', 'staff', 'cashier']
+    {
+      title: 'Products',
+      href: '/products',
+      icon: Package,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: Package, 
-      label: 'Products', 
-      path: '/products', 
-      permission: 'products',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Categories & Units',
+      href: '/categories-units',
+      icon: Layers,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: Package2, 
-      label: 'Categories & Units', 
-      path: '/categories-units', 
-      permission: 'categories',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'POS',
+      href: '/pos',
+      icon: ShoppingCart,
+      roles: ['admin', 'manager', 'staff', 'cashier'] as UserRole[]
     },
-    { 
-      icon: ShoppingCart, 
-      label: 'POS', 
-      path: '/pos', 
-      permission: 'transactions',
-      roles: ['admin', 'manager', 'staff', 'cashier']
+    {
+      title: 'Orders',
+      href: '/orders',
+      icon: FileText,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: FileText, 
-      label: 'Orders', 
-      path: '/orders', 
-      permission: 'orders',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Inventory',
+      href: '/inventory',
+      icon: Archive,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: Calendar, 
-      label: 'Order History', 
-      path: '/order-history', 
-      permission: 'orders',
-      roles: ['admin', 'manager', 'staff', 'buyer']
+    {
+      title: 'Purchases',
+      href: '/purchases',
+      icon: TrendingUp,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: Users, 
-      label: 'Customers', 
-      path: '/customers', 
-      permission: 'customers',
-      roles: ['admin', 'manager', 'staff', 'cashier']
+    {
+      title: 'Returns',
+      href: '/returns',
+      icon: UserCheck,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: CreditCard, 
-      label: 'Credit Management', 
-      path: '/credit-management', 
-      permission: 'credit',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Credit Management',
+      href: '/credit',
+      icon: CreditCard,
+      roles: ['admin', 'manager'] as UserRole[]
     },
-    { 
-      icon: TrendingUp, 
-      label: 'Inventory', 
-      path: '/inventory', 
-      permission: 'inventory',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Customers',
+      href: '/customers',
+      icon: Users,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: Truck, 
-      label: 'Purchases', 
-      path: '/purchases', 
-      permission: 'purchases',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Suppliers',
+      href: '/suppliers',
+      icon: UserCog,
+      roles: ['admin', 'manager', 'staff'] as UserRole[]
     },
-    { 
-      icon: RotateCcw, 
-      label: 'Returns', 
-      path: '/returns', 
-      permission: 'returns',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Expenses',
+      href: '/expenses',
+      icon: DollarSign,
+      roles: ['admin', 'manager'] as UserRole[]
     },
-    { 
-      icon: DollarSign, 
-      label: 'Expenses', 
-      path: '/expenses', 
-      permission: 'expenses',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Flash Sales',
+      href: '/flash-sales',
+      icon: Zap,
+      roles: ['admin', 'manager'] as UserRole[]
     },
-    { 
-      icon: Truck, 
-      label: 'Suppliers', 
-      path: '/suppliers', 
-      permission: 'suppliers',
-      roles: ['admin', 'manager', 'staff']
+    {
+      title: 'Points & Rewards',
+      href: '/points-rewards',
+      icon: Gift,
+      roles: ['admin', 'manager'] as UserRole[]
     },
-    { 
-      icon: FileText, 
-      label: 'Reports', 
-      path: '/reports', 
-      permission: 'reports',
-      roles: ['admin', 'manager']
+    {
+      title: 'Reports',
+      href: '/reports',
+      icon: BarChart3,
+      roles: ['admin', 'manager'] as UserRole[]
     },
-    { 
-      icon: Gift, 
-      label: 'Points & Rewards', 
-      path: '/points-rewards', 
-      permission: 'rewards',
-      roles: ['admin', 'manager', 'staff', 'cashier']
+    {
+      title: 'User Management',
+      href: '/user-management',
+      icon: UserCog,
+      roles: ['admin'] as UserRole[]
     },
-    { 
-      icon: Gift, 
-      label: 'Point Exchange', 
-      path: '/point-exchange', 
-      permission: 'rewards',
-      roles: ['admin', 'manager', 'staff', 'cashier']
+    {
+      title: 'User Locations',
+      href: '/user-locations',
+      icon: MapPin,
+      roles: ['admin', 'manager'] as UserRole[]
     },
-    { 
-      icon: TrendingUp, 
-      label: 'Flash Sales', 
-      path: '/flash-sales', 
-      permission: 'flash_sales',
-      roles: ['admin', 'manager']
+    {
+      title: 'Notifications',
+      href: '/notifications',
+      icon: Bell,
+      roles: ['admin', 'manager', 'staff', 'cashier'] as UserRole[]
     },
-    { 
-      icon: UserCheck, 
-      label: 'User Management', 
-      path: '/user-management', 
-      permission: 'users',
-      roles: ['admin']
-    },
-    { 
-      icon: Bell, 
-      label: 'Notifications', 
-      path: '/notifications', 
-      permission: null,
-      roles: ['admin', 'manager', 'staff', 'cashier', 'buyer']
-    },
-    { 
-      icon: MapPin, 
-      label: 'User Locations', 
-      path: '/user-locations', 
-      permission: 'users',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: Shield, 
-      label: 'Security', 
-      path: '/security', 
-      permission: 'security',
-      roles: ['admin']
-    },
-    { 
-      icon: Settings, 
-      label: 'Settings', 
-      path: '/settings', 
-      permission: 'settings',
-      roles: ['admin', 'manager']
+    {
+      title: 'Settings',
+      href: '/settings',
+      icon: Settings,
+      roles: ['admin', 'manager'] as UserRole[]
     }
   ];
 
-  const filteredMenuItems = menuItems.filter(item => {
-    // Check if user role is allowed for this menu item
-    if (!item.roles.includes(profile?.role || '')) {
-      return false;
-    }
-    
-    // Check permission if required
-    if (item.permission && !hasPermission(item.permission)) {
-      return false;
-    }
-    
-    return true;
-  });
+  const filteredItems = navigationItems.filter(item => hasAccess(item.roles));
+
+  const handleNavigation = (href: string) => {
+    navigate(href);
+    onLinkClick?.();
+  };
 
   return (
-    <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full overflow-y-auto">
-      <div className="p-6">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white">TokoQu</h2>
+    <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} flex flex-col h-full`}>
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        {!isCollapsed && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
+            <p className="text-sm text-gray-500">
+              {String(profile?.full_name || user?.email || '')}
+            </p>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="p-2"
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
       </div>
-      
-      <nav className="px-4 pb-4">
-        <ul className="space-y-2">
-          {filteredMenuItems.map((item, index) => {
+
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3 py-4">
+        <nav className="space-y-2">
+          {filteredItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.href;
             
             return (
-              <li key={index}>
-                <Link
-                  to={item.path}
-                  className={cn(
-                    "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150",
-                    isActive
-                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
-                  )}
-                >
-                  <Icon className="mr-3 h-5 w-5" />
-                  {item.label}
-                </Link>
-              </li>
+              <Button
+                key={item.href}
+                variant={isActive ? "default" : "ghost"}
+                className={`w-full justify-start text-left ${isCollapsed ? 'px-2' : 'px-3'} py-2 h-auto`}
+                onClick={() => handleNavigation(item.href)}
+              >
+                <Icon className={`h-4 w-4 ${isCollapsed ? '' : 'mr-3'} flex-shrink-0`} />
+                {!isCollapsed && (
+                  <span className="truncate">{item.title}</span>
+                )}
+              </Button>
             );
           })}
-        </ul>
-      </nav>
+        </nav>
+      </ScrollArea>
+
+      {/* Footer */}
+      {!isCollapsed && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center space-x-2">
+            <Badge variant="secondary" className="text-xs">
+              {String(userRole || '')}
+            </Badge>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
