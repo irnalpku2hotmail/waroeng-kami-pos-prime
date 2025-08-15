@@ -8,9 +8,22 @@ import HomeFlashSale from '@/components/home/HomeFlashSale';
 import ProductGrid from '@/components/home/ProductGrid';
 import HomeFooter from '@/components/home/HomeFooter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
+
+interface Product {
+  id: string;
+  name: string;
+  base_price: number;
+  image_url: string;
+  current_stock: number;
+  categories: { id: string; name: string };
+  units: { name: string; abbreviation: string };
+  price_variants: any[];
+}
 
 const Home = () => {
   const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['frontend-products'],
@@ -19,7 +32,7 @@ const Home = () => {
         .from('products')
         .select(`
           *,
-          categories(name),
+          categories(id, name),
           units(name, abbreviation),
           price_variants(*)
         `)
@@ -32,9 +45,39 @@ const Home = () => {
     }
   });
 
+  const { data: flashSales = [] } = useQuery({
+    queryKey: ['flash-sales'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('flash_sales')
+        .select(`
+          *,
+          flash_sale_items(
+            *,
+            products(*)
+          )
+        `)
+        .eq('is_active', true)
+        .gte('end_date', new Date().toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const handleCartClick = () => {
+    // Handle cart click - could open cart modal
+    console.log('Cart clicked');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar />
+      <HomeNavbar 
+        onCartClick={handleCartClick}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Hero Section */}
@@ -49,7 +92,7 @@ const Home = () => {
 
         {/* Flash Sale Section */}
         <section className="mb-12">
-          <HomeFlashSale />
+          <HomeFlashSale flashSales={flashSales} />
         </section>
 
         {/* Products Section */}
@@ -57,7 +100,7 @@ const Home = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Semua Produk</h2>
           </div>
-          <ProductGrid products={products} isLoading={isLoading} />
+          <ProductGrid products={products as Product[]} isLoading={isLoading} />
         </section>
       </main>
 
