@@ -5,190 +5,113 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { ShoppingCart, Star, Clock } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { ChevronLeft, ChevronRight, Star, MapPin } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-interface Product {
-  id: string;
-  name: string;
-  selling_price: number;
-  image_url: string | null;
-  current_stock: number;
-}
+const HomeHero = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const isMobile = useIsMobile();
 
-interface FlashSaleItem {
-  id: string;
-  product_id: string;
-  original_price: number;
-  sale_price: number;
-  discount_percentage: number;
-  stock_quantity: number;
-  products: Product | null;
-  flash_sales: {
-    name: string;
-    start_date: string;
-    end_date: string;
-    is_active: boolean;
-  } | null;
-}
-
-interface HomeHeroProps {
-  storeName?: string;
-  storeDescription?: string;
-  onProductClick?: (product: Product) => void;
-}
-
-const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick }: HomeHeroProps) => {
-  const { user } = useAuth();
-  const { addItem } = useCart();
-
-  // Fetch featured/flash sale products
-  const { data: flashSaleProducts = [] } = useQuery({
-    queryKey: ['flash-sale-products'],
+  const { data: banners = [] } = useQuery({
+    queryKey: ['banners'],
     queryFn: async () => {
-      const now = new Date().toISOString();
-      console.log('Fetching flash sale products...');
       const { data, error } = await supabase
-        .from('flash_sale_items')
-        .select(`
-          *,
-          products!inner(*),
-          flash_sales!inner(*)
-        `)
-        .eq('flash_sales.is_active', true)
-        .lte('flash_sales.start_date', now)
-        .gte('flash_sales.end_date', now)
-        .gt('stock_quantity', 0)
-        .limit(4);
+        .from('settings')
+        .select('value')
+        .eq('key', 'banners')
+        .single();
 
-      if (error) {
-        console.error('Error fetching flash sale products:', error);
-        throw error;
-      }
-      
-      console.log('Flash sale products data:', data);
-      return (data || []) as FlashSaleItem[];
+      if (error || !data?.value) return [];
+      return Array.isArray(data.value) ? data.value : [];
     }
   });
 
-  const handleAddToCart = (product: Product, flashSaleItem?: FlashSaleItem) => {
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Please login to add items to cart',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    const price = flashSaleItem ? flashSaleItem.sale_price : product.selling_price;
-    addItem({ 
-      id: product.id,
-      name: product.name,
-      price: price,
-      image: product.image_url,
-      quantity: 1,
-      stock: flashSaleItem ? flashSaleItem.stock_quantity : product.current_stock
-    });
-    toast({
-      title: 'Added to Cart',
-      description: `${String(product.name || 'Product')} has been added to your cart`
-    });
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % banners.length);
   };
 
-  const handleProductClick = (product: Product) => {
-    if (onProductClick) {
-      onProductClick(product);
-    }
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
   };
+
+  if (banners.length === 0) {
+    return (
+      <div className={`relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-purple-700 text-white ${isMobile ? 'h-48' : 'h-96'}`}>
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative z-10 flex items-center justify-center h-full px-6">
+          <div className="text-center">
+            <h1 className={`font-bold text-white mb-4 ${isMobile ? 'text-2xl' : 'text-4xl'}`}>
+              Selamat Datang di Toko Kami
+            </h1>
+            <p className={`text-blue-100 ${isMobile ? 'text-sm' : 'text-lg'}`}>
+              Temukan produk berkualitas dengan harga terbaik
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
-            Welcome to {String(storeName || 'Waroeng Kami')}
-          </h1>
-          {storeDescription && (
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              {String(storeDescription)}
-            </p>
-          )}
-        </div>
-
-        {/* Flash Sale Section */}
-        {flashSaleProducts.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center justify-center mb-6">
-              <div className="flex items-center gap-2 bg-red-100 text-red-600 px-4 py-2 rounded-full">
-                <Clock className="h-5 w-5" />
-                <span className="font-semibold">Flash Sale</span>
+    <div className={`relative overflow-hidden rounded-xl ${isMobile ? 'h-48' : 'h-96'}`}>
+      <div className="flex transition-transform duration-500 ease-in-out h-full"
+           style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+        {banners.map((banner: any, index: number) => (
+          <div key={index} className="w-full flex-shrink-0 relative">
+            <img
+              src={banner.image_url || '/placeholder.svg'}
+              alt={banner.title || 'Banner'}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <div className="text-center text-white px-6">
+                <h2 className={`font-bold mb-2 ${isMobile ? 'text-xl' : 'text-3xl'}`}>
+                  {banner.title}
+                </h2>
+                {banner.subtitle && (
+                  <p className={`mb-4 ${isMobile ? 'text-sm' : 'text-lg'}`}>
+                    {banner.subtitle}
+                  </p>
+                )}
+                {banner.button_text && banner.button_link && (
+                  <Button className="bg-white text-gray-900 hover:bg-gray-100">
+                    {banner.button_text}
+                  </Button>
+                )}
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {flashSaleProducts.map((item) => (
-                <Card 
-                  key={item.id} 
-                  className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
-                  onClick={() => item.products && handleProductClick(item.products)}
-                >
-                  <div className="relative">
-                    <img
-                      src={item.products?.image_url || '/placeholder.svg'}
-                      alt={String(item.products?.name || 'Product')}
-                      className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-200"
-                    />
-                    <Badge className="absolute top-2 left-2 bg-red-500 text-white text-xs">
-                      -{item.discount_percentage || 0}%
-                    </Badge>
-                  </div>
-                  
-                  <CardContent className="p-3">
-                    <h3 className="font-medium text-sm mb-2 line-clamp-2">
-                      {String(item.products?.name || 'Unnamed Product')}
-                    </h3>
-                    
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-bold text-red-600">
-                        Rp {(item.sale_price || 0).toLocaleString('id-ID')}
-                      </span>
-                      <span className="text-xs text-gray-500 line-through">
-                        Rp {(item.original_price || 0).toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                      <span>Stock: {item.stock_quantity || 0}</span>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 text-yellow-500" />
-                        <span>4.5</span>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      size="sm"
-                      className="w-full text-xs h-7"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (item.products) {
-                          handleAddToCart(item.products, item);
-                        }
-                      }}
-                    >
-                      <ShoppingCart className="h-3 w-3 mr-1" />
-                      Add to Cart
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </div>
-        )}
+        ))}
       </div>
+
+      {banners.length > 1 && (
+        <>
+          <button
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            {banners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentSlide ? 'bg-white' : 'bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

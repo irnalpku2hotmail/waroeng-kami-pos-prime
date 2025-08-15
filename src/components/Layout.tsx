@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
@@ -75,8 +76,8 @@ const Layout = ({ children }: LayoutProps) => {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <div className="flex items-center justify-between p-4 border-b">
+              <SheetContent side="left" className="w-72 p-0 flex flex-col">
+                <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
                   <h2 className="text-lg font-bold text-blue-800">{storeName}</h2>
                   <Button 
                     variant="ghost" 
@@ -87,9 +88,11 @@ const Layout = ({ children }: LayoutProps) => {
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="p-4 overflow-y-auto">
-                  <NavigationSidebar onLinkClick={() => setIsMobileMenuOpen(false)} />
-                </div>
+                <ScrollArea className="flex-1">
+                  <div className="p-4">
+                    <NavigationSidebar onLinkClick={() => setIsMobileMenuOpen(false)} />
+                  </div>
+                </ScrollArea>
               </SheetContent>
             </Sheet>
 
@@ -116,9 +119,11 @@ const Layout = ({ children }: LayoutProps) => {
       <div className="flex min-h-[calc(100vh-80px)]">
         {/* Desktop Sidebar */}
         <aside className="hidden md:block w-64 bg-white border-r border-gray-200 min-h-full">
-          <div className="p-4 sm:p-6">
-            <NavigationSidebar />
-          </div>
+          <ScrollArea className="h-[calc(100vh-80px)]">
+            <div className="p-4 sm:p-6">
+              <NavigationSidebar />
+            </div>
+          </ScrollArea>
         </aside>
 
         {/* Main Content - Mobile Optimized */}

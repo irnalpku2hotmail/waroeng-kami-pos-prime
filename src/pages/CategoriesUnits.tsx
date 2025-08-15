@@ -1,13 +1,9 @@
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { FolderTree, Package } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import CategoriesTab from '@/components/categories/CategoriesTab';
-import UnitsTab from '@/components/units/UnitsTab';
-import { FolderTree, Package } from 'lucide-react';
+import PaginatedCategoriesTab from '@/components/categories/PaginatedCategoriesTab';
+import PaginatedUnitsTab from '@/components/units/PaginatedUnitsTab';
 
 const CategoriesUnits = () => {
   return (
@@ -31,11 +27,11 @@ const CategoriesUnits = () => {
           </TabsList>
 
           <TabsContent value="categories">
-            <CategoriesTab />
+            <PaginatedCategoriesTab />
           </TabsContent>
 
           <TabsContent value="units">
-            <UnitsTab />
+            <PaginatedUnitsTab />
           </TabsContent>
         </Tabs>
       </div>
