@@ -53,7 +53,7 @@ const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
         <div className="flex gap-2 items-center">
           {selectedProduct ? (
             <>
-              <span className="font-medium text-sm">{selectedProduct.name}</span>
+              <span className="font-medium text-sm">{String(selectedProduct.name || 'Unknown Product')}</span>
               <Button
                 type="button"
                 size="icon"
@@ -107,7 +107,7 @@ const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
             {allowedUnits.map((uid) =>
               unitsMap[uid] ? (
                 <SelectItem value={uid} key={uid}>
-                  {unitsMap[uid]?.name} ({unitsMap[uid]?.abbreviation})
+                  {String(unitsMap[uid]?.name || 'Unknown Unit')} ({String(unitsMap[uid]?.abbreviation || '')})
                   {uid === baseUnitId && " (Dasar)"}
                 </SelectItem>
               ) : null

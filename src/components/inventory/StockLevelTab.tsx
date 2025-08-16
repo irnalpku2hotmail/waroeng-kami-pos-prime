@@ -58,20 +58,20 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
                     <tr key={product.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-gray-500">{product.barcode}</p>
+                          <p className="font-medium">{String(product.name || 'Unknown Product')}</p>
+                          <p className="text-sm text-gray-500">{String(product.barcode || '')}</p>
                         </div>
                       </td>
                       <td className="p-2">
-                        {product.categories?.name || '-'}
+                        {String(product.categories?.name || '-')}
                       </td>
                       <td className="p-2">
                         <span className={`font-medium ${isOutOfStock ? 'text-red-600' : isLowStock ? 'text-orange-600' : 'text-green-600'}`}>
-                          {product.current_stock} {product.units?.abbreviation}
+                          {product.current_stock} {String(product.units?.abbreviation || '')}
                         </span>
                       </td>
                       <td className="p-2">
-                        {product.min_stock} {product.units?.abbreviation}
+                        {product.min_stock} {String(product.units?.abbreviation || '')}
                       </td>
                       <td className="p-2">
                         {isOutOfStock ? (
