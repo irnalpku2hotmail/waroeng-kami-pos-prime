@@ -6,6 +6,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import NavigationSidebar from './NavigationSidebar';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MobileResponsiveSidebarProps {
   children: React.ReactNode;
@@ -15,6 +17,23 @@ const MobileResponsiveSidebar: React.FC<MobileResponsiveSidebarProps> = ({ child
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const location = useLocation();
+
+  // Fetch store settings for store name
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
+    }
+  });
+
+  const storeName = settings?.store_info?.name || 'Toko Saya';
 
   // Close sidebar when route changes on mobile
   useEffect(() => {
@@ -62,7 +81,7 @@ const MobileResponsiveSidebar: React.FC<MobileResponsiveSidebarProps> = ({ child
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{storeName}</h2>
             {isMobile && (
               <Button
                 variant="ghost"

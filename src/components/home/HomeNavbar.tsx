@@ -1,50 +1,37 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ShoppingCart, 
-  User, 
-  LogOut, 
-  UserCircle,
-  Store,
-  History,
-  Home,
-  Menu,
-  X
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import MobileSearchBar from './MobileSearchBar';
+import AuthModal from '@/components/AuthModal';
+import EnhancedSearch from './EnhancedSearch';
 
 interface HomeNavbarProps {
-  onCartClick: () => void;
+  onCartClick?: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  onSearch?: () => void;
 }
 
-const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeNavbarProps) => {
-  const { user, signOut, profile } = useAuth();
+const HomeNavbar = ({ 
+  onCartClick,
+  searchTerm, 
+  onSearchChange
+}: HomeNavbarProps) => {
+  const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
-  const navigate = useNavigate();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
 
   // Fetch store settings
   const { data: settings } = useQuery({
-    queryKey: ['store-settings'],
+    queryKey: ['settings'],
     queryFn: async () => {
       const { data, error } = await supabase.from('settings').select('*');
       if (error) throw error;
@@ -57,246 +44,284 @@ const HomeNavbar = ({ onCartClick, searchTerm, onSearchChange, onSearch }: HomeN
     }
   });
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
-  const handleSearch = () => {
-    if (onSearch) {
-      onSearch();
-    } else if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
-  // Get store info from settings
   const storeInfo = settings?.store_info || {};
-  const storeName = settings?.store_name?.name || 'Waroeng Kami';
-  const storeTagline = settings?.store_tagline?.tagline || 'Toko online terpercaya';
-  const logoUrl = settings?.store_logo?.url || null;
+  const contactInfo = settings?.contact_info || {};
+  const logoUrl = storeInfo.logo_url;
+  const storeName = storeInfo.name || 'Toko Online';
+
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
+
+  const navLinks = [
+    { label: 'Beranda', href: '#home' },
+    { label: 'Produk', href: '#products' },
+    { label: 'Kategori', href: '#categories' },
+    { label: 'Flash Sale', href: '#flash-sale' },
+    { label: 'Tentang', href: '#about' }
+  ];
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 shadow-xl border-b sticky top-0 z-50">
-      <div className="container mx-auto px-3 sm:px-4">
-        {/* Main Navigation Bar */}
-        <div className="flex items-center justify-between py-4">
-          {/* Logo and Store Name with Enhanced Design */}
-          <Link to="/" className="flex items-center space-x-3 sm:space-x-4 group">
-            <div className="relative">
-              <div className="bg-white p-2 sm:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                {logoUrl ? (
+    <>
+      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
+        {/* Top bar with contact info - Hidden on mobile */}
+        {!isMobile && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+              <div className="flex items-center space-x-4">
+                {contactInfo.phone && (
+                  <span>📞 {contactInfo.phone}</span>
+                )}
+                {contactInfo.email && (
+                  <span className="hidden md:inline">✉️ {contactInfo.email}</span>
+                )}
+              </div>
+              <div className="flex items-center space-x-4">
+                <span>Selamat Datang di {storeName}!</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main navbar */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo & Store Name */}
+            <div className="flex items-center space-x-3">
+              {logoUrl && (
+                <div className="relative">
                   <img 
                     src={logoUrl} 
                     alt={storeName} 
-                    className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} object-cover rounded-lg`}
+                    className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} 
                   />
-                ) : (
-                  <Store className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} text-blue-600`} />
+                </div>
+              )}
+              {!logoUrl && (
+                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
+                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                </div>
+              )}
+              <div>
+                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
+                  {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
+                </h1>
+                {!isMobile && (
+                  <p className="text-xs text-gray-500">
+                    {storeInfo.tagline || 'Toko Online Terpercaya'}
+                  </p>
                 )}
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
-            <div className="text-white">
-              <h1 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold leading-tight tracking-wide`}>
-                {isMobile ? storeName.slice(0, 12) + (storeName.length > 12 ? '...' : '') : storeName}
-              </h1>
-              {!isMobile && (
-                <p className="text-blue-100 text-sm font-medium">
-                  {storeTagline}
-                </p>
-              )}
-            </div>
-          </Link>
 
-          {/* Enhanced Search Bar for Desktop */}
-          {!isMobile && (
-            <div className="flex-1 max-w-2xl mx-8">
-              <MobileSearchBar
+            {/* Desktop Navigation */}
+            {!isMobile && (
+              <div className="hidden lg:flex items-center space-x-8">
+                {navLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
+                  >
+                    {link.label}
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Enhanced Search Bar */}
+            {!isMobile && (
+              <EnhancedSearch
                 searchTerm={searchTerm}
                 onSearchChange={onSearchChange}
-                onSearch={handleSearch}
-                placeholder="Cari produk, kategori, atau brand..."
-                showVoiceSearch={true}
+              />
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Cart - Only show if user is logged in */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative hover:bg-blue-50 p-2"
+                  onClick={onCartClick}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+
+              {/* User Menu - Desktop */}
+              {!isMobile && (
+                <div>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
+                          {profile?.avatar_url ? (
+                            <img 
+                              src={profile.avatar_url} 
+                              alt="Profile" 
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserCircle className="h-6 w-6" />
+                          )}
+                          <span className="hidden lg:inline text-sm font-medium">
+                            {profile?.full_name || user.email?.split('@')[0]}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem disabled>
+                          <User className="h-4 w-4 mr-2" />
+                          {profile?.full_name || user.email?.split('@')[0]}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setAuthModalOpen(true)}
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50 px-4"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Masuk
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Mobile menu button */}
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-2"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Search */}
+          {isMobile && (
+            <div className="pb-4">
+              <EnhancedSearch
+                searchTerm={searchTerm}
+                onSearchChange={onSearchChange}
               />
             </div>
           )}
-          
-          {/* Enhanced User Actions */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 sm:gap-3 text-white hover:bg-white/10 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300">
-                    {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt="Avatar" 
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-white/30"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                        <UserCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </div>
-                    )}
-                    {!isMobile && <span className="font-semibold">{profile?.full_name || 'User'}</span>}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-md border-0 shadow-xl rounded-xl">
-                  <DropdownMenuItem onClick={() => navigate('/')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
-                    <Home className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Beranda</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/order-history')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
-                    <History className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Riwayat Pesanan</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/profile')} className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg">
-                    <User className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Profil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-2" />
-                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg text-red-600">
-                    <LogOut className="h-4 w-4" />
-                    <span className="font-medium">Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate('/login')}
-                  className="text-white hover:bg-white/10 font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all duration-300"
-                >
-                  Login
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={() => navigate('/register')}
-                  className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-3 sm:px-4 py-2 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
-                >
-                  Register
-                </Button>
-              </div>
-            )}
-            
-            {/* Enhanced Cart Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="relative text-white hover:bg-white/10 p-2 sm:p-3 rounded-xl transition-all duration-300 hover:scale-105"
-              onClick={onCartClick}
-            >
-              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
-              {getTotalItems() > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600 rounded-full animate-bounce">
-                  {getTotalItems()}
-                </Badge>
-              )}
-            </Button>
-
-            {/* Enhanced Mobile Menu Button */}
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/10 p-2 rounded-xl transition-all duration-300"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </Button>
-            )}
-          </div>
         </div>
 
-        {/* Enhanced Mobile Search Bar */}
-        {isMobile && (
-          <div className="pb-4">
-            <MobileSearchBar
-              searchTerm={searchTerm}
-              onSearchChange={onSearchChange}
-              onSearch={handleSearch}
-              placeholder="Cari produk atau kategori..."
-              showVoiceSearch={true}
-            />
-          </div>
-        )}
-
-        {/* Enhanced Mobile Menu */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && isMobile && (
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl mb-4 p-4 shadow-xl">
-            <div className="space-y-3">
-              {user ? (
-                <>
-                  <Link 
-                    to="/" 
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <Home className="h-5 w-5" />
-                    <span className="font-medium">Beranda</span>
-                  </Link>
-                  <Link 
-                    to="/order-history" 
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <History className="h-5 w-5" />
-                    <span className="font-medium">Riwayat Pesanan</span>
-                  </Link>
-                  <Link 
-                    to="/profile" 
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-all duration-300"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="font-medium">Profil</span>
-                  </Link>
-                  <hr className="border-white/20 my-2" />
-                  <button 
-                    onClick={handleSignOut}
-                    className="flex items-center gap-3 py-3 px-4 text-white hover:bg-red-500/20 rounded-xl transition-all duration-300 w-full text-left"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span className="font-medium">Logout</span>
-                  </button>
-                </>
-              ) : (
-                <div className="space-y-3">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => {
-                      navigate('/login');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full justify-start text-white hover:bg-white/10 font-medium py-3 rounded-xl"
-                  >
-                    Login
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      navigate('/register');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-white text-blue-600 hover:bg-blue-50 font-medium py-3 rounded-xl"
-                  >
-                    Register
-                  </Button>
+          <div className="bg-white border-t shadow-lg">
+            <div className="px-4 py-4 space-y-4">
+              {/* Contact info on mobile */}
+              {contactInfo.phone && (
+                <div className="text-sm text-gray-600 pb-2 border-b">
+                  📞 {contactInfo.phone}
                 </div>
               )}
+              
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="block text-gray-700 hover:text-blue-600 font-medium py-2 text-base"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </a>
+              ))}
+              
+              <div className="border-t pt-4">
+                {user ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 py-2">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Profile" 
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle className="h-8 w-8 text-gray-400" />
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {profile?.full_name || 'User'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Masuk
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
-      </div>
-    </nav>
+      </nav>
+
+      {/* Modals */}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+    </>
   );
 };
 

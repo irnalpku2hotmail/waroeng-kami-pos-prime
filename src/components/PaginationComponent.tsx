@@ -72,7 +72,7 @@ const PaginationComponent = ({
                 e.preventDefault();
                 if (currentPage > 1) onPageChange(currentPage - 1);
               }}
-              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
+              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'hover:bg-accent cursor-pointer'}
             />
           </PaginationItem>
           
@@ -88,7 +88,7 @@ const PaginationComponent = ({
                     onPageChange(page as number);
                   }}
                   isActive={currentPage === page}
-                  className="hover:bg-accent"
+                  className="hover:bg-accent cursor-pointer"
                 >
                   {page}
                 </PaginationLink>
@@ -103,7 +103,7 @@ const PaginationComponent = ({
                 e.preventDefault();
                 if (currentPage < totalPages) onPageChange(currentPage + 1);
               }}
-              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-accent'}
+              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-accent cursor-pointer'}
             />
           </PaginationItem>
         </PaginationContent>

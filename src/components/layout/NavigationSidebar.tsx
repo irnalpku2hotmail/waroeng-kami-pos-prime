@@ -19,38 +19,44 @@ import {
   TrendingUp,
   LayoutDashboard
 } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface NavigationSidebarProps {
   onLinkClick?: () => void;
 }
 
 const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ onLinkClick }) => {
+  const { canAccessRoute } = usePermissions();
+
   const menuItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'POS', path: '/pos', icon: ShoppingCart },
-    { name: 'Products', path: '/products', icon: Package },
-    { name: 'Categories & Units', path: '/categories', icon: Archive },
-    { name: 'Inventory', path: '/inventory', icon: TrendingUp },
-    { name: 'Orders', path: '/orders', icon: FileText },
-    { name: 'Purchases', path: '/purchases', icon: Truck },
-    { name: 'Returns', path: '/returns', icon: Archive },
-    { name: 'Suppliers', path: '/suppliers', icon: Truck },
-    { name: 'Customers', path: '/customers', icon: Users },
-    { name: 'Credit Management', path: '/credit-management', icon: CreditCard },
-    { name: 'User Management', path: '/user-management', icon: UserCheck },
-    { name: 'User Locations', path: '/user-locations', icon: MapPin },
-    { name: 'Point Exchange', path: '/point-exchange', icon: Star },
-    { name: 'Points & Rewards', path: '/points-rewards', icon: Star },
-    { name: 'Flash Sales', path: '/flash-sales', icon: Zap },
-    { name: 'Expenses', path: '/expenses', icon: FileText },
-    { name: 'Reports', path: '/reports', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { name: 'Home', path: '/', icon: Home, resource: 'dashboard' },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, resource: 'dashboard' },
+    { name: 'POS', path: '/pos', icon: ShoppingCart, resource: 'pos' },
+    { name: 'Products', path: '/products', icon: Package, resource: 'products' },
+    { name: 'Categories & Units', path: '/categories', icon: Archive, resource: 'categories' },
+    { name: 'Inventory', path: '/inventory', icon: TrendingUp, resource: 'inventory' },
+    { name: 'Orders', path: '/orders', icon: FileText, resource: 'orders' },
+    { name: 'Purchases', path: '/purchases', icon: Truck, resource: 'purchases' },
+    { name: 'Returns', path: '/returns', icon: Archive, resource: 'returns' },
+    { name: 'Suppliers', path: '/suppliers', icon: Truck, resource: 'suppliers' },
+    { name: 'Customers', path: '/customers', icon: Users, resource: 'customers' },
+    { name: 'Credit Management', path: '/credit-management', icon: CreditCard, resource: 'credit-management' },
+    { name: 'User Management', path: '/user-management', icon: UserCheck, resource: 'users' },
+    { name: 'User Locations', path: '/user-locations', icon: MapPin, resource: 'user-locations' },
+    { name: 'Point Exchange', path: '/point-exchange', icon: Star, resource: 'point-exchange' },
+    { name: 'Points & Rewards', path: '/points-rewards', icon: Star, resource: 'points-rewards' },
+    { name: 'Flash Sales', path: '/flash-sales', icon: Zap, resource: 'flash-sales' },
+    { name: 'Expenses', path: '/expenses', icon: FileText, resource: 'expenses' },
+    { name: 'Reports', path: '/reports', icon: BarChart3, resource: 'reports' },
+    { name: 'Settings', path: '/settings', icon: Settings, resource: 'settings' },
   ];
+
+  // Filter menu items based on permissions
+  const allowedMenuItems = menuItems.filter(item => canAccessRoute(item.resource));
 
   return (
     <nav className="space-y-2">
-      {menuItems.map((item) => {
+      {allowedMenuItems.map((item) => {
         const Icon = item.icon;
         return (
           <NavLink

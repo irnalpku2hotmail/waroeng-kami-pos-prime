@@ -17,7 +17,7 @@ interface SearchSuggestion {
 interface EnhancedSearchProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  onSearch: () => void;
+  onSearch?: () => void;
 }
 
 const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearchProps) => {
@@ -39,7 +39,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Separate queries for products and categories
+  // Fetch products for suggestions
   const { data: productsData } = useQuery({
     queryKey: ['search-products', debouncedSearchTerm],
     queryFn: async () => {
@@ -47,7 +47,11 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
 
       const { data, error } = await supabase
         .from('products')
-        .select('id, name')
+        .select(`
+          id, 
+          name,
+          categories(id, name)
+        `)
         .ilike('name', `%${debouncedSearchTerm}%`)
         .eq('is_active', true)
         .limit(6);
@@ -62,6 +66,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     enabled: debouncedSearchTerm.length >= 2
   });
 
+  // Fetch categories for suggestions
   const { data: categoriesData } = useQuery({
     queryKey: ['search-categories', debouncedSearchTerm],
     queryFn: async () => {
@@ -100,7 +105,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     setSuggestions([...categorySuggestions, ...productSuggestions]);
   }, [productsData, categoriesData]);
 
-  // Show suggestions logic - Fixed the boolean logic
+  // Show suggestions logic
   useEffect(() => {
     const shouldShow = isFocused && 
       debouncedSearchTerm.length >= 2 && 
@@ -135,7 +140,6 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
         const transcript = event.results[0][0].transcript;
         onSearchChange(transcript);
         setIsListening(false);
-        // Auto focus to results after voice input
         setTimeout(() => {
           handleSearch();
         }, 500);
@@ -173,6 +177,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
     if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
+    if (onSearch) onSearch();
   };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
@@ -201,7 +206,7 @@ const EnhancedSearch = ({ searchTerm, onSearchChange, onSearch }: EnhancedSearch
   };
 
   return (
-    <div className="flex-1 max-w-2xl mx-8 hidden md:block" ref={searchRef}>
+    <div className="flex-1 max-w-2xl mx-4" ref={searchRef}>
       <form onSubmit={handleSearch} className="relative">
         <div className={`relative transition-all duration-300 ${isFocused ? 'scale-105' : ''}`}>
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 transition-colors duration-200" />
