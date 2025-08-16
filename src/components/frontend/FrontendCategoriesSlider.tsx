@@ -124,14 +124,14 @@ const FrontendCategoriesSlider = ({
                 {category.icon_url ? (
                   <img 
                     src={category.icon_url} 
-                    alt={category.name}
+                    alt={String(category.name)}
                     className="h-6 w-6 mb-1 object-contain"
                   />
                 ) : (
                   <Package className="h-6 w-6 mb-1" />
                 )}
                 <span className="text-xs font-medium text-center line-clamp-2">
-                  {category.name}
+                  {String(category.name)}
                 </span>
               </button>
             ))}

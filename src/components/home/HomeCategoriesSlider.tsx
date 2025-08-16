@@ -87,7 +87,7 @@ const HomeCategoriesSlider = ({ onCategorySelect }: HomeCategoriesSliderProps) =
                     {category.icon_url ? (
                       <img 
                         src={category.icon_url} 
-                        alt={category.name}
+                        alt={String(category.name)}
                         className="w-10 h-10 object-cover rounded-full"
                       />
                     ) : (
