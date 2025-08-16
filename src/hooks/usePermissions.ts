@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
 
 interface Permission {
   id: string;
@@ -24,7 +25,8 @@ export const usePermissions = () => {
       const { data, error } = await supabase
         .from('role_permissions')
         .select('*')
-        .eq('role', profile.role);
+        // Cast role to the Supabase enum type to satisfy the typed client
+        .eq('role', profile.role as Database['public']['Enums']['user_role']);
 
       if (error) throw error;
       return data as Permission[];
