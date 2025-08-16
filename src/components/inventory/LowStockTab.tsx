@@ -44,15 +44,15 @@ const LowStockTab = ({ lowStockProducts }: LowStockTabProps) => {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-10 h-10 object-cover rounded" />
+                        <img src={product.image_url} alt={String(product.name)} className="w-10 h-10 object-cover rounded" />
                       ) : (
                         <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
                           <Package className="h-5 w-5 text-gray-400" />
                         </div>
                       )}
                       <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-gray-500">{product.barcode}</div>
+                        <div className="font-medium">{String(product.name)}</div>
+                        <div className="text-sm text-gray-500">{String(product.barcode)}</div>
                       </div>
                     </div>
                   </TableCell>

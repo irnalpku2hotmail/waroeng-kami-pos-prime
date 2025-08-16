@@ -41,7 +41,7 @@ const StockAdjustmentsTab = ({ adjustments }: StockAdjustmentsTabProps) => {
             {adjustments.map((adjustment) => (
               <TableRow key={adjustment.id}>
                 <TableCell>{new Date(adjustment.created_at).toLocaleDateString()}</TableCell>
-                <TableCell>{adjustment.products?.name}</TableCell>
+                <TableCell>{String(adjustment.products?.name || 'Unknown Product')}</TableCell>
                 <TableCell>
                   <Badge variant={
                     adjustment.adjustment_type === 'increase' ? 'default' :
@@ -58,8 +58,8 @@ const StockAdjustmentsTab = ({ adjustments }: StockAdjustmentsTabProps) => {
                     `${adjustment.adjustment_type === 'increase' ? '+' : '-'}${adjustment.quantity_change}`
                   )}
                 </TableCell>
-                <TableCell>{adjustment.profiles?.full_name}</TableCell>
-                <TableCell>{adjustment.reason}</TableCell>
+                <TableCell>{String(adjustment.profiles?.full_name || 'Unknown User')}</TableCell>
+                <TableCell>{String(adjustment.reason)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

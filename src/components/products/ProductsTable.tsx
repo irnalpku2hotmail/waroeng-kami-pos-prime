@@ -29,7 +29,7 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
         <TableRow key={product.id}>
           <TableCell>
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-12 h-12 object-cover rounded" />
+              <img src={product.image_url} alt={String(product.name)} className="w-12 h-12 object-cover rounded" />
             ) : (
               <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
                 <Package className="h-6 w-6 text-gray-400" />
@@ -38,14 +38,14 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
           </TableCell>
           <TableCell>
             <div>
-              <div className="font-medium">{product.name}</div>
+              <div className="font-medium">{String(product.name)}</div>
               {product.barcode && (
-                <div className="text-sm text-gray-500">{product.barcode}</div>
+                <div className="text-sm text-gray-500">{String(product.barcode)}</div>
               )}
             </div>
           </TableCell>
-          <TableCell>{product.categories?.name || '-'}</TableCell>
-          <TableCell>{product.units?.name || '-'}</TableCell>
+          <TableCell>{String(product.categories?.name || '-')}</TableCell>
+          <TableCell>{String(product.units?.name || '-')}</TableCell>
           <TableCell>Rp {product.selling_price?.toLocaleString('id-ID')}</TableCell>
           <TableCell>
             <span className={product.current_stock < product.min_stock ? 'text-red-600' : 'text-green-600'}>
@@ -57,7 +57,7 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
               <div className="text-sm">
                 {product.price_variants.map((variant: any) => (
                   <div key={variant.id}>
-                    {variant.name}: Rp {variant.price?.toLocaleString('id-ID')} (min: {variant.minimum_quantity})
+                    {String(variant.name)}: Rp {variant.price?.toLocaleString('id-ID')} (min: {variant.minimum_quantity})
                   </div>
                 ))}
               </div>
