@@ -10,8 +10,7 @@ import BannerCarousel from '@/components/home/BannerCarousel';
 import EnhancedCategoriesSlider from '@/components/home/EnhancedCategoriesSlider';
 import EnhancedFlashSale from '@/components/home/EnhancedFlashSale';
 import PurchaseHistorySlider from '@/components/home/PurchaseHistorySlider';
-import BestSellingSlider from '@/components/home/BestSellingSlider';
-import CartModal from '@/components/CartModal';
+import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
 import EnhancedFooter from '@/components/home/EnhancedFooter';
 import { Package } from 'lucide-react';
@@ -90,18 +89,31 @@ const Home = () => {
     setSelectedCategory(null);
   };
 
+  const handleCartClick = () => {
+    if (user) {
+      setCartModalOpen(true);
+    } else {
+      // Don't show cart modal for non-logged users
+      console.log('User not logged in');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <HomeNavbar 
-        onCartClick={() => setCartModalOpen(true)}
+        onCartClick={handleCartClick}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onSearch={handleSearch}
       />
       
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Banner Carousel */}
-        <BannerCarousel />
+        {/* Banner Carousel - Reduced height on mobile */}
+        <div className="mb-8">
+          <div className="h-32 sm:h-48 md:h-64 lg:h-80">
+            <BannerCarousel />
+          </div>
+        </div>
         
         {/* Enhanced Shipping Info Display */}
         <EnhancedShippingInfo />
@@ -114,11 +126,8 @@ const Home = () => {
           <EnhancedFlashSale flashSales={flashSales} />
         )}
         
-        {/* Purchase History Slider */}
-        <PurchaseHistorySlider />
-        
-        {/* Best Selling Slider */}
-        <BestSellingSlider />
+        {/* Purchase History Slider - Only show if user is logged in */}
+        {user && <PurchaseHistorySlider />}
         
         {/* Featured Products - Enhanced Design */}
         <div className="mb-8">
@@ -205,11 +214,13 @@ const Home = () => {
         </div>
       </main>
 
-      {/* Enhanced Footer */}
+      {/* Enhanced Footer - Will be updated to remove quick menu */}
       <EnhancedFooter />
 
-      {/* Cart Modal */}
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+      {/* Enhanced Cart Modal - Only render if user is logged in */}
+      {user && (
+        <EnhancedFrontendCartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+      )}
     </div>
   );
 };

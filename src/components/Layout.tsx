@@ -1,131 +1,61 @@
 
-import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { supabase } from '@/integrations/supabase/client';
-import { Menu, X } from 'lucide-react';
-import { useState } from 'react';
-import NotificationDropdown from '@/components/layout/NotificationDropdown';
-import UserDropdown from '@/components/layout/UserDropdown';
-import DateTimeDisplay from '@/components/layout/DateTimeDisplay';
-import NavigationSidebar from '@/components/layout/NavigationSidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
+import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
+import MobileResponsiveSidebar from './layout/MobileResponsiveSidebar';
+import DateTimeDisplay from './layout/DateTimeDisplay';
+import UserDropdown from './layout/UserDropdown';
+import NotificationDropdown from './layout/NotificationDropdown';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const Layout = ({ children }: LayoutProps) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { user, profile, loading } = useAuth();
 
-  // Fetch store settings for store name
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*');
-      if (error) throw error;
-      
-      const settingsObj: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsObj[setting.key] = setting.value;
-      });
-      return settingsObj;
-    }
-  });
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  // Safely extract store name and handle potential object values
-  const getStoreName = (): string => {
-    if (!settings?.store_name) return 'SmartPOS';
-    
-    const storeNameValue = settings.store_name;
-    
-    // Handle case where store_name might be an object with a name property
-    if (typeof storeNameValue === 'object' && storeNameValue !== null) {
-      if ('name' in storeNameValue && typeof storeNameValue.name === 'string') {
-        return storeNameValue.name;
-      }
-      // If it's an object but doesn't have a name property, return default
-      return 'SmartPOS';
-    }
-    
-    // Handle case where store_name is a direct string
-    if (typeof storeNameValue === 'string') {
-      return storeNameValue;
-    }
-    
-    // Convert any other type to string safely
-    return String(storeNameValue) || 'SmartPOS';
-  };
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-  const storeName = getStoreName();
+  // Only allow buyers to access the frontend, redirect staff to dashboard
+  if (profile?.role === 'buyer') {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header - Mobile Optimized */}
-      <header className="bg-white border-b border-gray-200 px-3 sm:px-4 py-3 sticky top-0 z-40">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Mobile menu trigger */}
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden p-2">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <div className="flex items-center justify-between p-4 border-b">
-                  <h2 className="text-lg font-bold text-blue-800">{storeName}</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="p-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="p-4 overflow-y-auto">
-                  <NavigationSidebar onLinkClick={() => setIsMobileMenuOpen(false)} />
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            <h1 className="text-lg sm:text-xl font-bold text-blue-800 truncate max-w-[200px] sm:max-w-none">
-              {storeName}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-4">
-            {!isMobile && <DateTimeDisplay />}
+      <MobileResponsiveSidebar>
+        {/* Top Bar - Hidden on mobile as it's integrated into sidebar */}
+        <div className="hidden md:flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200 mb-6">
+          <DateTimeDisplay />
+          <div className="flex items-center gap-4">
             <NotificationDropdown />
             <UserDropdown />
           </div>
         </div>
-        
-        {/* Mobile DateTime Display */}
-        {isMobile && (
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <DateTimeDisplay />
-          </div>
-        )}
-      </header>
 
-      <div className="flex min-h-[calc(100vh-80px)]">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 bg-white border-r border-gray-200 min-h-full">
-          <div className="p-4 sm:p-6">
-            <NavigationSidebar />
+        {/* Mobile Top Bar - Shows user info */}
+        <div className="md:hidden flex items-center justify-between bg-white px-4 py-3 border-b border-gray-200 mb-4">
+          <DateTimeDisplay />
+          <div className="flex items-center gap-2">
+            <NotificationDropdown />
+            <UserDropdown />
           </div>
-        </aside>
+        </div>
 
-        {/* Main Content - Mobile Optimized */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-hidden">
+        <div className="px-2 md:px-0">
           {children}
-        </main>
-      </div>
+        </div>
+      </MobileResponsiveSidebar>
     </div>
   );
 };
