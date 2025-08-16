@@ -11,7 +11,7 @@ interface Profile {
   role: string;
   phone?: string;
   address?: string;
-  address_text?: string; // Added this property
+  address_text?: string;
   avatar_url?: string;
   date_of_birth?: string;
 }
@@ -42,7 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
       
       if (error) throw error;
-      return data;
+      
+      // Ensure all string fields are properly converted
+      return {
+        ...data,
+        email: String(data.email || ''),
+        full_name: String(data.full_name || ''),
+        role: String(data.role || ''),
+        phone: data.phone ? String(data.phone) : undefined,
+        address: data.address ? String(data.address) : undefined,
+        address_text: data.address_text ? String(data.address_text) : undefined,
+        avatar_url: data.avatar_url ? String(data.avatar_url) : undefined,
+        date_of_birth: data.date_of_birth ? String(data.date_of_birth) : undefined,
+      };
     },
     enabled: !!user?.id,
   });

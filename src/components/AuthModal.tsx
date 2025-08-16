@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -37,11 +38,11 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
 
     setIsLoading(true);
     try {
-      const { error } = await signIn(formData.email, formData.password);
+      const { error } = await signIn(String(formData.email), String(formData.password));
       if (error) {
         toast({
           title: 'Login Gagal',
-          description: error.message,
+          description: String(error.message || 'Login failed'),
           variant: 'destructive'
         });
       } else {
@@ -55,7 +56,7 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: String(error?.message || 'An error occurred'),
         variant: 'destructive'
       });
     } finally {
@@ -94,12 +95,12 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
 
     setIsLoading(true);
     try {
-      const { error } = await signUp(formData.email, formData.password, formData.fullName);
+      const { error } = await signUp(String(formData.email), String(formData.password), String(formData.fullName));
       
       if (error) {
         toast({
           title: 'Registrasi Gagal',
-          description: error.message,
+          description: String(error.message || 'Registration failed'),
           variant: 'destructive'
         });
       } else {
@@ -113,7 +114,7 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: String(error?.message || 'An error occurred'),
         variant: 'destructive'
       });
     } finally {
@@ -141,8 +142,8 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                 <Input
                   id="login-email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  value={String(formData.email)}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: String(e.target.value) }))}
                   placeholder="Masukkan email Anda"
                   required
                 />
@@ -154,8 +155,8 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                   <Input
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    value={String(formData.password)}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: String(e.target.value) }))}
                     placeholder="Masukkan password Anda"
                     required
                   />
@@ -188,8 +189,8 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                 <Input
                   id="register-name"
                   type="text"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                  value={String(formData.fullName)}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: String(e.target.value) }))}
                   placeholder="Masukkan nama lengkap Anda"
                   required
                 />
@@ -200,8 +201,8 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                 <Input
                   id="register-email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  value={String(formData.email)}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: String(e.target.value) }))}
                   placeholder="Masukkan email Anda"
                   required
                 />
@@ -213,8 +214,8 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                   <Input
                     id="register-password"
                     type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    value={String(formData.password)}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: String(e.target.value) }))}
                     placeholder="Masukkan password (min. 6 karakter)"
                     required
                     minLength={6}
@@ -240,8 +241,8 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                 <Input
                   id="register-confirm-password"
                   type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  value={String(formData.confirmPassword)}
+                  onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: String(e.target.value) }))}
                   placeholder="Konfirmasi password Anda"
                   required
                 />
