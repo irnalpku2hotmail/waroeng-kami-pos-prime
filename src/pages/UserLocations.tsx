@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -243,8 +244,8 @@ const UserLocations = () => {
                     >
                       <Popup>
                         <div>
-                          <h3 className="font-bold">{profile.full_name}</h3>
-                          <p className="text-sm text-gray-600">{profile.email}</p>
+                          <h3 className="font-bold">{String(profile.full_name || '')}</h3>
+                          <p className="text-sm text-gray-600">{String(profile.email || '')}</p>
                           <p className="text-xs">
                             Diperbarui: {profile.location_updated_at ? 
                               new Date(profile.location_updated_at).toLocaleDateString('id-ID') : 
@@ -275,8 +276,8 @@ const UserLocations = () => {
                       <MapPin className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{profile.full_name}</h3>
-                      <p className="text-sm text-gray-600">{profile.email}</p>
+                      <h3 className="font-medium">{String(profile.full_name || '')}</h3>
+                      <p className="text-sm text-gray-600">{String(profile.email || '')}</p>
                     </div>
                   </div>
                   <div className="text-right">

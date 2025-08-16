@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -205,7 +206,7 @@ const UsersTable = ({ users, currentPage, totalPages, currentUser, onPageChange,
                 <div className="flex items-center gap-3">
                   {userData.avatar_url && (
                     <img 
-                      src={userData.avatar_url} 
+                      src={String(userData.avatar_url)} 
                       alt={String(userData.full_name || '')}
                       className="w-8 h-8 rounded-full object-cover"
                     />

@@ -31,7 +31,7 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
       cashier: 'bg-yellow-600'
     };
     
-    return <Badge className={colors[role] || 'bg-gray-600'}>{role}</Badge>;
+    return <Badge className={colors[role] || 'bg-gray-600'}>{String(role || '')}</Badge>;
   };
 
   // Update user role mutation
@@ -78,8 +78,8 @@ const EditRoleDialog = ({ open, onOpenChange, selectedUser, onUserUpdated }: Edi
         {selectedUser && (
           <div className="space-y-4">
             <div>
-              <Label>User: {selectedUser.full_name}</Label>
-              <div className="text-sm text-gray-500">{selectedUser.email}</div>
+              <Label>User: {String(selectedUser.full_name || '')}</Label>
+              <div className="text-sm text-gray-500">{String(selectedUser.email || '')}</div>
             </div>
             <div>
               <Label>Current Role</Label>

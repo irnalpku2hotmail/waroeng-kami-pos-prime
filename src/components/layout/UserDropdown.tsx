@@ -18,7 +18,7 @@ const UserDropdown = () => {
   // Get user avatar URL
   const getUserAvatarUrl = () => {
     if (user?.user_metadata?.avatar_url) {
-      return user.user_metadata.avatar_url;
+      return String(user.user_metadata.avatar_url);
     }
     return null;
   };
