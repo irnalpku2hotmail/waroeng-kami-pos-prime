@@ -80,7 +80,17 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
     );
   }
 
-  if (!flashSaleItems?.length) {
+  // Filter out null/invalid items
+  const validFlashSaleItems = flashSaleItems?.filter(item => 
+    item && 
+    typeof item === 'object' && 
+    item.id && 
+    item.products &&
+    typeof item.products === 'object' &&
+    item.products.name
+  ) || [];
+
+  if (!validFlashSaleItems.length) {
     return (
       <div className="text-center py-6 text-gray-500">
         <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -91,11 +101,11 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
 
   return (
     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-      {flashSaleItems?.map((item) => (
+      {validFlashSaleItems.map((item) => (
         <Card 
           key={item.id} 
           className="cursor-pointer hover:shadow-md transition-shadow duration-200 group relative overflow-hidden"
-          onClick={() => onProductClick(item.products)}
+          onClick={() => item.products && onProductClick(item.products)}
         >
           <div className="absolute top-1 left-1 z-10">
             <Badge className="bg-red-500 text-white text-xs px-1 py-0">
@@ -115,7 +125,7 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
             
             <div className="space-y-1">
               <h3 className="font-medium text-xs line-clamp-2 leading-tight">
-                {item.products?.name}
+                {item.products?.name || 'Unnamed Product'}
               </h3>
               
               {item.products?.categories && (

@@ -52,16 +52,25 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.stopPropagation();
     
+    if (!product || !product.id || !product.name) {
+      toast({
+        title: 'Error',
+        description: 'Produk tidak valid',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.selling_price,
+      price: product.selling_price || 0,
       quantity: 1,
       image: product.image_url,
-      stock: product.current_stock,
+      stock: product.current_stock || 0,
       product_id: product.id,
-      unit_price: product.selling_price,
-      total_price: product.selling_price * 1,
+      unit_price: product.selling_price || 0,
+      total_price: (product.selling_price || 0) * 1,
       product: {
         id: product.id,
         name: product.name,
@@ -99,7 +108,15 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
     );
   }
 
-  if (similarProducts.length === 0) {
+  // Filter out null/invalid products
+  const validProducts = similarProducts?.filter(product => 
+    product && 
+    typeof product === 'object' && 
+    product.id && 
+    product.name
+  ) || [];
+
+  if (validProducts.length === 0) {
     return null;
   }
 
@@ -122,7 +139,7 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
         className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {similarProducts.map((product) => (
+        {validProducts.map((product) => (
           <Card 
             key={product.id} 
             className="flex-none w-64 group hover:shadow-lg transition-shadow cursor-pointer"
@@ -155,21 +172,21 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
                 </h3>
                 
                 <p className="text-lg font-bold text-blue-600">
-                  {formatPrice(product.selling_price)}
+                  {formatPrice(product.selling_price || 0)}
                 </p>
                 
                 <div className="flex items-center justify-between">
                   <Badge 
-                    variant={product.current_stock > 0 ? 'default' : 'destructive'}
+                    variant={(product.current_stock || 0) > 0 ? 'default' : 'destructive'}
                     className="text-xs"
                   >
-                    {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
+                    {(product.current_stock || 0) > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
                   </Badge>
                   
                   <Button
                     size="sm"
                     onClick={(e) => handleAddToCart(product, e)}
-                    disabled={product.current_stock === 0}
+                    disabled={(product.current_stock || 0) === 0}
                     className="h-8 w-8 p-0"
                   >
                     <ShoppingCart className="h-3 w-3" />

@@ -24,7 +24,7 @@ interface FlashSaleItem {
     image_url: string | null;
     current_stock: number;
     description: string | null;
-  };
+  } | null;
 }
 
 interface FlashSale {
@@ -55,6 +55,15 @@ const HomeFlashSale = ({ flashSales }: HomeFlashSaleProps) => {
   };
 
   const handleAddToCart = (item: FlashSaleItem) => {
+    if (!item.products) {
+      toast({
+        title: 'Error',
+        description: 'Produk tidak tersedia',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     addToCart({
       id: item.product_id,
       name: item.products.name,
@@ -80,11 +89,34 @@ const HomeFlashSale = ({ flashSales }: HomeFlashSaleProps) => {
     });
   };
 
-  if (!flashSales || flashSales.length === 0) {
+  // Filter out null/invalid flash sales and items
+  const validFlashSales = flashSales?.filter(sale => 
+    sale && 
+    typeof sale === 'object' && 
+    sale.id && 
+    sale.name &&
+    Array.isArray(sale.flash_sale_items)
+  ) || [];
+
+  if (!validFlashSales || validFlashSales.length === 0) {
     return null;
   }
 
-  const activeFlashSale = flashSales[0]; // Get the first active flash sale
+  const activeFlashSale = validFlashSales[0]; // Get the first active flash sale
+
+  // Filter valid flash sale items
+  const validFlashSaleItems = activeFlashSale.flash_sale_items?.filter(item => 
+    item && 
+    typeof item === 'object' && 
+    item.id && 
+    item.products &&
+    typeof item.products === 'object' &&
+    item.products.name
+  ) || [];
+
+  if (validFlashSaleItems.length === 0) {
+    return null;
+  }
 
   return (
     <div className="mb-8">
@@ -107,12 +139,12 @@ const HomeFlashSale = ({ flashSales }: HomeFlashSaleProps) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {activeFlashSale.flash_sale_items.map((item) => (
+        {validFlashSaleItems.map((item) => (
           <Card key={item.id} className="group hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="relative mb-3">
                 <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                  {item.products.image_url ? (
+                  {item.products?.image_url ? (
                     <img 
                       src={item.products.image_url} 
                       alt={item.products.name}
@@ -130,7 +162,7 @@ const HomeFlashSale = ({ flashSales }: HomeFlashSaleProps) => {
               </div>
               
               <h3 className="font-semibold text-sm mb-2 line-clamp-2">
-                {item.products.name}
+                {item.products?.name || 'Unnamed Product'}
               </h3>
               
               <div className="mb-3">
@@ -151,7 +183,7 @@ const HomeFlashSale = ({ flashSales }: HomeFlashSaleProps) => {
               
               <Button
                 onClick={() => handleAddToCart(item)}
-                disabled={item.stock_quantity === 0}
+                disabled={item.stock_quantity === 0 || !item.products}
                 className="w-full"
                 size="sm"
               >

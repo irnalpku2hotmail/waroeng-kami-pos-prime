@@ -17,11 +17,11 @@ interface Product {
   categories?: {
     id: string;
     name: string;
-  };
+  } | null;
   units?: {
     name: string;
     abbreviation: string;
-  };
+  } | null;
 }
 
 interface ProductGridProps {
@@ -70,7 +70,16 @@ const ProductGrid = ({ products }: ProductGridProps) => {
     navigate(`/product/${productId}`);
   };
 
-  if (!products || products.length === 0) {
+  // Filter out null/undefined products and ensure they have required properties
+  const validProducts = products?.filter(product => 
+    product && 
+    typeof product === 'object' && 
+    product.id && 
+    product.name && 
+    typeof product.selling_price === 'number'
+  ) || [];
+
+  if (!validProducts || validProducts.length === 0) {
     return (
       <div className="text-center py-8">
         <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -81,7 +90,7 @@ const ProductGrid = ({ products }: ProductGridProps) => {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {products.map((product) => (
+      {validProducts.map((product) => (
         <Card 
           key={product.id} 
           className="group hover:shadow-lg transition-shadow cursor-pointer"
