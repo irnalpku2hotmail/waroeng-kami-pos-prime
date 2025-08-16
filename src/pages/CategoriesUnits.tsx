@@ -1,41 +1,35 @@
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React from 'react';
 import Layout from '@/components/Layout';
-import PaginatedCategoriesTab from '@/components/categories/PaginatedCategoriesTab';
-import PaginatedUnitsTab from '@/components/units/PaginatedUnitsTab';
-import { FolderTree, Package } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import CategoryList from '@/components/categories/CategoryList';
+import UnitList from '@/components/units/UnitList';
+import AccessControl from '@/components/layout/AccessControl';
 
 const CategoriesUnits = () => {
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <FolderTree className="h-8 w-8 text-blue-800" />
-          <h1 className="text-3xl font-bold text-blue-800">Kategori & Unit</h1>
+    <AccessControl allowedRoles={['admin', 'manager', 'staff']} resource="Categories & Units">
+      <Layout>
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Kategori & Unit</h1>
+
+          <Tabs defaultValue="categories" className="w-full">
+            <TabsList>
+              <TabsTrigger value="categories">Kategori</TabsTrigger>
+              <TabsTrigger value="units">Unit</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="categories">
+              <CategoryList />
+            </TabsContent>
+
+            <TabsContent value="units">
+              <UnitList />
+            </TabsContent>
+          </Tabs>
         </div>
-
-        <Tabs defaultValue="categories" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <FolderTree className="h-4 w-4" />
-              Kategori
-            </TabsTrigger>
-            <TabsTrigger value="units" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Unit
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="categories">
-            <PaginatedCategoriesTab />
-          </TabsContent>
-
-          <TabsContent value="units">
-            <PaginatedUnitsTab />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </Layout>
+      </Layout>
+    </AccessControl>
   );
 };
 

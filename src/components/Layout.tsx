@@ -33,29 +33,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <MobileResponsiveSidebar>
-        {/* Top Bar - Hidden on mobile as it's integrated into sidebar */}
-        <div className="hidden md:flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200 mb-6">
+      {/* Fixed Top Navigation */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-3">
           <DateTimeDisplay />
           <div className="flex items-center gap-4">
             <NotificationDropdown />
             <UserDropdown />
           </div>
         </div>
+      </header>
 
-        {/* Mobile Top Bar - Shows user info */}
-        <div className="md:hidden flex items-center justify-between bg-white px-4 py-3 border-b border-gray-200 mb-4">
-          <DateTimeDisplay />
-          <div className="flex items-center gap-2">
-            <NotificationDropdown />
-            <UserDropdown />
+      {/* Main Content with Sidebar */}
+      <div className="pt-16">
+        <MobileResponsiveSidebar>
+          <div className="px-2 md:px-6 py-6">
+            {children}
           </div>
-        </div>
-
-        <div className="px-2 md:px-0">
-          {children}
-        </div>
-      </MobileResponsiveSidebar>
+        </MobileResponsiveSidebar>
+      </div>
     </div>
   );
 };
