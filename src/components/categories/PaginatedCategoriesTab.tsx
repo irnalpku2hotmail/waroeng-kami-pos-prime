@@ -176,7 +176,7 @@ const PaginatedCategoriesTab = () => {
             setShowForm(false);
             setEditingCategory(null);
           }}
-          onSave={() => {
+          onSuccess={() => {
             setShowForm(false);
             setEditingCategory(null);
             queryClient.invalidateQueries({ queryKey: ['categories'] });
