@@ -89,29 +89,59 @@ const Inventory = () => {
     itemsPerPage: 10
   });
 
-  const getPaginatedData = () => {
+  // Get paginated products
+  const getPaginatedProducts = () => {
+    return allProducts.slice(
+      productsPagination.paginatedIndices.from, 
+      productsPagination.paginatedIndices.to + 1
+    );
+  };
+
+  // Get paginated adjustments
+  const getPaginatedAdjustments = () => {
+    return allAdjustments.slice(
+      adjustmentsPagination.paginatedIndices.from, 
+      adjustmentsPagination.paginatedIndices.to + 1
+    );
+  };
+
+  // Get paginated low stock products
+  const getPaginatedLowStock = () => {
+    return lowStockProducts.slice(
+      lowStockPagination.paginatedIndices.from, 
+      lowStockPagination.paginatedIndices.to + 1
+    );
+  };
+
+  // Get current pagination based on active tab
+  const getCurrentPagination = () => {
     switch (currentTab) {
       case 'products':
-        return {
-          data: allProducts.slice(productsPagination.paginatedIndices.from, productsPagination.paginatedIndices.to + 1),
-          pagination: productsPagination
-        };
+        return productsPagination;
       case 'adjustments':
-        return {
-          data: allAdjustments.slice(adjustmentsPagination.paginatedIndices.from, adjustmentsPagination.paginatedIndices.to + 1),
-          pagination: adjustmentsPagination
-        };
+        return adjustmentsPagination;
       case 'low-stock':
-        return {
-          data: lowStockProducts.slice(lowStockPagination.paginatedIndices.from, lowStockPagination.paginatedIndices.to + 1),
-          pagination: lowStockPagination
-        };
+        return lowStockPagination;
       default:
-        return { data: [], pagination: productsPagination };
+        return productsPagination;
     }
   };
 
-  const { data: paginatedData, pagination } = getPaginatedData();
+  // Get total items for current tab
+  const getCurrentTotalItems = () => {
+    switch (currentTab) {
+      case 'products':
+        return allProducts.length;
+      case 'adjustments':
+        return allAdjustments.length;
+      case 'low-stock':
+        return lowStockProducts.length;
+      default:
+        return allProducts.length;
+    }
+  };
+
+  const currentPagination = getCurrentPagination();
 
   return (
     <AccessControl allowedRoles={['admin', 'manager', 'staff']} resource="Inventory">
@@ -146,32 +176,32 @@ const Inventory = () => {
             </TabsList>
 
             <TabsContent value="products" className="space-y-4">
-              <StockLevelTab products={paginatedData} />
+              <StockLevelTab products={getPaginatedProducts()} />
               <PaginationComponent
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={pagination.setCurrentPage}
-                totalItems={allProducts.length}
+                currentPage={currentPagination.currentPage}
+                totalPages={currentPagination.totalPages}
+                onPageChange={currentPagination.setCurrentPage}
+                totalItems={getCurrentTotalItems()}
               />
             </TabsContent>
 
             <TabsContent value="adjustments" className="space-y-4">
-              <StockAdjustmentsTab adjustments={paginatedData} />
+              <StockAdjustmentsTab adjustments={getPaginatedAdjustments()} />
               <PaginationComponent
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={pagination.setCurrentPage}
-                totalItems={allAdjustments.length}
+                currentPage={currentPagination.currentPage}
+                totalPages={currentPagination.totalPages}
+                onPageChange={currentPagination.setCurrentPage}
+                totalItems={getCurrentTotalItems()}
               />
             </TabsContent>
 
             <TabsContent value="low-stock" className="space-y-4">
-              <LowStockTab lowStockProducts={paginatedData} />
+              <LowStockTab lowStockProducts={getPaginatedLowStock()} />
               <PaginationComponent
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={pagination.setCurrentPage}
-                totalItems={lowStockProducts.length}
+                currentPage={currentPagination.currentPage}
+                totalPages={currentPagination.totalPages}
+                onPageChange={currentPagination.setCurrentPage}
+                totalItems={getCurrentTotalItems()}
               />
             </TabsContent>
           </Tabs>
