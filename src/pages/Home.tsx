@@ -16,6 +16,7 @@ const Home = () => {
   const { user } = useAuth();
   const { getTotalItems } = useCart();
   const [showCartModal, setShowCartModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -59,7 +60,7 @@ const Home = () => {
         .from('products')
         .select(`
           *,
-          categories(name),
+          categories(id, name),
           units(name, abbreviation)
         `)
         .eq('is_active', true)
@@ -71,15 +72,19 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar onCartClick={() => user && setShowCartModal(true)} />
+      <HomeNavbar 
+        onCartClick={() => user && setShowCartModal(true)} 
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
       
       {/* Hero Banner with reduced height on mobile */}
-      <div className="h-48 md:h-64 lg:h-80">
+      <div className="h-32 md:h-48 lg:h-64">
         <HomeHero />
       </div>
       
       <div className="container mx-auto px-4 py-6 space-y-8">
-        <HomeCategoriesSlider categories={categories} />
+        <HomeCategoriesSlider />
         
         {flashSales.length > 0 && (
           <HomeFlashSale flashSales={flashSales} />
@@ -93,8 +98,8 @@ const Home = () => {
       {/* Only show cart modal if user is logged in */}
       {user && (
         <EnhancedFrontendCartModal 
-          isOpen={showCartModal} 
-          onClose={() => setShowCartModal(false)} 
+          open={showCartModal} 
+          onOpenChange={setShowCartModal} 
         />
       )}
     </div>
