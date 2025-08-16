@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Mail, Package, Tag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Mail, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -30,7 +30,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
   const [customerInfo, setCustomerInfo] = useState({
     name: profile?.full_name || '',
     phone: profile?.phone || '',
-    address: profile?.address_text || profile?.address || '',
+    address: profile?.address_text || profile?.address || '', // Prioritize address_text
     notes: ''
   });
 
@@ -48,75 +48,6 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
     }
   });
 
-  // Fetch products with price variants for cart items
-  const { data: productsWithVariants = [] } = useQuery({
-    queryKey: ['cart-products-variants', items.map(item => item.product_id)],
-    queryFn: async () => {
-      if (items.length === 0) return [];
-      
-      const productIds = items.map(item => item.product_id);
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          selling_price,
-          price_variants(
-            id,
-            name,
-            price,
-            minimum_quantity,
-            is_active
-          )
-        `)
-        .in('id', productIds);
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: items.length > 0
-  });
-
-  const getBestPriceForQuantity = (productId: string, quantity: number) => {
-    const product = productsWithVariants.find(p => p.id === productId);
-    if (!product || !product.price_variants || product.price_variants.length === 0) {
-      return {
-        price: product?.selling_price || 0,
-        isWholesale: false,
-        variantName: null
-      };
-    }
-
-    // Filter active variants and sort by minimum quantity descending
-    const activeVariants = product.price_variants
-      .filter((variant: any) => variant.is_active)
-      .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity);
-
-    // Find the best variant for the given quantity
-    for (const variant of activeVariants) {
-      if (quantity >= variant.minimum_quantity) {
-        return {
-          price: variant.price,
-          isWholesale: true,
-          variantName: variant.name
-        };
-      }
-    }
-
-    return {
-      price: product.selling_price,
-      isWholesale: false,
-      variantName: null
-    };
-  };
-
-  const calculateCartTotal = () => {
-    return items.reduce((total, item) => {
-      const priceInfo = getBestPriceForQuantity(item.product_id, item.quantity);
-      return total + (priceInfo.price * item.quantity);
-    }, 0);
-  };
-
   const generateOrderNumber = () => {
     const timestamp = Date.now();
     return `WEB-${timestamp}`;
@@ -133,10 +64,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
       }
 
       const deliveryFee = settings?.delivery_fee?.amount || 10000;
-      const minOrderForFreeShipping = settings?.cod_settings?.min_order || 50000;
-      const cartTotal = calculateCartTotal();
-      const isFreeShipping = cartTotal >= minOrderForFreeShipping;
-      const totalAmount = cartTotal + (isFreeShipping ? 0 : deliveryFee);
+      const totalAmount = getTotalPrice() + deliveryFee;
       const orderNumber = generateOrderNumber();
 
       const { data: order, error: orderError } = await supabase
@@ -148,7 +76,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
           customer_address: customerInfo.address,
           notes: customerInfo.notes || 'Pesanan dari website',
           total_amount: totalAmount,
-          delivery_fee: isFreeShipping ? 0 : deliveryFee,
+          delivery_fee: deliveryFee,
           payment_method: 'cod',
           status: 'pending',
           customer_id: user.id
@@ -158,16 +86,13 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
 
       if (orderError) throw orderError;
 
-      const orderItems = items.map(item => {
-        const priceInfo = getBestPriceForQuantity(item.product_id, item.quantity);
-        return {
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: priceInfo.price,
-          total_price: priceInfo.price * item.quantity
-        };
-      });
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price
+      }));
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -208,10 +133,8 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
   };
 
   const deliveryFee = settings?.delivery_fee?.amount || 10000;
-  const minOrderForFreeShipping = settings?.cod_settings?.min_order || 50000;
-  const subtotal = calculateCartTotal();
-  const isFreeShipping = subtotal >= minOrderForFreeShipping;
-  const total = subtotal + (isFreeShipping ? 0 : deliveryFee);
+  const subtotal = getTotalPrice();
+  const total = subtotal + deliveryFee;
 
   if (!user) {
     return (
@@ -261,65 +184,50 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
                 <Package className="h-4 w-4" />
                 Produk Pesanan
               </h3>
-              {items.map((item) => {
-                const priceInfo = getBestPriceForQuantity(item.product_id, item.quantity);
-                
-                return (
-                  <Card key={item.id}>
-                    <CardContent className="p-4">
-                      <div className={`flex items-center gap-4 ${isMobile ? 'flex-col space-y-3' : ''}`}>
-                        <img
-                          src={getImageUrl(item.product?.image_url)}
-                          alt={item.product?.name || 'Product'}
-                          className={`${isMobile ? 'w-20 h-20' : 'w-16 h-16'} object-cover rounded-md`}
-                        />
-                        <div className={`flex-1 ${isMobile ? 'text-center' : ''}`}>
-                          <h4 className="font-medium">{item.product?.name || 'Product'}</h4>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm text-gray-600">
-                              Rp {priceInfo.price.toLocaleString('id-ID')}
-                            </p>
-                            {priceInfo.isWholesale && (
-                              <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {priceInfo.variantName}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm font-medium text-blue-600">
-                            Total: Rp {(item.quantity * priceInfo.price).toLocaleString('id-ID')}
-                          </p>
-                        </div>
-                        <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.product_id, Math.max(1, item.quantity - 1))}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <span className="w-12 text-center">{item.quantity}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeItem(item.product_id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+              {items.map((item) => (
+                <Card key={item.id}>
+                  <CardContent className="p-4">
+                    <div className={`flex items-center gap-4 ${isMobile ? 'flex-col space-y-3' : ''}`}>
+                      <img
+                        src={getImageUrl(item.product?.image_url)}
+                        alt={item.product?.name || 'Product'}
+                        className={`${isMobile ? 'w-20 h-20' : 'w-16 h-16'} object-cover rounded-md`}
+                      />
+                      <div className={`flex-1 ${isMobile ? 'text-center' : ''}`}>
+                        <h4 className="font-medium">{item.product?.name || 'Product'}</h4>
+                        <p className="text-sm text-gray-600">
+                          Rp {item.unit_price.toLocaleString('id-ID')}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateQuantity(item.product_id, Math.max(1, item.quantity - 1))}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="w-12 text-center">{item.quantity}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeItem(item.product_id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
             <Separator />
@@ -402,19 +310,8 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
                   <MapPin className="h-4 w-4" />
                   Ongkos Kirim
                 </span>
-                <span>
-                  {isFreeShipping ? (
-                    <Badge className="bg-green-100 text-green-800">Gratis</Badge>
-                  ) : (
-                    `Rp ${deliveryFee.toLocaleString('id-ID')}`
-                  )}
-                </span>
+                <span>Rp {deliveryFee.toLocaleString('id-ID')}</span>
               </div>
-              {!isFreeShipping && (
-                <div className="text-xs text-gray-500">
-                  Belanja Rp {(minOrderForFreeShipping - subtotal).toLocaleString('id-ID')} lagi untuk gratis ongkir
-                </div>
-              )}
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>

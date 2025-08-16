@@ -18,7 +18,7 @@ const UserDropdown = () => {
   // Get user avatar URL
   const getUserAvatarUrl = () => {
     if (user?.user_metadata?.avatar_url) {
-      return String(user.user_metadata.avatar_url);
+      return user.user_metadata.avatar_url;
     }
     return null;
   };
@@ -26,9 +26,9 @@ const UserDropdown = () => {
   // Get user display name
   const getUserDisplayName = () => {
     if (user?.user_metadata?.full_name) {
-      return String(user.user_metadata.full_name);
+      return user.user_metadata.full_name;
     }
-    return String(user?.email || '');
+    return user?.email || '';
   };
 
   return (

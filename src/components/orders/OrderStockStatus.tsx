@@ -41,7 +41,7 @@ const OrderStockStatus = ({ orderItems, orderStatus }: OrderStockStatusProps) =>
         );
         return (
           <div key={item.id} className="text-xs">
-            <div className="font-medium text-gray-700">{String(item.products?.name || 'Unknown Product')}</div>
+            <div className="font-medium text-gray-700">{item.products?.name}</div>
             <div className="flex items-center gap-2">
               <span className="text-gray-600">Pesan: {item.quantity}</span>
               <span className={stockInfo.colorClass}>

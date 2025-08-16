@@ -88,7 +88,7 @@ const FrontendCategories = ({ selectedCategory, onCategorySelect }: FrontendCate
                   {category.icon_url ? (
                     <img 
                       src={category.icon_url} 
-                      alt={String(category.name)}
+                      alt={category.name}
                       className="w-6 h-6 object-contain"
                     />
                   ) : (
@@ -96,7 +96,7 @@ const FrontendCategories = ({ selectedCategory, onCategorySelect }: FrontendCate
                   )}
                 </div>
                 <h3 className="font-medium text-sm mb-2 line-clamp-2">
-                  {String(category.name)}
+                  {category.name}
                 </h3>
                 <Badge variant="secondary" className="text-xs">
                   {productCounts[category.id] || 0}
