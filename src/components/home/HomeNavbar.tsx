@@ -16,12 +16,14 @@ interface HomeNavbarProps {
   onCartClick?: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  onSearch?: () => void;
 }
 
 const HomeNavbar = ({ 
   onCartClick,
   searchTerm, 
-  onSearchChange
+  onSearchChange,
+  onSearch
 }: HomeNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
@@ -152,6 +154,7 @@ const HomeNavbar = ({
               <EnhancedSearch
                 searchTerm={searchTerm}
                 onSearchChange={onSearchChange}
+                onSearch={onSearch}
               />
             )}
 
@@ -240,6 +243,7 @@ const HomeNavbar = ({
               <EnhancedSearch
                 searchTerm={searchTerm}
                 onSearchChange={onSearchChange}
+                onSearch={onSearch}
               />
             </div>
           )}
