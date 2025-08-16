@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1542,9 +1542,9 @@ export type Database = {
     Functions: {
       check_user_permission: {
         Args: {
-          user_id: string
-          resource_name: string
           permission_type: string
+          resource_name: string
+          user_id: string
         }
         Returns: boolean
       }
@@ -1563,53 +1563,53 @@ export type Database = {
       get_customer_purchase_history: {
         Args: { customer_uuid: string }
         Returns: {
-          transaction_id: string
-          transaction_number: string
-          total_amount: number
-          points_earned: number
-          points_used: number
           created_at: string
           items: Json
+          points_earned: number
+          points_used: number
+          total_amount: number
+          transaction_id: string
+          transaction_number: string
         }[]
       }
       get_customer_statistics: {
         Args: Record<PropertyKey, never>
         Returns: {
-          total_customers: number
           active_customers_this_month: number
+          total_customers: number
           total_unredeemed_points: number
         }[]
       }
       get_supplier_purchase_history: {
         Args: { supplier_uuid: string }
         Returns: {
-          purchase_id: string
-          purchase_number: string
-          total_amount: number
-          purchase_date: string
-          payment_method: string
-          status: string
           created_at: string
           items: Json
+          payment_method: string
+          purchase_date: string
+          purchase_id: string
+          purchase_number: string
+          status: string
+          total_amount: number
         }[]
       }
       get_supplier_return_history: {
         Args: { supplier_uuid: string }
         Returns: {
-          return_id: string
-          return_number: string
-          total_amount: number
-          return_date: string
-          status: string
-          reason: string
           created_at: string
           items: Json
+          reason: string
+          return_date: string
+          return_id: string
+          return_number: string
+          status: string
+          total_amount: number
         }[]
       }
       get_unit_conversion_factor: {
         Args: {
-          p_product_id: string
           p_from_unit_id: string
+          p_product_id: string
           p_to_unit_id: string
         }
         Returns: number
