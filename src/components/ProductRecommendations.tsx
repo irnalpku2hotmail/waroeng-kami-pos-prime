@@ -86,7 +86,7 @@ const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecomme
             <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 p-2 flex items-center justify-center">
               <img
                 src={getImageUrl(product.image_url)}
-                alt={product.name}
+                alt={String(product.name)}
                 className="w-full h-full object-cover rounded"
               />
             </div>
@@ -99,7 +99,7 @@ const ProductRecommendations = ({ categoryId, currentProductId }: ProductRecomme
           
           <div className="p-3">
             <h3 className="font-medium text-sm text-gray-900 line-clamp-2 mb-1">
-              {product.name}
+              {String(product.name)}
             </h3>
             
             <div className="flex items-center justify-between">

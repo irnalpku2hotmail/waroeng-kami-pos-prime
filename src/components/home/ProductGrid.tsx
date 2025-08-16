@@ -129,12 +129,12 @@ const ProductGrid = ({ products, isLoading = false }: ProductGridProps) => {
             <div className="space-y-2">
               {product.categories && (
                 <Badge variant="secondary" className="text-xs">
-                  {String(product.categories.name || '')}
+                  {String(product.categories.name)}
                 </Badge>
               )}
               
               <h3 className="font-semibold text-sm line-clamp-2">
-                {String(product.name || '')}
+                {String(product.name)}
               </h3>
               
               <p className="text-lg font-bold text-blue-600">

@@ -133,7 +133,7 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
                 {product.image_url ? (
                   <img 
                     src={product.image_url} 
-                    alt={product.name}
+                    alt={String(product.name)}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                 ) : (
@@ -146,12 +146,12 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
               <div className="space-y-2">
                 {product.categories && (
                   <Badge variant="secondary" className="text-xs">
-                    {product.categories.name}
+                    {String(product.categories.name)}
                   </Badge>
                 )}
                 
                 <h3 className="font-medium text-sm line-clamp-2 h-10">
-                  {product.name}
+                  {String(product.name)}
                 </h3>
                 
                 <p className="text-lg font-bold text-blue-600">

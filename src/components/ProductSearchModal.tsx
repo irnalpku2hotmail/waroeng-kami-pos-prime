@@ -119,7 +119,7 @@ const ProductSearchModal = ({ open, onOpenChange, onSelectProduct, flashSaleId }
                             {productImageUrl ? (
                               <img 
                                 src={productImageUrl} 
-                                alt={product.name}
+                                alt={String(product.name)}
                                 className="w-full h-full object-cover rounded-lg"
                               />
                             ) : (
@@ -128,9 +128,9 @@ const ProductSearchModal = ({ open, onOpenChange, onSelectProduct, flashSaleId }
                           </div>
                           
                           <div className="flex-1">
-                            <h3 className="font-medium text-sm mb-1">{product.name}</h3>
+                            <h3 className="font-medium text-sm mb-1">{String(product.name)}</h3>
                             <p className="text-sm text-gray-500 mb-1">
-                              {product.categories?.name || 'Tanpa kategori'}
+                              {String(product.categories?.name || 'Tanpa kategori')}
                             </p>
                             <div className="flex items-center justify-between">
                               <span className="text-lg font-bold text-blue-600">
