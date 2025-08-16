@@ -26,9 +26,9 @@ const UserDropdown = () => {
   // Get user display name
   const getUserDisplayName = () => {
     if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name;
+      return String(user.user_metadata.full_name);
     }
-    return user?.email || '';
+    return String(user?.email || '');
   };
 
   return (

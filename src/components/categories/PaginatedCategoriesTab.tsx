@@ -5,185 +5,308 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import CategoryForm from '../CategoryForm';
-import PaginationComponent from '../PaginationComponent';
-import { usePagination } from '@/hooks/usePagination';
+import { Plus, Edit, Trash2, FolderTree } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import PaginationComponent from '@/components/PaginationComponent';
+
+const ITEMS_PER_PAGE = 10;
 
 const PaginatedCategoriesTab = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    description: ''
+  });
+
   const queryClient = useQueryClient();
 
-  const { data: allCategories = [] } = useQuery({
-    queryKey: ['categories'],
+  // Fetch categories with pagination
+  const { data: categoriesData, isLoading } = useQuery({
+    queryKey: ['categories-paginated', currentPage],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      const { data, error, count } = await supabase
         .from('categories')
-        .select('*')
-        .order('name');
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      
+      return {
+        categories: data || [],
+        total: count || 0
+      };
     }
   });
 
-  // Filter categories based on search
-  const filteredCategories = allCategories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const totalPages = Math.ceil((categoriesData?.total || 0) / ITEMS_PER_PAGE);
 
-  const {
-    currentPage,
-    totalPages,
-    startIndex,
-    endIndex,
-    setCurrentPage
-  } = usePagination({
-    totalItems: filteredCategories.length,
-    itemsPerPage: 8
-  });
-
-  const paginatedCategories = filteredCategories.slice(startIndex, endIndex);
-
-  const deleteCategory = useMutation({
-    mutationFn: async (categoryId: string) => {
+  // Create category mutation
+  const createCategory = useMutation({
+    mutationFn: async (category: { name: string; description: string }) => {
       const { error } = await supabase
         .from('categories')
-        .delete()
-        .eq('id', categoryId);
+        .insert(category);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'Kategori berhasil dihapus' });
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['categories-paginated'] });
+      toast({ title: 'Berhasil', description: 'Kategori berhasil dibuat' });
+      setIsCreateDialogOpen(false);
+      setNewCategory({ name: '', description: '' });
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
-  const handleEdit = (category: any) => {
-    setEditingCategory(category);
-    setShowForm(true);
+  // Update category mutation
+  const updateCategory = useMutation({
+    mutationFn: async (category: { id: string; name: string; description: string }) => {
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: category.name, description: category.description })
+        .eq('id', category.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories-paginated'] });
+      toast({ title: 'Berhasil', description: 'Kategori berhasil diupdate' });
+      setIsEditDialogOpen(false);
+      setEditingCategory(null);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Delete category mutation
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories-paginated'] });
+      toast({ title: 'Berhasil', description: 'Kategori berhasil dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const handleCreateCategory = () => {
+    if (!newCategory.name.trim()) {
+      toast({ title: 'Error', description: 'Nama kategori harus diisi', variant: 'destructive' });
+      return;
+    }
+    createCategory.mutate(newCategory);
   };
 
-  const handleDelete = (categoryId: string) => {
+  const handleEditCategory = (category: any) => {
+    setEditingCategory(category);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateCategory = () => {
+    if (!editingCategory?.name?.trim()) {
+      toast({ title: 'Error', description: 'Nama kategori harus diisi', variant: 'destructive' });
+      return;
+    }
+    updateCategory.mutate(editingCategory);
+  };
+
+  const handleDeleteCategory = (id: string) => {
     if (confirm('Apakah Anda yakin ingin menghapus kategori ini?')) {
-      deleteCategory.mutate(categoryId);
+      deleteCategory.mutate(id);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Cari kategori..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-10"
-          />
-        </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Tambah Kategori
-        </Button>
-      </div>
-
-      {/* Categories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {paginatedCategories.map((category) => (
-          <Card key={category.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium truncate">
-                  {category.name}
-                </CardTitle>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(category)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(category.id)}
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <FolderTree className="h-5 w-5" />
+            Kategori
+          </CardTitle>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Kategori
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Tambah Kategori Baru</DialogTitle>
+                <DialogDescription>
+                  Masukkan informasi kategori baru
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nama Kategori</Label>
+                  <Input
+                    id="name"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Masukkan nama kategori"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Deskripsi</Label>
+                  <Textarea
+                    id="description"
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Masukkan deskripsi kategori (opsional)"
+                  />
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {category.description && (
-                <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                  {category.description}
-                </p>
-              )}
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary" className="text-xs">
-                  ID: {category.id.slice(0, 8)}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {paginatedCategories.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-500">
-            {searchTerm ? 'Tidak ada kategori yang sesuai dengan pencarian' : 'Belum ada kategori'}
-          </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Batal
+                </Button>
+                <Button onClick={handleCreateCategory} disabled={createCategory.isPending}>
+                  {createCategory.isPending ? 'Menyimpan...' : 'Simpan'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
-      )}
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead>Dibuat</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categoriesData?.categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell className="text-gray-600">
+                      {category.description || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(category.created_at).toLocaleDateString('id-ID')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditCategory(category)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteCategory(category.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-      {/* Pagination */}
-      {filteredCategories.length > 8 && (
-        <PaginationComponent
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={filteredCategories.length}
-          itemsPerPage={8}
-        />
-      )}
+            {totalPages > 1 && (
+              <PaginationComponent
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={ITEMS_PER_PAGE}
+                totalItems={categoriesData?.total || 0}
+              />
+            )}
+          </>
+        )}
 
-      {/* Category Form Modal */}
-      {showForm && (
-        <CategoryForm
-          category={editingCategory}
-          onClose={() => {
-            setShowForm(false);
-            setEditingCategory(null);
-          }}
-          onSuccess={() => {
-            setShowForm(false);
-            setEditingCategory(null);
-            queryClient.invalidateQueries({ queryKey: ['categories'] });
-          }}
-        />
-      )}
-    </div>
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Kategori</DialogTitle>
+              <DialogDescription>
+                Ubah informasi kategori
+              </DialogDescription>
+            </DialogHeader>
+            {editingCategory && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-name">Nama Kategori</Label>
+                  <Input
+                    id="edit-name"
+                    value={editingCategory.name}
+                    onChange={(e) => setEditingCategory(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-description">Deskripsi</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editingCategory.description || ''}
+                    onChange={(e) => setEditingCategory(prev => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleUpdateCategory} disabled={updateCategory.isPending}>
+                {updateCategory.isPending ? 'Menyimpan...' : 'Simpan'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 };
 

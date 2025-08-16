@@ -26,9 +26,10 @@ interface Product {
 
 interface ProductGridProps {
   products: Product[];
+  isLoading?: boolean;
 }
 
-const ProductGrid = ({ products }: ProductGridProps) => {
+const ProductGrid = ({ products, isLoading = false }: ProductGridProps) => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
@@ -70,6 +71,29 @@ const ProductGrid = ({ products }: ProductGridProps) => {
     navigate(`/product/${productId}`);
   };
 
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Card key={index} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="aspect-square bg-gray-200 rounded-lg mb-4"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-20"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-6 bg-gray-200 rounded w-24"></div>
+                <div className="flex items-center justify-between">
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                  <div className="h-8 bg-gray-200 rounded w-16"></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   if (!products || products.length === 0) {
     return (
       <div className="text-center py-8">
@@ -105,12 +129,12 @@ const ProductGrid = ({ products }: ProductGridProps) => {
             <div className="space-y-2">
               {product.categories && (
                 <Badge variant="secondary" className="text-xs">
-                  {product.categories.name}
+                  {String(product.categories.name || '')}
                 </Badge>
               )}
               
               <h3 className="font-semibold text-sm line-clamp-2">
-                {product.name}
+                {String(product.name || '')}
               </h3>
               
               <p className="text-lg font-bold text-blue-600">
