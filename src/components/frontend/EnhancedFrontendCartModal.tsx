@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Mail, Package, Truck } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -19,12 +20,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface EnhancedFrontendCartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface CODSettings {
-  delivery_fee?: number;
-  min_order?: number;
-  is_enabled?: boolean;
 }
 
 const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartModalProps) => {
@@ -40,25 +35,11 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     notes: ''
   });
 
-  // Update customer info when profile changes
-  useEffect(() => {
-    setCustomerInfo({
-      name: profile?.full_name || '',
-      phone: profile?.phone || '',
-      address: profile?.address_text || profile?.address || '',
-      notes: ''
-    });
-  }, [profile]);
-
-  // Fetch COD settings
+  // Fetch settings including delivery settings
   const { data: settings } = useQuery({
-    queryKey: ['settings-cod'],
+    queryKey: ['settings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .in('key', ['cod_settings']);
-      
+      const { data, error } = await supabase.from('settings').select('*');
       if (error) throw error;
       
       const settingsMap: Record<string, any> = {};
@@ -123,16 +104,10 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         throw new Error('Mohon lengkapi semua data pengiriman yang wajib diisi');
       }
 
-      const codSettings = settings?.cod_settings as CODSettings;
-      const deliveryFee = codSettings?.delivery_fee || 10000;
-      const minOrder = codSettings?.min_order || 50000;
+      const deliveryFee = settings?.delivery_fee?.amount || 10000;
+      const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
       const subtotal = getTotalPriceWithVariants();
-      
-      if (subtotal < minOrder) {
-        throw new Error(`Minimum order Rp ${minOrder.toLocaleString('id-ID')}`);
-      }
-
-      const finalDeliveryFee = subtotal >= minOrder ? 0 : deliveryFee;
+      const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
       const totalAmount = subtotal + finalDeliveryFee;
       const orderNumber = generateOrderNumber();
 
@@ -177,7 +152,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         description: `Nomor pesanan: ${order.order_number}. Pesanan Anda sedang diproses.`
       });
       clearCart();
-      setCustomerInfo(prev => ({ ...prev, notes: '' }));
+      setCustomerInfo({ name: '', phone: '', address: '', notes: '' });
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -207,13 +182,12 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     return data.publicUrl;
   };
 
-  const codSettings = settings?.cod_settings as CODSettings;
-  const deliveryFee = codSettings?.delivery_fee || 10000;
-  const minOrder = codSettings?.min_order || 50000;
+  const deliveryFee = settings?.delivery_fee?.amount || 10000;
+  const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
   const subtotal = getTotalPriceWithVariants();
-  const finalDeliveryFee = subtotal >= minOrder ? 0 : deliveryFee;
+  const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
   const total = subtotal + finalDeliveryFee;
-  const isEligibleForFreeShipping = subtotal >= minOrder;
+  const isEligibleForFreeShipping = subtotal >= freeShippingMinimum;
 
   if (!user) {
     return null; // Don't show cart modal if not logged in
@@ -248,7 +222,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                     style: 'currency',
                     currency: 'IDR',
                     minimumFractionDigits: 0,
-                  }).format(minOrder - subtotal)} lagi untuk gratis ongkir!
+                  }).format(freeShippingMinimum - subtotal)} lagi untuk gratis ongkir!
                 </span>
               </div>
             )}
@@ -333,7 +307,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
 
             <Separator />
 
-            {/* Customer Information - Locked except notes */}
+            {/* Customer Information */}
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -349,8 +323,8 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                     <Input
                       id="name"
                       value={customerInfo.name}
-                      readOnly
-                      className="bg-gray-50 cursor-not-allowed"
+                      onChange={(e) => setCustomerInfo(prev => ({...prev, name: e.target.value}))}
+                      required
                     />
                   </div>
                   <div>
@@ -361,8 +335,8 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                     <Input
                       id="phone"
                       value={customerInfo.phone}
-                      readOnly
-                      className="bg-gray-50 cursor-not-allowed"
+                      onChange={(e) => setCustomerInfo(prev => ({...prev, phone: e.target.value}))}
+                      required
                     />
                   </div>
                 </div>
@@ -374,8 +348,9 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   <Textarea
                     id="address"
                     value={customerInfo.address}
-                    readOnly
-                    className="bg-gray-50 cursor-not-allowed"
+                    onChange={(e) => setCustomerInfo(prev => ({...prev, address: e.target.value}))}
+                    placeholder="Alamat akan terisi otomatis dari profil, atau masukkan alamat lengkap untuk pengiriman"
+                    required
                     rows={isMobile ? 2 : 3}
                   />
                 </div>
@@ -405,9 +380,12 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   <MapPin className="h-4 w-4" />
                   Ongkos Kirim
                 </span>
-                <span className={isEligibleForFreeShipping ? 'text-green-600' : ''}>
+                <span className={isEligibleForFreeShipping ? 'text-green-600 line-through' : ''}>
                   {isEligibleForFreeShipping ? (
-                    <span className="font-medium">GRATIS</span>
+                    <>
+                      <span className="line-through">Rp {deliveryFee.toLocaleString('id-ID')}</span>
+                      <span className="ml-2 font-medium">GRATIS</span>
+                    </>
                   ) : (
                     `Rp ${finalDeliveryFee.toLocaleString('id-ID')}`
                   )}

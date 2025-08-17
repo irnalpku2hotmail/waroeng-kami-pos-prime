@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Grid, List } from 'lucide-react';
+import { Search, Package, Filter, Grid, List } from 'lucide-react';
 import ProductCardSmall from '@/components/home/ProductCardSmall';
+import HomeNavbar from '@/components/home/HomeNavbar';
 import EnhancedSearchWithSuggestions from '@/components/home/EnhancedSearchWithSuggestions';
 
 const SearchResults = () => {
@@ -38,24 +40,6 @@ const SearchResults = () => {
       
       if (error) throw error;
       return data || [];
-    }
-  });
-
-  // Fetch store settings for footer
-  const { data: settings } = useQuery({
-    queryKey: ['store-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*');
-      
-      if (error) throw error;
-      
-      const settingsObj: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsObj[setting.key] = setting.value;
-      });
-      return settingsObj;
     }
   });
 
@@ -138,8 +122,8 @@ const SearchResults = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Fixed Navigation */}
-      <div className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50">
+      {/* Navigation */}
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -163,7 +147,7 @@ const SearchResults = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 mt-20">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Search Summary & Filters */}
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
           {/* Search Summary */}
@@ -274,38 +258,6 @@ const SearchResults = () => {
           </div>
         )}
       </div>
-
-      {/* Footer with Store Info */}
-      <footer className="bg-gray-900 text-white mt-16">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">
-                {settings?.store_name?.name || 'Toko Online'}
-              </h3>
-              <p className="text-gray-300 text-sm">
-                {settings?.store_address?.address || 'Alamat toko belum diatur'}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium mb-3">Kontak</h4>
-              <div className="space-y-2 text-sm text-gray-300">
-                <p>📞 {settings?.store_phone?.phone || 'Telepon belum diatur'}</p>
-                <p>✉️ {settings?.store_email?.email || 'Email belum diatur'}</p>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium mb-3">Tentang Kami</h4>
-              <p className="text-sm text-gray-300">
-                Toko online terpercaya dengan berbagai pilihan produk berkualitas.
-              </p>
-            </div>
-          </div>
-          <div className="border-t border-gray-700 mt-8 pt-4 text-center text-sm text-gray-400">
-            <p>&copy; 2024 {settings?.store_name?.name || 'Toko Online'}. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
