@@ -89,22 +89,35 @@ const PermissionManagement = () => {
         
         if (error) throw error;
       } else {
-        // Create new permission record
-        const newPermission = {
+        // Create new permission record with explicit typing
+        const basePermission = {
           role: selectedRole,
           resource,
-          can_create: permission === 'can_create' ? value : false,
-          can_read: permission === 'can_read' ? value : false,
-          can_update: permission === 'can_update' ? value : false,
-          can_delete: permission === 'can_delete' ? value : false
+          can_create: false,
+          can_read: false,
+          can_update: false,
+          can_delete: false
         };
         
-        // Override the specific permission being set
-        newPermission[permission as keyof typeof newPermission] = value;
+        // Use explicit type mapping instead of dynamic property assignment
+        switch (permission) {
+          case 'can_create':
+            basePermission.can_create = value;
+            break;
+          case 'can_read':
+            basePermission.can_read = value;
+            break;
+          case 'can_update':
+            basePermission.can_update = value;
+            break;
+          case 'can_delete':
+            basePermission.can_delete = value;
+            break;
+        }
 
         const { error } = await supabase
           .from('role_permissions')
-          .insert([newPermission]);
+          .insert([basePermission]);
         
         if (error) throw error;
       }
