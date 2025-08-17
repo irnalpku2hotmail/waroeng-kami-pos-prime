@@ -4,28 +4,27 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Search, ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Phone, Mail, MapPin, Facebook, Instagram, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Phone, Mail, MapPin, Facebook, Instagram, Clock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useNavigate } from 'react-router-dom';
-import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import AuthModal from '@/components/AuthModal';
-import { toast } from '@/hooks/use-toast';
+import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
+import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
+import ProductGridSmall from '@/components/home/ProductGridSmall';
+import BannerCarousel from '@/components/home/BannerCarousel';
+import { Separator } from '@/components/ui/separator';
 
 const Home = () => {
   const { user, signOut } = useAuth();
-  const { addItem, getTotalItems } = useCart();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showCartModal, setShowCartModal] = useState(false);
+  const { getTotalItems } = useCart();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [showCartModal, setShowCartModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
 
   // Fetch store settings
   const { data: settings } = useQuery({
@@ -58,74 +57,15 @@ const Home = () => {
     enabled: !!user?.id
   });
 
-  // Fetch featured products
-  const { data: products = [] } = useQuery({
-    queryKey: ['featured-products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories(id, name),
-          units(name, abbreviation)
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(12);
-
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
-  const handleAddToCart = (product: any) => {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
-
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      quantity: 1,
-      image: product.image_url,
-      stock: product.current_stock
-    });
-
-    toast({
-      title: 'Produk ditambahkan ke keranjang',
-      description: `${product.name} telah ditambahkan ke keranjang belanja`,
-    });
-  };
-
-  const getImageUrl = (imageUrl: string | null | undefined) => {
-    if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(imageUrl);
-    
-    return data.publicUrl;
-  };
+  const storeInfo = settings?.store_info || {};
+  const contactInfo = settings?.contact_info || {};
+  const logoUrl = storeInfo.logo_url;
+  const storeName = storeInfo.name || 'Toko Online';
 
   const handleSignOut = async () => {
     await signOut();
     setMobileMenuOpen(false);
   };
-
-  const storeInfo = settings?.store_info || {};
-  const contactInfo = settings?.contact_info || {};
-  const logoUrl = storeInfo.logo_url;
-  const storeName = storeInfo.name || 'Toko Online';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -181,19 +121,17 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="search"
-                  placeholder="Cari produk..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 transition-colors"
+            {/* Search Bar - Desktop */}
+            {!isMobile && (
+              <div className="flex-1 max-w-2xl mx-8">
+                <EnhancedHomeSearch
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={setSelectedCategory}
                 />
               </div>
-            </form>
+            )}
 
             {/* Actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -236,9 +174,9 @@ const Home = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <DropdownMenuItem disabled>
                           <User className="h-4 w-4 mr-2" />
-                          Profile
+                          {profile?.full_name || user.email?.split('@')[0]}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleSignOut}>
                           <LogOut className="h-4 w-4 mr-2" />
@@ -273,6 +211,18 @@ const Home = () => {
               )}
             </div>
           </div>
+
+          {/* Mobile Search */}
+          {isMobile && (
+            <div className="pb-4">
+              <EnhancedHomeSearch
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                selectedCategory={selectedCategory}
+                onCategoryChange={setSelectedCategory}
+              />
+            </div>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -311,18 +261,6 @@ const Home = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        navigate('/profile');
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full justify-start mb-2"
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
                       onClick={handleSignOut}
                       className="w-full justify-start"
                     >
@@ -350,101 +288,24 @@ const Home = () => {
         )}
       </nav>
 
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            Selamat Datang di {storeName}
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 text-blue-100">
-            {storeInfo.tagline || 'Belanja mudah, berkualitas, terpercaya'}
-          </p>
-          <div className="max-w-md mx-auto">
-            <form onSubmit={handleSearch} className="flex">
-              <Input
-                type="search"
-                placeholder="Cari produk impian Anda..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="rounded-r-none"
-              />
-              <Button type="submit" className="rounded-l-none bg-white text-blue-600 hover:bg-gray-100">
-                <Search className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
-        </div>
-      </div>
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        {/* Banner Carousel */}
+        <BannerCarousel />
 
-      {/* Featured Products */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Produk Pilihan</h2>
-          <p className="text-gray-600">Temukan produk terbaik dengan kualitas terjamin</p>
+        {/* Products Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Produk Unggulan</h2>
+          <ProductGridSmall 
+            searchTerm={searchTerm} 
+            selectedCategory={selectedCategory}
+            limit={24}
+          />
         </div>
-
-        {products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">Belum ada produk tersedia</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-4">
-                  <div className="relative mb-4">
-                    <img
-                      src={getImageUrl(product.image_url)}
-                      alt={product.name}
-                      className="w-full h-48 object-cover rounded-md group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {product.current_stock <= product.min_stock && (
-                      <Badge variant="destructive" className="absolute top-2 right-2">
-                        Stok Terbatas
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                      {product.name}
-                    </h3>
-                    
-                    {product.categories && (
-                      <Badge variant="outline" className="text-xs">
-                        {product.categories.name}
-                      </Badge>
-                    )}
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-lg font-bold text-blue-600">
-                          Rp {product.selling_price.toLocaleString('id-ID')}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Stok: {product.current_stock}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      onClick={() => handleAddToCart(product)}
-                      disabled={product.current_stock === 0}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                      size="sm"
-                    >
-                      {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white">
+      <footer className="bg-gray-900 text-white mt-16">
         <div className="container mx-auto px-4 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Store Info */}
