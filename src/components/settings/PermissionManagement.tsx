@@ -61,7 +61,7 @@ const PermissionManagement = () => {
 
   const roles: UserRole[] = ['admin', 'manager', 'staff', 'cashier', 'buyer'];
   const resources = [
-    'products', 'categories', 'users', 'orders', 'reports', 'settings',
+    'dashboard', 'products', 'categories', 'users', 'orders', 'reports', 'settings',
     'pos', 'inventory', 'purchases', 'returns', 'suppliers', 'customers',
     'expenses', 'credit-management', 'point-exchange', 'points-rewards',
     'flash-sales', 'user-locations'
