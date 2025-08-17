@@ -10,8 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Mail, Package, Truck } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -35,18 +34,28 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     notes: ''
   });
 
-  // Fetch settings including delivery settings
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
+  // Update customer info when profile changes
+  useEffect(() => {
+    setCustomerInfo({
+      name: profile?.full_name || '',
+      phone: profile?.phone || '',
+      address: profile?.address_text || profile?.address || '',
+      notes: ''
+    });
+  }, [profile]);
+
+  // Fetch COD settings
+  const { data: codSettings } = useQuery({
+    queryKey: ['cod-settings'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('settings').select('*');
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('key', 'cod_settings')
+        .single();
       
-      const settingsMap: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsMap[setting.key] = setting.value;
-      });
-      return settingsMap;
+      if (error && error.code !== 'PGRST116') throw error;
+      return data?.value || { delivery_fee: 10000, free_shipping_minimum: 100000 };
     }
   });
 
@@ -104,8 +113,8 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         throw new Error('Mohon lengkapi semua data pengiriman yang wajib diisi');
       }
 
-      const deliveryFee = settings?.delivery_fee?.amount || 10000;
-      const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
+      const deliveryFee = codSettings?.delivery_fee || 10000;
+      const freeShippingMinimum = codSettings?.free_shipping_minimum || 100000;
       const subtotal = getTotalPriceWithVariants();
       const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
       const totalAmount = subtotal + finalDeliveryFee;
@@ -182,8 +191,8 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     return data.publicUrl;
   };
 
-  const deliveryFee = settings?.delivery_fee?.amount || 10000;
-  const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
+  const deliveryFee = codSettings?.delivery_fee || 10000;
+  const freeShippingMinimum = codSettings?.free_shipping_minimum || 100000;
   const subtotal = getTotalPriceWithVariants();
   const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
   const total = subtotal + finalDeliveryFee;
@@ -307,7 +316,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
 
             <Separator />
 
-            {/* Customer Information */}
+            {/* Customer Information - Read only */}
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -318,39 +327,38 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   <div>
                     <Label htmlFor="name" className="flex items-center gap-1">
                       <User className="h-3 w-3" />
-                      Nama Lengkap *
+                      Nama Lengkap
                     </Label>
                     <Input
                       id="name"
                       value={customerInfo.name}
-                      onChange={(e) => setCustomerInfo(prev => ({...prev, name: e.target.value}))}
-                      required
+                      readOnly
+                      className="bg-gray-50"
                     />
                   </div>
                   <div>
                     <Label htmlFor="phone" className="flex items-center gap-1">
                       <Phone className="h-3 w-3" />
-                      Nomor Telepon *
+                      Nomor Telepon
                     </Label>
                     <Input
                       id="phone"
                       value={customerInfo.phone}
-                      onChange={(e) => setCustomerInfo(prev => ({...prev, phone: e.target.value}))}
-                      required
+                      readOnly
+                      className="bg-gray-50"
                     />
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="address" className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
-                    Alamat Lengkap *
+                    Alamat Lengkap
                   </Label>
                   <Textarea
                     id="address"
                     value={customerInfo.address}
-                    onChange={(e) => setCustomerInfo(prev => ({...prev, address: e.target.value}))}
-                    placeholder="Alamat akan terisi otomatis dari profil, atau masukkan alamat lengkap untuk pengiriman"
-                    required
+                    readOnly
+                    className="bg-gray-50"
                     rows={isMobile ? 2 : 3}
                   />
                 </div>
@@ -380,10 +388,10 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   <MapPin className="h-4 w-4" />
                   Ongkos Kirim
                 </span>
-                <span className={isEligibleForFreeShipping ? 'text-green-600 line-through' : ''}>
+                <span className={isEligibleForFreeShipping ? 'text-green-600' : ''}>
                   {isEligibleForFreeShipping ? (
                     <>
-                      <span className="line-through">Rp {deliveryFee.toLocaleString('id-ID')}</span>
+                      <span className="line-through text-gray-400">Rp {deliveryFee.toLocaleString('id-ID')}</span>
                       <span className="ml-2 font-medium">GRATIS</span>
                     </>
                   ) : (

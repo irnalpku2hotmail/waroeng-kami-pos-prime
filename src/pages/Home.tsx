@@ -1,60 +1,66 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeHero from '@/components/home/HomeHero';
-import HomeCategoriesSlider from '@/components/home/HomeCategoriesSlider';
-import HomeFlashSale from '@/components/home/HomeFlashSale';
-import ProductGrid from '@/components/home/ProductGrid';
-import EnhancedFooter from '@/components/home/EnhancedFooter';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Search, ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Phone, Mail, MapPin, Facebook, Instagram, Clock } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
+import AuthModal from '@/components/AuthModal';
+import { toast } from '@/hooks/use-toast';
 
 const Home = () => {
-  const { user } = useAuth();
-  const { getTotalItems } = useCart();
-  const [showCartModal, setShowCartModal] = useState(false);
+  const { user, signOut } = useAuth();
+  const { addItem, getTotalItems } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
-  // Fetch categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
     queryFn: async () => {
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
+    }
+  });
+
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
       const { data, error } = await supabase
-        .from('categories')
+        .from('profiles')
         .select('*')
-        .order('name');
+        .eq('id', user.id)
+        .single();
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!user?.id
   });
 
-  // Fetch flash sales
-  const { data: flashSales = [] } = useQuery({
-    queryKey: ['flash-sales'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('flash_sales')
-        .select(`
-          *,
-          flash_sale_items(
-            *,
-            products(*)
-          )
-        `)
-        .eq('is_active', true)
-        .gte('end_date', new Date().toISOString())
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch products
+  // Fetch featured products
   const { data: products = [] } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['featured-products'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -64,44 +70,492 @@ const Home = () => {
           units(name, abbreviation)
         `)
         .eq('is_active', true)
-        .order('name');
+        .order('created_at', { ascending: false })
+        .limit(12);
+
       if (error) throw error;
       return data;
     }
   });
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
+  const handleAddToCart = (product: any) => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: 1,
+      image: product.image_url,
+      stock: product.current_stock
+    });
+
+    toast({
+      title: 'Produk ditambahkan ke keranjang',
+      description: `${product.name} telah ditambahkan ke keranjang belanja`,
+    });
+  };
+
+  const getImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return '/placeholder.svg';
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(imageUrl);
+    
+    return data.publicUrl;
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
+
+  const storeInfo = settings?.store_info || {};
+  const contactInfo = settings?.contact_info || {};
+  const logoUrl = storeInfo.logo_url;
+  const storeName = storeInfo.name || 'Toko Online';
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar 
-        onCartClick={() => user && setShowCartModal(true)} 
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-      />
-      
-      {/* Hero Banner with reduced height on mobile */}
-      <div className="h-32 md:h-48 lg:h-64">
-        <HomeHero />
-      </div>
-      
-      <div className="container mx-auto px-4 py-6 space-y-8">
-        <HomeCategoriesSlider />
-        
-        {flashSales.length > 0 && (
-          <HomeFlashSale flashSales={flashSales} />
+      {/* Fixed Navbar */}
+      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
+        {/* Top bar with contact info - Hidden on mobile */}
+        {!isMobile && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+              <div className="flex items-center space-x-4">
+                {contactInfo.phone && (
+                  <span>📞 {contactInfo.phone}</span>
+                )}
+                {contactInfo.email && (
+                  <span className="hidden md:inline">✉️ {contactInfo.email}</span>
+                )}
+              </div>
+              <div className="flex items-center space-x-4">
+                <span>Selamat Datang di {storeName}!</span>
+              </div>
+            </div>
+          </div>
         )}
-        
-        <ProductGrid products={products} />
+
+        {/* Main navbar */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo & Store Name */}
+            <div className="flex items-center space-x-3">
+              {logoUrl && (
+                <div className="relative">
+                  <img 
+                    src={logoUrl} 
+                    alt={storeName} 
+                    className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} 
+                  />
+                </div>
+              )}
+              {!logoUrl && (
+                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
+                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                </div>
+              )}
+              <div>
+                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
+                  {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
+                </h1>
+                {!isMobile && (
+                  <p className="text-xs text-gray-500">
+                    {storeInfo.tagline || 'Toko Online Terpercaya'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="search"
+                  placeholder="Cari produk..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </form>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Cart - Only show if user is logged in */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative hover:bg-blue-50 p-2"
+                  onClick={() => setShowCartModal(true)}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+
+              {/* User Menu - Desktop */}
+              {!isMobile && (
+                <div>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
+                          {profile?.avatar_url ? (
+                            <img 
+                              src={profile.avatar_url} 
+                              alt="Profile" 
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserCircle className="h-6 w-6" />
+                          )}
+                          <span className="hidden lg:inline text-sm font-medium">
+                            {profile?.full_name || user.email?.split('@')[0]}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <User className="h-4 w-4 mr-2" />
+                          Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setAuthModalOpen(true)}
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50 px-4"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Masuk
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Mobile menu button */}
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-2"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && isMobile && (
+          <div className="bg-white border-t shadow-lg">
+            <div className="px-4 py-4 space-y-4">
+              {/* Contact info on mobile */}
+              {contactInfo.phone && (
+                <div className="text-sm text-gray-600 pb-2 border-b">
+                  📞 {contactInfo.phone}
+                </div>
+              )}
+              
+              <div className="border-t pt-4">
+                {user ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 py-2">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Profile" 
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle className="h-8 w-8 text-gray-400" />
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {profile?.full_name || 'User'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigate('/profile');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start mb-2"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Masuk
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4">
+            Selamat Datang di {storeName}
+          </h1>
+          <p className="text-xl md:text-2xl mb-8 text-blue-100">
+            {storeInfo.tagline || 'Belanja mudah, berkualitas, terpercaya'}
+          </p>
+          <div className="max-w-md mx-auto">
+            <form onSubmit={handleSearch} className="flex">
+              <Input
+                type="search"
+                placeholder="Cari produk impian Anda..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="rounded-r-none"
+              />
+              <Button type="submit" className="rounded-l-none bg-white text-blue-600 hover:bg-gray-100">
+                <Search className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+        </div>
       </div>
-      
-      <EnhancedFooter />
-      
-      {/* Only show cart modal if user is logged in */}
+
+      {/* Featured Products */}
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Produk Pilihan</h2>
+          <p className="text-gray-600">Temukan produk terbaik dengan kualitas terjamin</p>
+        </div>
+
+        {products.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Belum ada produk tersedia</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="p-4">
+                  <div className="relative mb-4">
+                    <img
+                      src={getImageUrl(product.image_url)}
+                      alt={product.name}
+                      className="w-full h-48 object-cover rounded-md group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {product.current_stock <= product.min_stock && (
+                      <Badge variant="destructive" className="absolute top-2 right-2">
+                        Stok Terbatas
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      {product.name}
+                    </h3>
+                    
+                    {product.categories && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.categories.name}
+                      </Badge>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg font-bold text-blue-600">
+                          Rp {product.selling_price.toLocaleString('id-ID')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Stok: {product.current_stock}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      onClick={() => handleAddToCart(product)}
+                      disabled={product.current_stock === 0}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      size="sm"
+                    >
+                      {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Store Info */}
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center space-x-3 mb-4">
+                {logoUrl && (
+                  <img 
+                    src={logoUrl} 
+                    alt={storeName} 
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                )}
+                <div>
+                  <h3 className="text-xl font-bold">{storeName}</h3>
+                  <p className="text-gray-400 text-sm">{storeInfo.tagline || 'Toko Online Terpercaya'}</p>
+                </div>
+              </div>
+              {storeInfo.description && (
+                <p className="text-gray-300 mb-4">{storeInfo.description}</p>
+              )}
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Kontak</h4>
+              <div className="space-y-3">
+                {contactInfo.phone && (
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-blue-400" />
+                    <span className="text-gray-300">{contactInfo.phone}</span>
+                  </div>
+                )}
+                {contactInfo.email && (
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-blue-400" />
+                    <span className="text-gray-300">{contactInfo.email}</span>
+                  </div>
+                )}
+                {contactInfo.address && (
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="h-4 w-4 text-blue-400 mt-1" />
+                    <span className="text-gray-300">{contactInfo.address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Business Hours */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Jam Operasional</h4>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                  <span className="text-gray-300">
+                    {contactInfo.business_hours || 'Senin - Minggu: 08:00 - 22:00'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Social Media */}
+              {(contactInfo.facebook || contactInfo.instagram) && (
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-4">Ikuti Kami</h4>
+                  <div className="flex space-x-4">
+                    {contactInfo.facebook && (
+                      <a 
+                        href={contactInfo.facebook} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        <Facebook className="h-6 w-6" />
+                      </a>
+                    )}
+                    {contactInfo.instagram && (
+                      <a 
+                        href={contactInfo.instagram} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-pink-400 hover:text-pink-300 transition-colors"
+                      >
+                        <Instagram className="h-6 w-6" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Separator className="my-8 bg-gray-700" />
+
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-400 text-sm">
+              © 2024 {storeName}. Semua hak dilindungi.
+            </p>
+            <div className="flex items-center space-x-4 mt-4 md:mt-0">
+              <span className="text-gray-400 text-sm">Powered by Lovable</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Modals */}
       {user && (
         <EnhancedFrontendCartModal 
           open={showCartModal} 
           onOpenChange={setShowCartModal} 
         />
       )}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 };
