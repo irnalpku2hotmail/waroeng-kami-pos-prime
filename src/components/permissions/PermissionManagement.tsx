@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/hooks/use-toast';
 import { Shield, Save, RefreshCw } from 'lucide-react';
 
+type UserRole = 'admin' | 'manager' | 'staff' | 'cashier' | 'buyer';
+
 const PermissionManagement = () => {
-  const [selectedRole, setSelectedRole] = useState<string>('staff');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('staff');
   const queryClient = useQueryClient();
 
   const resources = [
@@ -37,10 +39,10 @@ const PermissionManagement = () => {
   ];
 
   const roles = [
-    { value: 'admin', label: 'Admin' },
-    { value: 'manager', label: 'Manager' },
-    { value: 'staff', label: 'Staff' },
-    { value: 'cashier', label: 'Cashier' }
+    { value: 'admin' as UserRole, label: 'Admin' },
+    { value: 'manager' as UserRole, label: 'Manager' },
+    { value: 'staff' as UserRole, label: 'Staff' },
+    { value: 'cashier' as UserRole, label: 'Cashier' }
   ];
 
   // Fetch permissions for selected role
@@ -88,17 +90,21 @@ const PermissionManagement = () => {
         if (error) throw error;
       } else {
         // Create new permission record
+        const newPermission = {
+          role: selectedRole,
+          resource,
+          can_create: permission === 'can_create' ? value : false,
+          can_read: permission === 'can_read' ? value : false,
+          can_update: permission === 'can_update' ? value : false,
+          can_delete: permission === 'can_delete' ? value : false
+        };
+        
+        // Override the specific permission being set
+        newPermission[permission as keyof typeof newPermission] = value;
+
         const { error } = await supabase
           .from('role_permissions')
-          .insert([{
-            role: selectedRole,
-            resource,
-            [permission]: value,
-            can_create: permission === 'can_create' ? value : false,
-            can_read: permission === 'can_read' ? value : false,
-            can_update: permission === 'can_update' ? value : false,
-            can_delete: permission === 'can_delete' ? value : false
-          }]);
+          .insert([newPermission]);
         
         if (error) throw error;
       }
@@ -132,7 +138,7 @@ const PermissionManagement = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          <Select value={selectedRole} onValueChange={setSelectedRole}>
+          <Select value={selectedRole} onValueChange={(value: UserRole) => setSelectedRole(value)}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Select Role" />
             </SelectTrigger>

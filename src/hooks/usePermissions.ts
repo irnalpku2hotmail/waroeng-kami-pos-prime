@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+type UserRole = 'admin' | 'manager' | 'staff' | 'cashier' | 'buyer';
+
 export const usePermissions = () => {
   const { user, profile } = useAuth();
 
@@ -14,7 +16,7 @@ export const usePermissions = () => {
       const { data, error } = await supabase
         .from('role_permissions')
         .select('*')
-        .eq('role', profile.role);
+        .eq('role', profile.role as UserRole);
       
       if (error) throw error;
       return data || [];

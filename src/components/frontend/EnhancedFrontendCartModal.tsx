@@ -20,6 +20,12 @@ interface EnhancedFrontendCartModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface CODSettings {
+  enabled: boolean;
+  delivery_fee: number;
+  min_order: number;
+}
+
 const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartModalProps) => {
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart();
   const { user, profile } = useAuth();
@@ -28,10 +34,10 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
   
   const [notes, setNotes] = useState('');
 
-  // Fetch COD settings
+  // Fetch COD settings with proper typing
   const { data: codSettings } = useQuery({
     queryKey: ['cod-settings'],
-    queryFn: async () => {
+    queryFn: async (): Promise<CODSettings> => {
       const { data, error } = await supabase
         .from('settings')
         .select('*')
@@ -39,7 +45,14 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         .single();
       
       if (error) throw error;
-      return data?.value || { enabled: true, delivery_fee: 10000, min_order: 0 };
+      
+      // Type guard and default values
+      const settings = data?.value as any;
+      return {
+        enabled: settings?.enabled ?? true,
+        delivery_fee: settings?.delivery_fee ?? 10000,
+        min_order: settings?.min_order ?? 0
+      };
     }
   });
 
