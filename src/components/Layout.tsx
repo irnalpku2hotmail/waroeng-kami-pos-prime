@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import FixedSidebar from './layout/FixedSidebar';
+import CollapsibleSidebar from './layout/CollapsibleSidebar';
 import DateTimeDisplay from './layout/DateTimeDisplay';
 import UserDropdown from './layout/UserDropdown';
 import NotificationDropdown from './layout/NotificationDropdown';
@@ -33,14 +33,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Fixed Sidebar */}
-      <FixedSidebar />
+      {/* Sidebar */}
+      <CollapsibleSidebar />
 
-      {/* Main Content Area - Adjusted for fixed sidebar */}
-      <div className="flex-1 flex flex-col min-w-0" style={{ marginLeft: '16rem' }}>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Fixed Top Navigation */}
-        <header className="bg-white border-b border-gray-200 shadow-sm z-30 fixed top-0 right-0 left-64 h-16">
-          <div className="flex items-center justify-between px-6 py-3 h-full">
+        <header className="bg-white border-b border-gray-200 shadow-sm z-10">
+          <div className="flex items-center justify-between px-4 py-3">
             <DateTimeDisplay />
             <div className="flex items-center gap-4">
               <NotificationDropdown />
@@ -49,8 +49,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        {/* Main Content - Adjusted for fixed header */}
-        <main className="flex-1 p-6 overflow-auto mt-16">
+        {/* Main Content */}
+        <main className="flex-1 p-4 overflow-auto">
           <div className="max-w-full mx-auto">
             {children}
           </div>

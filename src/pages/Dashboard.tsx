@@ -1,198 +1,432 @@
-
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  Package, 
+  Users, 
+  ShoppingCart, 
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  History,
+  Wifi,
+  Calendar,
+  Clock
+} from 'lucide-react';
+import Layout from '@/components/Layout';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { BarChart3, ShoppingCart, Package, Users, TrendingUp, AlertCircle } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { usePresence } from '@/contexts/PresenceContext';
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { onlineUsers } = usePresence();
 
-  // Redirect buyers to frontend
-  if (profile?.role === 'buyer') {
-    return <Navigate to="/" replace />;
-  }
+  // Get today's date in local timezone for better accuracy
+  const today = new Date();
+  const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Create proper date boundaries for today in local timezone
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+  
+  const startOfTodayISO = startOfToday.toISOString();
+  const endOfTodayISO = endOfToday.toISOString();
 
-  // Fetch dashboard statistics
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
+  console.log('Today filter improved:', { 
+    todayString, 
+    startOfTodayISO, 
+    endOfTodayISO,
+    localDate: today.toLocaleDateString(),
+    localTime: today.toLocaleTimeString()
+  });
+
+  // Total produk
+  const { data: products } = useQuery({
+    queryKey: ['products'],
     queryFn: async () => {
-      const [
-        { count: totalProducts },
-        { count: totalCustomers },
-        { count: pendingOrders },
-        { data: lowStockProducts }
-      ] = await Promise.all([
-        supabase.from('products').select('*', { count: 'exact', head: true }),
-        supabase.from('customers').select('*', { count: 'exact', head: true }),
-        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('products').select('id, name, current_stock, min_stock').lt('current_stock', 10)
-      ]);
-
-      return {
-        totalProducts: totalProducts || 0,
-        totalCustomers: totalCustomers || 0,
-        pendingOrders: pendingOrders || 0,
-        lowStockProducts: lowStockProducts || []
-      };
+      const { data, error } = await supabase
+        .from('products')
+        .select('*');
+      if (error) throw error;
+      return data;
     }
   });
 
-  // Fetch recent orders
-  const { data: recentOrders = [] } = useQuery({
-    queryKey: ['recent-orders'],
+  // Produk stok rendah
+  const { data: lowStock } = useQuery({
+    queryKey: ['low-stock'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .lt('current_stock', 10);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Produk kadaluarsa (berdasarkan purchase_items dengan tanggal kadaluarsa)
+  const { data: expiredProducts } = useQuery({
+    queryKey: ['expired-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('purchase_items')
+        .select('product_id, expiration_date')
+        .not('expiration_date', 'is', null)
+        .lt('expiration_date', todayString);
+      if (error) throw error;
+      // Count unique products that are expired
+      const uniqueProducts = new Set(data?.map(item => item.product_id) || []);
+      return Array.from(uniqueProducts);
+    }
+  });
+
+  // Total pelanggan
+  const { data: customers } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Pesanan masuk hari ini
+  const { data: todayOrders } = useQuery({
+    queryKey: ['today-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
+        .gte('created_at', startOfTodayISO)
+        .lte('created_at', endOfTodayISO);
       if (error) throw error;
-      return data || [];
+      return data;
     }
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  const dashboardCards = [
-    {
-      title: 'Total Produk',
-      value: stats?.totalProducts || 0,
-      icon: Package,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
-    },
-    {
-      title: 'Total Pelanggan',
-      value: stats?.totalCustomers || 0,
-      icon: Users,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    {
-      title: 'Pesanan Pending',
-      value: stats?.pendingOrders || 0,
-      icon: ShoppingCart,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100'
-    },
-    {
-      title: 'Stok Rendah',
-      value: stats?.lowStockProducts?.length || 0,
-      icon: AlertCircle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-100'
+  // Fixed POS sales calculation with proper date filtering
+  const { data: posSales } = useQuery({
+    queryKey: ['pos-daily-sales', todayString],
+    queryFn: async () => {
+      console.log('Fetching POS sales with improved date filter:', {
+        startOfTodayISO,
+        endOfTodayISO
+      });
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id, transaction_number, total_amount, customer_id, created_at')
+        .gte('created_at', startOfTodayISO)
+        .lte('created_at', endOfTodayISO);
+      
+      if (error) {
+        console.error('Error fetching POS sales:', error);
+        throw error;
+      }
+      
+      console.log('POS sales data fetched:', {
+        count: data?.length || 0,
+        data: data?.map(t => ({
+          id: t.id,
+          amount: t.total_amount,
+          created_at: t.created_at
+        }))
+      });
+      
+      return data;
     }
-  ];
+  });
+
+  // COD: Pendapatan COD hari ini (orders delivered hari ini)
+  const { data: codSalesToday } = useQuery({
+    queryKey: ['cod-revenue-today'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status')
+        .eq('status', 'delivered')
+        .gte('delivery_date', startOfTodayISO)
+        .lte('delivery_date', endOfTodayISO);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Calculate statistics
+  const totalProducts = products?.length || 0;
+  const lowStockProducts = lowStock?.length || 0;
+  const expiredProductsCount = expiredProducts?.length || 0;
+  const totalCustomers = customers?.length || 0;
+  const todayOrdersCount = todayOrders?.length || 0;
+
+  // Fixed POS sales calculation with better logging
+  const todaySales = posSales?.reduce((sum, trx) => {
+    const amount = Number(trx.total_amount) || 0;
+    console.log('Processing transaction:', {
+      id: trx.id,
+      amount: amount,
+      created_at: trx.created_at
+    });
+    return sum + amount;
+  }, 0) || 0;
+  const todayTransactions = posSales?.length || 0;
+
+  console.log('Final POS sales calculation:', { 
+    todaySales, 
+    todayTransactions, 
+    totalTransactions: posSales?.length,
+    transactionDetails: posSales?.map(t => ({ 
+      amount: t.total_amount, 
+      created: t.created_at 
+    }))
+  });
+
+  // Calculate COD income today
+  const codIncomeToday = codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
+
+  // Prepare sales table data
+  const todaySalesTable = (posSales ?? []).map(trx => {
+    let customerName = 'Umum';
+    if (trx.customer_id) {
+      const matchCustomer = customers?.find((c) => c.id === trx.customer_id);
+      customerName = matchCustomer?.name || 'Umum';
+    }
+    return {
+      id: trx.id,
+      number: trx.transaction_number,
+      name: customerName,
+      total: trx.total_amount,
+      status: 'POS',
+      created_at: trx.created_at,
+    };
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  // COD Sales Table Today
+  const codSalesTable = (codSalesToday ?? []).map(trx => ({
+    id: trx.id,
+    number: trx.order_number,
+    name: trx.customer_name || 'Umum',
+    total: trx.total_amount,
+    status: trx.status,
+    created_at: trx.created_at,
+  })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const getOrderStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'delivered':
+        return <Badge className="bg-green-100 text-green-800">Selesai</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Dibatalkan</Badge>;
+      case 'processing':
+        return <Badge className="bg-blue-100 text-blue-800">Diproses</Badge>;
+      case 'shipped':
+        return <Badge className="bg-yellow-100 text-yellow-800">Dikirim</Badge>;
+      default:
+        return <Badge>{String(status || '')}</Badge>;
+    }
+  };
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Selamat datang di panel admin</p>
+    <Layout>
+      <div className="space-y-6">
+        <h1 className="text-2xl lg:text-3xl font-bold text-blue-800 mb-2">Dashboard</h1>
+        
+        {/* Statistics Cards - 8 cards in 2 rows */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">User Online</CardTitle>
+              <Wifi className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-green-600">{String(onlineUsers || 0)}</div>
+              <p className="text-[10px] text-muted-foreground">User aktif login</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Total Produk</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-blue-600">{String(totalProducts)}</div>
+              <p className="text-[10px] text-muted-foreground">Produk tersedia</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Stok Menipis</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-orange-600">{String(lowStockProducts)}</div>
+              <p className="text-[10px] text-muted-foreground">Produk &lt; 10 stok</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Produk Kadaluarsa</CardTitle>
+              <Clock className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-red-600">{String(expiredProductsCount)}</div>
+              <p className="text-[10px] text-muted-foreground">Produk expired</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Total Pelanggan</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-green-600">{String(totalCustomers)}</div>
+              <p className="text-[10px] text-muted-foreground">Pelanggan terdaftar</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Pesanan Hari Ini</CardTitle>
+              <Calendar className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-blue-600">{String(todayOrdersCount)}</div>
+              <p className="text-[10px] text-muted-foreground">Pesanan masuk</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Penjualan Hari Ini</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-purple-600">
+                Rp {String(todaySales?.toLocaleString('id-ID') || '0')}
+              </div>
+              <p className="text-[10px] text-muted-foreground">Dari {String(todayTransactions)} transaksi POS</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="px-3 py-2">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
+              <CardTitle className="text-xs font-semibold">Pendapatan COD Hari Ini</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent className="pb-1">
+              <div className="text-lg font-bold text-green-600">
+                Rp {String(codIncomeToday?.toLocaleString('id-ID') || '0')}
+              </div>
+              <p className="text-[10px] text-muted-foreground">COD delivered hari ini</p>
+            </CardContent>
+          </Card>
         </div>
-        <Badge variant="secondary" className="text-lg px-4 py-2">
-          {profile?.role?.toUpperCase()}
-        </Badge>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {dashboardCards.map((card, index) => {
-          const IconComponent = card.icon;
-          return (
-            <Card key={index} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{card.value}</p>
-                  </div>
-                  <div className={`${card.bgColor} p-3 rounded-full`}>
-                    <IconComponent className={`h-6 w-6 ${card.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+        {/* Tabel Transaksi Penjualan Hari Ini (POS saja) */}
+        <div className="grid grid-cols-1 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-5 w-5 text-blue-500" />
+                Transaksi Penjualan Hari Ini (POS)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">No. Transaksi</TableHead>
+                    <TableHead className="text-xs">Pelanggan</TableHead>
+                    <TableHead className="text-xs">Tipe</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {todaySalesTable.length > 0 ? (
+                    todaySalesTable.map(order => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium text-xs">{String(order.number || '')}</TableCell>
+                        <TableCell className="text-xs">{String(order.name || '')}</TableCell>
+                        <TableCell className="text-xs">
+                          <Badge variant="secondary">
+                            POS
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-xs">
+                          Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-16 text-center text-xs">
+                        Tidak ada transaksi POS hari ini.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Recent Orders & Low Stock */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Pesanan Terbaru
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentOrders.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Belum ada pesanan</p>
-              ) : (
-                recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">{order.order_number}</p>
-                      <p className="text-sm text-gray-600">{order.customer_name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">Rp {order.total_amount?.toLocaleString('id-ID')}</p>
-                      <Badge variant={order.status === 'pending' ? 'destructive' : 'default'}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Low Stock Products */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              Produk Stok Rendah
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {stats?.lowStockProducts?.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Semua produk stok aman</p>
-              ) : (
-                stats?.lowStockProducts?.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-gray-600">Min: {product.min_stock}</p>
-                    </div>
-                    <Badge variant="destructive">
-                      {product.current_stock} tersisa
-                    </Badge>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tabel Transaksi COD Hari Ini */}
+        <div className="grid grid-cols-1 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-5 w-5 text-green-500" />
+                Transaksi COD Hari Ini (Selesai)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">No. Order</TableHead>
+                    <TableHead className="text-xs">Pelanggan</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {codSalesTable.length > 0 ? (
+                    codSalesTable.map(order => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium text-xs">{String(order.number || '')}</TableCell>
+                        <TableCell className="text-xs">{String(order.name || '')}</TableCell>
+                        <TableCell className="text-xs">
+                          {getOrderStatusBadge(order.status)}
+                        </TableCell>
+                        <TableCell className="text-right text-xs">
+                          Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-16 text-center text-xs">
+                        Tidak ada transaksi COD selesai hari ini.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 
