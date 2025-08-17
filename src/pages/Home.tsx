@@ -83,10 +83,14 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <HomeNavbar onCartClick={() => setCartModalOpen(true)} />
+      <HomeNavbar 
+        onCartClick={() => setCartModalOpen(true)}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
 
       {/* Hero Section with Search */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12 mt-16">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
             Belanja Online Mudah & Terpercaya
