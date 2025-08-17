@@ -21,6 +21,11 @@ interface EnhancedFrontendCartModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface CODSettings {
+  delivery_fee?: number;
+  free_shipping_minimum?: number;
+}
+
 const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartModalProps) => {
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart();
   const { user, profile } = useAuth();
@@ -113,8 +118,10 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         throw new Error('Mohon lengkapi semua data pengiriman yang wajib diisi');
       }
 
-      const deliveryFee = codSettings?.delivery_fee || 10000;
-      const freeShippingMinimum = codSettings?.free_shipping_minimum || 100000;
+      // Cast COD settings to proper type
+      const settings = codSettings as CODSettings;
+      const deliveryFee = settings?.delivery_fee || 10000;
+      const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
       const subtotal = getTotalPriceWithVariants();
       const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
       const totalAmount = subtotal + finalDeliveryFee;
@@ -191,8 +198,10 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     return data.publicUrl;
   };
 
-  const deliveryFee = codSettings?.delivery_fee || 10000;
-  const freeShippingMinimum = codSettings?.free_shipping_minimum || 100000;
+  // Cast COD settings to proper type for calculations
+  const settings = codSettings as CODSettings;
+  const deliveryFee = settings?.delivery_fee || 10000;
+  const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
   const subtotal = getTotalPriceWithVariants();
   const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
   const total = subtotal + finalDeliveryFee;
