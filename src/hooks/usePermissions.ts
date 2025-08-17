@@ -2,61 +2,57 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Database } from '@/integrations/supabase/types';
-
-interface Permission {
-  id: string;
-  role: string;
-  resource: string;
-  can_create: boolean;
-  can_read: boolean;
-  can_update: boolean;
-  can_delete: boolean;
-}
 
 export const usePermissions = () => {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
 
-  const { data: permissions = [], isLoading } = useQuery({
-    queryKey: ['permissions', profile?.role],
+  const { data: permissions = [] } = useQuery({
+    queryKey: ['user-permissions', profile?.role],
     queryFn: async () => {
       if (!profile?.role) return [];
       
       const { data, error } = await supabase
         .from('role_permissions')
         .select('*')
-        // Cast role to the Supabase enum type to satisfy the typed client
-        .eq('role', profile.role as Database['public']['Enums']['user_role']);
-
+        .eq('role', profile.role);
+      
       if (error) throw error;
-      return data as Permission[];
+      return data || [];
     },
-    enabled: !!profile?.role
+    enabled: !!profile?.role && profile?.role !== 'buyer'
   });
 
-  const hasPermission = (resource: string, action: 'create' | 'read' | 'update' | 'delete') => {
+  const canAccessRoute = (resource: string, action: 'create' | 'read' | 'update' | 'delete' = 'read') => {
+    // Buyers can't access admin routes
+    if (profile?.role === 'buyer') return false;
+    
+    // Admins have full access
     if (profile?.role === 'admin') return true;
     
+    // Check specific permissions
     const permission = permissions.find(p => p.resource === resource);
     if (!permission) return false;
-
+    
     switch (action) {
-      case 'create': return permission.can_create;
-      case 'read': return permission.can_read;
-      case 'update': return permission.can_update;
-      case 'delete': return permission.can_delete;
-      default: return false;
+      case 'create':
+        return permission.can_create;
+      case 'read':
+        return permission.can_read;
+      case 'update':
+        return permission.can_update;
+      case 'delete':
+        return permission.can_delete;
+      default:
+        return permission.can_read;
     }
-  };
-
-  const canAccessRoute = (resource: string) => {
-    return hasPermission(resource, 'read');
   };
 
   return {
     permissions,
-    hasPermission,
     canAccessRoute,
-    isLoading
+    canCreate: (resource: string) => canAccessRoute(resource, 'create'),
+    canRead: (resource: string) => canAccessRoute(resource, 'read'),
+    canUpdate: (resource: string) => canAccessRoute(resource, 'update'),
+    canDelete: (resource: string) => canAccessRoute(resource, 'delete'),
   };
 };
