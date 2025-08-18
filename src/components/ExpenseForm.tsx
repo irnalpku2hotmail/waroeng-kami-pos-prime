@@ -1,9 +1,11 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +30,9 @@ interface ExpenseFormProps {
   onSuccess: () => void;
   onClose: () => void;
 }
+
+type ExpenseInsert = Database['public']['Tables']['expenses']['Insert'];
+type ExpenseUpdate = Database['public']['Tables']['expenses']['Update'];
 
 const ExpenseForm = ({ expense, onSuccess, onClose }: ExpenseFormProps) => {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -111,13 +116,25 @@ const ExpenseForm = ({ expense, onSuccess, onClose }: ExpenseFormProps) => {
   };
 
   const createExpense = useMutation({
-    mutationFn: async (data: ExpenseFormData & { receipt_url?: string }) => {
+    mutationFn: async (data: ExpenseFormData & { receipt_url?: string | null }) => {
+      if (!user?.id) {
+        throw new Error('User tidak terautentikasi');
+      }
+
+      const payload: ExpenseInsert = {
+        title: data.title,
+        category: data.category as ExpenseInsert['category'],
+        amount: data.amount,
+        expense_date: data.expense_date,
+        description: data.description ?? null,
+        receipt_url: data.receipt_url ?? null,
+        user_id: user.id,
+      };
+
       const { error } = await supabase
         .from('expenses')
-        .insert({
-          ...data,
-          user_id: user?.id,
-        });
+        .insert(payload);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -126,16 +143,26 @@ const ExpenseForm = ({ expense, onSuccess, onClose }: ExpenseFormProps) => {
       onSuccess();
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
     }
   });
 
   const updateExpense = useMutation({
-    mutationFn: async (data: ExpenseFormData & { receipt_url?: string }) => {
+    mutationFn: async (data: ExpenseFormData & { receipt_url?: string | null }) => {
+      const payload: ExpenseUpdate = {
+        title: data.title,
+        category: data.category as ExpenseUpdate['category'],
+        amount: data.amount,
+        expense_date: data.expense_date,
+        description: data.description ?? null,
+        receipt_url: data.receipt_url ?? null,
+      };
+
       const { error } = await supabase
         .from('expenses')
-        .update(data)
+        .update(payload)
         .eq('id', expense.id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -144,7 +171,7 @@ const ExpenseForm = ({ expense, onSuccess, onClose }: ExpenseFormProps) => {
       onSuccess();
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
     }
   });
 
@@ -159,7 +186,7 @@ const ExpenseForm = ({ expense, onSuccess, onClose }: ExpenseFormProps) => {
 
       const formData = { 
         ...data, 
-        receipt_url: receipt_url || undefined
+        receipt_url: receipt_url ?? null
       };
 
       if (expense) {
