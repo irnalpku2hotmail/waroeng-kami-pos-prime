@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +15,7 @@ import { Upload, X, FileText } from 'lucide-react';
 
 const expenseSchema = z.object({
   title: z.string().min(1, 'Judul pengeluaran wajib diisi'),
-  category: z.enum(['operational', 'marketing', 'equipment', 'maintenance', 'other']),
+  category: z.enum(['operational', 'maintenance', 'utilities', 'supplies', 'other']),
   amount: z.number().min(1, 'Jumlah harus lebih dari 0'),
   expense_date: z.string().min(1, 'Tanggal pengeluaran wajib diisi'),
   description: z.string().optional(),
@@ -177,9 +176,9 @@ const ExpenseForm = ({ expense, onSuccess, onClose }: ExpenseFormProps) => {
 
   const categoryOptions = [
     { value: 'operational', label: 'Operasional' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'equipment', label: 'Peralatan' },
     { value: 'maintenance', label: 'Perawatan' },
+    { value: 'utilities', label: 'Utilitas' },
+    { value: 'supplies', label: 'Perlengkapan' },
     { value: 'other', label: 'Lainnya' },
   ];
 
