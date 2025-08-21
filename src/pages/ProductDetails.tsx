@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -515,7 +514,7 @@ const ProductDetails = () => {
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Rekomendasi Produk
           </h2>
-          <ProductRecommendations categoryId={product.category_id} excludeId={product.id} limit={5} />
+          <ProductRecommendations categoryId={product.category_id} currentProductId={product.id} />
         </div>
 
         {/* Similar Products Carousel */}
@@ -523,7 +522,7 @@ const ProductDetails = () => {
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Produk Serupa
           </h2>
-          <ProductSimilarCarousel categoryId={product.category_id} excludeId={product.id} limit={10} />
+          <ProductSimilarCarousel categoryId={product.category_id} currentProductId={product.id} />
         </div>
       </div>
 
