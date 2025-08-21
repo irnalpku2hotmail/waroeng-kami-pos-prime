@@ -7,18 +7,22 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Phone, Mail, MapPin, Facebook, Instagram, Clock } from 'lucide-react';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Phone, Mail, MapPin, Facebook, Instagram, Clock, Settings } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
 import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 import ProductGridSmall from '@/components/home/ProductGridSmall';
-import BannerCarousel from '@/components/home/BannerCarousel';
+import CompactBannerCarousel from '@/components/home/CompactBannerCarousel';
+import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
+import CompactFlashSale from '@/components/home/CompactFlashSale';
 import { Separator } from '@/components/ui/separator';
 
 const Home = () => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
+  const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -174,9 +178,9 @@ const Home = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem disabled>
-                          <User className="h-4 w-4 mr-2" />
-                          {profile?.full_name || user.email?.split('@')[0]}
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Profile
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleSignOut}>
                           <LogOut className="h-4 w-4 mr-2" />
@@ -261,6 +265,18 @@ const Home = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => {
+                        navigate('/profile');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start mb-2"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleSignOut}
                       className="w-full justify-start"
                     >
@@ -291,7 +307,13 @@ const Home = () => {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
         {/* Banner Carousel */}
-        <BannerCarousel />
+        <CompactBannerCarousel />
+
+        {/* Shipping Info */}
+        <EnhancedShippingInfo />
+
+        {/* Flash Sale */}
+        <CompactFlashSale />
 
         {/* Products Section */}
         <div className="mb-8">
@@ -307,7 +329,7 @@ const Home = () => {
       {/* Footer */}
       <footer className="bg-gray-900 text-white mt-16">
         <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Store Info */}
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center space-x-3 mb-4">
@@ -350,49 +372,46 @@ const Home = () => {
                     <span className="text-gray-300">{contactInfo.address}</span>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Business Hours */}
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Jam Operasional</h4>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-blue-400" />
-                  <span className="text-gray-300">
-                    {contactInfo.business_hours || 'Senin - Minggu: 08:00 - 22:00'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Social Media */}
-              {(contactInfo.facebook || contactInfo.instagram) && (
-                <div className="mt-6">
-                  <h4 className="text-lg font-semibold mb-4">Ikuti Kami</h4>
-                  <div className="flex space-x-4">
-                    {contactInfo.facebook && (
-                      <a 
-                        href={contactInfo.facebook} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 transition-colors"
-                      >
-                        <Facebook className="h-6 w-6" />
-                      </a>
-                    )}
-                    {contactInfo.instagram && (
-                      <a 
-                        href={contactInfo.instagram} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-pink-400 hover:text-pink-300 transition-colors"
-                      >
-                        <Instagram className="h-6 w-6" />
-                      </a>
-                    )}
+                
+                {/* Business Hours */}
+                <div className="mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-blue-400" />
+                    <span className="text-gray-300">
+                      {contactInfo.business_hours || 'Senin - Minggu: 08:00 - 22:00'}
+                    </span>
                   </div>
                 </div>
-              )}
+
+                {/* Social Media */}
+                {(contactInfo.facebook || contactInfo.instagram) && (
+                  <div className="mt-6">
+                    <h4 className="text-lg font-semibold mb-4">Ikuti Kami</h4>
+                    <div className="flex space-x-4">
+                      {contactInfo.facebook && (
+                        <a 
+                          href={contactInfo.facebook} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          <Facebook className="h-6 w-6" />
+                        </a>
+                      )}
+                      {contactInfo.instagram && (
+                        <a 
+                          href={contactInfo.instagram} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-pink-400 hover:text-pink-300 transition-colors"
+                        >
+                          <Instagram className="h-6 w-6" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

@@ -40,7 +40,6 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
       });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       onSuccess?.();
-      // Reset form
       setFormData({
         name: '',
         phone: '',

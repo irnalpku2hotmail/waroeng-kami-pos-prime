@@ -2,8 +2,8 @@
 import React from 'react';
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import CategoryList from '@/components/categories/CategoryList';
-import UnitList from '@/components/units/UnitList';
+import CategorySearchList from '@/components/categories/CategorySearchList';
+import UnitSearchList from '@/components/units/UnitSearchList';
 import AccessControl from '@/components/layout/AccessControl';
 
 const CategoriesUnits = () => {
@@ -20,11 +20,11 @@ const CategoriesUnits = () => {
             </TabsList>
 
             <TabsContent value="categories">
-              <CategoryList />
+              <CategorySearchList />
             </TabsContent>
 
             <TabsContent value="units">
-              <UnitList />
+              <UnitSearchList />
             </TabsContent>
           </Tabs>
         </div>
