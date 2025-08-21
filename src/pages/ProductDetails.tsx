@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -148,6 +149,20 @@ const ProductDetails = () => {
     });
   };
 
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const target = e.target as HTMLInputElement;
+      navigate(`/search?q=${target.value}`);
+    }
+  };
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value > 0 && value <= (product?.current_stock || 0)) {
+      setQuantity(value);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -240,7 +255,7 @@ const ProductDetails = () => {
                 <div className="flex gap-2">
                   <Input
                     placeholder="Cari produk..."
-                    onKeyPress={(e) => e.key === 'Enter' && navigate(`/search?q=${e.target.value}`)}
+                    onKeyPress={handleSearchKeyPress}
                     className="flex-1"
                   />
                   <Button onClick={() => navigate(`/search?q=${''}`)}>
@@ -332,7 +347,7 @@ const ProductDetails = () => {
               <div className="flex gap-2">
                 <Input
                   placeholder="Cari produk..."
-                  onKeyPress={(e) => e.key === 'Enter' && navigate(`/search?q=${e.target.value}`)}
+                  onKeyPress={handleSearchKeyPress}
                   className="flex-1"
                 />
                 <Button onClick={() => navigate(`/search?q=${''}`)}>
@@ -471,12 +486,7 @@ const ProductDetails = () => {
               <Input
                 type="number"
                 value={quantity}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value);
-                  if (!isNaN(value) && value > 0 && value <= (product?.current_stock || 0)) {
-                    setQuantity(value);
-                  }
-                }}
+                onChange={handleQuantityChange}
                 className="w-20 text-center"
               />
               <Button
@@ -505,7 +515,7 @@ const ProductDetails = () => {
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Rekomendasi Produk
           </h2>
-          <ProductRecommendations categoryId={product.category_id} excludeProductId={product.id} limit={5} />
+          <ProductRecommendations categoryId={product.category_id} excludeId={product.id} limit={5} />
         </div>
 
         {/* Similar Products Carousel */}
@@ -513,7 +523,7 @@ const ProductDetails = () => {
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Produk Serupa
           </h2>
-          <ProductSimilarCarousel categoryId={product.category_id} excludeProductId={product.id} limit={10} />
+          <ProductSimilarCarousel categoryId={product.category_id} excludeId={product.id} limit={10} />
         </div>
       </div>
 

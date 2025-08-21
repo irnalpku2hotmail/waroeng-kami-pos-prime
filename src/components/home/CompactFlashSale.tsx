@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,47 +60,51 @@ const CompactFlashSale = () => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
-  const { data: flashSaleItem, isLoading, error } = useQuery({
-    queryKey: ['active-flash-sale'],
+  const { data: flashSaleData, isLoading, error } = useQuery({
+    queryKey: ['active-flash-sale-with-items'],
     queryFn: async () => {
       const now = new Date().toISOString();
-      const { data, error } = await supabase
+      
+      // First get active flash sale
+      const { data: flashSale, error: fsError } = await supabase
         .from('flash_sales')
         .select('*')
         .eq('is_active', true)
-        .lte('start_time', now)
-        .gte('end_time', now)
+        .lte('start_date', now)
+        .gte('end_date', now)
         .single();
 
-      if (error) {
-        console.error("Error fetching active flash sale:", error);
-        throw error;
+      if (fsError || !flashSale) {
+        console.error("No active flash sale found:", fsError);
+        return null;
       }
-      return data;
+
+      // Then get flash sale items with products
+      const { data: flashSaleItems, error: fsiError } = await supabase
+        .from('flash_sale_items')
+        .select(`
+          *,
+          products (*)
+        `)
+        .eq('flash_sale_id', flashSale.id)
+        .gt('stock_quantity', 0)
+        .limit(1)
+        .single();
+
+      if (fsiError || !flashSaleItems) {
+        console.error("No flash sale items found:", fsiError);
+        return null;
+      }
+
+      return {
+        flashSale,
+        flashSaleItem: flashSaleItems,
+        product: flashSaleItems.products
+      };
     },
   });
 
-  const { data: product, isLoading: isProductLoading, error: productError } = useQuery({
-    queryKey: ['flash-sale-product', flashSaleItem?.product_id],
-    queryFn: async () => {
-      if (!flashSaleItem?.product_id) return null;
-
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', flashSaleItem.product_id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching flash sale product:", error);
-        throw error;
-      }
-      return data;
-    },
-    enabled: !!flashSaleItem?.product_id,
-  });
-
-  if (isLoading || isProductLoading) {
+  if (isLoading) {
     return (
       <Card className="w-full">
         <CardContent className="p-4 space-y-2">
@@ -117,9 +122,11 @@ const CompactFlashSale = () => {
     );
   }
 
-  if (error || productError || !flashSaleItem || !product) {
+  if (error || !flashSaleData) {
     return null;
   }
+
+  const { flashSale, flashSaleItem, product } = flashSaleData;
 
   const handleAddToCart = (product: any) => {
     if (!user) {
@@ -160,7 +167,7 @@ const CompactFlashSale = () => {
           <h3 className="text-sm font-semibold text-gray-700">
             Flash Sale Berakhir dalam:
           </h3>
-          <CountdownTimer endDate={flashSaleItem.end_time} />
+          <CountdownTimer endDate={flashSale.end_date} />
         </div>
         <div className="relative">
           <img
@@ -169,7 +176,7 @@ const CompactFlashSale = () => {
             className="w-full h-40 object-cover rounded-md"
           />
           <Badge className="absolute top-1 right-1 text-xs">
-            -{Math.round(((product.selling_price - flashSaleItem.sale_price) / product.selling_price) * 100)}%
+            -{Math.round(((flashSaleItem.original_price - flashSaleItem.sale_price) / flashSaleItem.original_price) * 100)}%
           </Badge>
         </div>
         <h4 className="text-sm font-medium text-gray-900 line-clamp-1">
@@ -181,7 +188,7 @@ const CompactFlashSale = () => {
               {formatPrice(flashSaleItem.sale_price)}
             </p>
             <p className="text-xs text-gray-500 line-through">
-              {formatPrice(product.selling_price)}
+              {formatPrice(flashSaleItem.original_price)}
             </p>
           </div>
           <Button size="sm" onClick={() => handleAddToCart(product)}>
