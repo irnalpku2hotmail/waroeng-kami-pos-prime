@@ -1,35 +1,41 @@
 
-import React from 'react';
-import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import CategoryList from '@/components/categories/CategoryList';
-import UnitList from '@/components/units/UnitList';
-import AccessControl from '@/components/layout/AccessControl';
+import Layout from '@/components/Layout';
+import CategorySearchList from '@/components/categories/CategorySearchList';
+import UnitsTab from '@/components/units/UnitsTab';
+import { Tag, Package } from 'lucide-react';
 
 const CategoriesUnits = () => {
   return (
-    <AccessControl allowedRoles={['admin', 'manager', 'staff']} resource="Categories & Units">
-      <Layout>
-        <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Kategori & Unit</h1>
-
-          <Tabs defaultValue="categories" className="w-full">
-            <TabsList>
-              <TabsTrigger value="categories">Kategori</TabsTrigger>
-              <TabsTrigger value="units">Unit</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="categories">
-              <CategoryList />
-            </TabsContent>
-
-            <TabsContent value="units">
-              <UnitList />
-            </TabsContent>
-          </Tabs>
+    <Layout>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Tag className="h-8 w-8 text-blue-800" />
+          <h1 className="text-3xl font-bold text-blue-800">Kategori & Unit</h1>
         </div>
-      </Layout>
-    </AccessControl>
+
+        <Tabs defaultValue="categories" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Kategori
+            </TabsTrigger>
+            <TabsTrigger value="units" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Unit
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="categories">
+            <CategorySearchList />
+          </TabsContent>
+
+          <TabsContent value="units">
+            <UnitsTab />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </Layout>
   );
 };
 

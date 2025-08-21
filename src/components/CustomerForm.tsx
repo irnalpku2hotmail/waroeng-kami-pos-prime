@@ -9,11 +9,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { User, Phone, Mail, MapPin, Calendar } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
 
 interface CustomerFormProps {
   customer?: any;
   onSuccess?: () => void;
 }
+
+type CustomerInsert = Database['public']['Tables']['customers']['Insert'];
+type CustomerUpdate = Database['public']['Tables']['customers']['Update'];
 
 const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
   const queryClient = useQueryClient();
@@ -26,10 +30,18 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
   });
 
   const createCustomer = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: typeof formData) => {
+      const payload: CustomerInsert = {
+        name: data.name.trim(),
+        phone: data.phone?.trim() || null,
+        email: data.email?.trim() || null,
+        address: data.address?.trim() || null,
+        date_of_birth: data.date_of_birth || null,
+      };
+
       const { error } = await supabase
         .from('customers')
-        .insert(data);
+        .insert(payload);
 
       if (error) throw error;
     },
@@ -59,10 +71,18 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
   });
 
   const updateCustomer = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: typeof formData) => {
+      const payload: CustomerUpdate = {
+        name: data.name.trim(),
+        phone: data.phone?.trim() || null,
+        email: data.email?.trim() || null,
+        address: data.address?.trim() || null,
+        date_of_birth: data.date_of_birth || null,
+      };
+
       const { error } = await supabase
         .from('customers')
-        .update(data)
+        .update(payload)
         .eq('id', customer.id);
 
       if (error) throw error;
@@ -96,18 +116,10 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
       return;
     }
 
-    const submitData = {
-      name: formData.name.trim(),
-      phone: formData.phone.trim() || null,
-      email: formData.email.trim() || null,
-      address: formData.address.trim() || null,
-      date_of_birth: formData.date_of_birth || null,
-    };
-
     if (customer) {
-      updateCustomer.mutate(submitData);
+      updateCustomer.mutate(formData);
     } else {
-      createCustomer.mutate(submitData);
+      createCustomer.mutate(formData);
     }
   };
 
