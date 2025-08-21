@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,9 +16,7 @@ interface CustomerFormProps {
   onSuccess?: () => void;
 }
 
-type CustomerInsert = Omit<Database['public']['Tables']['customers']['Insert'], 'customer_code'> & {
-  customer_code?: string;
-};
+type CustomerInsert = Database['public']['Tables']['customers']['Insert'];
 type CustomerUpdate = Database['public']['Tables']['customers']['Update'];
 
 const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
@@ -32,7 +31,14 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
 
   const createCustomer = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Generate customer_code via RPC agar sesuai tipe Insert (customer_code: string wajib)
+      const { data: generatedCode, error: codeError } = await supabase.rpc('generate_customer_code');
+      if (codeError || !generatedCode) {
+        throw codeError || new Error('Gagal menghasilkan kode customer');
+      }
+
       const payload: CustomerInsert = {
+        customer_code: generatedCode,
         name: data.name.trim(),
         phone: data.phone?.trim() || null,
         email: data.email?.trim() || null,
@@ -40,10 +46,7 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
         date_of_birth: data.date_of_birth || null,
       };
 
-      const { error } = await supabase
-        .from('customers')
-        .insert(payload);
-
+      const { error } = await supabase.from('customers').insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
