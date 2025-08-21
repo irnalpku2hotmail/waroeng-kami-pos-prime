@@ -5,8 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, Zap, Eye } from 'lucide-react';
+import { Clock, Zap, Eye, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from '@/hooks/use-toast';
 import {
   Carousel,
   CarouselContent,
@@ -17,6 +20,8 @@ import {
 
 const CompactFlashSale = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { addToCart } = useCart();
 
   const { data: flashSaleData, isLoading } = useQuery({
     queryKey: ['active-flash-sales-compact'],
@@ -70,6 +75,40 @@ const CompactFlashSale = () => {
     return `${minutes}m`;
   };
 
+  const handleAddToCart = (product: any, salePrice: number) => {
+    if (!user) {
+      toast({
+        title: 'Login Diperlukan',
+        description: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (product.current_stock < 1) {
+      toast({
+        title: 'Stok Habis',
+        description: 'Produk ini sedang tidak tersedia',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: salePrice,
+      quantity: 1,
+      stock: product.current_stock,
+      image_url: product.image_url
+    });
+
+    toast({
+      title: 'Berhasil',
+      description: `${product.name} ditambahkan ke keranjang`,
+    });
+  };
+
   if (isLoading || !flashSaleData || !flashSaleData.flash_sale_items?.length) {
     return null;
   }
@@ -121,15 +160,27 @@ const CompactFlashSale = () => {
                           </span>
                         </div>
                         
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-6 text-xs"
-                          onClick={() => navigate(`/product/${item.products.id}`)}
-                        >
-                          <Eye className="h-2 w-2 mr-1" />
-                          Lihat
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-6 text-xs"
+                            onClick={() => navigate(`/product/${item.products.id}`)}
+                          >
+                            <Eye className="h-2 w-2 mr-1" />
+                            Lihat
+                          </Button>
+                          {user && (
+                            <Button
+                              size="sm"
+                              className="h-6 px-2"
+                              onClick={() => handleAddToCart(item.products, item.sale_price)}
+                              disabled={item.products.current_stock < 1}
+                            >
+                              <ShoppingCart className="h-2 w-2" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

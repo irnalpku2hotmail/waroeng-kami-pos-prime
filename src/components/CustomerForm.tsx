@@ -27,9 +27,22 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
 
   const createCustomer = useMutation({
     mutationFn: async (data: any) => {
+      // Generate customer code using RPC function
+      const { data: customerCode, error: codeError } = await supabase
+        .rpc('generate_customer_code');
+
+      if (codeError) throw codeError;
+
+      const customerData = {
+        ...data,
+        customer_code: customerCode,
+        total_points: 0,
+        total_spent: 0
+      };
+
       const { error } = await supabase
         .from('customers')
-        .insert(data);
+        .insert(customerData);
 
       if (error) throw error;
     },
@@ -49,6 +62,7 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
       });
     },
     onError: (error: any) => {
+      console.error('Error creating customer:', error);
       toast({
         title: 'Error',
         description: error.message || 'Gagal menambahkan customer',
@@ -75,6 +89,7 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
       onSuccess?.();
     },
     onError: (error: any) => {
+      console.error('Error updating customer:', error);
       toast({
         title: 'Error',
         description: error.message || 'Gagal memperbarui customer',

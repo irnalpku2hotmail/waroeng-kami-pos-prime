@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,101 +8,135 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
-  Heart, 
-  Share2, 
   ShoppingCart, 
-  Star, 
+  User, 
+  LogOut, 
+  LogIn, 
+  UserCircle, 
+  Menu, 
+  X, 
+  Store, 
+  ArrowLeft, 
   Minus, 
   Plus,
-  ArrowLeft,
-  Package,
-  Truck,
-  Shield,
-  Clock
+  Heart,
+  Settings
 } from 'lucide-react';
-import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeFooter from '@/components/home/HomeFooter';
-import CartModal from '@/components/CartModal';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from '@/hooks/use-toast';
+import AuthModal from '@/components/AuthModal';
+import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import ProductReviews from '@/components/ProductReviews';
+import ProductRecommendations from '@/components/ProductRecommendations';
+import FrontendFooter from '@/components/frontend/FrontendFooter';
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { user, signOut } = useAuth();
+  const { addToCart, getTotalItems } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
-  const [cartModalOpen, setCartModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
-  const { data: product, isLoading, isError } = useQuery({
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('settings').select('*');
+      if (error) throw error;
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
+    }
+  });
+
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
     queryFn: async () => {
+      if (!id) throw new Error('Product ID is required');
+      
       const { data, error } = await supabase
         .from('products')
         .select(`
           *,
-          categories (
-            name
-          )
+          categories(name),
+          units(name, abbreviation)
         `)
         .eq('id', id)
         .single();
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       return data;
     },
+    enabled: !!id
   });
 
-  const { data: relatedProducts } = useQuery({
-    queryKey: ['related-products', product?.category_id, id],
-    queryFn: async () => {
-      if (!product?.category_id) return [];
+  const storeInfo = settings?.store_info || {};
+  const contactInfo = settings?.contact_info || {};
+  const logoUrl = storeInfo.logo_url;
+  const storeName = 'TokoQu';
 
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('category_id', product.category_id)
-        .neq('id', id)
-        .limit(5);
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
 
-      if (error) {
-        throw error;
-      }
+  const handleAddToCart = () => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
 
-      return data;
-    },
-    enabled: !!product?.category_id,
-  });
+    if (!product) return;
 
-  useEffect(() => {
-    // Check if the user has liked the product
-    const checkLikeStatus = async () => {
-      if (!user || !id) return;
+    if (product.current_stock < quantity) {
+      toast({
+        title: 'Stok Tidak Cukup',
+        description: `Stok tersedia: ${product.current_stock}`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
-      const { data, error } = await supabase
-        .from('user_product_likes')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('product_id', id)
-        .maybeSingle();
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: quantity,
+      stock: product.current_stock,
+      image_url: product.image_url
+    });
 
-      if (error) {
-        console.error('Error fetching like status:', error);
-        return;
-      }
-
-      setIsLiked(!!data);
-    };
-
-    checkLikeStatus();
-  }, [user, id]);
+    toast({
+      title: 'Berhasil',
+      description: `${product.name} ditambahkan ke keranjang`,
+    });
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -111,250 +146,304 @@ const ProductDetails = () => {
     }).format(price);
   };
 
-  const getImageUrl = (imageName: string | null | undefined) => {
-    if (!imageName) {
-        return '/placeholder.svg';
-    }
-    if (imageName.startsWith('http')) {
-        return imageName;
-    }
-    const { data } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(imageName);
-    
-    return data?.publicUrl || '/placeholder.svg';
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  const handleAddToCart = () => {
-    if (!product) return;
-    
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      quantity: quantity,
-      image: product.image_url,
-      stock: product.current_stock,
-      product_id: product.id,
-      unit_price: product.selling_price,
-      total_price: product.selling_price * quantity,
-      product: {
-        id: product.id,
-        name: product.name,
-        image_url: product.image_url
-      }
-    });
-    
-    toast({
-      title: "Produk ditambahkan",
-      description: `${product.name} telah ditambahkan ke keranjang`,
-    });
-  };
-
-  const handleToggleLike = async () => {
-    if (!user) {
-      toast({
-        title: 'Anda harus login',
-        description: 'Silakan login untuk menyukai produk',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (isLiked) {
-      // Unlike the product
-      const { error } = await supabase
-        .from('user_product_likes')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('product_id', id);
-
-      if (error) {
-        toast({
-          title: 'Gagal unlike produk',
-          description: 'Terjadi kesalahan saat unlike produk',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setIsLiked(false);
-      toast({
-        title: 'Produk tidak disukai',
-        description: 'Anda tidak lagi menyukai produk ini',
-      });
-    } else {
-      // Like the product
-      const { error } = await supabase
-        .from('user_product_likes')
-        .insert([{ user_id: user.id, product_id: id }]);
-
-      if (error) {
-        toast({
-          title: 'Gagal menyukai produk',
-          description: 'Terjadi kesalahan saat menyukai produk',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setIsLiked(true);
-      toast({
-        title: 'Produk disukai',
-        description: 'Anda menyukai produk ini',
-      });
-    }
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: product?.name,
-        text: product?.description,
-        url: window.location.href,
-      })
-      .then(() => console.log('Successful share'))
-      .catch((error) => console.error('Error sharing', error));
-    } else {
-      toast({
-        title: 'Web Share API tidak didukung',
-        description: 'Fitur berbagi tidak didukung di browser ini',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Produk Tidak Ditemukan</h1>
+          <Button onClick={() => navigate('/')}>Kembali ke Beranda</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar 
-        onCartClick={() => setCartModalOpen(true)}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onSearch={handleSearch}
-      />
-
-      {isLoading && (
-        <div className="text-center py-8">
-          <Package className="h-8 w-8 text-gray-400 mx-auto mb-2 animate-pulse" />
-          <p className="text-gray-500">Memuat produk...</p>
-        </div>
-      )}
-
-      {isError && (
-        <div className="text-center py-8">
-          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">
-            Produk tidak ditemukan
-          </h2>
-          <p className="text-gray-500 mb-4">
-            Maaf, produk yang Anda cari tidak ditemukan.
-          </p>
-          <Button onClick={() => navigate('/')}>
-            Kembali ke Beranda
-          </Button>
-        </div>
-      )}
-
-      {product && (
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Back Button */}
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="mb-4 flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali
-          </Button>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Product Images - Mobile Responsive */}
-            <div className="space-y-4">
-              <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-sm">
-                <img
-                  src={getImageUrl(product.image_url)}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+      {/* Navbar - Same as Home */}
+      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
+        {!isMobile && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+              <div className="flex items-center space-x-4">
+                {contactInfo.phone && (
+                  <span>📞 {contactInfo.phone}</span>
+                )}
+                {contactInfo.email && (
+                  <span className="hidden md:inline">✉️ {contactInfo.email}</span>
+                )}
               </div>
-              
-              {/* Image thumbnails for mobile - smaller size */}
-              {product.image_url && (
-                <div className="flex gap-2 overflow-x-auto">
-                  <div 
-                    className={`flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-lg overflow-hidden cursor-pointer border-2 ${
-                      selectedImage === 0 ? 'border-blue-500' : 'border-gray-200'
-                    }`}
-                    onClick={() => setSelectedImage(0)}
-                  >
-                    <img
-                      src={getImageUrl(product.image_url)}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+              <div className="flex items-center space-x-4">
+                <span>Selamat Datang di {storeName}!</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo & Store Name */}
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/')}>
+              {logoUrl && (
+                <div className="relative">
+                  <img 
+                    src={logoUrl} 
+                    alt={storeName} 
+                    className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} 
+                  />
                 </div>
+              )}
+              {!logoUrl && (
+                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
+                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                </div>
+              )}
+              <div>
+                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
+                  {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
+                </h1>
+                {!isMobile && (
+                  <p className="text-xs text-gray-500">
+                    {storeInfo.tagline || 'Toko Online Terpercaya'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative hover:bg-blue-50 p-2"
+                  onClick={() => setShowCartModal(true)}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+
+              {!isMobile && (
+                <div>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
+                          {profile?.avatar_url ? (
+                            <img 
+                              src={profile.avatar_url} 
+                              alt="Profile" 
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserCircle className="h-6 w-6" />
+                          )}
+                          <span className="hidden lg:inline text-sm font-medium">
+                            {profile?.full_name || user.email?.split('@')[0]}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setAuthModalOpen(true)}
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50 px-4"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Masuk
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-2"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && isMobile && (
+          <div className="bg-white border-t shadow-lg">
+            <div className="px-4 py-4 space-y-4">
+              {contactInfo.phone && (
+                <div className="text-sm text-gray-600 pb-2 border-b">
+                  📞 {contactInfo.phone}
+                </div>
+              )}
+              
+              <div className="border-t pt-4">
+                {user ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 py-2">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Profile" 
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle className="h-8 w-8 text-gray-400" />
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {profile?.full_name || 'User'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigate('/profile');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start mb-2"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Masuk
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Kembali
+        </Button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Product Image */}
+          <div>
+            <img
+              src={product.image_url || '/placeholder.svg'}
+              alt={product.name}
+              className="w-full h-96 object-cover rounded-lg"
+            />
+          </div>
+
+          {/* Product Info */}
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {product.name}
+              </h1>
+              {product.categories && (
+                <Badge variant="secondary" className="mb-4">
+                  {product.categories.name}
+                </Badge>
               )}
             </div>
 
-            {/* Product Info - Mobile Responsive */}
-            <div className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-3xl font-bold text-blue-600">
+                {formatPrice(product.selling_price)}
+              </p>
+              <p className="text-gray-600">
+                Stok tersedia: <span className="font-medium">{product.current_stock}</span>
+              </p>
+            </div>
+
+            {product.description && (
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge variant="secondary">{product.categories?.name}</Badge>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm text-gray-600">4.5 (128 ulasan)</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-baseline gap-3 mb-4">
-                  <span className="text-2xl md:text-3xl font-bold text-blue-600">
-                    {formatPrice(product.selling_price)}
-                  </span>
-                  {product.base_price < product.selling_price && (
-                    <span className="text-lg text-gray-500 line-through">
-                      {formatPrice(product.base_price)}
-                    </span>
-                  )}
-                </div>
-
-                {product.description && (
-                  <p className="text-gray-600 leading-relaxed text-sm md:text-base">{product.description}</p>
-                )}
+                <h3 className="font-semibold mb-2">Deskripsi</h3>
+                <p className="text-gray-600">{product.description}</p>
               </div>
+            )}
 
-              {/* Stock Status */}
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-600">
-                  Stok: <span className="font-medium">{product.current_stock}</span>
-                </span>
-              </div>
-
-              {/* Quantity Selector */}
-              <div className="flex items-center gap-4">
-                <span className="font-medium">Jumlah:</span>
-                <div className="flex items-center gap-2">
+            {/* Quantity Selector */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Jumlah
+                </label>
+                <div className="flex items-center space-x-3">
                   <Button
-                    size="sm"
                     variant="outline"
+                    size="sm"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
+                  <Input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 text-center"
+                    min="1"
+                    max={product.current_stock}
+                  />
                   <Button
-                    size="sm"
                     variant="outline"
+                    size="sm"
                     onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
                     disabled={quantity >= product.current_stock}
                   >
@@ -363,91 +452,41 @@ const ProductDetails = () => {
                 </div>
               </div>
 
-              {/* Action Buttons - Mobile Responsive */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  className="flex-1 flex items-center justify-center gap-2"
-                  onClick={handleAddToCart}
-                  disabled={product.current_stock === 0}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  Tambah ke Keranjang
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="default"
-                  onClick={handleToggleLike}
-                  className="sm:w-auto"
-                >
-                  <Heart className={`h-5 w-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="default"
-                  onClick={handleShare}
-                  className="sm:w-auto"
-                >
-                  <Share2 className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* Product Features - Mobile Responsive */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-green-600" />
-                  <span className="text-sm">Gratis Ongkir</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm">Garansi Resmi</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-orange-600" />
-                  <span className="text-sm">Kirim Hari Ini</span>
-                </div>
-              </div>
+              {/* Add to Cart Button */}
+              <Button
+                onClick={handleAddToCart}
+                disabled={product.current_stock === 0}
+                className="w-full"
+                size="lg"
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+              </Button>
             </div>
-          </div>
-
-          {/* Related Products Section */}
-          {relatedProducts && relatedProducts.length > 0 && (
-            <div className="mt-12">
-              <h2 className="text-xl md:text-2xl font-bold mb-6">Produk Terkait</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {relatedProducts.map((relatedProduct) => (
-                  <Card 
-                    key={relatedProduct.id} 
-                    className="hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/product/${relatedProduct.id}`)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-3">
-                        <img
-                          src={getImageUrl(relatedProduct.image_url)}
-                          alt={relatedProduct.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <h3 className="font-medium text-sm mb-2 line-clamp-2">{relatedProduct.name}</h3>
-                      <p className="text-blue-600 font-bold text-sm">
-                        {formatPrice(relatedProduct.selling_price)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Product Reviews */}
-          <div className="mt-12">
-            <ProductReviews productId={id!} />
           </div>
         </div>
-      )}
 
-      <HomeFooter />
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+        {/* Product Reviews */}
+        <ProductReviews productId={product.id} />
+
+        {/* Product Recommendations */}
+        <ProductRecommendations 
+          currentProductId={product.id} 
+          categoryId={product.category_id} 
+        />
+      </div>
+
+      {/* Footer */}
+      <FrontendFooter />
+
+      {/* Modals */}
+      {user && (
+        <EnhancedFrontendCartModal 
+          open={showCartModal} 
+          onOpenChange={setShowCartModal} 
+        />
+      )}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 };

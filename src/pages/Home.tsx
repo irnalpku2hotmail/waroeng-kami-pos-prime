@@ -7,7 +7,7 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Phone, Mail, MapPin, Facebook, Instagram, Clock, Settings } from 'lucide-react';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Settings } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
 import AuthModal from '@/components/AuthModal';
@@ -17,6 +17,8 @@ import ProductGridSmall from '@/components/home/ProductGridSmall';
 import CompactBannerCarousel from '@/components/home/CompactBannerCarousel';
 import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
 import CompactFlashSale from '@/components/home/CompactFlashSale';
+import CategoriesCarousel from '@/components/home/CategoriesCarousel';
+import FrontendFooter from '@/components/frontend/FrontendFooter';
 import { Separator } from '@/components/ui/separator';
 
 const Home = () => {
@@ -64,7 +66,7 @@ const Home = () => {
   const storeInfo = settings?.store_info || {};
   const contactInfo = settings?.contact_info || {};
   const logoUrl = storeInfo.logo_url;
-  const storeName = storeInfo.name || 'Toko Online';
+  const storeName = 'TokoQu';
 
   const handleSignOut = async () => {
     await signOut();
@@ -324,109 +326,13 @@ const Home = () => {
             limit={24}
           />
         </div>
+
+        {/* Categories Carousel */}
+        <CategoriesCarousel />
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-16">
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Store Info */}
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-3 mb-4">
-                {logoUrl && (
-                  <img 
-                    src={logoUrl} 
-                    alt={storeName} 
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
-                )}
-                <div>
-                  <h3 className="text-xl font-bold">{storeName}</h3>
-                  <p className="text-gray-400 text-sm">{storeInfo.tagline || 'Toko Online Terpercaya'}</p>
-                </div>
-              </div>
-              {storeInfo.description && (
-                <p className="text-gray-300 mb-4">{storeInfo.description}</p>
-              )}
-            </div>
-
-            {/* Contact Info */}
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Kontak</h4>
-              <div className="space-y-3">
-                {contactInfo.phone && (
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-blue-400" />
-                    <span className="text-gray-300">{contactInfo.phone}</span>
-                  </div>
-                )}
-                {contactInfo.email && (
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-blue-400" />
-                    <span className="text-gray-300">{contactInfo.email}</span>
-                  </div>
-                )}
-                {contactInfo.address && (
-                  <div className="flex items-start space-x-2">
-                    <MapPin className="h-4 w-4 text-blue-400 mt-1" />
-                    <span className="text-gray-300">{contactInfo.address}</span>
-                  </div>
-                )}
-                
-                {/* Business Hours */}
-                <div className="mt-4">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-blue-400" />
-                    <span className="text-gray-300">
-                      {contactInfo.business_hours || 'Senin - Minggu: 08:00 - 22:00'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Social Media */}
-                {(contactInfo.facebook || contactInfo.instagram) && (
-                  <div className="mt-6">
-                    <h4 className="text-lg font-semibold mb-4">Ikuti Kami</h4>
-                    <div className="flex space-x-4">
-                      {contactInfo.facebook && (
-                        <a 
-                          href={contactInfo.facebook} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                          <Facebook className="h-6 w-6" />
-                        </a>
-                      )}
-                      {contactInfo.instagram && (
-                        <a 
-                          href={contactInfo.instagram} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-pink-400 hover:text-pink-300 transition-colors"
-                        >
-                          <Instagram className="h-6 w-6" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <Separator className="my-8 bg-gray-700" />
-
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm">
-              © 2024 {storeName}. Semua hak dilindungi.
-            </p>
-            <div className="flex items-center space-x-4 mt-4 md:mt-0">
-              <span className="text-gray-400 text-sm">Powered by Lovable</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <FrontendFooter />
 
       {/* Modals */}
       {user && (

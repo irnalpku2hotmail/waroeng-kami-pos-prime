@@ -2,6 +2,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
+import Autoplay from 'embla-carousel-autoplay';
 import {
   Carousel,
   CarouselContent,
@@ -9,12 +11,10 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { Card, CardContent } from '@/components/ui/card';
-import Autoplay from 'embla-carousel-autoplay';
 
 const CompactBannerCarousel = () => {
   const { data: banners = [] } = useQuery({
-    queryKey: ['banners'],
+    queryKey: ['banner-images'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('settings')
@@ -23,7 +23,7 @@ const CompactBannerCarousel = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching banners:', error);
+        console.log('No banner images found');
         return [];
       }
 
@@ -34,9 +34,9 @@ const CompactBannerCarousel = () => {
 
   if (!banners.length) {
     return (
-      <div className="w-full h-24 md:h-32 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white mb-4">
+      <div className="w-full h-32 md:h-40 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white mb-4">
         <div className="text-center">
-          <h2 className="text-lg md:text-xl font-bold">Selamat Datang!</h2>
+          <h2 className="text-lg md:text-xl font-bold">Selamat Datang di TokoQu!</h2>
           <p className="text-xs md:text-sm opacity-90">Temukan produk terbaik untuk Anda</p>
         </div>
       </div>
@@ -58,13 +58,14 @@ const CompactBannerCarousel = () => {
             <CarouselItem key={index}>
               <Card>
                 <CardContent className="p-0">
-                  <div className="relative w-full h-24 md:h-32 overflow-hidden rounded-xl">
+                  <div className="relative w-full h-32 md:h-40 overflow-hidden rounded-xl">
                     <img
                       src={imageUrl || '/placeholder.svg'}
                       alt={`Banner ${index + 1}`}
                       className="w-full h-full object-cover"
+                      style={{ aspectRatio: '16/9' }}
                     />
-                    <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                    <div className="absolute inset-0 bg-black bg-opacity-10"></div>
                   </div>
                 </CardContent>
               </Card>
