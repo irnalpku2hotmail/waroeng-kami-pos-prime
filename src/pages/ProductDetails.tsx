@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,34 +6,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { 
-  ShoppingCart, 
-  User, 
-  LogOut, 
-  LogIn, 
-  UserCircle, 
-  Menu, 
-  X, 
-  Store, 
-  ArrowLeft, 
-  Minus, 
-  Plus,
-  Heart,
-  Settings
-} from 'lucide-react';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Search, ArrowLeft, Heart, Share2, Plus, Minus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
-import ProductReviews from '@/components/ProductReviews';
 import ProductRecommendations from '@/components/ProductRecommendations';
+import ProductSimilarCarousel from '@/components/ProductSimilarCarousel';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
 
 const ProductDetails = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { addToCart, getTotalItems } = useCart();
@@ -43,6 +28,28 @@ const ProductDetails = () => {
   const [showCartModal, setShowCartModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  const { data: product, isLoading, error } = useQuery({
+    queryKey: ['product', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(id, name),
+          units(name, abbreviation)
+        `)
+        .eq('id', id)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    },
+  });
 
   // Fetch store settings
   const { data: settings } = useQuery({
@@ -75,27 +82,6 @@ const ProductDetails = () => {
     enabled: !!user?.id
   });
 
-  const { data: product, isLoading } = useQuery({
-    queryKey: ['product', id],
-    queryFn: async () => {
-      if (!id) throw new Error('Product ID is required');
-      
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories(name),
-          units(name, abbreviation)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id
-  });
-
   const storeInfo = settings?.store_info || {};
   const contactInfo = settings?.contact_info || {};
   const logoUrl = storeInfo.logo_url;
@@ -106,38 +92,6 @@ const ProductDetails = () => {
     setMobileMenuOpen(false);
   };
 
-  const handleAddToCart = () => {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
-
-    if (!product) return;
-
-    if (product.current_stock < quantity) {
-      toast({
-        title: 'Stok Tidak Cukup',
-        description: `Stok tersedia: ${product.current_stock}`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      quantity: quantity,
-      stock: product.current_stock,
-      image_url: product.image_url
-    });
-
-    toast({
-      title: 'Berhasil',
-      description: `${product.name} ditambahkan ke keranjang`,
-    });
-  };
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -146,20 +100,83 @@ const ProductDetails = () => {
     }).format(price);
   };
 
+  const incrementQuantity = () => {
+    if (product && quantity < product.current_stock) {
+      setQuantity(quantity + 1);
+    }
+  };
+
+  const decrementQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    if (!product) return;
+
+    if (quantity > product.current_stock) {
+      toast({
+        title: 'Stok tidak mencukupi',
+        description: `Stok tersedia: ${product.current_stock}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const cartItem = {
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: quantity,
+      image: product.image_url,
+      stock: product.current_stock,
+      product_id: product.id,
+      unit_price: product.selling_price,
+      total_price: product.selling_price * quantity
+    };
+
+    addToCart(cartItem);
+    toast({
+      title: 'Berhasil ditambahkan',
+      description: `${product.name} telah ditambahkan ke keranjang`,
+    });
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-6">
+          <div className="animate-pulse">
+            <div className="bg-gray-200 h-64 w-full rounded-md mb-4"></div>
+            <div className="bg-gray-200 h-8 w-3/4 mb-2"></div>
+            <div className="bg-gray-200 h-6 w-1/2 mb-4"></div>
+            <div className="bg-gray-200 h-4 w-1/4 mb-6"></div>
+            <div className="bg-gray-200 h-12 w-full"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Produk Tidak Ditemukan</h1>
-          <Button onClick={() => navigate('/')}>Kembali ke Beranda</Button>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Produk tidak ditemukan
+          </h2>
+          <p className="text-gray-500">
+            Maaf, produk dengan ID ini tidak tersedia.
+          </p>
+          <Button onClick={() => navigate('/')} className="mt-4">
+            Kembali ke Beranda
+          </Button>
         </div>
       </div>
     );
@@ -217,6 +234,22 @@ const ProductDetails = () => {
               </div>
             </div>
 
+            {/* Search Bar - Desktop */}
+            {!isMobile && (
+              <div className="flex-1 max-w-2xl mx-8">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Cari produk..."
+                    onKeyPress={(e) => e.key === 'Enter' && navigate(`/search?q=${e.target.value}`)}
+                    className="flex-1"
+                  />
+                  <Button onClick={() => navigate(`/search?q=${''}`)}>
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
               {user && (
@@ -257,7 +290,7 @@ const ProductDetails = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuItem onClick={() => navigate('/profile')}>
-                          <Settings className="h-4 w-4 mr-2" />
+                          <User className="h-4 w-4 mr-2" />
                           Profile
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleSignOut}>
@@ -292,6 +325,22 @@ const ProductDetails = () => {
               )}
             </div>
           </div>
+
+          {/* Mobile Search */}
+          {isMobile && (
+            <div className="pb-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Cari produk..."
+                  onKeyPress={(e) => e.key === 'Enter' && navigate(`/search?q=${e.target.value}`)}
+                  className="flex-1"
+                />
+                <Button onClick={() => navigate(`/search?q=${''}`)}>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -335,7 +384,7 @@ const ProductDetails = () => {
                       }}
                       className="w-full justify-start mb-2"
                     >
-                      <Settings className="h-4 w-4 mr-2" />
+                      <User className="h-4 w-4 mr-2" />
                       Profile
                     </Button>
                     <Button
@@ -373,107 +422,99 @@ const ProductDetails = () => {
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-6"
+          className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Kembali
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Product Image */}
           <div>
             <img
               src={product.image_url || '/placeholder.svg'}
               alt={product.name}
-              className="w-full h-96 object-cover rounded-lg"
+              className="w-full h-96 object-cover rounded-md"
             />
           </div>
 
-          {/* Product Info */}
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {product.name}
-              </h1>
+          {/* Product Details */}
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {product.name}
+            </h1>
+            <div className="flex items-center space-x-2 mb-3">
               {product.categories && (
-                <Badge variant="secondary" className="mb-4">
+                <Badge variant="secondary">
                   {product.categories.name}
                 </Badge>
               )}
+              <Badge>
+                Stok: {product.current_stock} {product.units?.abbreviation}
+              </Badge>
             </div>
+            <p className="text-gray-600 mb-4">{product.description}</p>
+            <p className="text-2xl font-bold text-blue-600 mb-4">
+              {formatPrice(product.selling_price)}
+            </p>
 
-            <div className="space-y-2">
-              <p className="text-3xl font-bold text-blue-600">
-                {formatPrice(product.selling_price)}
-              </p>
-              <p className="text-gray-600">
-                Stok tersedia: <span className="font-medium">{product.current_stock}</span>
-              </p>
-            </div>
-
-            {product.description && (
-              <div>
-                <h3 className="font-semibold mb-2">Deskripsi</h3>
-                <p className="text-gray-600">{product.description}</p>
-              </div>
-            )}
-
-            {/* Quantity Selector */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Jumlah
-                </label>
-                <div className="flex items-center space-x-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 text-center"
-                    min="1"
-                    max={product.current_stock}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
-                    disabled={quantity >= product.current_stock}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Add to Cart Button */}
+            {/* Quantity */}
+            <div className="flex items-center space-x-3 mb-6">
               <Button
-                onClick={handleAddToCart}
-                disabled={product.current_stock === 0}
-                className="w-full"
-                size="lg"
+                variant="outline"
+                size="icon"
+                onClick={decrementQuantity}
+                disabled={quantity <= 1}
               >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value > 0 && value <= (product?.current_stock || 0)) {
+                    setQuantity(value);
+                  }
+                }}
+                className="w-20 text-center"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={incrementQuantity}
+                disabled={quantity >= product.current_stock}
+              >
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Add to Cart */}
+            <Button
+              className="w-full"
+              onClick={handleAddToCart}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Tambah ke Keranjang
+            </Button>
           </div>
         </div>
 
-        {/* Product Reviews */}
-        <ProductReviews productId={product.id} />
-
         {/* Product Recommendations */}
-        <ProductRecommendations 
-          currentProductId={product.id} 
-          categoryId={product.category_id} 
-        />
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Rekomendasi Produk
+          </h2>
+          <ProductRecommendations categoryId={product.category_id} excludeProductId={product.id} limit={5} />
+        </div>
+
+        {/* Similar Products Carousel */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Produk Serupa
+          </h2>
+          <ProductSimilarCarousel categoryId={product.category_id} excludeProductId={product.id} limit={10} />
+        </div>
       </div>
 
       {/* Footer */}
