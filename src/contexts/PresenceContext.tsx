@@ -31,42 +31,29 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const count = Object.keys(state).length;
-        console.log('Presence sync - online users count:', count, 'state:', state);
+        console.log('Presence sync - online users count:', count);
         setOnlineUsers(count);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         console.log('User joined:', key, newPresences);
-        const state = channel.presenceState();
-        const count = Object.keys(state).length;
-        setOnlineUsers(count);
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         console.log('User left:', key, leftPresences);
-        const state = channel.presenceState();
-        const count = Object.keys(state).length;
-        setOnlineUsers(count);
       })
       .subscribe(async (status) => {
-        console.log('Presence subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('Presence channel subscribed, tracking user presence');
-          const presenceData = { 
+          await channel.track({ 
             user_id: user.id,
             online_at: new Date().toISOString(),
             email: user.email 
-          };
-          
-          const trackResult = await channel.track(presenceData);
-          console.log('Track result:', trackResult);
+          });
         }
       });
 
-    // Clean up function
     return () => {
       console.log('Cleaning up presence tracking');
-      channel.untrack().then(() => {
-        supabase.removeChannel(channel);
-      });
+      supabase.removeChannel(channel);
     };
   }, [user]);
 

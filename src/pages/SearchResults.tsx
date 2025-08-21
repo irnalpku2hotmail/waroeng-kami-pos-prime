@@ -1,164 +1,560 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import Layout from '@/components/Layout';
-import EnhancedSearchWithSuggestions from '@/components/home/EnhancedSearchWithSuggestions';
-import SearchProductCard from '@/components/search/SearchProductCard';
-import SearchFilters from '@/components/search/SearchFilters';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, Package } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Search, ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Phone, Mail, MapPin, Facebook, Instagram, Clock } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
+import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
+import AuthModal from '@/components/AuthModal';
+import { toast } from '@/hooks/use-toast';
 
 const SearchResults = () => {
+  const { user, signOut } = useAuth();
+  const { addItem, getTotalItems } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
-  const query = searchParams.get('q') || '';
-  const category = searchParams.get('category') || '';
-
-  // Fetch all products for filtering
-  const { data: productsData, isLoading } = useQuery({
-    queryKey: ['search-products', query, category],
+  // Fetch store settings
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
     queryFn: async () => {
-      let supabaseQuery = supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          image_url,
-          selling_price,
-          current_stock,
-          categories (id, name)
-        `)
-        .eq('is_active', true);
-
-      if (query) {
-        supabaseQuery = supabaseQuery.ilike('name', `%${query}%`);
-      }
-
-      if (category && category !== 'all') {
-        supabaseQuery = supabaseQuery.eq('category_id', category);
-      }
-
-      const { data, error } = await supabaseQuery.order('name');
-      
+      const { data, error } = await supabase.from('settings').select('*');
       if (error) throw error;
-      return data || [];
+      
+      const settingsMap: Record<string, any> = {};
+      data?.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      return settingsMap;
     }
   });
 
-  // Get max price for slider
-  const maxPrice = useMemo(() => {
-    if (!productsData?.length) return 1000000;
-    return Math.max(...productsData.map(p => p.selling_price));
-  }, [productsData]);
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
-  // Filter products by price range
-  const filteredProducts = useMemo(() => {
-    if (!productsData) return [];
-    
-    return productsData.filter(product => 
-      product.selling_price >= priceRange[0] && 
-      product.selling_price <= priceRange[1]
-    );
-  }, [productsData, priceRange]);
+  // Search products
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['search-products', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm.trim()) return [];
 
-  // Update URL params when filters change
-  React.useEffect(() => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.set('q', searchTerm);
-    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
-    setSearchParams(params);
-  }, [searchTerm, selectedCategory, setSearchParams]);
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(id, name),
+          units(name, abbreviation)
+        `)
+        .eq('is_active', true)
+        .ilike('name', `%${searchTerm}%`)
+        .order('name');
 
-  const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.set('q', searchTerm);
-    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
-    setSearchParams(params);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!searchTerm.trim()
+  });
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setSearchParams({ q: searchTerm.trim() });
+    }
   };
 
+  const handleAddToCart = (product: any) => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: 1,
+      image: product.image_url,
+      stock: product.current_stock
+    });
+
+    toast({
+      title: 'Produk ditambahkan ke keranjang',
+      description: `${product.name} telah ditambahkan ke keranjang belanja`,
+    });
+  };
+
+  const getImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return '/placeholder.svg';
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(imageUrl);
+    
+    return data.publicUrl;
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
+
+  const storeInfo = settings?.store_info || {};
+  const contactInfo = settings?.contact_info || {};
+  const logoUrl = storeInfo.logo_url;
+  const storeName = storeInfo.name || 'Toko Online';
+
   return (
-    <Layout>
-      <div className="space-y-6">
-        {/* Search Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Search className="h-6 w-6 text-blue-600" />
-            <h1 className="text-2xl font-bold">Hasil Pencarian</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Fixed Navbar */}
+      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
+        {/* Top bar with contact info - Hidden on mobile */}
+        {!isMobile && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+              <div className="flex items-center space-x-4">
+                {contactInfo.phone && (
+                  <span>📞 {contactInfo.phone}</span>
+                )}
+                {contactInfo.email && (
+                  <span className="hidden md:inline">✉️ {contactInfo.email}</span>
+                )}
+              </div>
+              <div className="flex items-center space-x-4">
+                <span>Selamat Datang di {storeName}!</span>
+              </div>
+            </div>
           </div>
-          
-          <EnhancedSearchWithSuggestions
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onSearch={handleSearch}
-          />
-          
-          {query && (
-            <p className="mt-4 text-gray-600">
-              Menampilkan hasil untuk: <span className="font-semibold">"{query}"</span>
-              {filteredProducts && (
-                <span className="ml-2">({filteredProducts.length} produk ditemukan)</span>
+        )}
+
+        {/* Main navbar */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo & Store Name */}
+            <div className="flex items-center space-x-3">
+              {logoUrl && (
+                <div className="relative">
+                  <img 
+                    src={logoUrl} 
+                    alt={storeName} 
+                    className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} 
+                  />
+                </div>
+              )}
+              {!logoUrl && (
+                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
+                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                </div>
+              )}
+              <div>
+                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
+                  {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
+                </h1>
+                {!isMobile && (
+                  <p className="text-xs text-gray-500">
+                    {storeInfo.tagline || 'Toko Online Terpercaya'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="search"
+                  placeholder="Cari produk..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </form>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Cart - Only show if user is logged in */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative hover:bg-blue-50 p-2"
+                  onClick={() => setShowCartModal(true)}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+
+              {/* User Menu - Desktop */}
+              {!isMobile && (
+                <div>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
+                          {profile?.avatar_url ? (
+                            <img 
+                              src={profile.avatar_url} 
+                              alt="Profile" 
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserCircle className="h-6 w-6" />
+                          )}
+                          <span className="hidden lg:inline text-sm font-medium">
+                            {profile?.full_name || user.email?.split('@')[0]}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem disabled>
+                          <User className="h-4 w-4 mr-2" />
+                          {profile?.full_name || user.email?.split('@')[0]}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setAuthModalOpen(true)}
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50 px-4"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Masuk
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Mobile menu button */}
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-2"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && isMobile && (
+          <div className="bg-white border-t shadow-lg">
+            <div className="px-4 py-4 space-y-4">
+              {/* Contact info on mobile */}
+              {contactInfo.phone && (
+                <div className="text-sm text-gray-600 pb-2 border-b">
+                  📞 {contactInfo.phone}
+                </div>
+              )}
+              
+              <div className="border-t pt-4">
+                {user ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 py-2">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Profile" 
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle className="h-8 w-8 text-gray-400" />
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {profile?.full_name || 'User'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Masuk
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        {/* Search Results Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Hasil Pencarian
+          </h1>
+          {searchTerm && (
+            <p className="text-gray-600">
+              Menampilkan hasil untuk "<span className="font-medium">{searchTerm}</span>"
+              {products.length > 0 && (
+                <span className="ml-2">({products.length} produk ditemukan)</span>
               )}
             </p>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <SearchFilters
-              selectedCategory={selectedCategory}
-              onCategoryChange={setSelectedCategory}
-              priceRange={priceRange}
-              onPriceRangeChange={setPriceRange}
-              maxPrice={maxPrice}
-            />
-          </div>
-
-          {/* Results Grid */}
-          <div className="lg:col-span-3">
-            {isLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-3">
-                      <div className="aspect-square bg-gray-200 rounded-lg mb-3"></div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded"></div>
-                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                        <div className="h-6 bg-gray-200 rounded"></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : filteredProducts?.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Package className="h-16 w-16 text-gray-400 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    Tidak ada produk ditemukan
-                  </h3>
-                  <p className="text-gray-500 text-center">
-                    Coba ubah kata kunci pencarian atau filter yang Anda gunakan
-                  </p>
+        {/* Search Results */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-4">
+                  <div className="w-full h-48 bg-gray-200 rounded-md mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-8 bg-gray-200 rounded"></div>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredProducts?.map((product) => (
-                  <SearchProductCard key={product.id} product={product} />
-                ))}
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-12">
+            <Search className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {searchTerm ? 'Produk tidak ditemukan' : 'Mulai pencarian'}
+            </h3>
+            <p className="text-gray-600">
+              {searchTerm 
+                ? `Tidak ada produk yang sesuai dengan "${searchTerm}"` 
+                : 'Ketik kata kunci untuk mencari produk'
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="p-4">
+                  <div className="relative mb-4">
+                    <img
+                      src={getImageUrl(product.image_url)}
+                      alt={product.name}
+                      className="w-full h-48 object-cover rounded-md group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {product.current_stock <= product.min_stock && (
+                      <Badge variant="destructive" className="absolute top-2 right-2">
+                        Stok Terbatas
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      {product.name}
+                    </h3>
+                    
+                    {product.categories && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.categories.name}
+                      </Badge>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg font-bold text-blue-600">
+                          Rp {product.selling_price.toLocaleString('id-ID')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Stok: {product.current_stock}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      onClick={() => handleAddToCart(product)}
+                      disabled={product.current_stock === 0}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      size="sm"
+                    >
+                      {product.current_stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white mt-16">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Store Info */}
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center space-x-3 mb-4">
+                {logoUrl && (
+                  <img 
+                    src={logoUrl} 
+                    alt={storeName} 
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                )}
+                <div>
+                  <h3 className="text-xl font-bold">{storeName}</h3>
+                  <p className="text-gray-400 text-sm">{storeInfo.tagline || 'Toko Online Terpercaya'}</p>
+                </div>
               </div>
-            )}
+              {storeInfo.description && (
+                <p className="text-gray-300 mb-4">{storeInfo.description}</p>
+              )}
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Kontak</h4>
+              <div className="space-y-3">
+                {contactInfo.phone && (
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-blue-400" />
+                    <span className="text-gray-300">{contactInfo.phone}</span>
+                  </div>
+                )}
+                {contactInfo.email && (
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-blue-400" />
+                    <span className="text-gray-300">{contactInfo.email}</span>
+                  </div>
+                )}
+                {contactInfo.address && (
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="h-4 w-4 text-blue-400 mt-1" />
+                    <span className="text-gray-300">{contactInfo.address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Business Hours */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Jam Operasional</h4>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                  <span className="text-gray-300">
+                    {contactInfo.business_hours || 'Senin - Minggu: 08:00 - 22:00'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Social Media */}
+              {(contactInfo.facebook || contactInfo.instagram) && (
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-4">Ikuti Kami</h4>
+                  <div className="flex space-x-4">
+                    {contactInfo.facebook && (
+                      <a 
+                        href={contactInfo.facebook} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        <Facebook className="h-6 w-6" />
+                      </a>
+                    )}
+                    {contactInfo.instagram && (
+                      <a 
+                        href={contactInfo.instagram} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-pink-400 hover:text-pink-300 transition-colors"
+                      >
+                        <Instagram className="h-6 w-6" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Separator className="my-8 bg-gray-700" />
+
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-400 text-sm">
+              © 2024 {storeName}. Semua hak dilindungi.
+            </p>
+            <div className="flex items-center space-x-4 mt-4 md:mt-0">
+              <span className="text-gray-400 text-sm">Powered by Lovable</span>
+            </div>
           </div>
         </div>
-      </div>
-    </Layout>
+      </footer>
+
+      {/* Modals */}
+      {user && (
+        <EnhancedFrontendCartModal 
+          open={showCartModal} 
+          onOpenChange={setShowCartModal} 
+        />
+      )}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+    </div>
   );
 };
 
