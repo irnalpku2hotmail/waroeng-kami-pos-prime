@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +15,9 @@ interface CustomerFormProps {
   onSuccess?: () => void;
 }
 
-type CustomerInsert = Database['public']['Tables']['customers']['Insert'];
+type CustomerInsert = Omit<Database['public']['Tables']['customers']['Insert'], 'customer_code'> & {
+  customer_code?: string;
+};
 type CustomerUpdate = Database['public']['Tables']['customers']['Update'];
 
 const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
