@@ -133,14 +133,14 @@ const EnhancedShippingInfo = () => {
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full"></div>
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
                   Lokasi Pengiriman
                   {locationAddress && (
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
                       Aktif
                     </span>
                   )}
-                </h3>
+                </h2>
                 
                 {locationAddress ? (
                   <div className="space-y-3">
