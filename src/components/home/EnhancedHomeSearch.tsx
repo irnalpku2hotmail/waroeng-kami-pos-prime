@@ -147,7 +147,7 @@ const EnhancedHomeSearch = ({
       <div className="flex gap-2">
         {/* Category Filter */}
         <Select value={selectedCategory || 'all'} onValueChange={onCategoryChange}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Pilih kategori produk">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Kategori" />
           </SelectTrigger>
@@ -187,6 +187,7 @@ const EnhancedHomeSearch = ({
                   onSearchChange('');
                   setShowSuggestions(false);
                 }}
+                aria-label="Hapus pencarian"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -196,6 +197,7 @@ const EnhancedHomeSearch = ({
               size="sm"
               className="h-8 px-2 text-blue-600 hover:bg-blue-50"
               onClick={() => handleSearch()}
+              aria-label="Cari produk"
             >
               <Search className="h-4 w-4" />
             </Button>
