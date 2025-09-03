@@ -84,6 +84,9 @@ const BannerCarousel = () => {
                 src={image}
                 alt={`Banner ${index + 1}`}
                 className="w-full h-full object-cover"
+                loading={index === 0 ? "eager" : "lazy"}
+                fetchPriority={index === 0 ? "high" : "low"}
+                decoding={index === 0 ? "sync" : "async"}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             </div>
