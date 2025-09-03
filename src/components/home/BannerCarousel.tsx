@@ -85,6 +85,8 @@ const BannerCarousel = () => {
                 data-src={image}
                 alt={`Banner ${index + 1}`}
                 className="w-full h-full object-cover"
+                width="1301"
+                height="320"
                 loading={index === 0 ? "eager" : "lazy"}
                 fetchPriority={index === 0 ? "high" : "low"}
                 decoding={index === 0 ? "sync" : "async"}

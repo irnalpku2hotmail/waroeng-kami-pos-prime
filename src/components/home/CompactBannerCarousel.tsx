@@ -65,6 +65,8 @@ const CompactBannerCarousel = () => {
                       alt={`Banner ${index + 1}`}
                       className="w-full h-full object-cover"
                       style={{ aspectRatio: '16/9' }}
+                      width="1301"
+                      height="160"
                       loading={index === 0 ? "eager" : "lazy"}
                       fetchPriority={index === 0 ? "high" : "low"}
                       decoding={index === 0 ? "sync" : "async"}
