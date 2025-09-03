@@ -81,12 +81,21 @@ const BannerCarousel = () => {
               }}
             >
               <img
-                src={image}
+                src={Math.abs(index - currentSlide) <= 1 ? image : '/placeholder.svg'}
+                data-src={image}
                 alt={`Banner ${index + 1}`}
                 className="w-full h-full object-cover"
                 loading={index === 0 ? "eager" : "lazy"}
                 fetchPriority={index === 0 ? "high" : "low"}
                 decoding={index === 0 ? "sync" : "async"}
+                onLoad={(e) => {
+                  if (Math.abs(index - currentSlide) > 1) {
+                    const img = e.target as HTMLImageElement;
+                    if (img.src === '/placeholder.svg' && img.dataset.src) {
+                      img.src = img.dataset.src;
+                    }
+                  }
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             </div>
