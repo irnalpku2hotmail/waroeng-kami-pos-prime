@@ -7,8 +7,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const BannerCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Static primary banner for immediate LCP
+  const primaryBanner = 'https://storage.googleapis.com/company-profile-b7/1731662827256-50babe33-0abb-4ee3-aab6-91ffaa96b782.jpg';
+
   // Fetch banner settings
-  const { data: settings } = useQuery({
+  const { data: settings, isLoading } = useQuery({
     queryKey: ['banner-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -28,12 +31,13 @@ const BannerCarousel = () => {
 
   // Default banner images if none configured
   const defaultBanners = [
-    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=300&fit=crop',
+    primaryBanner,
     'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&h=300&fit=crop',
     'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=300&fit=crop'
   ];
 
-  const bannerImages = settings?.banner_images || defaultBanners;
+  // Use static primary banner immediately, then switch to dynamic data when loaded
+  const bannerImages = !isLoading && settings?.banner_images ? settings.banner_images : defaultBanners;
   const isBannerEnabled = settings?.banner_enabled !== false;
 
   // Auto-slide every 7 seconds
@@ -81,8 +85,7 @@ const BannerCarousel = () => {
               }}
             >
               <img
-                src={Math.abs(index - currentSlide) <= 1 ? image : '/placeholder.svg'}
-                data-src={image}
+                src={image}
                 alt={`Banner ${index + 1}`}
                 className="w-full h-full object-cover"
                 width="1301"
@@ -90,14 +93,6 @@ const BannerCarousel = () => {
                 loading={index === 0 ? "eager" : "lazy"}
                 fetchPriority={index === 0 ? "high" : "low"}
                 decoding={index === 0 ? "sync" : "async"}
-                onLoad={(e) => {
-                  if (Math.abs(index - currentSlide) > 1) {
-                    const img = e.target as HTMLImageElement;
-                    if (img.src === '/placeholder.svg' && img.dataset.src) {
-                      img.src = img.dataset.src;
-                    }
-                  }
-                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             </div>
