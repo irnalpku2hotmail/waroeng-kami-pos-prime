@@ -17,7 +17,10 @@ const CategorySearchList = () => {
     queryFn: async () => {
       let query = supabase
         .from('categories')
-        .select('*')
+        .select(`
+          *,
+          products(count)
+        `)
         .order('name');
 
       if (searchTerm) {
@@ -97,6 +100,9 @@ const CategorySearchList = () => {
                             </Badge>
                             <Badge variant="secondary" className="text-xs">
                               {new Date(category.created_at).toLocaleDateString('id-ID')}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {category.products?.[0]?.count || 0} produk
                             </Badge>
                           </div>
                         </div>

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, Ruler, Edit, Trash2, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import UnitModal from '../UnitModal';
 
 const UnitSearchList = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +63,10 @@ const UnitSearchList = () => {
     }
   };
 
+  const handleSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['units-list'] });
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -81,6 +86,7 @@ const UnitSearchList = () => {
               <Ruler className="h-5 w-5" />
               Daftar Unit
             </CardTitle>
+            <UnitModal onSuccess={handleSuccess} />
           </div>
           
           <div className="relative">
@@ -124,6 +130,15 @@ const UnitSearchList = () => {
                       </div>
                       
                       <div className="flex items-center space-x-2">
+                        <UnitModal
+                          unit={unit}
+                          onSuccess={handleSuccess}
+                          trigger={
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
                         <Button
                           variant="outline"
                           size="sm"

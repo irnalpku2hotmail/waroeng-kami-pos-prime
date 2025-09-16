@@ -25,17 +25,10 @@ const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
     date_of_birth: customer?.date_of_birth || '',
   });
 
-  const createCustomer = useMutation({
+const createCustomer = useMutation({
     mutationFn: async (data: any) => {
-      // Generate customer code using RPC function
-      const { data: customerCode, error: codeError } = await supabase
-        .rpc('generate_customer_code');
-
-      if (codeError) throw codeError;
-
       const customerData = {
         ...data,
-        customer_code: customerCode,
         total_points: 0,
         total_spent: 0
       };

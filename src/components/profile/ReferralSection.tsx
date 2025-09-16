@@ -118,35 +118,35 @@ const ReferralSection = () => {
 
   const shareToWhatsApp = () => {
     if (!referralCode?.code) return;
-    const message = `Bergabunglah dengan aplikasi kami menggunakan kode referral saya: ${referralCode.code}`;
+    const message = `🎉 Dapatkan Poin Gratis! 🎉\n\nHalo! Aku mau ajak kamu gabung di aplikasi toko keren ini. Pakai kode referral aku: ${referralCode.code}\n\nKamu bisa belanja lebih hemat dan dapat poin reward! 🛍️✨\n\nDownload sekarang: ${window.location.origin}`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
   const shareToFacebook = () => {
     if (!referralCode?.code) return;
-    const message = `Bergabunglah dengan aplikasi kami menggunakan kode referral saya: ${referralCode.code}`;
+    const message = `🎉 Dapatkan Poin Gratis dengan kode referral: ${referralCode.code} 🎉\n\nBelanja lebih hemat dan dapat reward menarik! Download aplikasi sekarang!`;
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}&quote=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
   const shareToInstagram = () => {
     if (!referralCode?.code) return;
-    const message = `Bergabunglah dengan aplikasi kami menggunakan kode referral saya: ${referralCode.code}`;
+    const message = `🎉 Dapatkan Poin Gratis! 🎉\n\nPakai kode referral aku: ${referralCode.code}\nBelanja lebih hemat dan dapat reward! 🛍️✨\n\n#referral #shopping #rewards #hemat`;
     navigator.clipboard.writeText(message);
     toast({
-      title: 'Disalin!',
-      description: 'Pesan referral telah disalin. Anda bisa paste di Instagram.',
+      title: '📋 Pesan Disalin!',
+      description: 'Pesan referral telah disalin. Silakan paste di Instagram Story atau Post kamu!',
     });
   };
 
   const shareToTikTok = () => {
     if (!referralCode?.code) return;
-    const message = `Bergabunglah dengan aplikasi kami menggunakan kode referral saya: ${referralCode.code}`;
+    const message = `🔥 KODE REFERRAL GRATIS! 🔥\n\nKode: ${referralCode.code}\nBelanja hemat + dapat poin! 🛍️💎\n\n#fyp #referralcode #belanja #hemat #viral`;
     navigator.clipboard.writeText(message);
     toast({
-      title: 'Disalin!',
-      description: 'Pesan referral telah disalin. Anda bisa paste di TikTok.',
+      title: '🎬 Caption Disalin!',
+      description: 'Caption referral telah disalin. Bikin video TikTok dan paste captionnya!',
     });
   };
 
@@ -155,10 +155,11 @@ const ReferralSection = () => {
     
     setCopying(true);
     try {
-      await navigator.clipboard.writeText(referralCode.code);
+      const message = `🎉 Pakai kode referral aku: ${referralCode.code} dan dapatkan poin gratis! Download aplikasi di: ${window.location.origin}`;
+      await navigator.clipboard.writeText(message);
       toast({
-        title: 'Disalin!',
-        description: 'Kode referral telah disalin ke clipboard',
+        title: '🎁 Kode Ajaib Disalin!',
+        description: 'Pesan referral lengkap sudah disalin! Bagikan ke teman dan dapatkan poin reward! ✨',
       });
     } catch (error) {
       toast({

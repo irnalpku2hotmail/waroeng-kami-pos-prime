@@ -15,6 +15,7 @@ import ReturnsForm from '@/components/ReturnsForm';
 import ReturnDetailModal from '@/components/ReturnDetailModal';
 import ReturnStats from '@/components/returns/ReturnStats';
 import PaginationComponent from '@/components/PaginationComponent';
+import CustomerReturnsTab from '@/components/returns/CustomerReturnsTab';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -244,40 +245,53 @@ const Returns = () => {
           />
         </div>
 
-        <Tabs defaultValue="process" className="w-full">
+        <Tabs defaultValue="supplier" className="w-full">
           <TabsList>
-            <TabsTrigger value="process">Process ({processReturns.length})</TabsTrigger>
-            <TabsTrigger value="history">History ({successReturns.length})</TabsTrigger>
+            <TabsTrigger value="supplier">Retur Supplier</TabsTrigger>
+            <TabsTrigger value="customer">Retur Pelanggan</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="process">
-            <div className="border rounded-lg">
-              {isLoading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : processReturns.length === 0 ? (
-                <div className="text-center py-8">
-                  <RotateCcw className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">Belum ada return dalam proses</p>
+          <TabsContent value="supplier">
+            <Tabs defaultValue="process" className="w-full">
+              <TabsList>
+                <TabsTrigger value="process">Process ({processReturns.length})</TabsTrigger>
+                <TabsTrigger value="history">History ({successReturns.length})</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="process">
+                <div className="border rounded-lg">
+                  {isLoading ? (
+                    <div className="text-center py-8">Loading...</div>
+                  ) : processReturns.length === 0 ? (
+                    <div className="text-center py-8">
+                      <RotateCcw className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <p className="text-gray-500">Belum ada return dalam proses</p>
+                    </div>
+                  ) : (
+                    <ReturnTable data={processReturns} />
+                  )}
                 </div>
-              ) : (
-                <ReturnTable data={processReturns} />
-              )}
-            </div>
+              </TabsContent>
+              
+              <TabsContent value="history">
+                <div className="border rounded-lg">
+                  {isLoading ? (
+                    <div className="text-center py-8">Loading...</div>
+                  ) : successReturns.length === 0 ? (
+                    <div className="text-center py-8">
+                      <RotateCcw className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <p className="text-gray-500">Belum ada return yang selesai</p>
+                    </div>
+                  ) : (
+                    <ReturnTable data={successReturns} />
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
           
-          <TabsContent value="history">
-            <div className="border rounded-lg">
-              {isLoading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : successReturns.length === 0 ? (
-                <div className="text-center py-8">
-                  <RotateCcw className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">Belum ada return yang selesai</p>
-                </div>
-              ) : (
-                <ReturnTable data={successReturns} />
-              )}
-            </div>
+          <TabsContent value="customer">
+            <CustomerReturnsTab />
           </TabsContent>
         </Tabs>
         

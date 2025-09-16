@@ -86,6 +86,108 @@ export type Database = {
           },
         ]
       }
+      customer_return_items: {
+        Row: {
+          created_at: string
+          customer_return_id: string
+          id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          customer_return_id: string
+          id?: string
+          product_id: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          customer_return_id?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_return_items_customer_return_id_fkey"
+            columns: ["customer_return_id"]
+            isOneToOne: false
+            referencedRelation: "customer_returns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_returns: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          order_id: string | null
+          processed_by: string | null
+          reason: string | null
+          return_date: string
+          return_number: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          order_id?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          return_date?: string
+          return_number: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          order_id?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          return_date?: string
+          return_number?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_returns_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -1549,6 +1651,10 @@ export type Database = {
         Returns: boolean
       }
       generate_customer_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_customer_return_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
