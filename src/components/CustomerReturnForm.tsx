@@ -256,7 +256,6 @@ const CustomerReturnForm = ({ returnData, onSuccess, onCancel }: CustomerReturnF
                   <SelectValue placeholder="Pilih order" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tanpa Order</SelectItem>
                   {orders.map(order => (
                     <SelectItem key={order.id} value={order.id}>
                       {order.order_number} - Rp {order.total_amount?.toLocaleString('id-ID')}
