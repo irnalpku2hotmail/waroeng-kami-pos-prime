@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import CategoryModal from '../CategoryModal';
 
 const CategorySearchList = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: categories = [], isLoading, refetch } = useQuery({
     queryKey: ['categories-list', searchTerm],
@@ -32,6 +34,26 @@ const CategorySearchList = () => {
       return data || [];
     }
   });
+
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories-list'] });
+      toast({ title: 'Berhasil', description: 'Kategori berhasil dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const handleDeleteCategory = (id: string) => {
+    if (confirm('Apakah Anda yakin ingin menghapus kategori ini?')) {
+      deleteCategory.mutate(id);
+    }
+  };
 
   const handleSuccess = () => {
     refetch();
@@ -118,6 +140,14 @@ const CategorySearchList = () => {
                             </Button>
                           }
                         />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDeleteCategory(category.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

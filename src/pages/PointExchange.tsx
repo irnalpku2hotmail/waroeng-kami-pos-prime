@@ -25,7 +25,14 @@ const PointExchange = () => {
       
       let query = supabase
         .from('customers')
-        .select('*');
+        .select(`
+          id,
+          name,
+          customer_code,
+          email,
+          phone,
+          total_points
+        `);
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);

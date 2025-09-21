@@ -41,7 +41,20 @@ const Customers = () => {
       
       let query = supabase
         .from('customers')
-        .select('*', { count: 'exact' });
+        .select(`
+          id,
+          name,
+          customer_code,
+          email,
+          phone,
+          address,
+          date_of_birth,
+          total_points,
+          total_spent,
+          qr_code_url,
+          created_at,
+          updated_at
+        `, { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
