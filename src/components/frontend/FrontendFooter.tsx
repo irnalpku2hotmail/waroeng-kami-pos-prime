@@ -39,25 +39,6 @@ const FrontendFooter = () => {
         <div className="absolute bottom-10 right-10 w-40 h-40 bg-purple-500 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Newsletter section */}
-      <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 py-12">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <h3 className="text-2xl font-bold mb-4">Dapatkan Update Terbaru!</h3>
-          <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-            Berlangganan newsletter kami untuk mendapatkan informasi produk terbaru, penawaran spesial, dan tips belanja.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Masukkan email Anda"
-              className="flex-1 px-4 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-white"
-            />
-            <Button className="bg-white text-blue-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-full">
-              Berlangganan
-            </Button>
-          </div>
-        </div>
-      </div>
 
       <div className="relative max-w-7xl mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

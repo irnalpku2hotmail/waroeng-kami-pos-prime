@@ -45,7 +45,7 @@ const HomeFooter = () => {
           {/* Store Info */}
           <div className="col-span-1 md:col-span-2">
             <h3 className="text-xl font-bold mb-4 text-blue-400">
-              {getStoreInfo('store_name') || 'SmartPOS'}
+              {settings?.store_info?.store_name || 'SmartPOS'}
             </h3>
             <p className="text-gray-300 mb-6 leading-relaxed">
               Toko terpercaya dengan pelayanan terbaik untuk kebutuhan sehari-hari Anda. 
@@ -58,7 +58,7 @@ const HomeFooter = () => {
                 <div>
                   <p className="font-medium text-white">Alamat Toko</p>
                   <p className="text-gray-300 text-sm">
-                    {getStoreInfo('store_address') || 'Alamat toko belum diatur'}
+                    {settings?.store_info?.store_address || 'Alamat toko belum diatur'}
                   </p>
                 </div>
               </div>
@@ -68,7 +68,7 @@ const HomeFooter = () => {
                 <div>
                   <p className="font-medium text-white">Telepon</p>
                   <p className="text-gray-300 text-sm">
-                    {getStoreInfo('store_phone') || 'Nomor telepon belum diatur'}
+                    {settings?.contact_info?.phone || 'Nomor telepon belum diatur'}
                   </p>
                 </div>
               </div>
@@ -78,7 +78,7 @@ const HomeFooter = () => {
                 <div>
                   <p className="font-medium text-white">Email</p>
                   <p className="text-gray-300 text-sm">
-                    {getStoreInfo('store_email') || 'Email belum diatur'}
+                    {settings?.contact_info?.email || 'Email belum diatur'}
                   </p>
                 </div>
               </div>
@@ -183,7 +183,7 @@ const HomeFooter = () => {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm">
-              &copy; 2024 {getStoreInfo('store_name') || 'SmartPOS'}. Semua hak dilindungi.
+              &copy; 2024 {settings?.store_info?.store_name || 'SmartPOS'}. Semua hak dilindungi.
             </p>
             <div className="flex gap-6 text-sm">
               <a href="#" className="text-gray-400 hover:text-white transition-colors">

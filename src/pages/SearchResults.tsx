@@ -484,7 +484,8 @@ const SearchResults = () => {
                     <img
                       src={product.image_url || '/placeholder.svg'}
                       alt={product.name}
-                      className="w-full h-32 object-cover rounded-md"
+                      className="w-full h-32 object-cover rounded-md cursor-pointer"
+                      onClick={() => navigate(`/product/${product.id}`)}
                     />
                   </div>
                   
@@ -499,14 +500,6 @@ const SearchResults = () => {
                     <p className="text-xs text-gray-500">
                       Stok: {product.current_stock}
                     </p>
-                    
-                    <Button
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => navigate(`/product/${product.id}`)}
-                    >
-                      Lihat Detail
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
