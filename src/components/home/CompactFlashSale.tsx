@@ -122,7 +122,7 @@ const CompactFlashSale = () => {
     );
   }
 
-  if (error || !flashSaleData) {
+  if (error || !flashSaleData || !flashSaleData.product) {
     return null;
   }
 
