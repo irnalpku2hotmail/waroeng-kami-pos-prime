@@ -186,58 +186,117 @@ export const usePOS = () => {
 
   const printReceipt = async (transaction: any) => {
     try {
-      const storeName = settings?.store_name?.name || 'SmartPOS';
-      const storePhone = settings?.store_phone?.phone || '';
-      const storeAddress = settings?.store_address?.address || '';
-      const receiptSettings = settings?.receipt_settings || {};
-      const receiptHeader = receiptSettings.header_text || 'Terima kasih telah berbelanja';
-      const receiptFooter = receiptSettings.footer_text || 'Barang yang sudah dibeli tidak dapat dikembalikan';
-      const showQrCode = receiptSettings.show_qr_code !== false;
-
-      const qrCodeUrl = showQrCode ? `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${transaction.transaction_number}` : '';
+      // Get settings from the receipt settings tab
+      const receiptWidth = settings?.receipt_width?.value || '80mm';
+      const storeName = settings?.store_name?.value || 'SmartPOS';
+      const storePhone = settings?.store_phone?.value || '';
+      const storeAddress = settings?.store_address?.value || '';
+      const receiptFooter = settings?.receipt_footer?.value || 'Terima Kasih!';
 
       const receiptContent = `
-========================================
-           ${storeName}
-========================================
-${storePhone ? `Tel: ${storePhone}` : ''}
-${storeAddress ? `${storeAddress}` : ''}
-========================================
-${receiptHeader}
-========================================
-Transaction: ${transaction.transaction_number}
-Date: ${new Date().toLocaleString('id-ID')}
-Cashier: ${user?.email}
-${selectedCustomer ? `Customer: ${selectedCustomer.name}` : ''}
-----------------------------------------
-${cart.map(item => `
-${item.name}
-${item.quantity} x Rp ${item.unit_price.toLocaleString('id-ID')}
-                    Rp ${item.total_price.toLocaleString('id-ID')}
-`).join('')}
-----------------------------------------
-Total: Rp ${getTotalAmount().toLocaleString('id-ID')}
-Payment: ${paymentType === 'cash' ? 'Cash' : paymentType === 'credit' ? 'Credit' : 'Transfer'}
-${paymentType === 'cash' ? `Paid: Rp ${paymentAmount.toLocaleString('id-ID')}` : ''}
-${paymentType === 'cash' ? `Change: Rp ${getChangeAmount().toLocaleString('id-ID')}` : ''}
-${paymentType === 'transfer' ? `Ref: ${transferReference}` : ''}
-${selectedCustomer ? `Points Earned: ${getTotalPointsEarned()}` : ''}
-${paymentType === 'credit' ? `Due Date: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}` : ''}
-========================================
-${receiptFooter}
-========================================
+        <html>
+          <head>
+            <title>Receipt</title>
+            <style>
+              @media print {
+                body { margin: 0; padding: 10px; font-family: monospace; font-size: 12px; }
+                .receipt { width: ${receiptWidth}; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { text-align: left; padding: 2px 0; }
+                .center { text-align: center; }
+                .right { text-align: right; }
+                .border-top { border-top: 1px dashed #000; margin: 5px 0; }
+                @page { margin: 0; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="receipt">
+              <div class="center">
+                <h2 style="margin: 0;">${storeName}</h2>
+                <p style="margin: 2px 0;">${storeAddress}</p>
+                <p style="margin: 2px 0;">Telp: ${storePhone}</p>
+              </div>
+              <div class="border-top"></div>
+              <p>No: ${transaction.transaction_number}</p>
+              <p>Tanggal: ${new Date(transaction.created_at).toLocaleString('id-ID')}</p>
+              <p>Kasir: ${user?.email || 'Admin'}</p>
+              ${selectedCustomer ? `<p>Pelanggan: ${selectedCustomer.name}</p>` : ''}
+              <div class="border-top"></div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th class="center">Qty</th>
+                    <th class="right">Harga</th>
+                    <th class="right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${cart.map(item => `
+                    <tr>
+                      <td>${item.name}</td>
+                      <td class="center">${item.quantity}</td>
+                      <td class="right">${new Intl.NumberFormat('id-ID').format(item.unit_price)}</td>
+                      <td class="right">${new Intl.NumberFormat('id-ID').format(item.total_price)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <div class="border-top"></div>
+              <table>
+                <tr>
+                  <td><strong>Total:</strong></td>
+                  <td class="right"><strong>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(getTotalAmount())}</strong></td>
+                </tr>
+                <tr>
+                  <td>Bayar:</td>
+                  <td class="right">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(paymentAmount)}</td>
+                </tr>
+                ${paymentType === 'cash' ? `
+                <tr>
+                  <td>Kembali:</td>
+                  <td class="right">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(getChangeAmount())}</td>
+                </tr>
+                ` : ''}
+                ${paymentType === 'transfer' ? `
+                <tr>
+                  <td>Ref Transfer:</td>
+                  <td class="right">${transferReference}</td>
+                </tr>
+                ` : ''}
+                ${selectedCustomer && getTotalPointsEarned() > 0 ? `
+                <tr>
+                  <td>Poin Didapat:</td>
+                  <td class="right">${getTotalPointsEarned()} poin</td>
+                </tr>
+                ` : ''}
+              </table>
+              <div class="border-top"></div>
+              <p class="center">${receiptFooter}</p>
+              <p class="center">Selamat Berbelanja Kembali</p>
+            </div>
+          </body>
+        </html>
       `;
 
-      if (window.print) {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(`<html><head><title>Receipt</title><style>body { font-family: monospace; font-size: 12px; margin: 0; padding: 10px; text-align: center; } pre { white-space: pre-wrap; margin: 0; } .qr-code { margin: 10px 0; }</style></head><body><pre>${receiptContent}</pre>${showQrCode ? `<div class="qr-code"><img src="${qrCodeUrl}" alt="QR Code" /></div>` : ''}<script>window.onload = function() { window.print(); window.close(); }</script></body></html>`);
-          printWindow.document.close();
-        }
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(receiptContent);
+        printWindow.document.close();
+        
+        // Auto print after content loaded
+        printWindow.onload = function() {
+          printWindow.print();
+          // Close window after printing
+          setTimeout(() => {
+            printWindow.close();
+          }, 500);
+        };
       }
     } catch (error) {
       console.error('Printing error:', error);
-      toast({ title: 'Printing Error', description: 'Unable to print receipt', variant: 'destructive' });
+      toast({ title: 'Error Mencetak', description: 'Gagal mencetak struk', variant: 'destructive' });
     }
   };
 

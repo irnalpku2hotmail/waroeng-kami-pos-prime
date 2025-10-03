@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, User, Gift, Star, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, User, Gift, Star, Edit, Trash2, Search, UserPlus } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerDetails from '@/components/CustomerDetails';
+import CustomerForm from '@/components/CustomerForm';
 import PaginationComponent from '@/components/PaginationComponent';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -23,15 +25,9 @@ const Customers = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
-    date_of_birth: ''
-  });
 
   const { data: customersData, isLoading } = useQuery({
     queryKey: ['customers', searchTerm, currentPage],
@@ -73,36 +69,6 @@ const Customers = () => {
   const customersCount = customersData?.count || 0;
   const totalPages = Math.ceil(customersCount / ITEMS_PER_PAGE);
 
-  const saveCustomer = useMutation({
-    mutationFn: async (customerData: any) => {
-      // Remove customer_code from data since it will be auto-generated
-      const { customer_code, ...dataToSave } = customerData;
-      
-      if (editCustomer) {
-        const { error } = await supabase
-          .from('customers')
-          .update(dataToSave)
-          .eq('id', editCustomer.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('customers')
-          .insert([dataToSave]);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast({ 
-        title: 'Berhasil', 
-        description: editCustomer ? 'Customer berhasil diperbarui' : 'Customer berhasil ditambahkan' 
-      });
-      handleCloseDialog();
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
 
   const deleteCustomer = useMutation({
     mutationFn: async (id: string) => {
@@ -112,39 +78,32 @@ const Customers = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast({ title: 'Berhasil', description: 'Customer berhasil dihapus' });
+      setDeleteCustomerId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeleteCustomerId(null);
     }
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveCustomer.mutate(formData);
-  };
 
   const handleCloseDialog = () => {
     setOpen(false);
     setEditCustomer(null);
-    setFormData({
-      name: '',
-      phone: '',
-      email: '',
-      address: '',
-      date_of_birth: ''
-    });
   };
 
   const handleEditCustomer = (customer: any) => {
     setEditCustomer(customer);
-    setFormData({
-      name: customer.name || '',
-      phone: customer.phone || '',
-      email: customer.email || '',
-      address: customer.address || '',
-      date_of_birth: customer.date_of_birth || ''
-    });
     setOpen(true);
+  };
+
+  const handleDeleteCustomer = (id: string) => {
+    setDeleteCustomerId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteCustomerId) {
+      deleteCustomer.mutate(deleteCustomerId);
+    }
   };
 
   const handleViewDetail = (customer: any) => {
@@ -157,11 +116,27 @@ const Customers = () => {
   const totalSpent = customers.reduce((sum, c) => sum + c.total_spent, 0);
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Manajemen Customer</h1>
-        </div>
+      <Layout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Manajemen Customer</h1>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditCustomer(null)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Tambah Customer
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editCustomer ? 'Edit Customer' : 'Tambah Customer Baru'}
+                  </DialogTitle>
+                </DialogHeader>
+                <CustomerForm customer={editCustomer} onSuccess={handleCloseDialog} />
+              </DialogContent>
+            </Dialog>
+          </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -292,7 +267,8 @@ const Customers = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => deleteCustomer.mutate(customer.id)}
+                              onClick={() => handleDeleteCustomer(customer.id)}
+                              className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -324,6 +300,23 @@ const Customers = () => {
           open={detailModalOpen}
           onOpenChange={setDetailModalOpen}
         />
+
+        <AlertDialog open={!!deleteCustomerId} onOpenChange={(open) => !open && setDeleteCustomerId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Customer</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus customer ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeleteCustomerId(null)}>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+                {deleteCustomer.isPending ? 'Menghapus...' : 'Hapus'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
