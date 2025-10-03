@@ -21,6 +21,7 @@ import CategoriesCarousel from '@/components/home/CategoriesCarousel';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
 import { Separator } from '@/components/ui/separator';
 
+
 const Home = () => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
