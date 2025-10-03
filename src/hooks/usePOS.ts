@@ -310,11 +310,12 @@ export const usePOS = () => {
       const transactionNumber = `TRX${Date.now()}`;
       const pointsEarned = selectedCustomer ? getTotalPointsEarned() : 0;
 
+      // Insert transaction - customer_id can be null
       const { data: transaction, error: transactionError } = await supabase.from('transactions').insert({
         transaction_number: transactionNumber,
         total_amount: totalAmount,
-        cashier_id: user?.id,
-        customer_id: selectedCustomer?.id,
+        cashier_id: user?.id || null,
+        customer_id: selectedCustomer?.id || null,
         payment_type: paymentType,
         payment_amount: paymentType === 'cash' ? paymentAmount : totalAmount,
         change_amount: paymentType === 'cash' ? getChangeAmount() : 0,
@@ -330,6 +331,7 @@ export const usePOS = () => {
       const { error: itemsError } = await supabase.from('transaction_items').insert(transactionItems);
       if (itemsError) throw itemsError;
 
+      // Only update customer if one was selected
       if (selectedCustomer && pointsEarned > 0) {
         const { error: customerError } = await supabase.from('customers').update({ total_points: selectedCustomer.total_points + pointsEarned, total_spent: (selectedCustomer.total_spent || 0) + totalAmount }).eq('id', selectedCustomer.id);
         if (customerError) throw customerError;
