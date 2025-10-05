@@ -1366,6 +1366,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          notes: string | null
           phone: string | null
           updated_at: string
         }
@@ -1376,6 +1377,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          notes?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -1386,6 +1388,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          notes?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -1648,6 +1651,10 @@ export type Database = {
           resource_name: string
           user_id: string
         }
+        Returns: boolean
+      }
+      customer_owns_transaction: {
+        Args: { transaction_customer_id: string }
         Returns: boolean
       }
       generate_customer_code: {
