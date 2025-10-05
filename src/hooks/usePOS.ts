@@ -498,5 +498,6 @@ export const usePOS = () => {
     getChangeAmount,
     processTransaction,
     handleVoiceSearch,
+    printReceipt,
   };
 };

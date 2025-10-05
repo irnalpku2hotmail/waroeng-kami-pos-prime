@@ -53,7 +53,7 @@ const Customers = () => {
         `, { count: 'exact' });
       
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,customers.customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
       }
       
       const { data, error, count } = await query

@@ -60,9 +60,9 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
   const allowedMenuItems = menuItems.filter(item => canAccessRoute(item.resource));
 
   return (
-    <div className={`${collapsed ? 'w-16' : 'w-56'} transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex flex-col`}>
+    <div className={`${collapsed ? 'w-16' : 'w-56'} transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 h-screen z-20`}>
       {/* Header with toggle button */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 min-h-[60px]">
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 min-h-[60px] flex-shrink-0">
         {!collapsed && (
           <h2 className="text-sm font-semibold text-gray-900 truncate">Menu</h2>
         )}

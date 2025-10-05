@@ -30,7 +30,12 @@ const CartSidebar: React.FC<CartSidebarProps> = (props) => {
             updateCartQuantity={props.updateCartQuantity}
             removeFromCart={props.removeFromCart}
           />
-          <PaymentDetails {...props} />
+          <PaymentDetails 
+            {...props}
+            printReceipt={props.printReceipt}
+            user={props.user}
+            settings={props.settings}
+          />
         </CardContent>
       </Card>
     </div>

@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Printer } from 'lucide-react';
 import { CartItem } from '@/hooks/usePOS';
 
 interface PaymentDetailsProps {
@@ -22,6 +22,9 @@ interface PaymentDetailsProps {
     mutate: () => void;
     isPending: boolean;
   };
+  printReceipt: (transaction: any) => void;
+  user: any;
+  settings: any;
 }
 
 const PaymentDetails: React.FC<PaymentDetailsProps> = ({
@@ -37,7 +40,18 @@ const PaymentDetails: React.FC<PaymentDetailsProps> = ({
   transferReference,
   setTransferReference,
   processTransaction,
+  printReceipt,
+  user,
+  settings,
 }) => {
+  const handlePrintReceipt = () => {
+    const mockTransaction = {
+      transaction_number: `TRX${Date.now()}`,
+      created_at: new Date().toISOString(),
+      total_amount: getTotalAmount(),
+    };
+    printReceipt(mockTransaction);
+  };
   if (cart.length === 0) {
     return null;
   }
@@ -51,12 +65,10 @@ const PaymentDetails: React.FC<PaymentDetailsProps> = ({
           <span>Total:</span>
           <span className="font-bold">Rp {totalAmount.toLocaleString('id-ID')}</span>
         </div>
-        {selectedCustomer && (
-          <div className="flex justify-between text-sm text-blue-600">
-            <span>Poin yang didapat:</span>
-            <span>{getTotalPointsEarned()} pts</span>
-          </div>
-        )}
+        <div className="flex justify-between text-sm text-blue-600">
+          <span>Poin yang didapat:</span>
+          <span>{getTotalPointsEarned()} pts</span>
+        </div>
       </div>
 
       <div>
@@ -109,19 +121,30 @@ const PaymentDetails: React.FC<PaymentDetailsProps> = ({
         </div>
       )}
 
-      <Button
-        className="w-full"
-        onClick={() => processTransaction.mutate()}
-        disabled={
-          cart.length === 0 || 
-          (paymentType === 'cash' && paymentAmount < totalAmount) ||
-          (paymentType === 'transfer' && !transferReference) ||
-          processTransaction.isPending
-        }
-      >
-        <DollarSign className="h-4 w-4 mr-2" />
-        {processTransaction.isPending ? 'Memproses...' : 'Proses Transaksi'}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={handlePrintReceipt}
+          disabled={cart.length === 0}
+          className="flex-1"
+        >
+          <Printer className="h-4 w-4 mr-2" />
+          Print Faktur
+        </Button>
+        <Button
+          className="flex-1"
+          onClick={() => processTransaction.mutate()}
+          disabled={
+            cart.length === 0 || 
+            (paymentType === 'cash' && paymentAmount < totalAmount) ||
+            (paymentType === 'transfer' && !transferReference) ||
+            processTransaction.isPending
+          }
+        >
+          <DollarSign className="h-4 w-4 mr-2" />
+          {processTransaction.isPending ? 'Memproses...' : 'Proses Transaksi'}
+        </Button>
+      </div>
     </div>
   );
 };
