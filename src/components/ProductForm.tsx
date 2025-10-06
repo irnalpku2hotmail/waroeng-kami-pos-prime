@@ -507,8 +507,11 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                 id="loyalty_points"
                 type="number"
                 value={formData.loyalty_points}
-                onChange={(e) => setFormData({ ...formData, loyalty_points: parseInt(e.target.value) || 1 })}
-                placeholder="1"
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                  setFormData({ ...formData, loyalty_points: isNaN(value) ? 0 : value });
+                }}
+                placeholder="0"
                 min="0"
               />
             </div>

@@ -60,8 +60,7 @@ const CompactBannerCarousel = () => {
                 <CardContent className="p-0">
                   <div className="relative w-full h-32 md:h-40 overflow-hidden rounded-xl">
                     <img
-                      src={index < 2 ? imageUrl || '/placeholder.svg' : '/placeholder.svg'}
-                      data-src={imageUrl || '/placeholder.svg'}
+                      src={imageUrl || '/placeholder.svg'}
                       alt={`Banner ${index + 1}`}
                       className="w-full h-full object-cover"
                       style={{ aspectRatio: '16/9' }}
@@ -70,14 +69,6 @@ const CompactBannerCarousel = () => {
                       loading={index === 0 ? "eager" : "lazy"}
                       fetchPriority={index === 0 ? "high" : "low"}
                       decoding={index === 0 ? "sync" : "async"}
-                      onLoad={(e) => {
-                        if (index >= 2 && imageUrl) {
-                          const img = e.target as HTMLImageElement;
-                          if (img.src === '/placeholder.svg' && img.dataset.src) {
-                            img.src = img.dataset.src;
-                          }
-                        }
-                      }}
                     />
                     <div className="absolute inset-0 bg-black bg-opacity-10"></div>
                   </div>

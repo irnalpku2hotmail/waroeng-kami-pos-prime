@@ -78,14 +78,7 @@ export const usePOS = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('customers')
-        .select(`
-          id,
-          name,
-          customer_code,
-          email,
-          phone,
-          total_points
-        `)
+        .select('id, name, email, phone, total_points')
         .order('name');
       if (error) throw error;
       return data;
