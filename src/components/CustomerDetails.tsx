@@ -120,18 +120,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     if (!customer) return;
     
     try {
-      // Generate QR code URL using customer code as the value
-      const qrData = customer.customer_code;
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
-      
-      // Update customer with QR code URL
-      const { error } = await supabase
-        .from('customers')
-        .update({ qr_code_url: qrCodeUrl })
-        .eq('id', customer.id);
-      
-      if (error) throw error;
-      
+      // QR code will now use customer ID directly, no need to update DB
       toast({ title: 'Berhasil', description: 'QR Code berhasil dibuat' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -185,14 +174,12 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
             </div>
             <div class="member-info">
               <div class="member-name">${customer.name}</div>
-              <div class="member-code">ID: ${customer.customer_code}</div>
+              <div class="member-code">ID: ${customer.id}</div>
               <div style="font-size: 10px;">Bergabung: ${new Date(customer.created_at).toLocaleDateString('id-ID')}</div>
             </div>
-            ${customer.qr_code_url ? `
-              <div class="qr-code">
-                <img src="${customer.qr_code_url}" alt="QR Code" />
-              </div>
-            ` : ''}
+            <div class="qr-code">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(customer.id)}" alt="QR Code" />
+            </div>
           </div>
         </body>
       </html>
@@ -266,12 +253,6 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   Kartu Member
                 </span>
                 <div className="flex gap-2">
-                  {!customer.qr_code_url && (
-                    <Button size="sm" variant="outline" onClick={generateQRCode}>
-                      <QrCode className="h-4 w-4 mr-2" />
-                      Generate QR
-                    </Button>
-                  )}
                   <Button size="sm" onClick={printMemberCard}>
                     <Printer className="h-4 w-4 mr-2" />
                     Print Kartu
@@ -296,21 +277,19 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                     
                     <div className="space-y-2 mb-4">
                       <p className="text-lg font-semibold">{customer.name}</p>
-                      <p className="text-sm opacity-90">ID: {customer.customer_code}</p>
+                      <p className="text-sm opacity-90">ID: {customer.id}</p>
                       <p className="text-xs opacity-75">
                         Bergabung: {new Date(customer.created_at).toLocaleDateString('id-ID')}
                       </p>
                     </div>
                     
-                    {customer.qr_code_url && (
-                      <div className="absolute bottom-4 right-4">
-                        <img 
-                          src={customer.qr_code_url} 
-                          alt="QR Code" 
-                          className="w-16 h-16 bg-white p-1 rounded"
-                        />
-                      </div>
-                    )}
+                    <div className="absolute bottom-4 right-4">
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(customer.id)}`}
+                        alt="QR Code" 
+                        className="w-16 h-16 bg-white p-1 rounded"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

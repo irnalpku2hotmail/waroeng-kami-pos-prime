@@ -40,20 +40,18 @@ const Customers = () => {
         .select(`
           id,
           name,
-          customer_code,
           email,
           phone,
           address,
           date_of_birth,
           total_points,
           total_spent,
-          qr_code_url,
           created_at,
           updated_at
         `, { count: 'exact' });
       
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
       
       const { data, error, count } = await query
@@ -226,13 +224,10 @@ const Customers = () => {
                     {customers.map((customer) => (
                       <tr key={customer.id} className="hover:bg-gray-50">
                         <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                          <Badge variant="outline">{customer.customer_code}</Badge>
+                          {customer.name}
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-900">
-                          <div>
-                            <div className="font-medium">{customer.name}</div>
-                            <div className="text-xs text-gray-500">{customer.email}</div>
-                          </div>
+                        <td className="px-4 py-4 text-sm text-gray-500">
+                          {customer.email || '-'}
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-500">
                           {customer.phone || '-'}

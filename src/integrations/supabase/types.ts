@@ -192,13 +192,11 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string
-          customer_code: string
           date_of_birth: string | null
           email: string | null
           id: string
           name: string
           phone: string | null
-          qr_code_url: string | null
           total_points: number
           total_spent: number
           updated_at: string
@@ -206,13 +204,11 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string
-          customer_code: string
           date_of_birth?: string | null
           email?: string | null
           id?: string
           name: string
           phone?: string | null
-          qr_code_url?: string | null
           total_points?: number
           total_spent?: number
           updated_at?: string
@@ -220,13 +216,11 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string
-          customer_code?: string
           date_of_birth?: string | null
           email?: string | null
           id?: string
           name?: string
           phone?: string | null
-          qr_code_url?: string | null
           total_points?: number
           total_spent?: number
           updated_at?: string
@@ -848,6 +842,7 @@ export type Database = {
           expiration_date: string | null
           id: string
           product_id: string
+          products: string | null
           purchase_id: string
           purchase_unit_id: string | null
           quantity: number
@@ -860,6 +855,7 @@ export type Database = {
           expiration_date?: string | null
           id?: string
           product_id: string
+          products?: string | null
           purchase_id: string
           purchase_unit_id?: string | null
           quantity?: number
@@ -872,6 +868,7 @@ export type Database = {
           expiration_date?: string | null
           id?: string
           product_id?: string
+          products?: string | null
           purchase_id?: string
           purchase_unit_id?: string | null
           quantity?: number
@@ -1656,10 +1653,6 @@ export type Database = {
       customer_owns_transaction: {
         Args: { transaction_customer_id: string }
         Returns: boolean
-      }
-      generate_customer_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
       }
       generate_customer_return_number: {
         Args: Record<PropertyKey, never>

@@ -28,14 +28,13 @@ const PointExchange = () => {
         .select(`
           id,
           name,
-          customer_code,
           email,
           phone,
           total_points
         `);
       
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
       
       const { data, error } = await query
@@ -85,7 +84,7 @@ const PointExchange = () => {
         .from('point_exchanges')
         .select(`
           *,
-          customers(name, customer_code),
+          customers(name),
           rewards(name),
           profiles(full_name)
         `)
@@ -231,7 +230,7 @@ const PointExchange = () => {
               {selectedCustomer && (
                 <div className="p-4 border rounded-lg bg-blue-50">
                   <h3 className="font-semibold">{selectedCustomer.name}</h3>
-                  <p className="text-sm text-gray-600">Kode: {selectedCustomer.customer_code}</p>
+                  <p className="text-sm text-gray-600">Email: {selectedCustomer.email || '-'}</p>
                   <p className="text-sm text-gray-600">Telepon: {selectedCustomer.phone}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <Star className="h-4 w-4 text-yellow-500" />
@@ -259,7 +258,7 @@ const PointExchange = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <h4 className="font-medium">{customer.name}</h4>
-                          <p className="text-sm text-gray-500">{customer.customer_code}</p>
+                          <p className="text-sm text-gray-500">{customer.email || customer.phone || '-'}</p>
                         </div>
                         <div className="text-right">
                           <div className="flex items-center gap-1">

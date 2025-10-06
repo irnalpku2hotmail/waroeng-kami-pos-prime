@@ -33,11 +33,14 @@ const createCustomer = useMutation({
         total_spent: 0
       };
 
-      const { error } = await supabase
+      const { data: newCustomer, error } = await supabase
         .from('customers')
-        .insert(customerData);
+        .insert(customerData)
+        .select()
+        .single();
 
       if (error) throw error;
+      return newCustomer;
     },
     onSuccess: () => {
       toast({

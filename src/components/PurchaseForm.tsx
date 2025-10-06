@@ -276,23 +276,66 @@ const PurchaseForm = ({ purchase, onSuccess, onCancel }: PurchaseFormProps) => {
     },
     onSuccess: async (purchaseId) => {
       if (items.length > 0) {
+        // For updates, we need to handle existing vs new items differently
         if (purchase) {
-          await supabase.from('purchase_items').delete().eq('purchase_id', purchase.id);
+          // Get existing purchase items
+          const { data: existingItems } = await supabase
+            .from('purchase_items')
+            .select('id')
+            .eq('purchase_id', purchase.id);
+          
+          const existingItemIds = existingItems?.map(item => item.id) || [];
+          const itemsToUpdate = items.filter(item => item.id && existingItemIds.includes(item.id));
+          const itemsToInsert = items.filter(item => !item.id || !existingItemIds.includes(item.id));
+          const itemsToDelete = existingItemIds.filter(id => !items.find(item => item.id === id));
+          
+          // Delete removed items
+          if (itemsToDelete.length > 0) {
+            await supabase
+              .from('purchase_items')
+              .delete()
+              .in('id', itemsToDelete);
+          }
+          
+          // Update existing items
+          for (const item of itemsToUpdate) {
+            const { id, products, units, ...updateData } = item;
+            await supabase
+              .from('purchase_items')
+              .update(updateData)
+              .eq('id', id);
+          }
+          
+          // Insert new items
+          if (itemsToInsert.length > 0) {
+            const cleanedNewItems = itemsToInsert.map(item => {
+              const { id, products, units, ...itemWithoutId } = item;
+              return {
+                ...itemWithoutId,
+                purchase_id: purchaseId
+              };
+            });
+            
+            const { error } = await supabase
+              .from('purchase_items')
+              .insert(cleanedNewItems);
+            if (error) throw error;
+          }
+        } else {
+          // For new purchases, insert all items
+          const cleanedItems = items.map(item => {
+            const { id, products, units, ...itemWithoutId } = item;
+            return {
+              ...itemWithoutId,
+              purchase_id: purchaseId
+            };
+          });
+          
+          const { error } = await supabase
+            .from('purchase_items')
+            .insert(cleanedItems);
+          if (error) throw error;
         }
-        
-        // Clean items data - remove id field to avoid null constraint violation
-        const cleanedItems = items.map(item => {
-          const { id, ...itemWithoutId } = item;
-          return {
-            ...itemWithoutId,
-            purchase_id: purchaseId
-          };
-        });
-        
-        const { error } = await supabase
-          .from('purchase_items')
-          .insert(cleanedItems);
-        if (error) throw error;
 
         // Auto update product base price if enabled
         if (autoUpdatePrice) {

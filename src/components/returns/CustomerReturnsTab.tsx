@@ -29,7 +29,7 @@ const CustomerReturnsTab = () => {
         .from('customer_returns')
         .select(`
           *,
-          customers(name, customer_code),
+          customers(name),
           orders(order_number),
           customer_return_items(*,
             products(name)
@@ -165,7 +165,7 @@ const CustomerReturnsTab = () => {
                 <TableRow key={returnItem.id}>
                   <TableCell className="font-medium">{returnItem.return_number}</TableCell>
                   <TableCell>
-                    {returnItem.customers?.customer_code} - {returnItem.customers?.name}
+                    {returnItem.customers?.name}
                   </TableCell>
                   <TableCell>{returnItem.orders?.order_number || '-'}</TableCell>
                   <TableCell>{getStatusBadge(returnItem.status)}</TableCell>

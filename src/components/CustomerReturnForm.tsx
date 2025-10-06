@@ -37,7 +37,7 @@ const CustomerReturnForm = ({ returnData, onSuccess, onCancel }: CustomerReturnF
     queryFn: async () => {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, customer_code')
+        .select('id, name')
         .order('name');
       if (error) throw error;
       return data;
@@ -242,7 +242,7 @@ const CustomerReturnForm = ({ returnData, onSuccess, onCancel }: CustomerReturnF
                 <SelectContent>
                   {customers.map(customer => (
                     <SelectItem key={customer.id} value={customer.id}>
-                      {customer.customer_code} - {customer.name}
+                      {customer.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
