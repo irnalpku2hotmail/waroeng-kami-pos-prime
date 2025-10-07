@@ -111,6 +111,21 @@ const SearchResults = () => {
 
       const { data, error } = await query;
       if (error) throw error;
+
+      // Log search analytics
+      if (searchQuery) {
+        const categoryName = selectedCategory !== 'all' 
+          ? categories.find(c => c.id === selectedCategory)?.name 
+          : null;
+
+        await supabase.from('search_analytics').insert({
+          user_id: user?.id || null,
+          search_query: searchQuery,
+          results_count: data?.length || 0,
+          category_filter: categoryName
+        });
+      }
+
       return data;
     }
   });

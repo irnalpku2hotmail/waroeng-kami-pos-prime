@@ -1280,6 +1280,33 @@ export type Database = {
         }
         Relationships: []
       }
+      search_analytics: {
+        Row: {
+          category_filter: string | null
+          created_at: string
+          id: string
+          results_count: number
+          search_query: string
+          user_id: string | null
+        }
+        Insert: {
+          category_filter?: string | null
+          created_at?: string
+          id?: string
+          results_count?: number
+          search_query: string
+          user_id?: string | null
+        }
+        Update: {
+          category_filter?: string | null
+          created_at?: string
+          id?: string
+          results_count?: number
+          search_query?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string

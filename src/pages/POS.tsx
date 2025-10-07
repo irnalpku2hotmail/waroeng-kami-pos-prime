@@ -6,14 +6,16 @@ import ProductGrid from '@/components/pos/ProductGrid';
 import CartSidebar from '@/components/pos/CartSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Star } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import CustomerFavoritesModal from '@/components/pos/CustomerFavoritesModal';
 
 const POS = () => {
   const pos = usePOS();
   const isMobile = useIsMobile();
   const [cartOpen, setCartOpen] = useState(false);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
 
   return (
     <Layout>
@@ -49,6 +51,19 @@ const POS = () => {
             isLoading={pos.isLoading}
             addToCart={pos.addToCart}
           />
+
+          {/* Customer Favorites Button */}
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setFavoritesOpen(true)}
+              className="w-full max-w-md"
+            >
+              <Star className="h-5 w-5 mr-2 text-yellow-500" />
+              Favorit Pelanggan
+            </Button>
+          </div>
         </div>
 
         {/* Cart Section - Desktop Only */}
@@ -56,6 +71,14 @@ const POS = () => {
           <CartSidebar {...pos} />
         )}
       </div>
+
+      {/* Customer Favorites Modal */}
+      <CustomerFavoritesModal
+        open={favoritesOpen}
+        onClose={() => setFavoritesOpen(false)}
+        customerId={pos.selectedCustomer?.id || null}
+        onAddToCart={pos.addToCart}
+      />
     </Layout>
   );
 };

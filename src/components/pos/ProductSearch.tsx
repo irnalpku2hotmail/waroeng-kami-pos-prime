@@ -12,17 +12,17 @@ interface ProductSearchProps {
 
 const ProductSearch: React.FC<ProductSearchProps> = ({ searchTerm, setSearchTerm, handleVoiceSearch }) => {
   return (
-    <div className="flex items-center gap-4">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Cari produk atau scan barcode..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+    <div className="relative flex-1">
+      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+      <Input
+        placeholder="Cari produk atau scan barcode..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="pl-10 pr-12"
+      />
+      <div className="absolute right-2 top-1.5">
+        <VoiceSearch onVoiceResult={handleVoiceSearch} />
       </div>
-      <VoiceSearch onVoiceResult={handleVoiceSearch} />
     </div>
   );
 };
