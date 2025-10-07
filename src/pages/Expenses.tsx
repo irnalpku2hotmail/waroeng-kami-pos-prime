@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, Search, DollarSign, TrendingUp, Eye, FileText } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ExpenseDetailsModal from '@/components/ExpenseDetailsModal';
@@ -30,6 +31,7 @@ const Expenses = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | ExpenseCategory>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const [expenseData, setExpenseData] = useState({
@@ -139,11 +141,17 @@ const Expenses = () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses-stats'] });
       toast({ title: 'Berhasil', description: 'Pengeluaran berhasil dihapus' });
+      setDeleteExpenseId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeleteExpenseId(null);
     }
   });
+
+  const handleDeleteExpense = (id: string) => {
+    setDeleteExpenseId(id);
+  };
 
   const handleEdit = (expense: any) => {
     setEditExpense(expense);
@@ -412,7 +420,7 @@ const Expenses = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => deleteExpense.mutate(expense.id)}
+                          onClick={() => handleDeleteExpense(expense.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -443,6 +451,23 @@ const Expenses = () => {
           onOpenChange={setDetailsOpen}
         />
       )}
+
+      <AlertDialog open={deleteExpenseId !== null} onOpenChange={(open) => !open && setDeleteExpenseId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus pengeluaran ini? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteExpenseId && deleteExpense.mutate(deleteExpenseId)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

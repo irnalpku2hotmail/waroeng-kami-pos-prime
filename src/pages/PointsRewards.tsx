@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, Gift, Search, X, Star, Package, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import RewardDetailsModal from '@/components/RewardDetailsModal';
@@ -27,6 +28,7 @@ const PointsRewards = () => {
   const [productSearch, setProductSearch] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteRewardId, setDeleteRewardId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const [rewardData, setRewardData] = useState({
@@ -202,9 +204,11 @@ const PointsRewards = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
       toast({ title: 'Berhasil', description: 'Reward berhasil dihapus' });
+      setDeleteRewardId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeleteRewardId(null);
     }
   });
 
@@ -523,7 +527,7 @@ const PointsRewards = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => deleteReward.mutate(reward.id)}
+                          onClick={() => setDeleteRewardId(reward.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

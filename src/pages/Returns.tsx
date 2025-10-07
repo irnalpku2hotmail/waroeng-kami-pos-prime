@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, RotateCcw, MoreHorizontal, Eye, CheckCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ReturnsForm from '@/components/ReturnsForm';
@@ -26,6 +27,7 @@ const Returns = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteReturnId, setDeleteReturnId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: returnsData, isLoading } = useQuery({
@@ -86,11 +88,17 @@ const Returns = () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
       queryClient.invalidateQueries({ queryKey: ['return-stats'] });
       toast({ title: 'Berhasil', description: 'Return berhasil dihapus' });
+      setDeleteReturnId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeleteReturnId(null);
     }
   });
+
+  const handleDeleteReturn = (id: string) => {
+    setDeleteReturnId(id);
+  };
 
   const updateReturnStatus = useMutation({
     mutationFn: async (id: string) => {
@@ -186,7 +194,7 @@ const Returns = () => {
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => deleteReturn.mutate(returnItem.id)}
+                    onClick={() => handleDeleteReturn(returnItem.id)}
                     className="text-red-600 focus:text-red-600"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -311,6 +319,23 @@ const Returns = () => {
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
         />
+
+        <AlertDialog open={deleteReturnId !== null} onOpenChange={(open) => !open && setDeleteReturnId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus retur ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteReturnId && deleteReturn.mutate(deleteReturnId)}>
+                Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

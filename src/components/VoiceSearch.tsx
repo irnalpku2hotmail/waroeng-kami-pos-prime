@@ -125,33 +125,19 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <Button
-        variant={isListening ? "destructive" : "outline"}
-        size="sm"
-        onClick={isListening ? stopListening : startListening}
-        className="flex items-center gap-2"
-      >
-        {isListening ? (
-          <>
-            <MicOff className="h-4 w-4" />
-            Stop Voice
-          </>
-        ) : (
-          <>
-            <Mic className="h-4 w-4" />
-            Voice Search
-          </>
-        )}
-      </Button>
-      
-      {isListening && (
-        <div className="flex items-center gap-1 text-sm text-green-600">
-          <RotateCcw className="h-3 w-3 animate-spin" />
-          Mendengarkan...
-        </div>
+    <Button
+      variant={isListening ? "destructive" : "ghost"}
+      size="icon"
+      onClick={isListening ? stopListening : startListening}
+      className="h-8 w-8"
+      type="button"
+    >
+      {isListening ? (
+        <MicOff className="h-4 w-4" />
+      ) : (
+        <Mic className="h-4 w-4" />
       )}
-    </div>
+    </Button>
   );
 };
 

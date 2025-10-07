@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, Zap, Calendar, DollarSign, TrendingUp, Package, Search, Eye } from 'lucide-react';
 import Layout from '@/components/Layout';
 import FlashSaleItemsManager from '@/components/FlashSaleItemsManager';
@@ -28,6 +29,7 @@ const FlashSales = () => {
   const [selectedFlashSale, setSelectedFlashSale] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deleteFlashSaleId, setDeleteFlashSaleId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
@@ -178,11 +180,17 @@ const FlashSales = () => {
       queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
       queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
       toast({ title: 'Berhasil', description: 'Flash sale berhasil dihapus' });
+      setDeleteFlashSaleId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeleteFlashSaleId(null);
     }
   });
+
+  const handleDeleteFlashSale = (id: string) => {
+    setDeleteFlashSaleId(id);
+  };
 
   const handleEdit = (flashSale: any) => {
     setEditFlashSale(flashSale);
@@ -458,7 +466,7 @@ const FlashSales = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => deleteFlashSale.mutate(flashSale.id)}
+                          onClick={() => handleDeleteFlashSale(flashSale.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -488,6 +496,23 @@ const FlashSales = () => {
           onOpenChange={setDetailOpen}
         />
       )}
+
+      <AlertDialog open={deleteFlashSaleId !== null} onOpenChange={(open) => !open && setDeleteFlashSaleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus flash sale ini? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteFlashSaleId && deleteFlashSale.mutate(deleteFlashSaleId)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

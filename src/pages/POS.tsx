@@ -55,12 +55,11 @@ const POS = () => {
           {/* Customer Favorites Button */}
           <div className="mt-6 flex justify-center">
             <Button
-              variant="outline"
               size="lg"
               onClick={() => setFavoritesOpen(true)}
-              className="w-full max-w-md"
+              className="w-full max-w-md bg-green-500 hover:bg-green-600 text-white"
             >
-              <Star className="h-5 w-5 mr-2 text-yellow-500" />
+              <Star className="h-5 w-5 mr-2" />
               Favorit Pelanggan
             </Button>
           </div>

@@ -7,21 +7,25 @@ import CustomerReports from '@/components/reports/CustomerReports';
 import InventoryReports from '@/components/reports/InventoryReports';
 import ExpenseReports from '@/components/reports/ExpenseReports';
 import CODReports from '@/components/reports/CODReports';
+import { useNavigate } from 'react-router-dom';
 
 const Reports = () => {
+  const navigate = useNavigate();
+
   return (
     <Layout>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-blue-800">Laporan</h1>
 
         <Tabs defaultValue="pos-sales" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="pos-sales">Penjualan POS</TabsTrigger>
             <TabsTrigger value="cod-sales">Penjualan COD</TabsTrigger>
             <TabsTrigger value="customers">Customer</TabsTrigger>
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="expenses">Pengeluaran</TabsTrigger>
             <TabsTrigger value="cod">COD</TabsTrigger>
+            <TabsTrigger value="search" onClick={() => navigate('/search-analytics')}>Search Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pos-sales" className="space-y-6">

@@ -12,6 +12,7 @@ import ProductsLoading from '@/components/products/ProductsLoading';
 import ProductsEmptyState from '@/components/products/ProductsEmptyState';
 import ProductsPagination from '@/components/products/ProductsPagination';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus } from 'lucide-react';
 import { exportToExcel } from '@/utils/excelExport';
 
@@ -23,6 +24,7 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: productsData, isLoading } = useQuery({
@@ -86,11 +88,17 @@ const Products = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({ title: 'Berhasil', description: 'Produk berhasil dihapus' });
+      setDeleteProductId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeleteProductId(null);
     }
   });
+
+  const handleDeleteProduct = (id: string) => {
+    setDeleteProductId(id);
+  };
 
   const handleExportToExcel = () => {
     if (!allProductsData || allProductsData.length === 0) {
@@ -177,7 +185,7 @@ const Products = () => {
                   setEditProduct(product);
                   setOpen(true);
                 }}
-                onDelete={id => deleteProduct.mutate(id)}
+                onDelete={handleDeleteProduct}
               />
               <ProductsPagination
                 currentPage={currentPage}
@@ -188,6 +196,23 @@ const Products = () => {
           )}
         </div>
       </div>
+
+      <AlertDialog open={deleteProductId !== null} onOpenChange={(open) => !open && setDeleteProductId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteProductId && deleteProduct.mutate(deleteProductId)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

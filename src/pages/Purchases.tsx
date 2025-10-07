@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,7 @@ const Purchases = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deletePurchaseId, setDeletePurchaseId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: purchasesData, isLoading } = useQuery({
@@ -66,11 +68,17 @@ const Purchases = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       toast({ title: 'Berhasil', description: 'Pembelian berhasil dihapus' });
+      setDeletePurchaseId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeletePurchaseId(null);
     }
   });
+
+  const handleDeletePurchase = (id: string) => {
+    setDeletePurchaseId(id);
+  };
 
   const handleCloseDialog = () => {
     setOpen(false);
@@ -315,7 +323,7 @@ const Purchases = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => deletePurchase.mutate(purchase.id)}
+                              onClick={() => handleDeletePurchase(purchase.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -347,6 +355,23 @@ const Purchases = () => {
           open={detailModalOpen}
           onOpenChange={setDetailModalOpen}
         />
+
+        <AlertDialog open={deletePurchaseId !== null} onOpenChange={(open) => !open && setDeletePurchaseId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus pembelian ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deletePurchaseId && deletePurchase.mutate(deletePurchaseId)}>
+                Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Users, UserCheck, Phone, Mail, MapPin, Search } from 'lucide-react';
 import SupplierDetails from '@/components/SupplierDetails';
@@ -19,6 +20,7 @@ const Suppliers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [deleteSupplierId, setDeleteSupplierId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: suppliers, isLoading } = useQuery({
@@ -68,11 +70,17 @@ const Suppliers = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       toast({ title: 'Berhasil', description: 'Supplier berhasil dihapus' });
+      setDeleteSupplierId(null);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setDeleteSupplierId(null);
     }
   });
+
+  const handleDeleteSupplier = (id: string) => {
+    setDeleteSupplierId(id);
+  };
 
   const handleCloseDialog = () => {
     setOpen(false);
@@ -247,7 +255,7 @@ const Suppliers = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => deleteSupplier.mutate(supplier.id)}
+                                onClick={() => handleDeleteSupplier(supplier.id)}
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -289,7 +297,7 @@ const Suppliers = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => deleteSupplier.mutate(supplier.id)}
+                              onClick={() => handleDeleteSupplier(supplier.id)}
                               className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -351,6 +359,23 @@ const Suppliers = () => {
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
         />
+
+        <AlertDialog open={deleteSupplierId !== null} onOpenChange={(open) => !open && setDeleteSupplierId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus supplier ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteSupplierId && deleteSupplier.mutate(deleteSupplierId)}>
+                Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

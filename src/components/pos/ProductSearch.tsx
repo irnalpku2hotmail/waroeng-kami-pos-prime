@@ -18,9 +18,9 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ searchTerm, setSearchTerm
         placeholder="Cari produk atau scan barcode..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="pl-10 pr-12"
+        className="pl-10 pr-10"
       />
-      <div className="absolute right-2 top-1.5">
+      <div className="absolute right-1 top-1">
         <VoiceSearch onVoiceResult={handleVoiceSearch} />
       </div>
     </div>
