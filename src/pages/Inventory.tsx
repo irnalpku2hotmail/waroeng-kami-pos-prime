@@ -9,7 +9,7 @@ import InventoryStats from '@/components/inventory/InventoryStats';
 import StockLevelTab from '@/components/inventory/StockLevelTab';
 import StockAdjustmentsTab from '@/components/inventory/StockAdjustmentsTab';
 import LowStockTab from '@/components/inventory/LowStockTab';
-import SupplierReturnsTab from '@/components/inventory/SupplierReturnsTab';
+import BarcodeModal from '@/components/inventory/BarcodeModal';
 import AccessControl from '@/components/layout/AccessControl';
 import { usePagination } from '@/hooks/usePagination';
 import PaginationComponent from '@/components/PaginationComponent';
@@ -17,6 +17,8 @@ import PaginationComponent from '@/components/PaginationComponent';
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState('products');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [barcodeModalOpen, setBarcodeModalOpen] = useState(false);
 
   // Fetch products with stock info
   const { data: allProducts = [] } = useQuery({
@@ -69,25 +71,6 @@ const Inventory = () => {
     }
   });
 
-  // Fetch supplier returns
-  const { data: allReturns = [] } = useQuery({
-    queryKey: ['supplier-returns'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('returns')
-        .select(`
-          *,
-          suppliers(name)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching returns:', error);
-        throw error;
-      }
-      return data || [];
-    }
-  });
 
   const lowStockProducts = allProducts.filter(p => p.current_stock <= p.min_stock);
   const totalStockValue = allProducts.reduce((sum, p) => sum + (p.current_stock * p.base_price), 0);
@@ -110,11 +93,6 @@ const Inventory = () => {
     itemsPerPage: 10
   });
 
-  // Pagination for returns
-  const returnsPagination = usePagination({
-    totalItems: allReturns.length,
-    itemsPerPage: 10
-  });
 
   // Get paginated products
   const getPaginatedProducts = () => {
@@ -140,13 +118,6 @@ const Inventory = () => {
     );
   };
 
-  // Get paginated returns
-  const getPaginatedReturns = () => {
-    return allReturns.slice(
-      returnsPagination.paginatedIndices.from, 
-      returnsPagination.paginatedIndices.to + 1
-    );
-  };
 
   // Get current pagination based on active tab
   const getCurrentPagination = () => {
@@ -157,8 +128,6 @@ const Inventory = () => {
         return adjustmentsPagination;
       case 'low-stock':
         return lowStockPagination;
-      case 'returns':
-        return returnsPagination;
       default:
         return productsPagination;
     }
@@ -173,11 +142,14 @@ const Inventory = () => {
         return allAdjustments.length;
       case 'low-stock':
         return lowStockProducts.length;
-      case 'returns':
-        return allReturns.length;
       default:
         return allProducts.length;
     }
+  };
+
+  const handleShowBarcode = (product: any) => {
+    setSelectedProduct(product);
+    setBarcodeModalOpen(true);
   };
 
   const currentPagination = getCurrentPagination();
@@ -212,11 +184,10 @@ const Inventory = () => {
               <TabsTrigger value="products">Level Stok</TabsTrigger>
               <TabsTrigger value="adjustments">Penyesuaian</TabsTrigger>
               <TabsTrigger value="low-stock">Peringatan Stok Rendah</TabsTrigger>
-              <TabsTrigger value="returns">Riwayat Retur Supplier</TabsTrigger>
             </TabsList>
 
             <TabsContent value="products" className="space-y-4">
-              <StockLevelTab products={getPaginatedProducts()} />
+              <StockLevelTab products={getPaginatedProducts()} onShowBarcode={handleShowBarcode} />
               <PaginationComponent
                 currentPage={currentPagination.currentPage}
                 totalPages={currentPagination.totalPages}
@@ -244,17 +215,13 @@ const Inventory = () => {
                 totalItems={getCurrentTotalItems()}
               />
             </TabsContent>
-
-            <TabsContent value="returns" className="space-y-4">
-              <SupplierReturnsTab returns={getPaginatedReturns()} />
-              <PaginationComponent
-                currentPage={currentPagination.currentPage}
-                totalPages={currentPagination.totalPages}
-                onPageChange={currentPagination.setCurrentPage}
-                totalItems={getCurrentTotalItems()}
-              />
-            </TabsContent>
           </Tabs>
+
+          <BarcodeModal
+            open={barcodeModalOpen}
+            onOpenChange={setBarcodeModalOpen}
+            product={selectedProduct}
+          />
         </div>
       </Layout>
     </AccessControl>

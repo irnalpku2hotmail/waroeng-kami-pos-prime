@@ -15,7 +15,7 @@ import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Search, 
 import { useIsMobile } from '@/hooks/use-mobile';
 import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
-import FrontendFooter from '@/components/frontend/FrontendFooter';
+import SimpleFooter from '@/components/home/SimpleFooter';
 
 const SearchResults = () => {
   const navigate = useNavigate();
@@ -534,7 +534,7 @@ const SearchResults = () => {
       </div>
 
       {/* Footer */}
-      <FrontendFooter />
+      <SimpleFooter />
 
       {/* Modals */}
       {user && (
