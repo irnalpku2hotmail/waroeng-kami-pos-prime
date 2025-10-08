@@ -7,9 +7,11 @@ import CustomerReports from '@/components/reports/CustomerReports';
 import InventoryReports from '@/components/reports/InventoryReports';
 import ExpenseReports from '@/components/reports/ExpenseReports';
 import CODReports from '@/components/reports/CODReports';
-import SearchAnalyticsTab from '@/components/reports/SearchAnalyticsTab';
+import { useNavigate } from 'react-router-dom';
 
 const Reports = () => {
+  const navigate = useNavigate();
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -23,7 +25,7 @@ const Reports = () => {
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="expenses">Pengeluaran</TabsTrigger>
             <TabsTrigger value="cod">COD</TabsTrigger>
-            <TabsTrigger value="search">Search Analytics</TabsTrigger>
+            <TabsTrigger value="search" onClick={() => navigate('/search-analytics')}>Search Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pos-sales" className="space-y-6">
@@ -48,10 +50,6 @@ const Reports = () => {
 
           <TabsContent value="cod" className="space-y-6">
             <CODReports />
-          </TabsContent>
-
-          <TabsContent value="search" className="space-y-6">
-            <SearchAnalyticsTab />
           </TabsContent>
         </Tabs>
       </div>

@@ -18,7 +18,7 @@ import CompactBannerCarousel from '@/components/home/CompactBannerCarousel';
 import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
 import CompactFlashSale from '@/components/home/CompactFlashSale';
 import CategoriesCarousel from '@/components/home/CategoriesCarousel';
-import SimpleFooter from '@/components/home/SimpleFooter';
+import FrontendFooter from '@/components/frontend/FrontendFooter';
 import { Separator } from '@/components/ui/separator';
 
 
@@ -333,7 +333,7 @@ const Home = () => {
       </div>
 
       {/* Footer */}
-      <SimpleFooter />
+      <FrontendFooter />
 
       {/* Modals */}
       {user && (

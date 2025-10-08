@@ -6,14 +6,12 @@ import CreditStats from '@/components/credit/CreditStats';
 import CreditSearch from '@/components/credit/CreditSearch';
 import CreditTable from '@/components/credit/CreditTable';
 import ReminderDialog from '@/components/credit/ReminderDialog';
-import InvoicePrintModal from '@/components/credit/InvoicePrintModal';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 
 const CreditManagement = () => {
   const [selectedCredit, setSelectedCredit] = useState<any>(null);
   const [remindDialogOpen, setRemindDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [invoicePrintOpen, setInvoicePrintOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: creditTransactions, isLoading } = useCreditTransactions(searchTerm);
@@ -26,11 +24,6 @@ const CreditManagement = () => {
   const handlePayCredit = (transaction: any) => {
     setSelectedCredit(transaction);
     setPaymentDialogOpen(true);
-  };
-
-  const handlePrintInvoice = (transaction: any) => {
-    setSelectedCredit(transaction);
-    setInvoicePrintOpen(true);
   };
 
   return (
@@ -52,7 +45,6 @@ const CreditManagement = () => {
           isLoading={isLoading}
           onPayCredit={handlePayCredit}
           onSendReminder={handleSendReminder}
-          onPrintInvoice={handlePrintInvoice}
         />
 
         <CreditPaymentForm
@@ -65,12 +57,6 @@ const CreditManagement = () => {
           open={remindDialogOpen}
           onOpenChange={setRemindDialogOpen}
           selectedCredit={selectedCredit}
-        />
-
-        <InvoicePrintModal
-          open={invoicePrintOpen}
-          onOpenChange={setInvoicePrintOpen}
-          transaction={selectedCredit}
         />
       </div>
     </Layout>
