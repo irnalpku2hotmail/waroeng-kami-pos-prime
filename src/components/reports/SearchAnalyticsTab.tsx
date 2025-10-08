@@ -34,10 +34,18 @@ const SearchAnalyticsTab = () => {
               .from('profiles')
               .select('full_name, email')
               .eq('id', item.user_id)
-              .single();
-            return { ...item, profile };
+              .maybeSingle();
+            return { 
+              ...item, 
+              profile: profile || null,
+              category_filter: typeof item.category_filter === 'string' ? item.category_filter : null
+            };
           }
-          return { ...item, profile: null };
+          return { 
+            ...item, 
+            profile: null,
+            category_filter: typeof item.category_filter === 'string' ? item.category_filter : null
+          };
         })
       );
 
