@@ -29,6 +29,17 @@ const SearchAnalyticsTab = () => {
       // Fetch profiles separately if user_id exists
       const enrichedData = await Promise.all(
         (data || []).map(async (item) => {
+          let categoryFilterText = null;
+          
+          // Handle category_filter - extract string value if it's an object
+          if (item.category_filter && item.category_filter !== null) {
+            if (typeof item.category_filter === 'object') {
+              categoryFilterText = (item.category_filter as any).name || null;
+            } else if (typeof item.category_filter === 'string') {
+              categoryFilterText = item.category_filter;
+            }
+          }
+
           if (item.user_id) {
             const { data: profile } = await supabase
               .from('profiles')
@@ -38,13 +49,13 @@ const SearchAnalyticsTab = () => {
             return { 
               ...item, 
               profile: profile || null,
-              category_filter: typeof item.category_filter === 'string' ? item.category_filter : null
+              category_filter: categoryFilterText
             };
           }
           return { 
             ...item, 
             profile: null,
-            category_filter: typeof item.category_filter === 'string' ? item.category_filter : null
+            category_filter: categoryFilterText
           };
         })
       );
