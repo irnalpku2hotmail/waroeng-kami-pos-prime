@@ -269,7 +269,11 @@ const SearchAnalyticsTab = () => {
                     <TableCell className="font-medium">{item.search_query}</TableCell>
                     <TableCell>
                       {item.category_filter ? (
-                        <Badge variant="outline">{item.category_filter}</Badge>
+                        <Badge variant="outline">
+                          {typeof item.category_filter === 'object' && item.category_filter !== null
+                            ? (item.category_filter as any).name || '-'
+                            : item.category_filter}
+                        </Badge>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
