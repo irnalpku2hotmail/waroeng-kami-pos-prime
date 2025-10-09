@@ -26,19 +26,21 @@ const SearchAnalyticsTab = () => {
 
       if (error) throw error;
 
-      // Fetch profiles separately if user_id exists and normalize category_filter
+      // Normalize all data to primitives only
       const enrichedData = await Promise.all(
         (data || []).map(async (item) => {
           // Extract category name from object or use string directly
-          const getCategoryFilterText = (filter: any): string | null => {
-            if (!filter) return null;
-            if (typeof filter === 'string') return filter;
-            if (typeof filter === 'object' && filter.name) return String(filter.name);
-            return null;
-          };
+          let categoryText: string | null = null;
+          if (item.category_filter) {
+            if (typeof item.category_filter === 'string') {
+              categoryText = item.category_filter;
+            } else if (typeof item.category_filter === 'object' && item.category_filter !== null) {
+              categoryText = String((item.category_filter as any).name || '');
+            }
+          }
 
-          let userName: string = 'Guest';
-          let userEmail: string = '-';
+          let userName = 'Guest';
+          let userEmail = '-';
           
           if (item.user_id) {
             const { data: profileData } = await supabase
@@ -53,9 +55,14 @@ const SearchAnalyticsTab = () => {
             }
           }
 
+          // Return ONLY primitive values - no objects
           return { 
-            ...item, 
-            category_filter: getCategoryFilterText(item.category_filter),
+            id: item.id,
+            created_at: item.created_at,
+            user_id: item.user_id,
+            search_query: String(item.search_query || ''),
+            results_count: Number(item.results_count || 0),
+            category_filter: categoryText,
             user_name: userName,
             user_email: userEmail
           };
