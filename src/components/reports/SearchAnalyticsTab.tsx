@@ -26,18 +26,25 @@ const SearchAnalyticsTab = () => {
 
       if (error) throw error;
 
+      // Helper function to safely extract string values
+      const extractString = (value: any, fallback: string = ''): string => {
+        if (!value) return fallback;
+        if (typeof value === 'string') return value;
+        if (typeof value === 'object') {
+          // If it's an object, try to extract meaningful string
+          if ('name' in value) return String(value.name);
+          if ('email' in value) return String(value.email);
+          if ('full_name' in value) return String(value.full_name);
+          return fallback;
+        }
+        return String(value);
+      };
+
       // Normalize all data to primitives only
       const enrichedData = await Promise.all(
         (data || []).map(async (item) => {
-          // Extract category name from object or use string directly
-          let categoryText: string | null = null;
-          if (item.category_filter) {
-            if (typeof item.category_filter === 'string') {
-              categoryText = item.category_filter;
-            } else if (typeof item.category_filter === 'object' && item.category_filter !== null) {
-              categoryText = String((item.category_filter as any).name || '');
-            }
-          }
+          // Extract category safely
+          const categoryText = extractString(item.category_filter, '');
 
           let userName = 'Guest';
           let userEmail = '-';
@@ -50,19 +57,6 @@ const SearchAnalyticsTab = () => {
               .maybeSingle();
             
             if (profileData) {
-              // Defensive extraction - handle any data type
-              const extractString = (value: any, fallback: string): string => {
-                if (!value) return fallback;
-                if (typeof value === 'string') return value;
-                if (typeof value === 'object') {
-                  // If it's an object, try to extract a string property or stringify
-                  if ('email' in value) return String(value.email);
-                  if ('name' in value) return String(value.name);
-                  return JSON.stringify(value);
-                }
-                return String(value);
-              };
-              
               userName = extractString(profileData.full_name, 'Guest');
               userEmail = extractString(profileData.email, '-');
             }
@@ -75,17 +69,14 @@ const SearchAnalyticsTab = () => {
             user_id: item.user_id,
             search_query: String(item.search_query || ''),
             results_count: Number(item.results_count || 0),
-            category_filter: categoryText,
+            category_filter: categoryText || null,
             user_name: userName,
             user_email: userEmail
           };
           
-          console.log('Enriched item:', result);
           return result;
         })
       );
-
-      console.log('Final enrichedData:', enrichedData);
 
       return enrichedData;
     }
