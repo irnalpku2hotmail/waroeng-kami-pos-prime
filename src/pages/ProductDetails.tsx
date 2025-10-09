@@ -16,7 +16,7 @@ import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import ProductRecommendations from '@/components/ProductRecommendations';
 import ProductSimilarCarousel from '@/components/ProductSimilarCarousel';
-import FrontendFooter from '@/components/frontend/FrontendFooter';
+import SimpleFooter from '@/components/home/SimpleFooter';
 
 const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -527,7 +527,7 @@ const ProductDetails = () => {
       </div>
 
       {/* Footer */}
-      <FrontendFooter />
+      <SimpleFooter />
 
       {/* Modals */}
       {user && (

@@ -9,9 +9,10 @@ import StockLevelDetailsModal from './StockLevelDetailsModal';
 
 interface StockLevelTabProps {
   products: any[];
+  onShowBarcode?: (product: any) => void;
 }
 
-const StockLevelTab = ({ products }: StockLevelTabProps) => {
+const StockLevelTab = ({ products, onShowBarcode }: StockLevelTabProps) => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adjustmentModalOpen, setAdjustmentModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -55,13 +56,18 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
                   const isOutOfStock = product.current_stock <= 0;
                   
                   return (
-                    <tr key={product.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-gray-500">{product.barcode}</p>
-                        </div>
-                      </td>
+                     <tr key={product.id} className="border-b hover:bg-gray-50">
+                       <td className="p-2">
+                         <div>
+                           <button
+                             onClick={() => onShowBarcode?.(product)}
+                             className="font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
+                           >
+                             {product.name}
+                           </button>
+                           <p className="text-sm text-gray-500">{product.barcode}</p>
+                         </div>
+                       </td>
                       <td className="p-2">
                         {product.categories?.name || '-'}
                       </td>
