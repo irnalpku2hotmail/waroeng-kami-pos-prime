@@ -9,10 +9,9 @@ interface CreditTableProps {
   isLoading: boolean;
   onPayCredit: (transaction: any) => void;
   onSendReminder: (transaction: any) => void;
-  onPrintInvoice?: (transaction: any) => void;
 }
 
-const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminder, onPrintInvoice }: CreditTableProps) => {
+const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminder }: CreditTableProps) => {
   const getPaymentStatus = (transaction: any) => {
     const today = new Date();
     const dueDate = new Date(transaction.due_date);
@@ -80,12 +79,7 @@ const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminde
             return (
               <TableRow key={transaction.id}>
                 <TableCell className="font-medium">
-                  <button
-                    onClick={() => onPrintInvoice?.(transaction)}
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    {transaction.transaction_number}
-                  </button>
+                  {transaction.transaction_number}
                 </TableCell>
                 <TableCell>{transaction.customers?.name || 'Customer Umum'}</TableCell>
                 <TableCell>

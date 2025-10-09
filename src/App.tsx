@@ -35,7 +35,7 @@ import Inventory from "./pages/Inventory";
 import SearchResults from "./pages/SearchResults";
 import OrderHistory from "./pages/OrderHistory";
 import Notifications from "./pages/Notifications";
-
+import SearchAnalytics from "./pages/SearchAnalytics";
 
 // Auth pages
 import Login from "./pages/auth/Login";
@@ -87,7 +87,7 @@ function App() {
                 <Route path="/user-locations" element={<ProtectedRoute><UserLocations /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                
+                <Route path="/search-analytics" element={<ProtectedRoute><SearchAnalytics /></ProtectedRoute>} />
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />
