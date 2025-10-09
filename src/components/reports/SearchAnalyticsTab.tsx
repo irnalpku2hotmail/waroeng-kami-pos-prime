@@ -26,36 +26,34 @@ const SearchAnalyticsTab = () => {
 
       if (error) throw error;
 
-      // Fetch profiles separately if user_id exists
+      // Fetch profiles separately if user_id exists and normalize category_filter
       const enrichedData = await Promise.all(
         (data || []).map(async (item) => {
-          let categoryFilterText = null;
-          
-          // Handle category_filter - extract string value if it's an object
-          if (item.category_filter && item.category_filter !== null) {
-            if (typeof item.category_filter === 'object') {
-              categoryFilterText = (item.category_filter as any).name || null;
-            } else if (typeof item.category_filter === 'string') {
-              categoryFilterText = item.category_filter;
-            }
-          }
+          // Extract category name from object or use string directly
+          const getCategoryFilterText = (filter: any): string | null => {
+            if (!filter) return null;
+            if (typeof filter === 'string') return filter;
+            if (typeof filter === 'object' && filter.name) return String(filter.name);
+            return null;
+          };
 
+          let profile = null;
           if (item.user_id) {
-            const { data: profile } = await supabase
+            const { data: profileData } = await supabase
               .from('profiles')
               .select('full_name, email')
               .eq('id', item.user_id)
               .maybeSingle();
-            return { 
-              ...item, 
-              profile: profile || null,
-              category_filter: categoryFilterText
-            };
+            profile = profileData;
           }
+
           return { 
             ...item, 
-            profile: null,
-            category_filter: categoryFilterText
+            profile,
+            category_filter: getCategoryFilterText(item.category_filter),
+            // Ensure user details are strings
+            user_name: profile?.full_name || null,
+            user_email: profile?.email || null
           };
         })
       );
@@ -262,18 +260,14 @@ const SearchAnalyticsTab = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="font-medium">{item.profile?.full_name || 'Guest'}</div>
-                        <div className="text-gray-500 text-xs">{item.profile?.email || '-'}</div>
+                        <div className="font-medium">{item.user_name || 'Guest'}</div>
+                        <div className="text-gray-500 text-xs">{item.user_email || '-'}</div>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{item.search_query}</TableCell>
                     <TableCell>
                       {item.category_filter ? (
-                        <Badge variant="outline">
-                          {typeof item.category_filter === 'object' && item.category_filter !== null
-                            ? (item.category_filter as any).name || '-'
-                            : item.category_filter}
-                        </Badge>
+                        <Badge variant="outline">{item.category_filter}</Badge>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
