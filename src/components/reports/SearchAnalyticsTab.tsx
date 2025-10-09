@@ -50,13 +50,19 @@ const SearchAnalyticsTab = () => {
               .maybeSingle();
             
             if (profileData) {
-              userName = String(profileData.full_name || 'Guest');
-              userEmail = String(profileData.email || '-');
+              // Explicitly ensure these are strings
+              const fullName = profileData.full_name;
+              const email = profileData.email;
+              
+              userName = typeof fullName === 'string' ? fullName : 'Guest';
+              userEmail = typeof email === 'string' ? email : '-';
+              
+              console.log('Profile data:', { fullName, email, userName, userEmail });
             }
           }
 
           // Return ONLY primitive values - no objects
-          return { 
+          const result = { 
             id: item.id,
             created_at: item.created_at,
             user_id: item.user_id,
@@ -66,8 +72,13 @@ const SearchAnalyticsTab = () => {
             user_name: userName,
             user_email: userEmail
           };
+          
+          console.log('Enriched item:', result);
+          return result;
         })
       );
+
+      console.log('Final enrichedData:', enrichedData);
 
       return enrichedData;
     }
