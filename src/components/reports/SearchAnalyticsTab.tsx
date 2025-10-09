@@ -50,14 +50,21 @@ const SearchAnalyticsTab = () => {
               .maybeSingle();
             
             if (profileData) {
-              // Explicitly ensure these are strings
-              const fullName = profileData.full_name;
-              const email = profileData.email;
+              // Defensive extraction - handle any data type
+              const extractString = (value: any, fallback: string): string => {
+                if (!value) return fallback;
+                if (typeof value === 'string') return value;
+                if (typeof value === 'object') {
+                  // If it's an object, try to extract a string property or stringify
+                  if ('email' in value) return String(value.email);
+                  if ('name' in value) return String(value.name);
+                  return JSON.stringify(value);
+                }
+                return String(value);
+              };
               
-              userName = typeof fullName === 'string' ? fullName : 'Guest';
-              userEmail = typeof email === 'string' ? email : '-';
-              
-              console.log('Profile data:', { fullName, email, userName, userEmail });
+              userName = extractString(profileData.full_name, 'Guest');
+              userEmail = extractString(profileData.email, '-');
             }
           }
 
