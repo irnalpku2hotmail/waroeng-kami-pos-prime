@@ -37,23 +37,27 @@ const SearchAnalyticsTab = () => {
             return null;
           };
 
-          let profile = null;
+          let userName: string = 'Guest';
+          let userEmail: string = '-';
+          
           if (item.user_id) {
             const { data: profileData } = await supabase
               .from('profiles')
               .select('full_name, email')
               .eq('id', item.user_id)
               .maybeSingle();
-            profile = profileData;
+            
+            if (profileData) {
+              userName = String(profileData.full_name || 'Guest');
+              userEmail = String(profileData.email || '-');
+            }
           }
 
           return { 
             ...item, 
-            profile,
             category_filter: getCategoryFilterText(item.category_filter),
-            // Ensure user details are strings
-            user_name: profile?.full_name || null,
-            user_email: profile?.email || null
+            user_name: userName,
+            user_email: userEmail
           };
         })
       );
