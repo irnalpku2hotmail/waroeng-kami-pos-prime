@@ -32,7 +32,8 @@ const CategorySearchList = () => {
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
-    }
+    },
+    staleTime: 0
   });
 
   const deleteCategory = useMutation({

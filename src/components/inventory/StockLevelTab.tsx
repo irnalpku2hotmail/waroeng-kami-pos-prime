@@ -1,11 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, AlertTriangle, Edit, BarChart3 } from 'lucide-react';
+import { Package, AlertTriangle, Edit, BarChart3, Barcode as BarcodeIcon, Printer } from 'lucide-react';
 import StockAdjustmentModal from './StockAdjustmentModal';
 import StockLevelDetailsModal from './StockLevelDetailsModal';
+import ProductBarcodeModal from './ProductBarcodeModal';
 
 interface StockLevelTabProps {
   products: any[];
@@ -15,6 +16,7 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adjustmentModalOpen, setAdjustmentModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [barcodeModalOpen, setBarcodeModalOpen] = useState(false);
 
   const handleAdjustStock = (product: any) => {
     setSelectedProduct(product);
@@ -24,6 +26,11 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
   const handleViewDetails = (product: any) => {
     setSelectedProduct(product);
     setDetailsModalOpen(true);
+  };
+
+  const handleShowBarcode = (product: any) => {
+    setSelectedProduct(product);
+    setBarcodeModalOpen(true);
   };
 
   return (
@@ -59,7 +66,15 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
                       <td className="p-2">
                         <div>
                           <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-gray-500">{product.barcode}</p>
+                          {product.barcode && (
+                            <button
+                              onClick={() => handleShowBarcode(product)}
+                              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-1"
+                            >
+                              <BarcodeIcon className="h-3 w-3" />
+                              {product.barcode}
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="p-2">
@@ -144,6 +159,15 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
         <StockLevelDetailsModal
           open={detailsModalOpen}
           onOpenChange={setDetailsModalOpen}
+          product={selectedProduct}
+        />
+      )}
+
+      {/* Barcode Modal */}
+      {selectedProduct && (
+        <ProductBarcodeModal
+          open={barcodeModalOpen}
+          onOpenChange={setBarcodeModalOpen}
           product={selectedProduct}
         />
       )}

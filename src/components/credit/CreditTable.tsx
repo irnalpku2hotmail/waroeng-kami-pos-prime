@@ -1,8 +1,9 @@
-
+import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, Phone, Mail, MessageSquare } from 'lucide-react';
+import { CreditCard, Phone, Mail, MessageSquare, FileText } from 'lucide-react';
+import CreditInvoiceModal from './CreditInvoiceModal';
 
 interface CreditTableProps {
   creditTransactions: any[];
@@ -12,6 +13,14 @@ interface CreditTableProps {
 }
 
 const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminder }: CreditTableProps) => {
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+
+  const handleShowInvoice = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setInvoiceModalOpen(true);
+  };
+
   const getPaymentStatus = (transaction: any) => {
     const today = new Date();
     const dueDate = new Date(transaction.due_date);
@@ -59,88 +68,111 @@ const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminde
   }
 
   return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>No. Transaksi</TableHead>
-            <TableHead>Pelanggan</TableHead>
-            <TableHead>Kontak</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Jatuh Tempo</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Aksi</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {creditTransactions?.map((transaction) => {
-            const paymentStatus = getPaymentStatus(transaction);
-            
-            return (
-              <TableRow key={transaction.id}>
-                <TableCell className="font-medium">
-                  {transaction.transaction_number}
-                </TableCell>
-                <TableCell>{transaction.customers?.name || 'Customer Umum'}</TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    {transaction.customers?.phone && (
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {transaction.customers.phone}
-                      </div>
-                    )}
-                    {transaction.customers?.email && (
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {transaction.customers.email}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">
-                    Rp {transaction.total_amount?.toLocaleString('id-ID')}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {transaction.due_date ? new Date(transaction.due_date).toLocaleDateString('id-ID') : '-'}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={paymentStatus.variant}>
-                    {paymentStatus.label}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onPayCredit(transaction)}
-                      className="text-green-600 hover:bg-green-50"
+    <>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>No. Transaksi</TableHead>
+              <TableHead>Pelanggan</TableHead>
+              <TableHead>Kontak</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Jatuh Tempo</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {creditTransactions?.map((transaction) => {
+              const paymentStatus = getPaymentStatus(transaction);
+              
+              return (
+                <TableRow key={transaction.id}>
+                  <TableCell>
+                    <button
+                      onClick={() => handleShowInvoice(transaction)}
+                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
                     >
-                      <CreditCard className="h-4 w-4 mr-1" />
-                      Bayar
-                    </Button>
-                    {transaction.customers && (
+                      {transaction.transaction_number}
+                    </button>
+                  </TableCell>
+                  <TableCell>{transaction.customers?.name || 'Customer Umum'}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {transaction.customers?.phone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {transaction.customers.phone}
+                        </div>
+                      )}
+                      {transaction.customers?.email && (
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {transaction.customers.email}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">
+                      Rp {transaction.total_amount?.toLocaleString('id-ID')}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {transaction.due_date ? new Date(transaction.due_date).toLocaleDateString('id-ID') : '-'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={paymentStatus.variant}>
+                      {paymentStatus.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onSendReminder(transaction)}
-                        className="text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleShowInvoice(transaction)}
+                        title="Lihat Faktur"
                       >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Ingatkan
+                        <FileText className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onPayCredit(transaction)}
+                        className="text-green-600 hover:bg-green-50"
+                      >
+                        <CreditCard className="h-4 w-4 mr-1" />
+                        Bayar
+                      </Button>
+                      {transaction.customers && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onSendReminder(transaction)}
+                          className="text-blue-600 hover:bg-blue-50"
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          Ingatkan
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {selectedTransaction && (
+        <CreditInvoiceModal
+          open={invoiceModalOpen}
+          onOpenChange={setInvoiceModalOpen}
+          transaction={selectedTransaction}
+        />
+      )}
+    </>
   );
 };
 

@@ -212,7 +212,6 @@ const Inventory = () => {
               <TabsTrigger value="products">Level Stok</TabsTrigger>
               <TabsTrigger value="adjustments">Penyesuaian</TabsTrigger>
               <TabsTrigger value="low-stock">Peringatan Stok Rendah</TabsTrigger>
-              <TabsTrigger value="returns">Riwayat Retur Supplier</TabsTrigger>
             </TabsList>
 
             <TabsContent value="products" className="space-y-4">
@@ -237,16 +236,6 @@ const Inventory = () => {
 
             <TabsContent value="low-stock" className="space-y-4">
               <LowStockTab lowStockProducts={getPaginatedLowStock()} />
-              <PaginationComponent
-                currentPage={currentPagination.currentPage}
-                totalPages={currentPagination.totalPages}
-                onPageChange={currentPagination.setCurrentPage}
-                totalItems={getCurrentTotalItems()}
-              />
-            </TabsContent>
-
-            <TabsContent value="returns" className="space-y-4">
-              <SupplierReturnsTab returns={getPaginatedReturns()} />
               <PaginationComponent
                 currentPage={currentPagination.currentPage}
                 totalPages={currentPagination.totalPages}
