@@ -1681,18 +1681,9 @@ export type Database = {
         Args: { transaction_customer_id: string }
         Returns: boolean
       }
-      generate_customer_return_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_referral_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_customer_return_number: { Args: never; Returns: string }
+      generate_order_number: { Args: never; Returns: string }
+      generate_referral_code: { Args: never; Returns: string }
       get_customer_purchase_history: {
         Args: { customer_uuid: string }
         Returns: {
@@ -1706,7 +1697,7 @@ export type Database = {
         }[]
       }
       get_customer_statistics: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active_customers_this_month: number
           total_customers: number

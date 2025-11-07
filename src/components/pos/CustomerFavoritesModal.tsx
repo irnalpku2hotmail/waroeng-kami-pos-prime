@@ -20,39 +20,33 @@ const CustomerFavoritesModal = ({ open, onClose, customerId, onAddToCart }: Cust
     queryFn: async () => {
       if (!customerId) return [];
 
-      // Get transactions for this customer
-      const { data: transactions, error: transError } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('customer_id', customerId);
-
-      if (transError) throw transError;
-      if (!transactions || transactions.length === 0) return [];
-
-      const transactionIds = transactions.map(t => t.id);
-
-      // Get transaction items with product details
-      const { data: items, error: itemsError } = await supabase
+      // Get transaction items with product details for this customer
+      const { data: items, error } = await supabase
         .from('transaction_items')
         .select(`
           product_id,
           quantity,
-          products (
+          transaction_id,
+          products!inner (
             id,
             name,
             selling_price,
             current_stock,
             image_url,
             units (name, abbreviation)
+          ),
+          transactions!inner (
+            customer_id
           )
         `)
-        .in('transaction_id', transactionIds);
+        .eq('transactions.customer_id', customerId);
 
-      if (itemsError) throw itemsError;
+      if (error) throw error;
+      if (!items || items.length === 0) return [];
 
       // Aggregate by product
       const productMap = new Map();
-      items?.forEach((item: any) => {
+      items.forEach((item: any) => {
         if (item.products) {
           const productId = item.product_id;
           if (productMap.has(productId)) {
