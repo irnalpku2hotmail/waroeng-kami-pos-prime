@@ -46,11 +46,13 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
       return;
     }
 
-    const receiptSettings = settings?.receipt_settings || {};
-    const storeName = settings?.store_name?.name || 'Toko Saya';
-    const storeAddress = settings?.store_address?.address || '';
-    const storePhone = settings?.store_phone?.phone || '';
-    const paperSize = receiptSettings.paper_size || '80mm';
+    const storeName = settings?.store_name || 'Toko Saya';
+    const storeAddress = settings?.store_address || '';
+    const storePhone = settings?.store_phone || '';
+    const receiptHeader = settings?.receipt_header || '';
+    const receiptFooter = settings?.receipt_footer || '';
+    const paperSize = settings?.paper_size || '80mm';
+    const showCashier = settings?.show_cashier !== false;
     const width = paperSize === '58mm' ? '58mm' : '80mm';
 
     const invoiceContent = `
@@ -118,9 +120,9 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
             ${storePhone ? `<div>Telp: ${storePhone}</div>` : ''}
           </div>
 
-          ${receiptSettings.header_text ? `
+          ${receiptHeader ? `
             <div style="text-align: center; margin-bottom: 10px; font-style: italic;">
-              ${receiptSettings.header_text}
+              ${receiptHeader}
             </div>
           ` : ''}
 
@@ -144,7 +146,7 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
             <span>Pelanggan</span>
             <span>${transaction.customers?.name || 'Umum'}</span>
           </div>
-          ${receiptSettings.show_cashier ? `
+          ${showCashier ? `
             <div class="info-row">
               <span>Kasir</span>
               <span>${transaction.profiles?.full_name || '-'}</span>
@@ -178,9 +180,9 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
             </div>
           </div>
 
-          ${receiptSettings.footer_text ? `
+          ${receiptFooter ? `
             <div class="footer">
-              ${receiptSettings.footer_text}
+              ${receiptFooter}
             </div>
           ` : ''}
 

@@ -48,22 +48,50 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     queryFn: async () => {
       if (!customer?.id) return [];
       
-      let query = supabase.rpc('get_customer_purchase_history', {
-        customer_uuid: customer.id
-      });
+      // Fetch transactions with items
+      const { data: transactions, error } = await supabase
+        .from('transactions')
+        .select(`
+          id,
+          transaction_number,
+          total_amount,
+          points_earned,
+          points_used,
+          created_at,
+          transaction_items(
+            quantity,
+            products(name)
+          )
+        `)
+        .eq('customer_id', customer.id)
+        .order('created_at', { ascending: false });
       
-      const { data, error } = await query;
       if (error) throw error;
+      if (!transactions) return [];
+      
+      // Transform the data to match expected format
+      const transformedData = transactions.map((t: any) => ({
+        transaction_id: t.id,
+        transaction_number: t.transaction_number,
+        total_amount: t.total_amount,
+        points_earned: t.points_earned || 0,
+        points_used: t.points_used || 0,
+        created_at: t.created_at,
+        items: t.transaction_items?.map((item: any) => ({
+          product_name: item.products?.name || 'Unknown',
+          quantity: item.quantity
+        })) || []
+      }));
       
       // Filter by year if selected
       if (selectedYear !== 'all') {
-        return data.filter((transaction: any) => {
+        return transformedData.filter((transaction: any) => {
           const year = new Date(transaction.created_at).getFullYear().toString();
           return year === selectedYear;
         });
       }
       
-      return data;
+      return transformedData;
     },
     enabled: !!customer?.id && open
   });

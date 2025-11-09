@@ -179,12 +179,23 @@ export const usePOS = () => {
 
   const printReceipt = async (transaction: any) => {
     try {
-      // Get settings from the receipt settings tab
-      const receiptWidth = settings?.receipt_width?.value || '80mm';
-      const storeName = settings?.store_name?.value || 'SmartPOS';
-      const storePhone = settings?.store_phone?.value || '';
-      const storeAddress = settings?.store_address?.value || '';
-      const receiptFooter = settings?.receipt_footer?.value || 'Terima Kasih!';
+      // Fetch latest settings
+      const { data: settingsData } = await supabase
+        .from('settings')
+        .select('key, value');
+      
+      const settingsMap = settingsData?.reduce((acc: any, s: any) => {
+        acc[s.key] = s.value;
+        return acc;
+      }, {}) || {};
+
+      const storeName = settingsMap.store_name || 'SmartPOS';
+      const storeAddress = settingsMap.store_address || '';
+      const storePhone = settingsMap.store_phone || '';
+      const receiptHeader = settingsMap.receipt_header || '';
+      const receiptFooter = settingsMap.receipt_footer || '';
+      const paperSize = settingsMap.paper_size || '58mm';
+      const showCashier = settingsMap.show_cashier !== false;
 
       const receiptContent = `
         <html>
@@ -193,7 +204,7 @@ export const usePOS = () => {
             <style>
               @media print {
                 body { margin: 0; padding: 10px; font-family: monospace; font-size: 12px; }
-                .receipt { width: ${receiptWidth}; }
+                .receipt { width: ${paperSize === '80mm' ? '80mm' : '58mm'}; }
                 table { width: 100%; border-collapse: collapse; }
                 th, td { text-align: left; padding: 2px 0; }
                 .center { text-align: center; }
@@ -205,15 +216,16 @@ export const usePOS = () => {
           </head>
           <body>
             <div class="receipt">
+              ${receiptHeader ? `<p class="center">${receiptHeader}</p><div class="border-top"></div>` : ''}
               <div class="center">
                 <h2 style="margin: 0;">${storeName}</h2>
-                <p style="margin: 2px 0;">${storeAddress}</p>
-                <p style="margin: 2px 0;">Telp: ${storePhone}</p>
+                ${storeAddress ? `<p style="margin: 2px 0;">${storeAddress}</p>` : ''}
+                ${storePhone ? `<p style="margin: 2px 0;">Telp: ${storePhone}</p>` : ''}
               </div>
               <div class="border-top"></div>
               <p>No: ${transaction.transaction_number}</p>
               <p>Tanggal: ${new Date(transaction.created_at).toLocaleString('id-ID')}</p>
-              <p>Kasir: ${user?.email || 'Admin'}</p>
+              ${showCashier ? `<p>Kasir: ${user?.email || 'Admin'}</p>` : ''}
               ${selectedCustomer ? `<p>Pelanggan: ${selectedCustomer.name}</p>` : ''}
               <div class="border-top"></div>
               <table>
@@ -266,8 +278,7 @@ export const usePOS = () => {
                 ` : ''}
               </table>
               <div class="border-top"></div>
-              <p class="center">${receiptFooter}</p>
-              <p class="center">Selamat Berbelanja Kembali</p>
+              ${receiptFooter ? `<p class="center">${receiptFooter}</p>` : ''}
             </div>
           </body>
         </html>
