@@ -327,12 +327,12 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
           {/* History Tabs */}
           <Tabs defaultValue="purchases" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="purchases">Riwayat Pembelian</TabsTrigger>
+              <TabsTrigger value="transactions">Riwayat Transaksi</TabsTrigger>
               <TabsTrigger value="points">Riwayat Point</TabsTrigger>
               <TabsTrigger value="redemptions">Riwayat Redeem</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="purchases" className="space-y-4">
+            <TabsContent value="transactions" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">

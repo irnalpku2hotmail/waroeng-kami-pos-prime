@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { generateReceiptHTML } from '@/utils/receiptGenerator';
 
 interface CreditInvoiceModalProps {
   open: boolean;
@@ -46,160 +47,41 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
       return;
     }
 
-    const storeName = settings?.store_name || 'Toko Saya';
-    const storeAddress = settings?.store_address || '';
-    const storePhone = settings?.store_phone || '';
-    const receiptHeader = settings?.receipt_header || '';
-    const receiptFooter = settings?.receipt_footer || '';
-    const paperSize = settings?.paper_size || '80mm';
-    const showCashier = settings?.show_cashier !== false;
-    const width = paperSize === '58mm' ? '58mm' : '80mm';
+    const receiptData = {
+      transaction_number: transaction.transaction_number,
+      transaction_date: transaction.created_at,
+      customer_name: transaction.customers?.name || 'Umum',
+      items: (transactionItems || []).map((item: any) => ({
+        name: item.products?.name || '',
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      })),
+      subtotal: transaction.total_amount,
+      total: transaction.total_amount,
+      paid_amount: transaction.paid_amount,
+      change_amount: 0,
+      payment_method: 'Kredit',
+      notes: `Jatuh Tempo: ${transaction.due_date ? new Date(transaction.due_date).toLocaleDateString('id-ID') : '-'}\nSisa Pembayaran: Rp ${(transaction.total_amount - transaction.paid_amount).toLocaleString('id-ID')}`,
+    };
 
-    const invoiceContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Faktur Piutang - ${transaction.transaction_number}</title>
-          <style>
-            @media print {
-              @page {
-                size: ${width} auto;
-                margin: 5mm;
-              }
-              body { margin: 0; padding: 0; }
-            }
-            body {
-              font-family: 'Courier New', monospace;
-              font-size: 12px;
-              line-height: 1.4;
-              padding: 10px;
-              max-width: ${width};
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 10px;
-              border-bottom: 1px dashed #000;
-              padding-bottom: 10px;
-            }
-            .store-name { font-weight: bold; font-size: 14px; }
-            .info-row {
-              display: flex;
-              justify-content: space-between;
-              margin: 2px 0;
-            }
-            .items-table {
-              width: 100%;
-              margin: 10px 0;
-              border-top: 1px dashed #000;
-              border-bottom: 1px dashed #000;
-              padding: 5px 0;
-            }
-            .item-row {
-              display: flex;
-              justify-content: space-between;
-              margin: 3px 0;
-            }
-            .total-section {
-              margin-top: 10px;
-              padding-top: 10px;
-              border-top: 1px dashed #000;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 10px;
-              padding-top: 10px;
-              border-top: 1px dashed #000;
-              font-size: 10px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="store-name">${storeName}</div>
-            ${storeAddress ? `<div>${storeAddress}</div>` : ''}
-            ${storePhone ? `<div>Telp: ${storePhone}</div>` : ''}
-          </div>
+    const receiptHTML = generateReceiptHTML(receiptData, {
+      store_name: settings?.store_name,
+      store_address: settings?.store_address,
+      store_phone: settings?.store_phone,
+      receipt_header: settings?.receipt_header,
+      receipt_footer: settings?.receipt_footer,
+      paper_size: settings?.paper_size,
+      show_cashier: settings?.show_cashier,
+    });
 
-          ${receiptHeader ? `
-            <div style="text-align: center; margin-bottom: 10px; font-style: italic;">
-              ${receiptHeader}
-            </div>
-          ` : ''}
-
-          <div style="text-align: center; font-weight: bold; margin: 10px 0;">
-            FAKTUR PIUTANG
-          </div>
-
-          <div class="info-row">
-            <span>No. Transaksi</span>
-            <span>${transaction.transaction_number}</span>
-          </div>
-          <div class="info-row">
-            <span>Tanggal</span>
-            <span>${new Date(transaction.created_at).toLocaleDateString('id-ID')}</span>
-          </div>
-          <div class="info-row">
-            <span>Jatuh Tempo</span>
-            <span>${transaction.due_date ? new Date(transaction.due_date).toLocaleDateString('id-ID') : '-'}</span>
-          </div>
-          <div class="info-row">
-            <span>Pelanggan</span>
-            <span>${transaction.customers?.name || 'Umum'}</span>
-          </div>
-          ${showCashier ? `
-            <div class="info-row">
-              <span>Kasir</span>
-              <span>${transaction.profiles?.full_name || '-'}</span>
-            </div>
-          ` : ''}
-
-          <div class="items-table">
-            ${transactionItems.map((item: any) => `
-              <div class="item-row">
-                <div style="flex: 1;">${item.products?.name || '-'}</div>
-              </div>
-              <div class="item-row" style="font-size: 11px;">
-                <span>${item.quantity} x Rp ${item.unit_price.toLocaleString('id-ID')}</span>
-                <span>Rp ${item.total_price.toLocaleString('id-ID')}</span>
-              </div>
-            `).join('')}
-          </div>
-
-          <div class="total-section">
-            <div class="info-row" style="font-weight: bold;">
-              <span>TOTAL</span>
-              <span>Rp ${transaction.total_amount.toLocaleString('id-ID')}</span>
-            </div>
-            <div class="info-row">
-              <span>Dibayar</span>
-              <span>Rp ${transaction.paid_amount.toLocaleString('id-ID')}</span>
-            </div>
-            <div class="info-row" style="font-weight: bold; color: red;">
-              <span>SISA PIUTANG</span>
-              <span>Rp ${(transaction.total_amount - transaction.paid_amount).toLocaleString('id-ID')}</span>
-            </div>
-          </div>
-
-          ${receiptFooter ? `
-            <div class="footer">
-              ${receiptFooter}
-            </div>
-          ` : ''}
-
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              };
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(invoiceContent);
+    printWindow.document.write(receiptHTML);
     printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   return (

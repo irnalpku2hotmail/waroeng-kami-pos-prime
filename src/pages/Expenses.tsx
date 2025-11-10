@@ -13,9 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2, Search, DollarSign, TrendingUp, Eye, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, DollarSign, TrendingUp, Eye, FileText, Image } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ExpenseDetailsModal from '@/components/ExpenseDetailsModal';
+import ExpenseForm from '@/components/ExpenseForm';
+import ExpenseReceiptViewer from '@/components/expenses/ExpenseReceiptViewer';
 import PaginationComponent from '@/components/PaginationComponent';
 import { Database } from '@/integrations/supabase/types';
 
@@ -28,20 +30,14 @@ const Expenses = () => {
   const [editExpense, setEditExpense] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<{ url: string | null; title: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | ExpenseCategory>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const [expenseData, setExpenseData] = useState({
-    title: '',
-    category: 'operational' as ExpenseCategory,
-    amount: '',
-    expense_date: new Date().toISOString().slice(0, 10),
-    description: '',
-    receipt_url: ''
-  });
 
   const { data: expensesData, isLoading } = useQuery({
     queryKey: ['expenses', searchTerm, categoryFilter, currentPage],
@@ -93,44 +89,6 @@ const Expenses = () => {
   const expensesCount = expensesData?.count || 0;
   const totalPages = Math.ceil(expensesCount / ITEMS_PER_PAGE);
 
-  const createExpense = useMutation({
-    mutationFn: async (data: any) => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
-      const expensePayload = {
-        ...data,
-        amount: parseFloat(data.amount),
-        user_id: userData.user.id
-      };
-
-      if (editExpense) {
-        const { error } = await supabase
-          .from('expenses')
-          .update(expensePayload)
-          .eq('id', editExpense.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('expenses')
-          .insert([expensePayload]);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses-stats'] });
-      setOpen(false);
-      resetForm();
-      toast({ 
-        title: 'Berhasil', 
-        description: editExpense ? 'Pengeluaran berhasil diperbarui' : 'Pengeluaran berhasil ditambahkan'
-      });
-    },
-    onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  });
 
   const deleteExpense = useMutation({
     mutationFn: async (id: string) => {
@@ -155,15 +113,12 @@ const Expenses = () => {
 
   const handleEdit = (expense: any) => {
     setEditExpense(expense);
-    setExpenseData({
-      title: expense.title,
-      category: expense.category,
-      amount: expense.amount.toString(),
-      expense_date: expense.expense_date,
-      description: expense.description || '',
-      receipt_url: expense.receipt_url || ''
-    });
     setOpen(true);
+  };
+
+  const handleViewReceipt = (expense: any) => {
+    setSelectedReceipt({ url: expense.receipt_url, title: expense.title });
+    setReceiptViewerOpen(true);
   };
 
   const handleDetails = (expense: any) => {
@@ -171,21 +126,16 @@ const Expenses = () => {
     setDetailsOpen(true);
   };
 
-  const resetForm = () => {
+  const handleSuccess = () => {
+    setOpen(false);
     setEditExpense(null);
-    setExpenseData({
-      title: '',
-      category: 'operational' as ExpenseCategory,
-      amount: '',
-      expense_date: new Date().toISOString().slice(0, 10),
-      description: '',
-      receipt_url: ''
-    });
+    queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    queryClient.invalidateQueries({ queryKey: ['expenses-stats'] });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    createExpense.mutate(expenseData);
+  const handleClose = () => {
+    setOpen(false);
+    setEditExpense(null);
   };
 
   const getCategoryBadge = (category: string) => {
@@ -210,91 +160,20 @@ const Expenses = () => {
           <h1 className="text-3xl font-bold text-blue-800">Pengeluaran</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm}>
+              <Button onClick={() => setOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Pengeluaran
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Judul *</Label>
-                  <Input
-                    id="title"
-                    value={expenseData.title}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Listrik bulan ini"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Kategori *</Label>
-                  <Select value={expenseData.category} onValueChange={(value) => setExpenseData(prev => ({ ...prev, category: value as ExpenseCategory }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="operational">Operasional</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="utilities">Utilitas</SelectItem>
-                      <SelectItem value="supplies">Supplies</SelectItem>
-                      <SelectItem value="other">Lainnya</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Jumlah *</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      value={expenseData.amount}
-                      onChange={(e) => setExpenseData(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="100000"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="expense_date">Tanggal *</Label>
-                    <Input
-                      id="expense_date"
-                      type="date"
-                      value={expenseData.expense_date}
-                      onChange={(e) => setExpenseData(prev => ({ ...prev, expense_date: e.target.value }))}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Deskripsi</Label>
-                  <Textarea
-                    id="description"
-                    value={expenseData.description}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Detail pengeluaran..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="receipt_url">URL Receipt</Label>
-                  <Input
-                    id="receipt_url"
-                    value={expenseData.receipt_url}
-                    onChange={(e) => setExpenseData(prev => ({ ...prev, receipt_url: e.target.value }))}
-                    placeholder="https://example.com/receipt.jpg"
-                  />
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button type="submit" disabled={!expenseData.title || !expenseData.amount}>
-                    {editExpense ? 'Update' : 'Simpan'}
-                  </Button>
-                </div>
-              </form>
+              <ExpenseForm
+                expense={editExpense}
+                onSuccess={handleSuccess}
+                onClose={handleClose}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -387,6 +266,7 @@ const Expenses = () => {
                   <TableHead>Kategori</TableHead>
                   <TableHead>Jumlah</TableHead>
                   <TableHead>Tanggal</TableHead>
+                  <TableHead>Bukti</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -401,6 +281,19 @@ const Expenses = () => {
                     </TableCell>
                     <TableCell>{formatCurrency(expense.amount)}</TableCell>
                     <TableCell>{new Date(expense.expense_date).toLocaleDateString('id-ID')}</TableCell>
+                    <TableCell>
+                      {expense.receipt_url ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewReceipt(expense)}
+                        >
+                          <Image className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -449,6 +342,15 @@ const Expenses = () => {
           expense={selectedExpense}
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
+        />
+      )}
+
+      {selectedReceipt && (
+        <ExpenseReceiptViewer
+          open={receiptViewerOpen}
+          onOpenChange={setReceiptViewerOpen}
+          receipt_url={selectedReceipt.url}
+          title={selectedReceipt.title}
         />
       )}
 
