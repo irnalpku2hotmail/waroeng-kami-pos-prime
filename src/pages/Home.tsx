@@ -16,7 +16,7 @@ import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 import ProductGridSmall from '@/components/home/ProductGridSmall';
 import CompactBannerCarousel from '@/components/home/CompactBannerCarousel';
 import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
-import CompactFlashSale from '@/components/home/CompactFlashSale';
+import ModernFrontendFlashSale from '@/components/frontend/ModernFrontendFlashSale';
 import CategoriesCarousel from '@/components/home/CategoriesCarousel';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
 import { Separator } from '@/components/ui/separator';
@@ -316,7 +316,7 @@ const Home = () => {
         <EnhancedShippingInfo />
 
         {/* Flash Sale */}
-        <CompactFlashSale />
+        <ModernFrontendFlashSale onProductClick={(product) => navigate(`/product/${product.id}`)} />
 
         {/* Products Section */}
         <div className="mb-8">
