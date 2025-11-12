@@ -190,110 +190,45 @@ export const usePOS = () => {
         return acc;
       }, {}) || {};
 
-      const storeName = settingsMap.store_name || 'SmartPOS';
-      const storeAddress = settingsMap.store_address || '';
-      const storePhone = settingsMap.store_phone || '';
-      const receiptHeader = settingsMap.receipt_header || '';
-      const receiptFooter = settingsMap.receipt_footer || '';
-      const paperSize = settingsMap.paper_size || '58mm';
-      const showCashier = settingsMap.show_cashier !== false;
+      const receiptSettings = {
+        store_name: settingsMap.store_name,
+        store_address: settingsMap.store_address,
+        store_phone: settingsMap.store_phone,
+        receipt_header: settingsMap.receipt_header,
+        receipt_footer: settingsMap.receipt_footer,
+        paper_size: settingsMap.paper_size || '58mm',
+        show_cashier: settingsMap.show_cashier !== false,
+      };
 
-      const receiptContent = `
-        <html>
-          <head>
-            <title>Receipt</title>
-            <style>
-              @media print {
-                body { margin: 0; padding: 10px; font-family: monospace; font-size: 12px; }
-                .receipt { width: ${paperSize === '80mm' ? '80mm' : '58mm'}; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { text-align: left; padding: 2px 0; }
-                .center { text-align: center; }
-                .right { text-align: right; }
-                .border-top { border-top: 1px dashed #000; margin: 5px 0; }
-                @page { margin: 0; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="receipt">
-              ${receiptHeader ? `<p class="center">${receiptHeader}</p><div class="border-top"></div>` : ''}
-              <div class="center">
-                <h2 style="margin: 0;">${storeName}</h2>
-                ${storeAddress ? `<p style="margin: 2px 0;">${storeAddress}</p>` : ''}
-                ${storePhone ? `<p style="margin: 2px 0;">Telp: ${storePhone}</p>` : ''}
-              </div>
-              <div class="border-top"></div>
-              <p>No: ${transaction.transaction_number}</p>
-              <p>Tanggal: ${new Date(transaction.created_at).toLocaleString('id-ID')}</p>
-              ${showCashier ? `<p>Kasir: ${user?.email || 'Admin'}</p>` : ''}
-              ${selectedCustomer ? `<p>Pelanggan: ${selectedCustomer.name}</p>` : ''}
-              <div class="border-top"></div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th class="center">Qty</th>
-                    <th class="right">Harga</th>
-                    <th class="right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${cart.map(item => `
-                    <tr>
-                      <td>${item.name}</td>
-                      <td class="center">${item.quantity}</td>
-                      <td class="right">${new Intl.NumberFormat('id-ID').format(item.unit_price)}</td>
-                      <td class="right">${new Intl.NumberFormat('id-ID').format(item.total_price)}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-              <div class="border-top"></div>
-              <table>
-                <tr>
-                  <td><strong>Total:</strong></td>
-                  <td class="right"><strong>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(getTotalAmount())}</strong></td>
-                </tr>
-                <tr>
-                  <td>Bayar:</td>
-                  <td class="right">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(paymentAmount)}</td>
-                </tr>
-                ${paymentType === 'cash' ? `
-                <tr>
-                  <td>Kembali:</td>
-                  <td class="right">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(getChangeAmount())}</td>
-                </tr>
-                ` : ''}
-                ${paymentType === 'transfer' ? `
-                <tr>
-                  <td>Ref Transfer:</td>
-                  <td class="right">${transferReference}</td>
-                </tr>
-                ` : ''}
-                ${selectedCustomer && getTotalPointsEarned() > 0 ? `
-                <tr>
-                  <td>Poin Didapat:</td>
-                  <td class="right">${getTotalPointsEarned()} poin</td>
-                </tr>
-                ` : ''}
-              </table>
-              <div class="border-top"></div>
-              ${receiptFooter ? `<p class="center">${receiptFooter}</p>` : ''}
-            </div>
-          </body>
-        </html>
-      `;
+      const receiptData = {
+        transaction_number: transaction.transaction_number,
+        transaction_date: transaction.created_at,
+        customer_name: selectedCustomer?.name,
+        cashier_name: user?.email || 'Admin',
+        items: cart.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+        })),
+        subtotal: getTotalAmount(),
+        total: getTotalAmount(),
+        paid_amount: paymentType === 'cash' ? paymentAmount : getTotalAmount(),
+        change_amount: paymentType === 'cash' ? getChangeAmount() : undefined,
+        payment_method: paymentType === 'cash' ? 'Tunai' : paymentType === 'credit' ? 'Kredit' : 'Transfer',
+        points_earned: selectedCustomer && getTotalPointsEarned() > 0 ? getTotalPointsEarned() : undefined,
+        notes: paymentType === 'transfer' ? `Ref: ${transferReference}` : undefined,
+      };
+
+      const receiptContent = generateReceiptHTML(receiptData, receiptSettings);
 
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(receiptContent);
         printWindow.document.close();
         
-        // Auto print after content loaded
         printWindow.onload = function() {
           printWindow.print();
-          // Close window after printing
           setTimeout(() => {
             printWindow.close();
           }, 500);
