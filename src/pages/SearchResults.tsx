@@ -112,6 +112,34 @@ const SearchResults = () => {
       const { data, error } = await query;
       if (error) throw error;
 
+      // If no results and we have a search query, try fuzzy search
+      let finalData = data;
+      if ((!data || data.length === 0) && searchQuery) {
+        const { data: similarProducts, error: similarError } = await supabase
+          .rpc('get_similar_products', {
+            search_term: searchQuery,
+            category_filter: selectedCategory !== 'all' ? selectedCategory : null,
+            similarity_threshold: 0.2,
+            max_results: 20
+          });
+
+        if (!similarError && similarProducts && similarProducts.length > 0) {
+          // Fetch full product details for similar products
+          const productIds = similarProducts.map((p: any) => p.id);
+          const { data: fullProducts } = await supabase
+            .from('products')
+            .select(`
+              *,
+              categories(id, name),
+              units(name, abbreviation)
+            `)
+            .in('id', productIds)
+            .eq('is_active', true);
+          
+          finalData = fullProducts || [];
+        }
+      }
+
       // Log search analytics
       if (searchQuery) {
         const categoryName = selectedCategory !== 'all' 
@@ -121,12 +149,12 @@ const SearchResults = () => {
         await supabase.from('search_analytics').insert({
           user_id: user?.id || null,
           search_query: searchQuery,
-          results_count: data?.length || 0,
+          results_count: finalData?.length || 0,
           category_filter: categoryName
         });
       }
 
-      return data;
+      return finalData;
     }
   });
 
