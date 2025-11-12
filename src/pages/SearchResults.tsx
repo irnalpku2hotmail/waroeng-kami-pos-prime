@@ -116,16 +116,16 @@ const SearchResults = () => {
       let finalData = data;
       if ((!data || data.length === 0) && searchQuery) {
         const { data: similarProducts, error: similarError } = await supabase
-          .rpc('get_similar_products', {
+          .rpc('get_similar_products' as any, {
             search_term: searchQuery,
             category_filter: selectedCategory !== 'all' ? selectedCategory : null,
             similarity_threshold: 0.2,
             max_results: 20
           });
 
-        if (!similarError && similarProducts && similarProducts.length > 0) {
+        if (!similarError && similarProducts && Array.isArray(similarProducts) && similarProducts.length > 0) {
           // Fetch full product details for similar products
-          const productIds = similarProducts.map((p: any) => p.id);
+          const productIds = (similarProducts as any[]).map((p: any) => p.id);
           const { data: fullProducts } = await supabase
             .from('products')
             .select(`
