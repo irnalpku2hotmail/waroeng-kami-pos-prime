@@ -15,7 +15,6 @@ import Products from "./pages/Products";
 import ProductDetails from "./pages/ProductDetails";
 import ProductDetail from "./pages/ProductDetail";
 import Categories from "./pages/Categories";
-import Units from "./pages/Units";
 import Suppliers from "./pages/Suppliers";
 import Customers from "./pages/Customers";
 import Purchases from "./pages/Purchases";
@@ -70,7 +69,6 @@ function App() {
                 <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
                 <Route path="/products/:id" element={<ProtectedRoute><ProductDetails /></ProtectedRoute>} />
                 <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
-                <Route path="/units" element={<ProtectedRoute><Units /></ProtectedRoute>} />
                 <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
                 <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
                 <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
