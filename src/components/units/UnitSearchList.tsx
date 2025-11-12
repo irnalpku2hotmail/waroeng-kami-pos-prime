@@ -23,7 +23,7 @@ const UnitSearchList = () => {
         .order('name');
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,abbreviation.ilike.%${searchTerm}%`);
+        query = query.ilike('name', `%${searchTerm}%`);
       }
 
       const { data, error } = await query;
