@@ -5,21 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Twitter, ArrowUp, Heart } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
 
 const FrontendFooter = () => {
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('settings').select('*');
-      if (error) throw error;
-      
-      const settingsMap: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsMap[setting.key] = setting.value;
-      });
-      return settingsMap;
-    }
-  });
+  const { data: settings } = useSettings();
 
   const storeInfo = settings?.store_info || {};
   const contactInfo = settings?.contact_info || {};

@@ -11,24 +11,11 @@ import {
   Twitter,
   Globe
 } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
 
 const HomeFooter = () => {
   // Fetch store settings
-  const { data: settings } = useQuery({
-    queryKey: ['store-settings-footer'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*');
-      if (error) throw error;
-      
-      const settingsObj: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsObj[setting.key] = setting.value;
-      });
-      return settingsObj;
-    }
-  });
+  const { data: settings } = useSettings();
 
   const getStoreInfo = (key: string) => {
     const setting = settings?.[key];

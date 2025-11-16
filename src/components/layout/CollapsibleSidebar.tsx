@@ -25,6 +25,7 @@ import {
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useSidebarContext } from '@/contexts/SidebarContext';
 
 interface CollapsibleSidebarProps {
   onLinkClick?: () => void;
@@ -32,7 +33,7 @@ interface CollapsibleSidebarProps {
 
 const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) => {
   const { canAccessRoute } = usePermissions();
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, setCollapsed } = useSidebarContext();
 
   const menuItems = [
     { name: 'Home', path: '/', icon: Home, resource: 'dashboard' },

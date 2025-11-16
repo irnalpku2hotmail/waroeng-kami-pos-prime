@@ -6,6 +6,7 @@ import CollapsibleSidebar from './layout/CollapsibleSidebar';
 import DateTimeDisplay from './layout/DateTimeDisplay';
 import UserDropdown from './layout/UserDropdown';
 import NotificationDropdown from './layout/NotificationDropdown';
+import { useSidebarContext } from '@/contexts/SidebarContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, profile, loading } = useAuth();
+  const { collapsed } = useSidebarContext();
 
   if (loading) {
     return (
@@ -37,9 +39,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <CollapsibleSidebar />
 
       {/* Main Content Area - with left margin for sidebar */}
-      <div className="ml-56 flex flex-col min-h-screen">
+      <div className={`${collapsed ? 'ml-16' : 'ml-56'} flex flex-col min-h-screen transition-all duration-300`}>
         {/* Fixed Top Navigation */}
-        <header className="bg-white border-b border-gray-200 shadow-sm fixed top-0 right-0 left-56 z-10">
+        <header className={`bg-white border-b border-gray-200 shadow-sm fixed top-0 right-0 ${collapsed ? 'left-16' : 'left-56'} z-10 transition-all duration-300`}>
           <div className="flex items-center justify-between px-4 py-3">
             <DateTimeDisplay />
             <div className="flex items-center gap-4">

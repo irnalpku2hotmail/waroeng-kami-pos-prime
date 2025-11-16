@@ -56,6 +56,7 @@ const Settings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
+      queryClient.invalidateQueries({ queryKey: ['store-settings-footer'] });
       toast({ title: 'Berhasil', description: 'Pengaturan berhasil disimpan' });
     },
     onError: (error) => {
