@@ -11,6 +11,7 @@ import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store } from 'l
 import { useIsMobile } from '@/hooks/use-mobile';
 import AuthModal from '@/components/AuthModal';
 import EnhancedSearch from './EnhancedSearch';
+import { useSettings } from '@/hooks/useSettings';
 
 interface HomeNavbarProps {
   onCartClick?: () => void;
@@ -32,19 +33,7 @@ const HomeNavbar = ({
   const isMobile = useIsMobile();
 
   // Fetch store settings
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('settings').select('*');
-      if (error) throw error;
-      
-      const settingsMap: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsMap[setting.key] = setting.value;
-      });
-      return settingsMap;
-    }
-  });
+  const { data: settings } = useSettings();
 
   // Fetch user profile
   const { data: profile } = useQuery({

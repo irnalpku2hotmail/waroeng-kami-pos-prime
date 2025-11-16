@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import MobileSearchBar from '@/components/home/MobileSearchBar';
+import { useSettings } from '@/hooks/useSettings';
 
 interface FrontendNavbarProps {
   storeName: string;
@@ -32,19 +33,7 @@ const FrontendNavbar = ({
   const isMobile = useIsMobile();
 
   // Fetch store settings
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('settings').select('*');
-      if (error) throw error;
-      
-      const settingsMap: Record<string, any> = {};
-      data?.forEach(setting => {
-        settingsMap[setting.key] = setting.value;
-      });
-      return settingsMap;
-    }
-  });
+  const { data: settings } = useSettings();
 
   // Fetch user profile
   const { data: profile } = useQuery({

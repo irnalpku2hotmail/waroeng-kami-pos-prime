@@ -40,9 +40,9 @@ const CountdownTimer = ({ endDate, className = "" }: CountdownTimerProps) => {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <Clock className="h-5 w-5" />
-      <span className="text-lg font-semibold">
+    <div className={`flex items-center gap-1 sm:gap-2 ${className}`}>
+      <Clock className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+      <span className="text-sm sm:text-lg font-semibold whitespace-nowrap">
         {timeLeft.days > 0 && `${timeLeft.days}d `}
         {formatTime(timeLeft.hours)}:{formatTime(timeLeft.minutes)}:{formatTime(timeLeft.seconds)}
       </span>

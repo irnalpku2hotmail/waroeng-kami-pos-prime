@@ -1704,6 +1704,24 @@ export type Database = {
           total_unredeemed_points: number
         }[]
       }
+      get_similar_products: {
+        Args: {
+          category_filter?: string
+          max_results?: number
+          search_term: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          category_id: string
+          current_stock: number
+          description: string
+          id: string
+          image_url: string
+          name: string
+          selling_price: number
+          similarity_score: number
+        }[]
+      }
       get_supplier_purchase_history: {
         Args: { supplier_uuid: string }
         Returns: {
@@ -1742,6 +1760,8 @@ export type Database = {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       adjustment_type: "increase" | "decrease" | "correction"
