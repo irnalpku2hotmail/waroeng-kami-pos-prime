@@ -32,7 +32,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
         .single();
       if (error) {
         return {
-          store_name: 'SmartPOS',
+          store_name: 'LAPAU.ID',
           phone: '',
           address: '',
           email: ''
@@ -161,7 +161,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const storeName = storeSettings?.store_name || 'SmartPOS';
+    const storeName = storeSettings?.store_name || 'LAPAU.ID';
     const storePhone = storeSettings?.phone || '';
     const storeAddress = storeSettings?.address || '';
 
@@ -296,7 +296,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   
                   <div className="relative z-10">
                     <div className="text-center mb-4">
-                      <h3 className="text-xl font-bold">{storeSettings?.store_name || 'SmartPOS'}</h3>
+                      <h3 className="text-xl font-bold">{storeSettings?.store_name || 'LAPAU.ID'}</h3>
                       <p className="text-sm opacity-90">KARTU MEMBER</p>
                       {storeSettings?.phone && (
                         <p className="text-xs opacity-75">{storeSettings.phone}</p>
