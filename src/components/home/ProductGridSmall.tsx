@@ -84,7 +84,7 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12 }: ProductG
       {products.map((product) => (
         <Card 
           key={product.id} 
-          className="group hover:shadow-md transition-shadow duration-300 cursor-pointer"
+          className="group hover:shadow-md transition-shadow duration-300 cursor-pointer border-2 border-transparent hover:border-orange-400"
           onClick={() => navigate(`/product/${product.id}`)}
         >
           <CardContent className="p-3">

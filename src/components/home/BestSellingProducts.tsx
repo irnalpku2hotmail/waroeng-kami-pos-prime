@@ -80,7 +80,7 @@ const BestSellingProducts = ({ onProductClick }: BestSellingProductsProps) => {
         {products?.map((product, index) => (
           <Card 
             key={product.id} 
-            className="flex-none w-48 cursor-pointer hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200 group bg-white rounded-2xl shadow-lg"
+            className="flex-none w-48 cursor-pointer hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-orange-400 group bg-white rounded-2xl shadow-lg"
             onClick={() => handleProductClick(product)}
           >
             <CardContent className="p-4">

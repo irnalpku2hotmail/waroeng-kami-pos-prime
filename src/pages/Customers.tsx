@@ -45,7 +45,6 @@ const Customers = () => {
           address,
           date_of_birth,
           total_points,
-          total_spent,
           created_at,
           updated_at
         `, { count: 'exact' });
@@ -54,12 +53,26 @@ const Customers = () => {
         query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
       
-      const { data, error, count } = await query
+      const { data: customers, error, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
       
       if (error) throw error;
-      return { data, count };
+
+      // Calculate actual total_spent from transactions
+      const customersWithTotalSpent = await Promise.all(
+        (customers || []).map(async (customer) => {
+          const { data: transactions } = await supabase
+            .from('transactions')
+            .select('total_amount')
+            .eq('customer_id', customer.id);
+          
+          const total_spent = transactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+          return { ...customer, total_spent };
+        })
+      );
+      
+      return { data: customersWithTotalSpent, count };
     }
   });
 
