@@ -102,7 +102,7 @@ const ModernFrontendFlashSale = ({ onProductClick }: ModernFrontendFlashSaleProp
     <div className="bg-gradient-to-r from-orange-50 to-red-50 py-8">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 bg-white rounded-lg shadow-md p-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-lg">
               <Flame className="h-6 w-6 text-white" />
@@ -116,31 +116,23 @@ const ModernFrontendFlashSale = ({ onProductClick }: ModernFrontendFlashSaleProp
           </div>
 
           {/* Countdown Timer */}
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-orange-600" />
-            <div className="flex gap-2">
-              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg font-bold text-center min-w-[50px]">
-                <div className="text-2xl">{String(timeLeft.hours).padStart(2, '0')}</div>
-                <div className="text-xs">Jam</div>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+            <div className="flex gap-1 sm:gap-2">
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg font-bold text-center min-w-[40px] sm:min-w-[50px]">
+                <div className="text-lg sm:text-2xl">{String(timeLeft.hours).padStart(2, '0')}</div>
+                <div className="text-[10px] sm:text-xs">Jam</div>
               </div>
-              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg font-bold text-center min-w-[50px]">
-                <div className="text-2xl">{String(timeLeft.minutes).padStart(2, '0')}</div>
-                <div className="text-xs">Menit</div>
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg font-bold text-center min-w-[40px] sm:min-w-[50px]">
+                <div className="text-lg sm:text-2xl">{String(timeLeft.minutes).padStart(2, '0')}</div>
+                <div className="text-[10px] sm:text-xs">Menit</div>
               </div>
-              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg font-bold text-center min-w-[50px]">
-                <div className="text-2xl">{String(timeLeft.seconds).padStart(2, '0')}</div>
-                <div className="text-xs">Detik</div>
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg font-bold text-center min-w-[40px] sm:min-w-[50px]">
+                <div className="text-lg sm:text-2xl">{String(timeLeft.seconds).padStart(2, '0')}</div>
+                <div className="text-[10px] sm:text-xs">Detik</div>
               </div>
             </div>
           </div>
-
-          <Button
-            variant="link"
-            className="text-orange-600 hover:text-orange-700 font-semibold"
-            onClick={() => {/* Navigate to all flash sale products */}}
-          >
-            Lihat Semua →
-          </Button>
         </div>
 
         {/* Products Carousel */}

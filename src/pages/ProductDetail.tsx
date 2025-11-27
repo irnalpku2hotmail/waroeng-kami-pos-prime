@@ -8,28 +8,35 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Star, Heart } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Heart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Settings, Search } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
-import CartModal from '@/components/CartModal';
 import ProductSimilarCarousel from '@/components/ProductSimilarCarousel';
 import ProductReviews from '@/components/ProductReviews';
 import { useAuth } from '@/contexts/AuthContext';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
+import AuthModal from '@/components/AuthModal';
+import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
+import { useSettings } from '@/hooks/useSettings';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
-  const { user } = useAuth();
+  const { addToCart, getTotalItems } = useCart();
+  const { user, signOut } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const { data: settings } = useSettings();
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product-detail', id],
@@ -187,15 +194,35 @@ const ProductDetail = () => {
     }
   };
 
-  if (isLoading) {
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
+
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  const storeInfo = settings?.store_info || {};
+  const contactInfo = settings?.contact_info || {};
+  const logoUrl = storeInfo.logo_url;
+  const storeName = settings?.store_name?.name || 'LAPAU.ID';
+
+  if (isLoading || !product) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <HomeNavbar 
-          onCartClick={() => setCartModalOpen(true)}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onSearch={handleSearch}
-        />
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -203,35 +230,229 @@ const ProductDetail = () => {
     );
   }
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <HomeNavbar 
-          onCartClick={() => setCartModalOpen(true)}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onSearch={handleSearch}
-        />
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Produk Tidak Ditemukan</h1>
-            <Button onClick={() => navigate('/')}>
-              Kembali ke Beranda
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar 
-        onCartClick={() => setCartModalOpen(true)}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onSearch={handleSearch}
-      />
+      {/* Navbar - Same as Home */}
+      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
+        {!isMobile && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+              <div className="flex items-center space-x-4">
+                {contactInfo.phone && <span>📞 {contactInfo.phone}</span>}
+                {contactInfo.email && <span className="hidden md:inline">✉️ {contactInfo.email}</span>}
+              </div>
+              <div className="flex items-center space-x-4">
+                <span>Selamat Datang di {storeName}!</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/')}>
+              {logoUrl && (
+                <img 
+                  src={logoUrl} 
+                  alt={storeName} 
+                  className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} 
+                />
+              )}
+              {!logoUrl && (
+                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
+                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                </div>
+              )}
+              <div>
+                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
+                  {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
+                </h1>
+                {!isMobile && (
+                  <p className="text-xs text-gray-500">{storeInfo.tagline || 'Toko Online Terpercaya'}</p>
+                )}
+              </div>
+            </div>
+
+            {!isMobile && (
+              <div className="flex-1 max-w-2xl mx-8">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type="text"
+                    placeholder="Cari produk..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative hover:bg-blue-50 p-2"
+                  onClick={() => setCartModalOpen(true)}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+
+              {!isMobile && (
+                <div>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
+                          {profile?.avatar_url ? (
+                            <img 
+                              src={profile.avatar_url} 
+                              alt="Profile" 
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserCircle className="h-6 w-6" />
+                          )}
+                          <span className="hidden lg:inline text-sm font-medium">
+                            {profile?.full_name || user.email?.split('@')[0]}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setAuthModalOpen(true)}
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50 px-4"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Masuk
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-2"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {isMobile && (
+            <div className="pb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Cari produk..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {mobileMenuOpen && isMobile && (
+          <div className="bg-white border-t shadow-lg">
+            <div className="px-4 py-4 space-y-4">
+              {contactInfo.phone && (
+                <div className="text-sm text-gray-600 pb-2 border-b">
+                  📞 {contactInfo.phone}
+                </div>
+              )}
+              
+              <div className="border-t pt-4">
+                {user ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 py-2">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Profile" 
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle className="h-8 w-8 text-gray-400" />
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {profile?.full_name || 'User'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigate('/profile');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start mb-2"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Masuk
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <Button 
@@ -418,7 +639,13 @@ const ProductDetail = () => {
       </div>
 
       <HomeFooter />
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+      {user && (
+        <EnhancedFrontendCartModal 
+          open={cartModalOpen} 
+          onOpenChange={setCartModalOpen} 
+        />
+      )}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 };
