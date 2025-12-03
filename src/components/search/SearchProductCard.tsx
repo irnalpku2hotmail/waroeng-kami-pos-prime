@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import WishlistButton from '@/components/wishlist/WishlistButton';
 
 interface SearchProductCardProps {
   product: any;
@@ -36,8 +36,14 @@ const SearchProductCard = ({ product }: SearchProductCardProps) => {
             alt={product.name}
             className="w-full h-24 object-cover rounded-md group-hover:scale-105 transition-transform duration-300"
           />
+          
+          {/* Wishlist Button */}
+          <div className="absolute top-1 right-1 z-10">
+            <WishlistButton productId={product.id} size="sm" />
+          </div>
+          
           {product.current_stock <= product.min_stock && (
-            <Badge variant="destructive" className="absolute top-1 right-1 text-xs">
+            <Badge variant="destructive" className="absolute bottom-1 left-1 text-xs">
               Terbatas
             </Badge>
           )}

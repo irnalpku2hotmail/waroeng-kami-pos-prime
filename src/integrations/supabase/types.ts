@@ -587,6 +587,38 @@ export type Database = {
           },
         ]
       }
+      price_history: {
+        Row: {
+          changed_at: string
+          id: string
+          new_price: number
+          old_price: number
+          product_id: string
+        }
+        Insert: {
+          changed_at?: string
+          id?: string
+          new_price: number
+          old_price: number
+          product_id: string
+        }
+        Update: {
+          changed_at?: string
+          id?: string
+          new_price?: number
+          old_price?: number
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_variants: {
         Row: {
           created_at: string
@@ -1634,6 +1666,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      user_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          product_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          product_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          product_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_product_likes: {
         Row: {

@@ -1,11 +1,11 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Package, Heart } from 'lucide-react';
+import { ShoppingCart, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
+import WishlistButton from '@/components/wishlist/WishlistButton';
 
 interface Product {
   id: string;
@@ -82,6 +82,11 @@ const ProductCardSmall: React.FC<ProductCardSmallProps> = ({ product, onProductC
             </div>
           )}
           
+          {/* Wishlist Button */}
+          <div className="absolute top-2 right-2 z-10">
+            <WishlistButton productId={product.id} size="sm" />
+          </div>
+          
           {/* Flash Sale Badge */}
           {product.isFlashSale && (
             <Badge className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1">
@@ -92,9 +97,9 @@ const ProductCardSmall: React.FC<ProductCardSmallProps> = ({ product, onProductC
           {/* Stock Badge */}
           <Badge 
             variant={product.current_stock > 0 ? "secondary" : "destructive"}
-            className="absolute top-2 right-2 text-xs"
+            className="absolute bottom-2 left-2 text-xs"
           >
-            {product.current_stock > 0 ? `${product.current_stock}` : 'Habis'}
+            {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
           </Badge>
         </div>
 
