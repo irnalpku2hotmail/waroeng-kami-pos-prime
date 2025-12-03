@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { LogOut, User, Heart } from 'lucide-react';
 
 const UserDropdown = () => {
   const { user, signOut } = useAuth();
@@ -45,8 +45,14 @@ const UserDropdown = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuItem onClick={() => navigate('/profile')}>
+          <User className="mr-2 h-4 w-4" />
           Profile
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/wishlist')}>
+          <Heart className="mr-2 h-4 w-4" />
+          Wishlist
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign out

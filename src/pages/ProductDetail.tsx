@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Heart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Settings, Search } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Heart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Search } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
@@ -16,11 +16,13 @@ import HomeFooter from '@/components/home/HomeFooter';
 import ProductSimilarCarousel from '@/components/ProductSimilarCarousel';
 import ProductReviews from '@/components/ProductReviews';
 import { useAuth } from '@/contexts/AuthContext';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import { useSettings } from '@/hooks/useSettings';
+import NotificationDropdown from '@/components/notifications/NotificationDropdown';
+import WishlistButton from '@/components/wishlist/WishlistButton';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -291,19 +293,22 @@ const ProductDetail = () => {
 
             <div className="flex items-center space-x-2 sm:space-x-4">
               {user && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="relative hover:bg-blue-50 p-2"
-                  onClick={() => setCartModalOpen(true)}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {getTotalItems() > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
-                      {getTotalItems()}
-                    </Badge>
-                  )}
-                </Button>
+                <>
+                  <NotificationDropdown />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="relative hover:bg-blue-50 p-2"
+                    onClick={() => setCartModalOpen(true)}
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    {getTotalItems() > 0 && (
+                      <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                        {getTotalItems()}
+                      </Badge>
+                    )}
+                  </Button>
+                </>
               )}
 
               {!isMobile && (
@@ -328,9 +333,14 @@ const ProductDetail = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuItem onClick={() => navigate('/profile')}>
-                          <Settings className="h-4 w-4 mr-2" />
+                          <User className="h-4 w-4 mr-2" />
                           Profile
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/wishlist')}>
+                          <Heart className="h-4 w-4 mr-2" />
+                          Wishlist
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleSignOut}>
                           <LogOut className="h-4 w-4 mr-2" />
                           Logout
@@ -421,7 +431,7 @@ const ProductDetail = () => {
                       }}
                       className="w-full justify-start mb-2"
                     >
-                      <Settings className="h-4 w-4 mr-2" />
+                      <User className="h-4 w-4 mr-2" />
                       Profile
                     </Button>
                     <Button
