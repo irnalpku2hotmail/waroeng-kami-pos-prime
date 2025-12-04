@@ -16,6 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
+import MobileBottomNav from '@/components/home/MobileBottomNav';
 
 const SearchResults = () => {
   const navigate = useNavigate();
@@ -190,7 +191,7 @@ const SearchResults = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
       {/* Navbar - Same as Home */}
       <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
         {!isMobile && (
@@ -572,6 +573,14 @@ const SearchResults = () => {
         />
       )}
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      
+      {/* Mobile Bottom Navigation */}
+      {isMobile && (
+        <MobileBottomNav 
+          onCartClick={() => setShowCartModal(true)}
+          onAuthClick={() => setAuthModalOpen(true)}
+        />
+      )}
     </div>
   );
 };
