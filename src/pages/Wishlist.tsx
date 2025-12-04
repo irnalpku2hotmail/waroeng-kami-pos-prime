@@ -31,6 +31,7 @@ import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCar
 import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 import WishlistButton from '@/components/wishlist/WishlistButton';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
+import MobileBottomNav from '@/components/home/MobileBottomNav';
 import { toast } from '@/hooks/use-toast';
 
 const Wishlist: React.FC = () => {
@@ -149,7 +150,7 @@ const Wishlist: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
       {/* Navbar */}
       <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
         {!isMobile && (
@@ -385,6 +386,14 @@ const Wishlist: React.FC = () => {
       <FrontendFooter />
       <EnhancedFrontendCartModal open={showCartModal} onOpenChange={setShowCartModal} />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      
+      {/* Mobile Bottom Navigation */}
+      {isMobile && (
+        <MobileBottomNav 
+          onCartClick={() => setShowCartModal(true)}
+          onAuthClick={() => setAuthModalOpen(true)}
+        />
+      )}
     </div>
   );
 };

@@ -23,6 +23,7 @@ import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCar
 import { useSettings } from '@/hooks/useSettings';
 import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 import WishlistButton from '@/components/wishlist/WishlistButton';
+import MobileBottomNav from '@/components/home/MobileBottomNav';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -233,7 +234,7 @@ const ProductDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
       {/* Navbar - Same as Home */}
       <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
         {!isMobile && (
@@ -656,6 +657,14 @@ const ProductDetail = () => {
         />
       )}
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      
+      {/* Mobile Bottom Navigation */}
+      {isMobile && (
+        <MobileBottomNav 
+          onCartClick={() => setCartModalOpen(true)}
+          onAuthClick={() => setAuthModalOpen(true)}
+        />
+      )}
     </div>
   );
 };

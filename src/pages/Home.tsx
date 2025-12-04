@@ -19,6 +19,7 @@ import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
 import ModernFrontendFlashSale from '@/components/frontend/ModernFrontendFlashSale';
 import CategoriesCarousel from '@/components/home/CategoriesCarousel';
 import FrontendFooter from '@/components/frontend/FrontendFooter';
+import MobileBottomNav from '@/components/home/MobileBottomNav';
 import { Separator } from '@/components/ui/separator';
 
 
@@ -75,7 +76,7 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
       {/* Fixed Navbar */}
       <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
         {/* Top bar with contact info - Hidden on mobile */}
@@ -343,6 +344,14 @@ const Home = () => {
         />
       )}
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      
+      {/* Mobile Bottom Navigation */}
+      {isMobile && (
+        <MobileBottomNav 
+          onCartClick={() => setShowCartModal(true)}
+          onAuthClick={() => setAuthModalOpen(true)}
+        />
+      )}
     </div>
   );
 };
