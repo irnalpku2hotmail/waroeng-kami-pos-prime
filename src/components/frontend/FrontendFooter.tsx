@@ -36,22 +36,22 @@ const FrontendFooter = () => {
             <div className="flex items-center space-x-3 mb-6">
               {storeInfo.logo_url && (
                 <img 
-                  src={storeInfo.logo_url} 
-                  alt={storeInfo.name} 
+                  src={String(storeInfo.logo_url)} 
+                  alt={String(storeInfo.name || 'Store')} 
                   className="h-12 w-12 rounded-full object-cover ring-2 ring-blue-500" 
                 />
               )}
               <div>
                 <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  {storeInfo.name || 'Toko Online'}
+                  {typeof storeInfo.name === 'string' ? storeInfo.name : 'Toko Online'}
                 </h3>
                 <p className="text-gray-400 text-sm">
-                  {storeInfo.tagline || 'Toko Online Terpercaya'}
+                  {typeof storeInfo.tagline === 'string' ? storeInfo.tagline : 'Toko Online Terpercaya'}
                 </p>
               </div>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed text-justify">
-              {storeInfo.description || 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda. Kami berkomitmen memberikan pengalaman belanja yang mudah, aman, dan menyenangkan.'}
+              {typeof storeInfo.description === 'string' ? storeInfo.description : 'Toko online terpercaya dengan produk berkualitas dan pelayanan terbaik untuk kebutuhan Anda. Kami berkomitmen memberikan pengalaman belanja yang mudah, aman, dan menyenangkan.'}
             </p>
             
             {/* Social Media */}
@@ -118,7 +118,7 @@ const FrontendFooter = () => {
           <div>
             <h3 className="text-lg font-semibold mb-6 text-blue-400">Hubungi Kami</h3>
             <div className="space-y-4">
-              {contactInfo.address && (
+              {typeof contactInfo.address === 'string' && contactInfo.address && (
                 <div className="flex items-start gap-3 group">
                   <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-blue-600 transition-colors">
                     <MapPin className="h-4 w-4 text-blue-400 group-hover:text-white" />
@@ -131,7 +131,7 @@ const FrontendFooter = () => {
                 </div>
               )}
               
-              {contactInfo.phone && (
+              {typeof contactInfo.phone === 'string' && contactInfo.phone && (
                 <div className="flex items-center gap-3 group">
                   <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-green-600 transition-colors">
                     <Phone className="h-4 w-4 text-green-400 group-hover:text-white" />
@@ -145,7 +145,7 @@ const FrontendFooter = () => {
                 </div>
               )}
               
-              {contactInfo.email && (
+              {typeof contactInfo.email === 'string' && contactInfo.email && (
                 <div className="flex items-center gap-3 group">
                   <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-purple-600 transition-colors">
                     <Mail className="h-4 w-4 text-purple-400 group-hover:text-white" />
@@ -159,7 +159,7 @@ const FrontendFooter = () => {
                 </div>
               )}
               
-              {contactInfo.operating_hours && (
+              {typeof contactInfo.operating_hours === 'string' && contactInfo.operating_hours && (
                 <div className="flex items-start gap-3 group">
                   <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-orange-600 transition-colors">
                     <Clock className="h-4 w-4 text-orange-400 group-hover:text-white mt-0.5" />
@@ -181,7 +181,7 @@ const FrontendFooter = () => {
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="text-center md:text-left">
             <p className="text-gray-400 text-sm">
-              &copy; {currentYear} {storeInfo.name || 'Toko Online'}. Semua hak dilindungi.
+              &copy; {currentYear} {typeof storeInfo.name === 'string' ? storeInfo.name : 'Toko Online'}. Semua hak dilindungi.
             </p>
             <p className="text-gray-500 text-xs mt-1 flex items-center justify-center md:justify-start">
               Dibuat dengan <Heart className="h-3 w-3 mx-1 text-red-500" /> untuk memberikan pengalaman belanja terbaik

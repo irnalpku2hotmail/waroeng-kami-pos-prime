@@ -46,9 +46,9 @@ const Wishlist: React.FC = () => {
   const [showCartModal, setShowCartModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const storeName = settings?.store_name || 'LAPAU.ID';
-  const logoUrl = settings?.store_info?.logo_url;
-  const contactInfo = settings?.contact_info || {};
+  const storeName = typeof settings?.store_name === 'string' ? settings.store_name : 'LAPAU.ID';
+  const logoUrl = typeof settings?.store_info?.logo_url === 'string' ? settings.store_info.logo_url : null;
+  const contactInfo = settings?.contact_info && typeof settings.contact_info === 'object' ? settings.contact_info : {};
 
   // Fetch wishlist products
   const { data: wishlistProducts = [], isLoading } = useQuery({
@@ -156,8 +156,8 @@ const Wishlist: React.FC = () => {
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
             <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
               <div className="flex items-center space-x-4">
-                {contactInfo.phone && <span>📞 {contactInfo.phone}</span>}
-                {contactInfo.email && <span className="hidden md:inline">✉️ {contactInfo.email}</span>}
+                {typeof contactInfo.phone === 'string' && contactInfo.phone && <span>📞 {contactInfo.phone}</span>}
+                {typeof contactInfo.email === 'string' && contactInfo.email && <span className="hidden md:inline">✉️ {contactInfo.email}</span>}
               </div>
               <span>Selamat Datang di {storeName}!</span>
             </div>
