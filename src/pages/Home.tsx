@@ -68,7 +68,7 @@ const Home = () => {
   const storeInfo = settings?.store_info || {};
   const contactInfo = settings?.contact_info || {};
   const logoUrl = storeInfo.logo_url;
-  const storeName = 'TokoQu';
+  const storeName = settings?.store_name?.name || 'LAPAU.ID';
 
   const handleSignOut = async () => {
     await signOut();

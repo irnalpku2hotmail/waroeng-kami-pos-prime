@@ -47,9 +47,10 @@ const Wishlist: React.FC = () => {
   const [showCartModal, setShowCartModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const storeName = typeof settings?.store_name === 'string' ? settings.store_name : 'LAPAU.ID';
-  const logoUrl = typeof settings?.store_info?.logo_url === 'string' ? settings.store_info.logo_url : null;
-  const contactInfo = settings?.contact_info && typeof settings.contact_info === 'object' ? settings.contact_info : {};
+  const storeInfo = settings?.store_info || {};
+  const contactInfo = settings?.contact_info || {};
+  const logoUrl = storeInfo.logo_url;
+  const storeName = settings?.store_name?.name || 'LAPAU.ID';
 
   // Fetch wishlist products
   const { data: wishlistProducts = [], isLoading } = useQuery({
