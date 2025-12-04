@@ -24,6 +24,7 @@ import { useSettings } from '@/hooks/useSettings';
 import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 import WishlistButton from '@/components/wishlist/WishlistButton';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
+import PriceHistoryChart from '@/components/product/PriceHistoryChart';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -612,6 +613,11 @@ const ProductDetail = () => {
               <p>Total: <span className="font-bold text-gray-900">{formatPrice(currentPrice * quantity)}</span></p>
             </div>
           </div>
+        </div>
+
+        {/* Price History Chart */}
+        <div className="mb-8">
+          <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
         </div>
 
         {/* Product Details & Reviews Tabs */}
