@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -8,49 +9,25 @@ import { useProductLikes } from '@/hooks/useProductLikes';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Heart, 
-  ShoppingCart, 
-  Package, 
-  ArrowLeft, 
-  Store,
-  Search,
-  User,
-  LogOut,
-  LogIn,
-  UserCircle,
-  Menu,
-  X
-} from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { Heart, ShoppingCart, Package, ArrowLeft, LogIn } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSettings } from '@/hooks/useSettings';
+import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
-import NotificationDropdown from '@/components/notifications/NotificationDropdown';
-import WishlistButton from '@/components/wishlist/WishlistButton';
-import FrontendFooter from '@/components/frontend/FrontendFooter';
+import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
+import WishlistButton from '@/components/wishlist/WishlistButton';
 import { toast } from '@/hooks/use-toast';
 
 const Wishlist: React.FC = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
-  const { addItem, getTotalItems } = useCart();
+  const { user } = useAuth();
+  const { addItem } = useCart();
   const { likedProducts } = useProductLikes();
-  const { data: settings } = useSettings();
   const isMobile = useIsMobile();
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const storeInfo = settings?.store_info || {};
-  const contactInfo = settings?.contact_info || {};
-  const logoUrl = storeInfo.logo_url;
-  const storeName = settings?.store_name?.name || 'LAPAU.ID';
 
   // Fetch wishlist products
   const { data: wishlistProducts = [], isLoading } = useQuery({
@@ -73,32 +50,6 @@ const Wishlist: React.FC = () => {
     },
     enabled: likedProducts.size > 0
   });
-
-  // Fetch user profile
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
-    }
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    setMobileMenuOpen(false);
-  };
 
   const handleAddToCart = (product: any) => {
     if (product.current_stock <= 0) {
@@ -152,145 +103,10 @@ const Wishlist: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
-      {/* Navbar */}
-      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
-        {!isMobile && (
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
-            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
-              <div className="flex items-center space-x-4">
-                {typeof contactInfo.phone === 'string' && contactInfo.phone && <span>📞 {contactInfo.phone}</span>}
-                {typeof contactInfo.email === 'string' && contactInfo.email && <span className="hidden md:inline">✉️ {contactInfo.email}</span>}
-              </div>
-              <span>Selamat Datang di {storeName}!</span>
-            </div>
-          </div>
-        )}
-
-        <div className="max-w-7xl mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/')}>
-              {logoUrl ? (
-                <img src={logoUrl} alt={storeName} className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} />
-              ) : (
-                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
-                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
-                </div>
-              )}
-              <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
-                {storeName}
-              </h1>
-            </div>
-
-            {/* Search Bar - Desktop */}
-            {!isMobile && (
-              <div className="flex-1 max-w-2xl mx-8">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Cari produk..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleSearch}>
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center space-x-2">
-              <NotificationDropdown />
-              
-              <Button variant="ghost" size="sm" className="relative p-2 hover:bg-blue-50" onClick={() => setShowCartModal(true)}>
-                <ShoppingCart className="h-5 w-5" />
-                {getTotalItems() > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500">
-                    {getTotalItems()}
-                  </Badge>
-                )}
-              </Button>
-
-              {!isMobile && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
-                      {profile?.avatar_url ? (
-                        <img src={profile.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
-                      ) : (
-                        <UserCircle className="h-6 w-6" />
-                      )}
-                      <span className="hidden lg:inline text-sm font-medium">
-                        {profile?.full_name || user.email?.split('@')[0]}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/wishlist')}>
-                      <Heart className="h-4 w-4 mr-2" />
-                      Wishlist
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              {isMobile && (
-                <Button variant="ghost" size="sm" className="p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile Search */}
-          {isMobile && (
-            <div className="pb-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Cari produk..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="flex-1"
-                />
-                <Button onClick={handleSearch}>
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && isMobile && (
-          <div className="bg-white border-t shadow-lg">
-            <div className="px-4 py-4 space-y-3">
-              <Button variant="outline" size="sm" onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }} className="w-full justify-start">
-                <User className="h-4 w-4 mr-2" />
-                Profile
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => { navigate('/wishlist'); setMobileMenuOpen(false); }} className="w-full justify-start">
-                <Heart className="h-4 w-4 mr-2" />
-                Wishlist
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleSignOut} className="w-full justify-start">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        )}
-      </nav>
+      {/* Reusable Navbar */}
+      <FrontendNavbar
+        onCartClick={() => setShowCartModal(true)}
+      />
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
@@ -384,7 +200,7 @@ const Wishlist: React.FC = () => {
         )}
       </div>
 
-      <FrontendFooter />
+      <MinimalFooter />
       <EnhancedFrontendCartModal open={showCartModal} onOpenChange={setShowCartModal} />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       
