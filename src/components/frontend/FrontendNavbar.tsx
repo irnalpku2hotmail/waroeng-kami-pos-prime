@@ -6,30 +6,35 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store } from 'lucide-react';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Search, Settings, Heart } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import CartModal from '@/components/CartModal';
+import { useNavigate } from 'react-router-dom';
 import AuthModal from '@/components/AuthModal';
-import MobileSearchBar from '@/components/home/MobileSearchBar';
 import { useSettings } from '@/hooks/useSettings';
 
 interface FrontendNavbarProps {
-  storeName: string;
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
+  onCartClick?: () => void;
+  searchComponent?: React.ReactNode;
+  showSearch?: boolean;
 }
 
 const FrontendNavbar = ({ 
-  storeName, 
-  searchTerm, 
-  onSearchChange
+  searchTerm = '',
+  onSearchChange,
+  onCartClick,
+  searchComponent,
+  showSearch = true
 }: FrontendNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
-  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   const isMobile = useIsMobile();
 
   // Fetch store settings
@@ -54,19 +59,27 @@ const FrontendNavbar = ({
   const storeInfo = settings?.store_info || {};
   const contactInfo = settings?.contact_info || {};
   const logoUrl = storeInfo.logo_url;
+  const storeName = settings?.store_name?.name || 'LAPAU.ID';
+  const tagline = storeInfo.tagline || 'Toko Online Terpercaya';
 
   const handleSignOut = async () => {
     await signOut();
     setMobileMenuOpen(false);
   };
 
-  const navLinks = [
-    { label: 'Beranda', href: '#home' },
-    { label: 'Produk', href: '#products' },
-    { label: 'Kategori', href: '#categories' },
-    { label: 'Flash Sale', href: '#flash-sale' },
-    { label: 'Tentang', href: '#about' }
-  ];
+  const handleSearch = () => {
+    if (onSearchChange) {
+      onSearchChange(localSearchTerm);
+    } else if (localSearchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(localSearchTerm)}`);
+    }
+  };
+
+  const handleCartClick = () => {
+    if (onCartClick) {
+      onCartClick();
+    }
+  };
 
   return (
     <>
@@ -94,7 +107,10 @@ const FrontendNavbar = ({
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Store Name */}
-            <div className="flex items-center space-x-3">
+            <div 
+              className="flex items-center space-x-3 cursor-pointer" 
+              onClick={() => navigate('/')}
+            >
               {logoUrl && (
                 <div className="relative">
                   <img 
@@ -113,57 +129,51 @@ const FrontendNavbar = ({
                 <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
                   {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
                 </h1>
-                {!isMobile && (
-                  <p className="text-xs text-gray-500">
-                    {storeInfo.tagline || 'Toko Online Terpercaya'}
-                  </p>
-                )}
+                {/* Tagline - shown on both mobile and desktop */}
+                <p className="text-xs text-gray-500 truncate max-w-[150px] sm:max-w-none">
+                  {tagline}
+                </p>
               </div>
             </div>
 
-            {/* Desktop Navigation */}
-            {!isMobile && (
-              <div className="hidden lg:flex items-center space-x-8">
-                {navLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
-                  >
-                    {link.label}
-                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
-                  </a>
-                ))}
-              </div>
-            )}
-
-            {/* Desktop Search Bar */}
-            {!isMobile && (
-              <div className="flex-1 max-w-lg mx-8">
-                <MobileSearchBar
-                  searchTerm={searchTerm}
-                  onSearchChange={onSearchChange}
-                  showVoiceSearch={true}
-                />
+            {/* Search Bar - Desktop */}
+            {!isMobile && showSearch && (
+              <div className="flex-1 max-w-2xl mx-8">
+                {searchComponent || (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Cari produk..."
+                      value={localSearchTerm}
+                      onChange={(e) => setLocalSearchTerm(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSearch}>
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Cart */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative hover:bg-blue-50 p-2"
-                onClick={() => setCartModalOpen(true)}
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {getTotalItems() > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
-                    {getTotalItems()}
-                  </Badge>
-                )}
-              </Button>
+              {/* Cart - Only show if user is logged in */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative hover:bg-blue-50 p-2"
+                  onClick={handleCartClick}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
 
               {/* User Menu - Desktop */}
               {!isMobile && (
@@ -187,9 +197,13 @@ const FrontendNavbar = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem disabled>
-                          <User className="h-4 w-4 mr-2" />
-                          {profile?.full_name || user.email?.split('@')[0]}
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/wishlist')}>
+                          <Heart className="h-4 w-4 mr-2" />
+                          Wishlist
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleSignOut}>
                           <LogOut className="h-4 w-4 mr-2" />
@@ -226,13 +240,22 @@ const FrontendNavbar = ({
           </div>
 
           {/* Mobile Search */}
-          {isMobile && (
+          {isMobile && showSearch && (
             <div className="pb-4">
-              <MobileSearchBar
-                searchTerm={searchTerm}
-                onSearchChange={onSearchChange}
-                showVoiceSearch={true}
-              />
+              {searchComponent || (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Cari produk..."
+                    value={localSearchTerm}
+                    onChange={(e) => setLocalSearchTerm(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleSearch}>
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -247,17 +270,6 @@ const FrontendNavbar = ({
                   📞 {contactInfo.phone}
                 </div>
               )}
-              
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="block text-gray-700 hover:text-blue-600 font-medium py-2 text-base"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </a>
-              ))}
               
               <div className="border-t pt-4">
                 {user ? (
@@ -281,6 +293,30 @@ const FrontendNavbar = ({
                         </p>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigate('/profile');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start mb-2"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigate('/wishlist');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full justify-start mb-2"
+                    >
+                      <Heart className="h-4 w-4 mr-2" />
+                      Wishlist
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -311,8 +347,6 @@ const FrontendNavbar = ({
         )}
       </nav>
 
-      {/* Modals */}
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </>
   );
