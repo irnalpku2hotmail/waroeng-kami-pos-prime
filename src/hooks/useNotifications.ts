@@ -95,8 +95,14 @@ export const useNotifications = () => {
     if (!user?.id) return;
 
     // Prevent duplicate subscriptions
-    if (isSubscribedRef.current) {
+    if (isSubscribedRef.current && channelRef.current) {
       return;
+    }
+
+    // Clean up any existing channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     isSubscribedRef.current = true;

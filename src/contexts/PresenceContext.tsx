@@ -20,11 +20,16 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
     }
 
     // Prevent duplicate subscriptions
-    if (isSubscribedRef.current) {
+    if (isSubscribedRef.current && channelRef.current) {
       return;
     }
 
-    console.log('Setting up presence tracking for user:', user.id);
+    // Clean up any existing channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     isSubscribedRef.current = true;
 
     const channel = supabase.channel('online-users', {
@@ -41,7 +46,6 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const count = Object.keys(state).length;
-        console.log('Presence sync - online users count:', count);
         setOnlineUsers(count);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
@@ -52,7 +56,6 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Presence channel subscribed, tracking user presence');
           await channel.track({ 
             user_id: user.id,
             online_at: new Date().toISOString(),
@@ -62,7 +65,6 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       });
 
     return () => {
-      console.log('Cleaning up presence tracking');
       isSubscribedRef.current = false;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
