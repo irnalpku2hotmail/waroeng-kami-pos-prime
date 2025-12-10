@@ -31,6 +31,7 @@ import SearchResults from "./pages/SearchResults";
 import OrderHistory from "./pages/OrderHistory";
 import Notifications from "./pages/Notifications";
 import SearchAnalytics from "./pages/SearchAnalytics";
+import UserNotifications from "./pages/UserNotifications";
 import Wishlist from "./pages/Wishlist";
 
 // Auth pages
@@ -50,6 +51,7 @@ function App() {
                 <Route path="/search" element={<SearchResults />} />
                 <Route path="/order-history" element={<OrderHistory />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/user-notifications" element={<UserNotifications />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
