@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
@@ -10,6 +10,8 @@ export const usePresence = () => useContext(PresenceContext);
 export const PresenceProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState(0);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const isSubscribedRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -17,7 +19,13 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       return;
     }
 
+    // Prevent duplicate subscriptions
+    if (isSubscribedRef.current) {
+      return;
+    }
+
     console.log('Setting up presence tracking for user:', user.id);
+    isSubscribedRef.current = true;
 
     const channel = supabase.channel('online-users', {
       config: {
@@ -26,6 +34,8 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
         },
       },
     });
+
+    channelRef.current = channel;
 
     channel
       .on('presence', { event: 'sync' }, () => {
@@ -53,9 +63,13 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
 
     return () => {
       console.log('Cleaning up presence tracking');
-      supabase.removeChannel(channel);
+      isSubscribedRef.current = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [user]);
+  }, [user?.id]);
 
   return (
     <PresenceContext.Provider value={{ onlineUsers }}>
