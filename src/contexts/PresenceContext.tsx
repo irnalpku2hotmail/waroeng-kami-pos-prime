@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
@@ -10,8 +10,6 @@ export const usePresence = () => useContext(PresenceContext);
 export const PresenceProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState(0);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const isSubscribedRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -19,18 +17,7 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       return;
     }
 
-    // Prevent duplicate subscriptions
-    if (isSubscribedRef.current && channelRef.current) {
-      return;
-    }
-
-    // Clean up any existing channel first
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-
-    isSubscribedRef.current = true;
+    console.log('Setting up presence tracking for user:', user.id);
 
     const channel = supabase.channel('online-users', {
       config: {
@@ -40,12 +27,11 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       },
     });
 
-    channelRef.current = channel;
-
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const count = Object.keys(state).length;
+        console.log('Presence sync - online users count:', count);
         setOnlineUsers(count);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
@@ -56,6 +42,7 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
+          console.log('Presence channel subscribed, tracking user presence');
           await channel.track({ 
             user_id: user.id,
             online_at: new Date().toISOString(),
@@ -65,13 +52,10 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
       });
 
     return () => {
-      isSubscribedRef.current = false;
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      console.log('Cleaning up presence tracking');
+      supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user]);
 
   return (
     <PresenceContext.Provider value={{ onlineUsers }}>

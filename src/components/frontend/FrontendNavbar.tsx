@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Search, Settings, Heart, Bell } from 'lucide-react';
-import { useNotifications } from '@/hooks/useNotifications';
+import { ShoppingCart, User, LogOut, LogIn, UserCircle, Menu, X, Store, Search, Settings, Heart } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
 import AuthModal from '@/components/AuthModal';
@@ -32,7 +31,6 @@ const FrontendNavbar = ({
 }: FrontendNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
-  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -160,23 +158,6 @@ const FrontendNavbar = ({
 
             {/* Actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Notifications - Only show if user is logged in */}
-              {user && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="relative hover:bg-blue-50 p-2"
-                  onClick={() => navigate('/user-notifications')}
-                >
-                  <Bell className="h-5 w-5" />
-                  {unreadCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </Badge>
-                  )}
-                </Button>
-              )}
-
               {/* Cart - Only show if user is logged in */}
               {user && (
                 <Button
@@ -223,13 +204,6 @@ const FrontendNavbar = ({
                         <DropdownMenuItem onClick={() => navigate('/wishlist')}>
                           <Heart className="h-4 w-4 mr-2" />
                           Wishlist
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/user-notifications')}>
-                          <Bell className="h-4 w-4 mr-2" />
-                          Notifikasi
-                          {unreadCount > 0 && (
-                            <Badge className="ml-auto h-5 px-1.5 text-xs bg-red-500">{unreadCount}</Badge>
-                          )}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleSignOut}>
                           <LogOut className="h-4 w-4 mr-2" />
@@ -342,21 +316,6 @@ const FrontendNavbar = ({
                     >
                       <Heart className="h-4 w-4 mr-2" />
                       Wishlist
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigate('/user-notifications');
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full justify-start mb-2"
-                    >
-                      <Bell className="h-4 w-4 mr-2" />
-                      Notifikasi
-                      {unreadCount > 0 && (
-                        <Badge className="ml-auto h-5 px-1.5 text-xs bg-red-500">{unreadCount}</Badge>
-                      )}
                     </Button>
                     <Button
                       variant="outline"
