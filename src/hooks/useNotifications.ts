@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,8 @@ interface Notification {
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const isSubscribedRef = useRef(false);
 
   const { data: notifications = [], isLoading, refetch } = useQuery({
     queryKey: ['notifications', user?.id],
@@ -38,7 +40,7 @@ export const useNotifications = () => {
       return data as Notification[];
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
   });
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -92,8 +94,15 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    // Prevent duplicate subscriptions
+    if (isSubscribedRef.current) {
+      return;
+    }
+
+    isSubscribedRef.current = true;
+
     const channel = supabase
-      .channel('user-notifications')
+      .channel(`user-notifications-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -108,8 +117,14 @@ export const useNotifications = () => {
       )
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      isSubscribedRef.current = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [user?.id, refetch]);
 
