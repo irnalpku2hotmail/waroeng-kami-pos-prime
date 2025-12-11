@@ -142,56 +142,54 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
         {validProducts.map((product) => (
           <Card 
             key={product.id} 
-            className="flex-none w-64 group hover:shadow-lg transition-shadow cursor-pointer"
+            className="flex-none w-40 group hover:shadow-md transition-all duration-200 border-gray-200 cursor-pointer"
             onClick={() => handleProductClick(product.id)}
           >
-            <CardContent className="p-4">
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-3">
+            <CardContent className="p-3">
+              {/* Product Image */}
+              <div className="relative w-full h-32 mb-3 bg-gray-100 rounded-lg overflow-hidden">
                 {product.image_url ? (
                   <img 
                     src={product.image_url} 
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <Package className="h-8 w-8 text-gray-400" />
                   </div>
                 )}
-              </div>
-              
-              <div className="space-y-2">
-                {product.categories && (
-                  <Badge variant="secondary" className="text-xs">
-                    {product.categories.name}
-                  </Badge>
-                )}
                 
-                <h3 className="font-medium text-sm line-clamp-2 h-10">
+                {/* Stock Badge */}
+                <Badge 
+                  variant={(product.current_stock || 0) > 0 ? "secondary" : "destructive"}
+                  className="absolute bottom-2 left-2 text-xs"
+                >
+                  {(product.current_stock || 0) > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
+                </Badge>
+              </div>
+
+              {/* Product Info */}
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 leading-tight">
                   {product.name}
                 </h3>
                 
-                <p className="text-lg font-bold text-blue-600">
+                {/* Price */}
+                <div className="text-blue-600 font-bold text-sm mb-3">
                   {formatPrice(product.selling_price || 0)}
-                </p>
-                
-                <div className="flex items-center justify-between">
-                  <Badge 
-                    variant={(product.current_stock || 0) > 0 ? 'default' : 'destructive'}
-                    className="text-xs"
-                  >
-                    {(product.current_stock || 0) > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
-                  </Badge>
-                  
-                  <Button
-                    size="sm"
-                    onClick={(e) => handleAddToCart(product, e)}
-                    disabled={(product.current_stock || 0) === 0}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ShoppingCart className="h-3 w-3" />
-                  </Button>
                 </div>
+
+                {/* Action Button */}
+                <Button
+                  onClick={(e) => handleAddToCart(product, e)}
+                  disabled={(product.current_stock || 0) === 0}
+                  className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700"
+                  size="sm"
+                >
+                  <ShoppingCart className="h-3 w-3 mr-1" />
+                  {(product.current_stock || 0) > 0 ? 'Tambah' : 'Habis'}
+                </Button>
               </div>
             </CardContent>
           </Card>
