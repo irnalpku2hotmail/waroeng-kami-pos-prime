@@ -37,7 +37,18 @@ const CartItemsList: React.FC<CartItemsListProps> = ({ cart, updateCartQuantity,
               <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}>
                 <Minus className="h-3 w-3" />
               </Button>
-              <span className="w-8 text-center text-sm">{item.quantity}</span>
+              <input 
+                type="number" 
+                min="1"
+                value={item.quantity}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  if (!isNaN(value) && value > 0) {
+                    updateCartQuantity(item.product_id, value);
+                  }
+                }}
+                className="w-12 text-center text-sm border rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
               <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}>
                 <Plus className="h-3 w-3" />
               </Button>
