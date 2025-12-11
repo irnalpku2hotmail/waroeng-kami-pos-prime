@@ -79,7 +79,7 @@ const MinimalFooter = () => {
         <p className="text-center text-gray-400 text-sm leading-relaxed mb-10 max-w-2xl mx-auto">
           {typeof storeInfo.description === 'string' && storeInfo.description
             ? storeInfo.description
-            : `${storeName} berkomitmen untuk menyediakan produk berkualitas dengan harga terbaik. Kami telah melayani pelanggan sejak ${currentYear - 5} dan terus berkembang menjadi salah satu toko online terpercaya. Seluruh konten di situs ini dilindungi hak cipta dan merupakan milik ${storeName}.`}
+            : `${storeName} berkomitmen untuk menyediakan produk berkualitas dengan harga terbaik. Kami telah melayani pelanggan sejak ${currentYear} dan terus berkembang menjadi salah satu toko online terpercaya. Seluruh konten di situs ini dilindungi hak cipta dan merupakan milik ${storeName}.`}
         </p>
 
         {/* Stylized Store Name Logo */}
