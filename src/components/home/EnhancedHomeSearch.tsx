@@ -8,7 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Package, X, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { SlidersHorizontal, Check } from 'lucide-react';
 
 interface EnhancedHomeSearchProps {
   searchTerm: string;
@@ -145,21 +146,38 @@ const EnhancedHomeSearch = ({
   return (
     <div ref={searchRef} className="relative w-full max-w-2xl mx-auto">
       <div className="flex gap-2">
-        {/* Category Filter */}
-        <Select value={selectedCategory || 'all'} onValueChange={onCategoryChange}>
-          <SelectTrigger className="w-40" aria-label="Pilih kategori produk">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Kategori" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Kategori</SelectItem>
+        {/* Category Filter - Minimal Button */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className={`h-10 w-10 flex-shrink-0 ${selectedCategory && selectedCategory !== 'all' ? 'bg-blue-50 border-blue-300 text-blue-600' : ''}`}
+              aria-label="Filter kategori"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem 
+              onClick={() => onCategoryChange('all')}
+              className="flex items-center justify-between"
+            >
+              Semua Kategori
+              {(!selectedCategory || selectedCategory === 'all') && <Check className="h-4 w-4 text-blue-600" />}
+            </DropdownMenuItem>
             {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
+              <DropdownMenuItem 
+                key={category.id} 
+                onClick={() => onCategoryChange(category.id)}
+                className="flex items-center justify-between"
+              >
                 {category.name}
-              </SelectItem>
+                {selectedCategory === category.id && <Check className="h-4 w-4 text-blue-600" />}
+              </DropdownMenuItem>
             ))}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Search Input */}
         <div className="relative flex-1">
