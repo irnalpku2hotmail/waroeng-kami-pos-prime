@@ -76,7 +76,9 @@ const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminde
               <TableHead>No. Transaksi</TableHead>
               <TableHead>Pelanggan</TableHead>
               <TableHead>Kontak</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>Total Piutang</TableHead>
+              <TableHead>Sudah Dibayar</TableHead>
+              <TableHead>Sisa Piutang</TableHead>
               <TableHead>Jatuh Tempo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Aksi</TableHead>
@@ -116,6 +118,16 @@ const CreditTable = ({ creditTransactions, isLoading, onPayCredit, onSendReminde
                   <TableCell>
                     <div className="font-medium">
                       Rp {transaction.total_amount?.toLocaleString('id-ID')}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-green-600 font-medium">
+                      Rp {(transaction.total_paid || 0)?.toLocaleString('id-ID')}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-orange-600 font-bold">
+                      Rp {(transaction.remaining_amount || transaction.total_amount)?.toLocaleString('id-ID')}
                     </div>
                   </TableCell>
                   <TableCell>

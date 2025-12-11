@@ -12,7 +12,7 @@ import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Heart, User, LogOut, Log
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import HomeFooter from '@/components/home/HomeFooter';
+import MinimalFooter from '@/components/frontend/MinimalFooter';
 import ProductSimilarCarousel from '@/components/ProductSimilarCarousel';
 import ProductReviews from '@/components/ProductReviews';
 import { useAuth } from '@/contexts/AuthContext';
@@ -655,7 +655,7 @@ const ProductDetail = () => {
         )}
       </div>
 
-      <HomeFooter />
+      <MinimalFooter />
       {user && (
         <EnhancedFrontendCartModal 
           open={cartModalOpen} 
