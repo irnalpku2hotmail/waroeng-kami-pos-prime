@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, X, Filter } from 'lucide-react';
+import { Search, Package, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SlidersHorizontal, Check } from 'lucide-react';
+import VoiceSearch from '@/components/VoiceSearch';
 
 interface EnhancedHomeSearchProps {
   searchTerm: string;
@@ -210,15 +211,12 @@ const EnhancedHomeSearch = ({
                 <X className="h-3 w-3" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-blue-600 hover:bg-blue-50"
-              onClick={() => handleSearch()}
-              aria-label="Cari produk"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            <VoiceSearch 
+              onVoiceResult={(text) => {
+                onSearchChange(text);
+                setShowSuggestions(true);
+              }} 
+            />
           </div>
         </div>
       </div>
