@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +49,23 @@ const Profile = () => {
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Fetch order count for current user
+  const { data: orderCount = 0 } = useQuery({
+    queryKey: ['user-order-count', profile?.email],
+    queryFn: async () => {
+      if (!profile?.email) return 0;
+      
+      const { count, error } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .or(`customer_id.eq.${user?.id},customer_name.ilike.%${profile.full_name}%`);
+      
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!profile?.email
+  });
 
   // Upload avatar
   const uploadAvatar = async (file: File, userId: string) => {
@@ -319,7 +336,7 @@ const Profile = () => {
                     <div className="bg-green-50 p-3 rounded-xl text-center">
                       <ShoppingBag className="h-5 w-5 mx-auto mb-1 text-green-600" />
                       <p className="text-xs text-gray-600">Orders</p>
-                      <p className="font-medium text-sm">12</p>
+                      <p className="font-medium text-sm">{orderCount}</p>
                     </div>
                   </div>
                 </CardContent>
