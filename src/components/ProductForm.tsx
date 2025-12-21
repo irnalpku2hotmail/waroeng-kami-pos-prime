@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Minus, X, Upload } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import BarcodeScanner from '@/components/BarcodeScanner';
 
 interface PriceVariant {
   id?: string;
@@ -394,12 +395,18 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
             <div>
               <Label htmlFor="barcode">Barcode</Label>
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                placeholder="Kode barcode"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="barcode"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  placeholder="Kode barcode"
+                  className="flex-1"
+                />
+                <BarcodeScanner 
+                  onScanSuccess={(barcode) => setFormData({ ...formData, barcode })} 
+                />
+              </div>
             </div>
 
             <div>
