@@ -168,19 +168,20 @@ const Purchases = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Manajemen Pembelian</h1>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl md:text-3xl font-bold">Manajemen Pembelian</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditPurchase(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Pembelian
+              <Button onClick={() => setEditPurchase(null)} size="sm" className="text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2">
+                <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Tambah Pembelian</span>
+                <span className="sm:hidden">Tambah</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] md:w-auto">
               <DialogHeader>
-                <DialogTitle>{editPurchase ? 'Edit Pembelian' : 'Tambah Pembelian Baru'}</DialogTitle>
+                <DialogTitle className="text-sm md:text-base">{editPurchase ? 'Edit Pembelian' : 'Tambah Pembelian Baru'}</DialogTitle>
               </DialogHeader>
               <PurchaseForm 
                 purchase={editPurchase}
@@ -192,50 +193,50 @@ const Purchases = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pembelian</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Pembelian</CardTitle>
+              <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Rp {totalPurchases.toLocaleString('id-ID')}</div>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-sm md:text-2xl font-bold">Rp {totalPurchases.toLocaleString('id-ID')}</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Cash</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Cash</CardTitle>
+              <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-sm md:text-2xl font-bold text-green-600">
                 Rp {totalCash.toLocaleString('id-ID')}
               </div>
-              <p className="text-xs text-muted-foreground">Cash + Pembayaran Kredit</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground hidden md:block">Cash + Pembayaran Kredit</p>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sisa Kredit</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Sisa Kredit</CardTitle>
+              <CreditCard className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-sm md:text-2xl font-bold text-red-600">
                 Rp {totalCreditRemaining.toLocaleString('id-ID')}
               </div>
-              <p className="text-xs text-muted-foreground">Belum dibayar</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground hidden md:block">Belum dibayar</p>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Transaksi</CardTitle>
+              <Calendar className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{purchases.length}</div>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{purchases.length}</div>
             </CardContent>
           </Card>
         </div>

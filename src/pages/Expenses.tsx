@@ -155,19 +155,20 @@ const Expenses = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Pengeluaran</h1>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl md:text-3xl font-bold text-blue-800">Pengeluaran</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Pengeluaran
+              <Button onClick={() => setOpen(true)} size="sm" className="text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2">
+                <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Tambah Pengeluaran</span>
+                <span className="sm:hidden">Tambah</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl w-[95vw] md:w-auto">
               <DialogHeader>
-                <DialogTitle>{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
+                <DialogTitle className="text-sm md:text-base">{editExpense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}</DialogTitle>
               </DialogHeader>
               <ExpenseForm
                 expense={editExpense}

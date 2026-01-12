@@ -129,18 +129,19 @@ const Customers = () => {
   return (
       <Layout>
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Manajemen Customer</h1>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+            <h1 className="text-xl md:text-3xl font-bold">Manajemen Customer</h1>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => setEditCustomer(null)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Tambah Customer
+                <Button onClick={() => setEditCustomer(null)} size="sm" className="text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2">
+                  <UserPlus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Tambah Customer</span>
+                  <span className="sm:hidden">Tambah</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] md:w-auto">
                 <DialogHeader>
-                  <DialogTitle>
+                  <DialogTitle className="text-sm md:text-base">
                     {editCustomer ? 'Edit Customer' : 'Tambah Customer Baru'}
                   </DialogTitle>
                 </DialogHeader>
@@ -150,44 +151,44 @@ const Customers = () => {
           </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customer</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Customer</CardTitle>
+              <User className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCustomers}</div>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{totalCustomers}</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Poin</CardTitle>
-              <Star className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Poin</CardTitle>
+              <Star className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPoints.toLocaleString('id-ID')}</div>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{totalPoints.toLocaleString('id-ID')}</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Penjualan</CardTitle>
-              <Gift className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Penjualan</CardTitle>
+              <Gift className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Rp {totalSpent.toLocaleString('id-ID')}</div>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">Rp {totalSpent.toLocaleString('id-ID')}</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rata-rata per Customer</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Rata-rata</CardTitle>
+              <User className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">
                 Rp {totalCustomers > 0 ? (totalSpent / totalCustomers).toLocaleString('id-ID') : '0'}
               </div>
             </CardContent>

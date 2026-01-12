@@ -251,17 +251,18 @@ const FlashSales = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Flash Sales</h1>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl md:text-3xl font-bold text-blue-800">Flash Sales</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Flash Sale
+              <Button onClick={resetForm} size="sm" className="text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2">
+                <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Tambah Flash Sale</span>
+                <span className="sm:hidden">Tambah</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden w-[95vw] md:w-auto">
               <DialogHeader>
                 <DialogTitle>{editFlashSale ? 'Edit Flash Sale' : 'Tambah Flash Sale Baru'}</DialogTitle>
               </DialogHeader>

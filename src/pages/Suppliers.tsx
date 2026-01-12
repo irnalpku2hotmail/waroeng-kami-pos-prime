@@ -141,14 +141,15 @@ const Suppliers = () => {
           
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditSupplier(null)} className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Supplier
+              <Button onClick={() => setEditSupplier(null)} className="w-full sm:w-auto text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2" size="sm">
+                <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Tambah Supplier</span>
+                <span className="sm:hidden">Tambah</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md mx-auto">
+            <DialogContent className="max-w-md mx-auto w-[95vw] md:w-auto">
               <DialogHeader>
-                <DialogTitle>
+                <DialogTitle className="text-sm md:text-base">
                   {editSupplier ? 'Edit Supplier' : 'Tambah Supplier Baru'}
                 </DialogTitle>
               </DialogHeader>
