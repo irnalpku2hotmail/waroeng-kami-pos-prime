@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, X } from 'lucide-react';
+import { Search, Package, X, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SlidersHorizontal, Check } from 'lucide-react';
 import VoiceSearch from '@/components/VoiceSearch';
+import BarcodeScanner from '@/components/BarcodeScanner';
 
 interface EnhancedHomeSearchProps {
   searchTerm: string;
@@ -85,6 +86,34 @@ const EnhancedHomeSearch = ({
       }
       navigate(`/search?${params.toString()}`);
       setShowSuggestions(false);
+    }
+  };
+
+  // Handle barcode scan - search for product by barcode
+  const handleBarcodeScan = async (barcode: string) => {
+    try {
+      const { data: product, error } = await supabase
+        .from('products')
+        .select('id')
+        .eq('barcode', barcode)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (product) {
+        // Navigate directly to product detail
+        navigate(`/product/${product.id}`);
+      } else {
+        // If no product found, search by barcode text
+        onSearchChange(barcode);
+        handleSearch(barcode);
+      }
+    } catch (error) {
+      console.error('Error searching by barcode:', error);
+      // Fallback to text search
+      onSearchChange(barcode);
+      handleSearch(barcode);
     }
   };
 
@@ -194,9 +223,9 @@ const EnhancedHomeSearch = ({
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => searchTerm.length >= 2 && setShowSuggestions(true)}
-            className="pl-10 pr-20 bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 transition-colors"
+            className="pl-10 pr-24 bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 transition-colors"
           />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-0.5">
             {searchTerm && (
               <Button
                 variant="ghost"
@@ -217,6 +246,7 @@ const EnhancedHomeSearch = ({
                 setShowSuggestions(true);
               }} 
             />
+            <BarcodeScanner onScanSuccess={handleBarcodeScan} />
           </div>
         </div>
       </div>
