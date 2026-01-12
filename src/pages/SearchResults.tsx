@@ -17,6 +17,7 @@ import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCar
 import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import AuthModal from '@/components/AuthModal';
+import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 
 const SearchResults = () => {
   const navigate = useNavigate();
@@ -149,14 +150,19 @@ const SearchResults = () => {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
-      {/* Reusable Navbar */}
+      {/* Reusable Navbar with EnhancedHomeSearch */}
       <FrontendNavbar
         searchTerm={searchQuery}
-        onSearchChange={(value) => {
-          setSearchQuery(value);
-          handleSearch();
-        }}
+        onSearchChange={setSearchQuery}
         onCartClick={() => setShowCartModal(true)}
+        searchComponent={
+          <EnhancedHomeSearch
+            searchTerm={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+          />
+        }
       />
 
       {/* Main Content */}
