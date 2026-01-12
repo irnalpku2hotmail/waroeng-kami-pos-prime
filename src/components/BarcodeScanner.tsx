@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,37 @@ const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Play beep sound using Web Audio API
+  const playBeepSound = useCallback(() => {
+    try {
+      // Create audio context if not exists
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      const audioContext = audioContextRef.current;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Beep settings - clear, pleasant tone
+      oscillator.frequency.value = 1200; // Higher pitch for success sound
+      oscillator.type = 'sine';
+      
+      // Volume envelope
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.15);
+    } catch (err) {
+      console.log('Could not play beep sound:', err);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -36,6 +67,8 @@ const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
             qrbox: { width: 250, height: 150 },
           },
           (decodedText) => {
+            // Play beep sound on successful scan
+            playBeepSound();
             onScanSuccess(decodedText);
             stopScanner();
             setIsOpen(false);

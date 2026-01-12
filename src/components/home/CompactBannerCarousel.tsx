@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +13,9 @@ import {
 } from '@/components/ui/carousel';
 
 const CompactBannerCarousel = () => {
+  const autoplayPlugin = useRef(
+    Autoplay({ delay: 4000, stopOnInteraction: true })
+  );
   const { data: banners = [] } = useQuery({
     queryKey: ['banner-images'],
     queryFn: async () => {
@@ -46,11 +49,7 @@ const CompactBannerCarousel = () => {
   return (
     <div className="w-full mb-4">
       <Carousel
-        plugins={[
-          Autoplay({
-            delay: 4000,
-          }),
-        ]}
+        plugins={[autoplayPlugin.current] as any}
         className="w-full"
       >
         <CarouselContent>
