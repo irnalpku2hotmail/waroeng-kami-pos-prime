@@ -268,21 +268,22 @@ const PointsRewards = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Points & Rewards</h1>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl md:text-3xl font-bold text-blue-800">Points & Rewards</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => {
                 setEditReward(null);
                 setRewardData({ name: '', description: '', stock_quantity: 0, is_active: true });
                 setSelectedProducts([]);
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Reward
+              }} size="sm" className="text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2">
+                <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Tambah Reward</span>
+                <span className="sm:hidden">Tambah</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] md:w-auto">
               <DialogHeader>
                 <DialogTitle>{editReward ? 'Edit Reward' : 'Tambah Reward Baru'}</DialogTitle>
               </DialogHeader>

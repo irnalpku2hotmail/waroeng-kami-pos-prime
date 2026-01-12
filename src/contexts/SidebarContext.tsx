@@ -8,7 +8,8 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export const SidebarProvider = ({ children }: { children: ReactNode }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  // Default to collapsed (minimized) sidebar
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
