@@ -40,7 +40,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     base_price: 0,
     selling_price: 0,
     min_stock: 10,
-    loyalty_points: 1,
+    loyalty_points: 0,
     category_id: '',
     unit_id: '',
     is_active: true
