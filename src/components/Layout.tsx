@@ -52,8 +52,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Fixed Top Navigation */}
         <header className={`bg-white border-b border-gray-200 shadow-sm fixed top-0 right-0 ${isMobile ? 'left-0' : collapsed ? 'left-16' : 'left-56'} z-10 transition-all duration-300`}>
           <div className="flex items-center justify-between px-2 md:px-4 py-2 md:py-3">
-            <DateTimeDisplay />
-            <div className="flex items-center gap-2 md:gap-4">
+            {/* On mobile, add left margin to avoid overlap with hamburger menu */}
+            <div className={isMobile ? 'ml-12' : ''}>
+              <DateTimeDisplay />
+            </div>
+            {/* Notification and Profile on the right */}
+            <div className="flex items-center gap-1 md:gap-4">
               <NotificationDropdown />
               <UserDropdown />
             </div>
