@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingCart, TrendingUp, Receipt, Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateReceiptHTML } from '@/utils/receiptGenerator';
+import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
 
 interface CustomerFavoritesModalProps {
   open: boolean;
@@ -146,19 +147,13 @@ const CustomerFavoritesModal = ({ open, onClose, customerId, onAddToCart }: Cust
       total: transaction.total_amount,
       paid_amount: transaction.payment_amount,
       change_amount: transaction.change_amount,
-      payment_method: transaction.payment_type,
+      payment_method: transaction.payment_type === 'cash' ? 'Tunai' : transaction.payment_type === 'credit' ? 'Kredit' : 'Transfer',
       points_earned: transaction.points_earned,
       points_used: transaction.points_used,
     };
 
-    const receiptSettings = {
-      store_name: settings?.store_name || 'Toko Saya',
-      store_address: settings?.store_address || '',
-      store_phone: settings?.store_phone || '',
-      receipt_header: settings?.receipt_header || '',
-      receipt_footer: settings?.receipt_footer || 'Terima kasih atas kunjungan Anda!',
-      paper_size: (settings?.paper_size as '80mm' | '58mm') || '80mm',
-    };
+    // Use helper to extract receipt settings consistently
+    const receiptSettings = extractReceiptSettings(settings);
 
     const receiptHTML = generateReceiptHTML(receiptData, receiptSettings);
     const printWindow = window.open('', '_blank');

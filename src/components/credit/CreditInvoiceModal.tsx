@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateReceiptHTML } from '@/utils/receiptGenerator';
+import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
 
 interface CreditInvoiceModalProps {
   open: boolean;
@@ -47,6 +48,9 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
       return;
     }
 
+    // Use helper to extract receipt settings consistently
+    const receiptSettings = extractReceiptSettings(settings);
+
     const receiptData = {
       transaction_number: transaction.transaction_number,
       transaction_date: transaction.created_at,
@@ -65,15 +69,7 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
       notes: `Jatuh Tempo: ${transaction.due_date ? new Date(transaction.due_date).toLocaleDateString('id-ID') : '-'}\nSisa Pembayaran: Rp ${(transaction.total_amount - transaction.paid_amount).toLocaleString('id-ID')}`,
     };
 
-    const receiptHTML = generateReceiptHTML(receiptData, {
-      store_name: settings?.store_name,
-      store_address: settings?.store_address,
-      store_phone: settings?.store_phone,
-      receipt_header: settings?.receipt_header,
-      receipt_footer: settings?.receipt_footer,
-      paper_size: settings?.paper_size,
-      show_cashier: settings?.show_cashier,
-    });
+    const receiptHTML = generateReceiptHTML(receiptData, receiptSettings);
 
     printWindow.document.write(receiptHTML);
     printWindow.document.close();

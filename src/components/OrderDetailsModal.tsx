@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -7,6 +6,7 @@ import { Package, User, MapPin, Phone, Calendar, CreditCard, Printer } from 'luc
 import { toast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
 
 interface OrderDetailsModalProps {
   order: any;
@@ -93,18 +93,11 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
       return;
     }
 
-    // Get receipt settings
-    const receiptSettings = settings?.receipt_settings || {};
-    const storeInfo = {
-      name: settings?.store_name?.name || 'TOKO RETAIL',
-      address: settings?.store_address?.address || 'Jl. Contoh No. 123',
-      phone: settings?.store_phone?.phone || '(021) 1234-5678',
-      email: settings?.store_email?.email || 'email@toko.com'
-    };
+    // Use helper to extract receipt settings consistently
+    const receiptSettings = extractReceiptSettings(settings);
 
-    const paperSize = receiptSettings.paper_size || '80mm';
-    const paperWidth = paperSize === '58mm' ? '58mm' : '80mm';
-    const contentWidth = paperSize === '58mm' ? '50mm' : '70mm';
+    const paperWidth = receiptSettings.paper_size === '58mm' ? '58mm' : '80mm';
+    const contentWidth = receiptSettings.paper_size === '58mm' ? '50mm' : '70mm';
 
     const receiptContent = `
       <!DOCTYPE html>
@@ -121,7 +114,7 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           }
           body {
             font-family: 'Courier New', monospace;
-            font-size: ${paperSize === '58mm' ? '10px' : '12px'};
+            font-size: ${receiptSettings.paper_size === '58mm' ? '10px' : '12px'};
             line-height: 1.4;
             margin: 0;
             padding: 5mm;
@@ -137,11 +130,11 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
             display: flex; 
             justify-content: space-between; 
             margin: 2px 0; 
-            font-size: ${paperSize === '58mm' ? '9px' : '11px'};
+            font-size: ${receiptSettings.paper_size === '58mm' ? '9px' : '11px'};
           }
           .total { 
             font-weight: bold; 
-            font-size: ${paperSize === '58mm' ? '11px' : '14px'}; 
+            font-size: ${receiptSettings.paper_size === '58mm' ? '11px' : '14px'}; 
           }
           .header { 
             margin-bottom: 15px; 
@@ -149,29 +142,29 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           .footer { 
             margin-top: 15px; 
             text-align: center; 
-            font-size: ${paperSize === '58mm' ? '8px' : '10px'}; 
+            font-size: ${receiptSettings.paper_size === '58mm' ? '8px' : '10px'}; 
           }
           .product-name {
             font-weight: bold;
             margin-bottom: 2px;
           }
           .item-details {
-            font-size: ${paperSize === '58mm' ? '8px' : '10px'};
+            font-size: ${receiptSettings.paper_size === '58mm' ? '8px' : '10px'};
             color: #666;
           }
         </style>
       </head>
       <body>
         <div class="header center">
-          <div class="bold" style="font-size: ${paperSize === '58mm' ? '12px' : '14px'};">${storeInfo.name}</div>
-          <div>${storeInfo.address}</div>
-          <div>Telp: ${storeInfo.phone}</div>
-          ${storeInfo.email ? `<div>Email: ${storeInfo.email}</div>` : ''}
+          <div class="bold" style="font-size: ${receiptSettings.paper_size === '58mm' ? '12px' : '14px'};">${receiptSettings.store_name}</div>
+          <div>${receiptSettings.store_address}</div>
+          <div>Telp: ${receiptSettings.store_phone}</div>
+          ${receiptSettings.store_email ? `<div>Email: ${receiptSettings.store_email}</div>` : ''}
         </div>
         
-        ${receiptSettings.header_text ? `
+        ${receiptSettings.receipt_header ? `
           <div class="center" style="margin: 10px 0;">
-            <div style="font-style: italic;">${receiptSettings.header_text}</div>
+            <div style="font-style: italic;">${receiptSettings.receipt_header}</div>
           </div>
         ` : ''}
         
@@ -237,17 +230,16 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           </div>
         ` : ''}
         
-        ${receiptSettings.footer_text ? `
+        ${receiptSettings.receipt_footer ? `
           <div class="separator"></div>
           <div class="center">
-            <div style="font-style: italic;">${receiptSettings.footer_text}</div>
+            <div style="font-style: italic;">${receiptSettings.receipt_footer}</div>
           </div>
         ` : ''}
         
         <div class="footer">
-          <div>Terima kasih atas pesanan Anda!</div>
           <div>Dicetak: ${new Date().toLocaleString('id-ID')}</div>
-          ${receiptSettings.show_qr_code ? `
+          ${receiptSettings.show_qr ? `
             <div style="margin-top: 10px;">
               <div>QR Code: ${order.order_number}</div>
             </div>
