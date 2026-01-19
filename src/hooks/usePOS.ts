@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateReceiptHTML } from '@/utils/receiptGenerator';
+import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
 
 export interface CartItem {
   id: string;
@@ -190,15 +191,8 @@ export const usePOS = () => {
         return acc;
       }, {}) || {};
 
-      const receiptSettings = {
-        store_name: settingsMap.store_name,
-        store_address: settingsMap.store_address,
-        store_phone: settingsMap.store_phone,
-        receipt_header: settingsMap.receipt_header,
-        receipt_footer: settingsMap.receipt_footer,
-        paper_size: settingsMap.paper_size || '58mm',
-        show_cashier: settingsMap.show_cashier !== false,
-      };
+      // Use helper to extract receipt settings consistently
+      const receiptSettings = extractReceiptSettings(settingsMap);
 
       const receiptData = {
         transaction_number: transaction.transaction_number,
