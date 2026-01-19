@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingCart, TrendingUp, Receipt } from 'lucide-react';
+import { Loader2, ShoppingCart, TrendingUp, Receipt, Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { generateReceiptHTML } from '@/utils/receiptGenerator';
 
 interface CustomerFavoritesModalProps {
   open: boolean;
@@ -16,6 +17,22 @@ interface CustomerFavoritesModalProps {
 }
 
 const CustomerFavoritesModal = ({ open, onClose, customerId, onAddToCart }: CustomerFavoritesModalProps) => {
+  // Fetch settings for receipt
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('key, value');
+      if (error) throw error;
+      const settingsMap: Record<string, any> = {};
+      data?.forEach((s: any) => {
+        settingsMap[s.key] = s.value;
+      });
+      return settingsMap;
+    },
+  });
+
   // Fetch customer transactions
   const { data: transactions, isLoading: isLoadingTransactions } = useQuery({
     queryKey: ['customer-transactions', customerId],
@@ -32,6 +49,9 @@ const CustomerFavoritesModal = ({ open, onClose, customerId, onAddToCart }: Cust
               name,
               selling_price
             )
+          ),
+          customers (
+            name
           )
         `)
         .eq('customer_id', customerId)
@@ -110,6 +130,45 @@ const CustomerFavoritesModal = ({ open, onClose, customerId, onAddToCart }: Cust
     });
   };
 
+  const handlePrintReceipt = (transaction: any) => {
+    const receiptData = {
+      transaction_number: transaction.transaction_number,
+      transaction_date: new Date(transaction.created_at).toLocaleString('id-ID'),
+      customer_name: transaction.customers?.name || 'Umum',
+      items: transaction.transaction_items?.map((item: any) => ({
+        name: item.products?.name || 'Produk',
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      })) || [],
+      subtotal: transaction.total_amount,
+      discount: transaction.discount_amount || 0,
+      total: transaction.total_amount,
+      paid_amount: transaction.payment_amount,
+      change_amount: transaction.change_amount,
+      payment_method: transaction.payment_type,
+      points_earned: transaction.points_earned,
+      points_used: transaction.points_used,
+    };
+
+    const receiptSettings = {
+      store_name: settings?.store_name || 'Toko Saya',
+      store_address: settings?.store_address || '',
+      store_phone: settings?.store_phone || '',
+      receipt_header: settings?.receipt_header || '',
+      receipt_footer: settings?.receipt_footer || 'Terima kasih atas kunjungan Anda!',
+      paper_size: (settings?.paper_size as '80mm' | '58mm') || '80mm',
+    };
+
+    const receiptHTML = generateReceiptHTML(receiptData, receiptSettings);
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(receiptHTML);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   const formatPrice = (price: number) => {
     return price.toLocaleString('id-ID');
   };
@@ -157,15 +216,25 @@ const CustomerFavoritesModal = ({ open, onClose, customerId, onAddToCart }: Cust
                           })}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg text-primary">
-                          Rp {transaction.total_amount.toLocaleString('id-ID')}
+                      <div className="flex items-start gap-2">
+                        <div className="text-right">
+                          <div className="font-bold text-lg text-primary">
+                            Rp {transaction.total_amount.toLocaleString('id-ID')}
+                          </div>
+                          {transaction.points_earned > 0 && (
+                            <Badge variant="secondary" className="mt-1">
+                              +{transaction.points_earned} poin
+                            </Badge>
+                          )}
                         </div>
-                        {transaction.points_earned > 0 && (
-                          <Badge variant="secondary" className="mt-1">
-                            +{transaction.points_earned} poin
-                          </Badge>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handlePrintReceipt(transaction)}
+                          title="Cetak Struk"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
 
