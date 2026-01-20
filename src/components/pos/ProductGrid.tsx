@@ -26,7 +26,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, addToCar
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[calc(100vh-220px)] overflow-y-auto">
+    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 max-h-[calc(100vh-220px)] overflow-y-auto">
       {products.map((product) => {
         const productImageUrl = getImageUrl(product.image_url);
         return (
@@ -35,8 +35,8 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, addToCar
             className="cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => addToCart(product, 1)}
           >
-            <CardContent className="p-3">
-              <div className="aspect-square mb-2 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
+            <CardContent className="p-1.5">
+              <div className="aspect-square mb-1 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
                 {productImageUrl ? (
                   <img 
                     src={productImageUrl} 
@@ -44,22 +44,22 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, addToCar
                     className="w-full h-full object-cover hover:scale-105 transition-transform"
                   />
                 ) : (
-                  <Package className="h-8 w-8 text-gray-400" />
+                  <Package className="h-5 w-5 text-gray-400" />
                 )}
               </div>
-              <h3 className="font-medium text-sm truncate">{String(product.name || 'Unnamed Product')}</h3>
-              <p className="text-lg font-bold text-green-600">
+              <h3 className="font-medium text-xs truncate">{String(product.name || 'Unnamed Product')}</h3>
+              <p className="text-xs font-bold text-green-600">
                 Rp {String(product.selling_price?.toLocaleString('id-ID') || '0')}
               </p>
-              <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+              <div className="flex justify-between items-center mt-0.5 text-[10px] text-gray-500">
                 <span>Stok: {String(product.current_stock || 0)}</span>
                 <span>{String(product.loyalty_points || 1)} pts</span>
               </div>
               {product.price_variants?.length > 0 && (
-                <Badge variant="secondary" className="text-xs mt-1">Grosir</Badge>
+                <Badge variant="secondary" className="text-[10px] px-1 py-0 mt-0.5">Grosir</Badge>
               )}
               {product.current_stock <= 0 && (
-                <Badge variant="destructive" className="w-full mt-1">Habis</Badge>
+                <Badge variant="destructive" className="w-full text-[10px] py-0 mt-0.5">Habis</Badge>
               )}
             </CardContent>
           </Card>
