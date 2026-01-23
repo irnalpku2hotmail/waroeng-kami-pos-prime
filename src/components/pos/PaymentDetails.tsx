@@ -25,6 +25,7 @@ interface PaymentDetailsProps {
   printReceipt: (transaction: any) => void;
   user: any;
   settings: any;
+  onProcessTransaction?: () => void;
 }
 
 const PaymentDetails: React.FC<PaymentDetailsProps> = ({
@@ -43,6 +44,7 @@ const PaymentDetails: React.FC<PaymentDetailsProps> = ({
   printReceipt,
   user,
   settings,
+  onProcessTransaction,
 }) => {
   const handlePrintReceipt = () => {
     const mockTransaction = {
@@ -133,7 +135,7 @@ const PaymentDetails: React.FC<PaymentDetailsProps> = ({
         </Button>
         <Button
           className="flex-1"
-          onClick={() => processTransaction.mutate()}
+          onClick={() => onProcessTransaction ? onProcessTransaction() : processTransaction.mutate()}
           disabled={
             cart.length === 0 || 
             (paymentType === 'cash' && paymentAmount < totalAmount) ||
