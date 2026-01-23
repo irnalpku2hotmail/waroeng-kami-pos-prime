@@ -1,14 +1,14 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, RefObject } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, RotateCcw } from 'lucide-react';
+import { Mic, MicOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface VoiceSearchProps {
   onVoiceResult: (text: string) => void;
+  buttonRef?: RefObject<HTMLButtonElement>;
 }
 
-const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
+const VoiceSearch = ({ onVoiceResult, buttonRef }: VoiceSearchProps) => {
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
 
@@ -126,6 +126,7 @@ const VoiceSearch = ({ onVoiceResult }: VoiceSearchProps) => {
 
   return (
     <Button
+      ref={buttonRef}
       variant={isListening ? "destructive" : "ghost"}
       size="icon"
       onClick={isListening ? stopListening : startListening}

@@ -16,10 +16,15 @@ interface ScannedItem {
 
 interface MultiBarcodeScannerProps {
   onAddProducts: (items: { product: any; quantity: number }[]) => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const MultiBarcodeScanner = ({ onAddProducts }: MultiBarcodeScannerProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+const MultiBarcodeScanner = ({ onAddProducts, isOpen: controlledIsOpen, onOpenChange }: MultiBarcodeScannerProps) => {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = onOpenChange || setInternalIsOpen;
+  
   const [error, setError] = useState<string | null>(null);
   const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
   const [lastScannedBarcode, setLastScannedBarcode] = useState<string>("");
