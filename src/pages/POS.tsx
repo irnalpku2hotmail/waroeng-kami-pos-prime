@@ -7,6 +7,8 @@ import ProductGrid from '@/components/pos/ProductGrid';
 import CartSidebar from '@/components/pos/CartSidebar';
 import KeyboardShortcutsHelp from '@/components/pos/KeyboardShortcutsHelp';
 import OfflineIndicator from '@/components/pos/OfflineIndicator';
+import CategoryFilter from '@/components/pos/CategoryFilter';
+import DailySalesSummary from '@/components/pos/DailySalesSummary';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Star } from 'lucide-react';
@@ -153,7 +155,8 @@ const POS = () => {
     <Layout>
       <div className={`${isMobile ? 'space-y-4' : 'flex gap-6 h-[calc(100vh-120px)]'}`}>
         {/* Products Section */}
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-3">
+          {/* Header */}
           <div className="flex items-center justify-between gap-2">
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Point of Sale</h1>
             <div className="flex items-center gap-2">
@@ -190,7 +193,11 @@ const POS = () => {
               )}
             </div>
           </div>
+
+          {/* Daily Sales Summary */}
+          <DailySalesSummary />
           
+          {/* Search */}
           <ProductSearch
             searchTerm={pos.searchTerm}
             setSearchTerm={pos.setSearchTerm}
@@ -198,6 +205,14 @@ const POS = () => {
             searchInputRef={searchInputRef}
             voiceSearchRef={voiceSearchRef}
           />
+
+          {/* Category Filter */}
+          <CategoryFilter
+            selectedCategory={pos.selectedCategory}
+            onSelectCategory={pos.setSelectedCategory}
+          />
+
+          {/* Products Grid */}
           <ProductGrid
             products={pos.products}
             isLoading={pos.isLoading}
@@ -205,7 +220,7 @@ const POS = () => {
           />
 
           {/* Customer Favorites Button */}
-          <div className="mt-6 flex justify-center">
+          <div className="mt-4 flex justify-center">
             <Button
               size="lg"
               onClick={() => setFavoritesOpen(true)}

@@ -33,6 +33,7 @@ export const getImageUrl = (imageUrl: string | null | undefined) => {
 export const usePOS = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
@@ -57,7 +58,7 @@ export const usePOS = () => {
 
   // Fetch products with stock and pricing info
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['pos-products', searchTerm],
+    queryKey: ['pos-products', searchTerm, selectedCategory],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -66,6 +67,10 @@ export const usePOS = () => {
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
+      }
+      
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
       }
       
       const { data, error } = await query.order('name');
@@ -410,6 +415,8 @@ export const usePOS = () => {
     user,
     searchTerm,
     setSearchTerm,
+    selectedCategory,
+    setSelectedCategory,
     cart,
     setCart,
     selectedCustomer,
