@@ -2,11 +2,13 @@ import Layout from '@/components/Layout';
 import { usePOS } from '@/hooks/usePOS';
 import { usePOSKeyboardShortcuts } from '@/hooks/usePOSKeyboardShortcuts';
 import { useOfflineMode } from '@/hooks/useOfflineMode';
+import { useHeldTransactions } from '@/hooks/useHeldTransactions';
 import ProductSearch from '@/components/pos/ProductSearch';
 import ProductGrid from '@/components/pos/ProductGrid';
 import CartSidebar from '@/components/pos/CartSidebar';
 import KeyboardShortcutsHelp from '@/components/pos/KeyboardShortcutsHelp';
 import OfflineIndicator from '@/components/pos/OfflineIndicator';
+import HeldTransactionsModal from '@/components/pos/HeldTransactionsModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Star } from 'lucide-react';
@@ -33,7 +35,10 @@ const POS = () => {
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [clearCartDialog, setClearCartDialog] = useState(false);
   const [multiScanOpen, setMultiScanOpen] = useState(false);
+  const [holdModalTrigger, setHoldModalTrigger] = useState(0);
   
+  // Held transactions
+  const heldTransactions = useHeldTransactions();
   // Refs for focusing elements
   const searchInputRef = useRef<HTMLInputElement>(null);
   const paymentInputRef = useRef<HTMLInputElement>(null);
@@ -124,6 +129,9 @@ const POS = () => {
         setClearCartDialog(true);
       }
     },
+    onHoldTransaction: () => {
+      setHoldModalTrigger(prev => prev + 1);
+    },
   };
 
   usePOSKeyboardShortcuts(shortcutActions, true);
@@ -135,6 +143,56 @@ const POS = () => {
     });
     setMultiScanOpen(false);
   };
+
+  // Handle hold current transaction
+  const handleHoldCurrent = useCallback((note?: string) => {
+    if (pos.cart.length === 0) {
+      toast({
+        title: 'Keranjang Kosong',
+        description: 'Tidak ada item untuk ditahan.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    heldTransactions.holdTransaction(
+      pos.cart,
+      pos.selectedCustomer,
+      pos.paymentType,
+      pos.paymentAmount,
+      pos.transferReference,
+      note
+    );
+    
+    // Clear current cart
+    pos.setCart([]);
+    pos.setSelectedCustomer(null);
+    pos.setPaymentAmount(0);
+    pos.setPaymentType('cash');
+    pos.setTransferReference('');
+    
+    toast({
+      title: 'Transaksi Ditahan',
+      description: 'Transaksi berhasil disimpan sementara.',
+    });
+  }, [pos, heldTransactions]);
+
+  // Handle recall held transaction
+  const handleRecallTransaction = useCallback((id: string) => {
+    const held = heldTransactions.recallTransaction(id);
+    if (held) {
+      pos.setCart(held.cart);
+      pos.setSelectedCustomer(held.customer);
+      pos.setPaymentType(held.paymentType);
+      pos.setPaymentAmount(held.paymentAmount);
+      pos.setTransferReference(held.transferReference);
+      
+      toast({
+        title: 'Transaksi Dilanjutkan',
+        description: `Transaksi ${id} berhasil dipulihkan.`,
+      });
+    }
+  }, [pos, heldTransactions]);
 
   const handleClearCart = () => {
     pos.setCart([]);
@@ -164,6 +222,14 @@ const POS = () => {
                 onSync={offlineMode.syncTransactions}
               />
               <KeyboardShortcutsHelp />
+              <HeldTransactionsModal
+                heldTransactions={heldTransactions.heldTransactions}
+                onRecall={handleRecallTransaction}
+                onDelete={heldTransactions.deleteHeldTransaction}
+                onUpdateNote={heldTransactions.updateHeldNote}
+                onHoldCurrent={handleHoldCurrent}
+                canHold={pos.cart.length > 0}
+              />
               <MultiBarcodeScanner 
                 onAddProducts={handleMultiScanProducts}
                 isOpen={multiScanOpen}
