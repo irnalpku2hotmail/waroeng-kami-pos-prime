@@ -9,6 +9,7 @@ export interface POSShortcutActions {
   onVoiceSearch: () => void;      // F6
   onPaymentMethod: () => void;    // F7
   onPrintReceipt: () => void;     // F8
+  onHoldTransaction: () => void;  // F9
   onClearCart: () => void;        // ESC
 }
 
@@ -27,6 +28,7 @@ export const POS_SHORTCUTS: ShortcutInfo[] = [
   { key: 'F6', label: 'F6', description: 'Voice Search' },
   { key: 'F7', label: 'F7', description: 'Metode Bayar' },
   { key: 'F8', label: 'F8', description: 'Print Faktur' },
+  { key: 'F9', label: 'F9', description: 'Hold/Recall' },
   { key: 'ESC', label: 'ESC', description: 'Kosongkan Keranjang' },
 ];
 
@@ -78,6 +80,10 @@ export const usePOSKeyboardShortcuts = (actions: POSShortcutActions, enabled: bo
       case 'F8':
         event.preventDefault();
         actions.onPrintReceipt();
+        break;
+      case 'F9':
+        event.preventDefault();
+        actions.onHoldTransaction();
         break;
     }
   }, [actions]);
