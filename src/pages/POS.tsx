@@ -35,6 +35,7 @@ const POS = () => {
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [clearCartDialog, setClearCartDialog] = useState(false);
   const [multiScanOpen, setMultiScanOpen] = useState(false);
+  const [holdModalOpen, setHoldModalOpen] = useState(false);
   const [holdModalTrigger, setHoldModalTrigger] = useState(0);
   
   // Held transactions
@@ -249,6 +250,10 @@ const POS = () => {
                         {...pos}
                         onProcessTransaction={handleProcessTransaction}
                         isOffline={!offlineMode.isOnline}
+                        heldTransactions={heldTransactions.heldTransactions}
+                        onRecallTransaction={handleRecallTransaction}
+                        onDeleteHeldTransaction={heldTransactions.deleteHeldTransaction}
+                        onHoldModalOpen={() => setHoldModalOpen(true)}
                       />
                     </div>
                   </SheetContent>
@@ -289,6 +294,10 @@ const POS = () => {
             {...pos}
             onProcessTransaction={handleProcessTransaction}
             isOffline={!offlineMode.isOnline}
+            heldTransactions={heldTransactions.heldTransactions}
+            onRecallTransaction={handleRecallTransaction}
+            onDeleteHeldTransaction={heldTransactions.deleteHeldTransaction}
+            onHoldModalOpen={() => setHoldModalOpen(true)}
           />
         )}
       </div>
