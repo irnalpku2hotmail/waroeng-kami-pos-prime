@@ -12,20 +12,34 @@ import ModernFrontendFlashSale from '@/components/frontend/ModernFrontendFlashSa
 import CategoriesCarousel from '@/components/home/CategoriesCarousel';
 import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
+import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
 import AuthModal from '@/components/AuthModal';
+
 const Home = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const isMobile = useIsMobile();
-  return <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
+
+  return (
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
       {/* Reusable Navbar */}
-      <FrontendNavbar searchTerm={searchTerm} onSearchChange={setSearchTerm} onCartClick={() => setShowCartModal(true)} searchComponent={<EnhancedHomeSearch searchTerm={searchTerm} onSearchChange={setSearchTerm} selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />} />
+      <FrontendNavbar 
+        searchTerm={searchTerm} 
+        onSearchChange={setSearchTerm} 
+        onCartClick={() => setShowCartModal(true)} 
+        searchComponent={
+          <EnhancedHomeSearch 
+            searchTerm={searchTerm} 
+            onSearchChange={setSearchTerm} 
+            selectedCategory={selectedCategory} 
+            onCategoryChange={setSelectedCategory} 
+          />
+        } 
+      />
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
@@ -34,6 +48,9 @@ const Home = () => {
 
         {/* Shipping Info */}
         <EnhancedShippingInfo />
+
+        {/* Personalized Recommendations */}
+        <PersonalizedRecommendations />
 
         {/* Flash Sale */}
         <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} />
@@ -57,6 +74,8 @@ const Home = () => {
       
       {/* Mobile Bottom Navigation */}
       {isMobile && <MobileBottomNav onCartClick={() => setShowCartModal(true)} onAuthClick={() => setAuthModalOpen(true)} />}
-    </div>;
+    </div>
+  );
 };
+
 export default Home;

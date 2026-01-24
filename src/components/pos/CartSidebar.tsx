@@ -4,16 +4,30 @@ import { ShoppingCart, WifiOff } from 'lucide-react';
 import CustomerSelector from './CustomerSelector';
 import CartItemsList from './CartItemsList';
 import PaymentDetails from './PaymentDetails';
+import HeldTransactionsBadge from './HeldTransactionsBadge';
 import { usePOS } from '@/hooks/usePOS';
 import { Badge } from '@/components/ui/badge';
+import { HeldTransaction } from '@/hooks/useHeldTransactions';
 
 type CartSidebarProps = ReturnType<typeof usePOS> & {
   onProcessTransaction?: () => void;
   isOffline?: boolean;
+  heldTransactions?: HeldTransaction[];
+  onRecallTransaction?: (id: string) => void;
+  onDeleteHeldTransaction?: (id: string) => void;
+  onHoldModalOpen?: () => void;
 };
 
 const CartSidebar: React.FC<CartSidebarProps> = (props) => {
-  const { onProcessTransaction, isOffline, ...posProps } = props;
+  const { 
+    onProcessTransaction, 
+    isOffline, 
+    heldTransactions = [],
+    onRecallTransaction,
+    onDeleteHeldTransaction,
+    onHoldModalOpen,
+    ...posProps 
+  } = props;
   
   return (
     <div className="w-96 space-y-4">
@@ -24,12 +38,23 @@ const CartSidebar: React.FC<CartSidebarProps> = (props) => {
               <ShoppingCart className="h-5 w-5" />
               Keranjang ({posProps.cart.length})
             </div>
-            {isOffline && (
-              <Badge variant="destructive" className="gap-1">
-                <WifiOff className="h-3 w-3" />
-                Offline
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Held Transactions Badge */}
+              {onRecallTransaction && onDeleteHeldTransaction && onHoldModalOpen && (
+                <HeldTransactionsBadge
+                  heldTransactions={heldTransactions}
+                  onRecall={onRecallTransaction}
+                  onDelete={onDeleteHeldTransaction}
+                  onHoldModalOpen={onHoldModalOpen}
+                />
+              )}
+              {isOffline && (
+                <Badge variant="destructive" className="gap-1">
+                  <WifiOff className="h-3 w-3" />
+                  Offline
+                </Badge>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -1,7 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,6 +30,21 @@ const EnhancedHomeSearch = ({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Save search to history when navigating
+  const saveSearchHistory = async (term: string) => {
+    if (!user || !term.trim()) return;
+    
+    try {
+      await supabase.from('search_history').insert({
+        user_id: user.id,
+        search_term: term.trim()
+      });
+    } catch (error) {
+      console.error('Error saving search history:', error);
+    }
+  };
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -79,6 +94,9 @@ const EnhancedHomeSearch = ({
   const handleSearch = (query?: string) => {
     const searchQuery = query || searchTerm;
     if (searchQuery.trim()) {
+      // Save to search history
+      saveSearchHistory(searchQuery.trim());
+      
       const params = new URLSearchParams();
       params.set('q', searchQuery.trim());
       if (selectedCategory && selectedCategory !== 'all') {
