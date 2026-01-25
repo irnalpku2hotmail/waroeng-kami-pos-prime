@@ -9,6 +9,7 @@ import CartSidebar from '@/components/pos/CartSidebar';
 import KeyboardShortcutsHelp from '@/components/pos/KeyboardShortcutsHelp';
 import OfflineIndicator from '@/components/pos/OfflineIndicator';
 import HeldTransactionsModal from '@/components/pos/HeldTransactionsModal';
+import DailySalesSummary from '@/components/pos/DailySalesSummary';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Star } from 'lucide-react';
@@ -261,6 +262,8 @@ const POS = () => {
               )}
             </div>
           </div>
+          
+          <DailySalesSummary />
           
           <ProductSearch
             searchTerm={pos.searchTerm}
