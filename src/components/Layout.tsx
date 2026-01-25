@@ -6,6 +6,7 @@ import CollapsibleSidebar from './layout/CollapsibleSidebar';
 import DateTimeDisplay from './layout/DateTimeDisplay';
 import UserDropdown from './layout/UserDropdown';
 import NotificationDropdown from './layout/NotificationDropdown';
+import { AIAgentButton } from './ai/AIAgentButton';
 import { useSidebarContext } from '@/contexts/SidebarContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -79,6 +80,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           onClick={() => setCollapsed(true)}
         />
       )}
+
+      {/* AI Agent Floating Button */}
+      <AIAgentButton variant="floating" />
     </div>
   );
 };
