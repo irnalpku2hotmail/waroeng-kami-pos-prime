@@ -1,1 +1,7 @@
 project_id = "fkqfdwxunnymmsutbeuu"
+
+[functions.geocode]
+verify_jwt = false
+
+[functions.ai-agent]
+verify_jwt = false
