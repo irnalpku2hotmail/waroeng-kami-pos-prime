@@ -18,6 +18,7 @@ import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import AuthModal from '@/components/AuthModal';
 import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
+import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 
 const SearchResults = () => {
   const navigate = useNavigate();
@@ -328,6 +329,9 @@ const SearchResults = () => {
           onAuthClick={() => setAuthModalOpen(true)}
         />
       )}
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppFloatingButton className={isMobile ? 'bottom-24' : ''} />
     </div>
   );
 };

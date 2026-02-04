@@ -24,6 +24,7 @@ import MobileBottomNav from '@/components/home/MobileBottomNav';
 import PriceHistoryChart from '@/components/product/PriceHistoryChart';
 import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
+import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -420,6 +421,9 @@ const ProductDetail = () => {
           onAuthClick={() => setAuthModalOpen(true)}
         />
       )}
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppFloatingButton className={isMobile ? 'bottom-24' : ''} />
     </div>
   );
 };

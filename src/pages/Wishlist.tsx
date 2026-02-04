@@ -18,6 +18,7 @@ import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import WishlistButton from '@/components/wishlist/WishlistButton';
 import { toast } from '@/hooks/use-toast';
+import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 
 const Wishlist: React.FC = () => {
   const navigate = useNavigate();
@@ -211,6 +212,9 @@ const Wishlist: React.FC = () => {
           onAuthClick={() => setAuthModalOpen(true)}
         />
       )}
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppFloatingButton className={isMobile ? 'bottom-24' : ''} />
     </div>
   );
 };
