@@ -17,18 +17,8 @@ import { useState, useRef, useCallback } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import CustomerFavoritesModal from '@/components/pos/CustomerFavoritesModal';
 import MultiBarcodeScanner from '@/components/pos/MultiBarcodeScanner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-
 const POS = () => {
   const pos = usePOS();
   const isMobile = useIsMobile();
@@ -38,7 +28,7 @@ const POS = () => {
   const [multiScanOpen, setMultiScanOpen] = useState(false);
   const [holdModalOpen, setHoldModalOpen] = useState(false);
   const [holdModalTrigger, setHoldModalTrigger] = useState(0);
-  
+
   // Held transactions
   const heldTransactions = useHeldTransactions();
   // Refs for focusing elements
@@ -67,7 +57,7 @@ const POS = () => {
         transfer_reference: pos.paymentType === 'transfer' ? pos.transferReference : null,
         points_earned: pos.selectedCustomer ? pos.getTotalPointsEarned() : 0,
         cashier_id: pos.user?.id || null,
-        created_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
       });
 
       // Clear cart and reset form
@@ -76,10 +66,9 @@ const POS = () => {
       pos.setPaymentAmount(0);
       pos.setPaymentType('cash');
       pos.setTransferReference('');
-      
       toast({
         title: 'Transaksi Tersimpan Offline',
-        description: 'Akan disinkronkan saat koneksi pulih.',
+        description: 'Akan disinkronkan saat koneksi pulih.'
       });
     } else {
       pos.processTransaction.mutate();
@@ -121,7 +110,7 @@ const POS = () => {
         const mockTransaction = {
           transaction_number: `TRX${Date.now()}`,
           created_at: new Date().toISOString(),
-          total_amount: pos.getTotalAmount(),
+          total_amount: pos.getTotalAmount()
         };
         pos.printReceipt(mockTransaction);
       }
@@ -133,14 +122,19 @@ const POS = () => {
     },
     onHoldTransaction: () => {
       setHoldModalTrigger(prev => prev + 1);
-    },
+    }
   };
-
   usePOSKeyboardShortcuts(shortcutActions, true);
 
   // Handle multi-barcode scan results
-  const handleMultiScanProducts = (items: { product: any; quantity: number }[]) => {
-    items.forEach(({ product, quantity }) => {
+  const handleMultiScanProducts = (items: {
+    product: any;
+    quantity: number;
+  }[]) => {
+    items.forEach(({
+      product,
+      quantity
+    }) => {
       pos.addToCart(product, quantity);
     });
     setMultiScanOpen(false);
@@ -152,30 +146,21 @@ const POS = () => {
       toast({
         title: 'Keranjang Kosong',
         description: 'Tidak ada item untuk ditahan.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       return;
     }
-    
-    heldTransactions.holdTransaction(
-      pos.cart,
-      pos.selectedCustomer,
-      pos.paymentType,
-      pos.paymentAmount,
-      pos.transferReference,
-      note
-    );
-    
+    heldTransactions.holdTransaction(pos.cart, pos.selectedCustomer, pos.paymentType, pos.paymentAmount, pos.transferReference, note);
+
     // Clear current cart
     pos.setCart([]);
     pos.setSelectedCustomer(null);
     pos.setPaymentAmount(0);
     pos.setPaymentType('cash');
     pos.setTransferReference('');
-    
     toast({
       title: 'Transaksi Ditahan',
-      description: 'Transaksi berhasil disimpan sementara.',
+      description: 'Transaksi berhasil disimpan sementara.'
     });
   }, [pos, heldTransactions]);
 
@@ -188,14 +173,12 @@ const POS = () => {
       pos.setPaymentType(held.paymentType);
       pos.setPaymentAmount(held.paymentAmount);
       pos.setTransferReference(held.transferReference);
-      
       toast({
         title: 'Transaksi Dilanjutkan',
-        description: `Transaksi ${id} berhasil dipulihkan.`,
+        description: `Transaksi ${id} berhasil dipulihkan.`
       });
     }
   }, [pos, heldTransactions]);
-
   const handleClearCart = () => {
     pos.setCart([]);
     pos.setSelectedCustomer(null);
@@ -205,40 +188,21 @@ const POS = () => {
     setClearCartDialog(false);
     toast({
       title: 'Keranjang Dikosongkan',
-      description: 'Semua item telah dihapus dari keranjang.',
+      description: 'Semua item telah dihapus dari keranjang.'
     });
   };
-
-  return (
-    <Layout>
+  return <Layout>
       <div className={`${isMobile ? 'space-y-4' : 'flex gap-6 h-[calc(100vh-120px)]'}`}>
         {/* Products Section */}
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Point of Sale</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">POS</h1>
             <div className="flex items-center gap-2">
-              <OfflineIndicator
-                isOnline={offlineMode.isOnline}
-                pendingCount={offlineMode.pendingCount}
-                isSyncing={offlineMode.isSyncing}
-                onSync={offlineMode.syncTransactions}
-              />
+              <OfflineIndicator isOnline={offlineMode.isOnline} pendingCount={offlineMode.pendingCount} isSyncing={offlineMode.isSyncing} onSync={offlineMode.syncTransactions} />
               <KeyboardShortcutsHelp />
-              <HeldTransactionsModal
-                heldTransactions={heldTransactions.heldTransactions}
-                onRecall={handleRecallTransaction}
-                onDelete={heldTransactions.deleteHeldTransaction}
-                onUpdateNote={heldTransactions.updateHeldNote}
-                onHoldCurrent={handleHoldCurrent}
-                canHold={pos.cart.length > 0}
-              />
-              <MultiBarcodeScanner 
-                onAddProducts={handleMultiScanProducts}
-                isOpen={multiScanOpen}
-                onOpenChange={setMultiScanOpen}
-              />
-              {isMobile && (
-                <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+              <HeldTransactionsModal heldTransactions={heldTransactions.heldTransactions} onRecall={handleRecallTransaction} onDelete={heldTransactions.deleteHeldTransaction} onUpdateNote={heldTransactions.updateHeldNote} onHoldCurrent={handleHoldCurrent} canHold={pos.cart.length > 0} />
+              <MultiBarcodeScanner onAddProducts={handleMultiScanProducts} isOpen={multiScanOpen} onOpenChange={setMultiScanOpen} />
+              {isMobile && <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                   <SheetTrigger asChild>
                     <Button className="relative">
                       <ShoppingCart className="h-4 w-4 mr-2" />
@@ -247,44 +211,21 @@ const POS = () => {
                   </SheetTrigger>
                   <SheetContent side="right" className="w-full sm:w-96 p-0">
                     <div className="p-4">
-                      <CartSidebar 
-                        {...pos}
-                        onProcessTransaction={handleProcessTransaction}
-                        isOffline={!offlineMode.isOnline}
-                        heldTransactions={heldTransactions.heldTransactions}
-                        onRecallTransaction={handleRecallTransaction}
-                        onDeleteHeldTransaction={heldTransactions.deleteHeldTransaction}
-                        onHoldModalOpen={() => setHoldModalOpen(true)}
-                      />
+                      <CartSidebar {...pos} onProcessTransaction={handleProcessTransaction} isOffline={!offlineMode.isOnline} heldTransactions={heldTransactions.heldTransactions} onRecallTransaction={handleRecallTransaction} onDeleteHeldTransaction={heldTransactions.deleteHeldTransaction} onHoldModalOpen={() => setHoldModalOpen(true)} />
                     </div>
                   </SheetContent>
-                </Sheet>
-              )}
+                </Sheet>}
             </div>
           </div>
           
           <DailySalesSummary />
           
-          <ProductSearch
-            searchTerm={pos.searchTerm}
-            setSearchTerm={pos.setSearchTerm}
-            handleVoiceSearch={pos.handleVoiceSearch}
-            searchInputRef={searchInputRef}
-            voiceSearchRef={voiceSearchRef}
-          />
-          <ProductGrid
-            products={pos.products}
-            isLoading={pos.isLoading}
-            addToCart={pos.addToCart}
-          />
+          <ProductSearch searchTerm={pos.searchTerm} setSearchTerm={pos.setSearchTerm} handleVoiceSearch={pos.handleVoiceSearch} searchInputRef={searchInputRef} voiceSearchRef={voiceSearchRef} />
+          <ProductGrid products={pos.products} isLoading={pos.isLoading} addToCart={pos.addToCart} />
 
           {/* Customer Favorites Button */}
           <div className="mt-6 flex justify-center">
-            <Button
-              size="lg"
-              onClick={() => setFavoritesOpen(true)}
-              className="w-full max-w-md bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
+            <Button size="lg" onClick={() => setFavoritesOpen(true)} className="w-full max-w-md bg-primary hover:bg-primary/90 text-primary-foreground">
               <Star className="h-5 w-5 mr-2" />
               Favorit Pelanggan
             </Button>
@@ -292,26 +233,11 @@ const POS = () => {
         </div>
 
         {/* Cart Section - Desktop Only */}
-        {!isMobile && (
-          <CartSidebar 
-            {...pos}
-            onProcessTransaction={handleProcessTransaction}
-            isOffline={!offlineMode.isOnline}
-            heldTransactions={heldTransactions.heldTransactions}
-            onRecallTransaction={handleRecallTransaction}
-            onDeleteHeldTransaction={heldTransactions.deleteHeldTransaction}
-            onHoldModalOpen={() => setHoldModalOpen(true)}
-          />
-        )}
+        {!isMobile && <CartSidebar {...pos} onProcessTransaction={handleProcessTransaction} isOffline={!offlineMode.isOnline} heldTransactions={heldTransactions.heldTransactions} onRecallTransaction={handleRecallTransaction} onDeleteHeldTransaction={heldTransactions.deleteHeldTransaction} onHoldModalOpen={() => setHoldModalOpen(true)} />}
       </div>
 
       {/* Customer Favorites Modal */}
-      <CustomerFavoritesModal
-        open={favoritesOpen}
-        onClose={() => setFavoritesOpen(false)}
-        customerId={pos.selectedCustomer?.id || null}
-        onAddToCart={pos.addToCart}
-      />
+      <CustomerFavoritesModal open={favoritesOpen} onClose={() => setFavoritesOpen(false)} customerId={pos.selectedCustomer?.id || null} onAddToCart={pos.addToCart} />
 
       {/* Clear Cart Confirmation Dialog */}
       <AlertDialog open={clearCartDialog} onOpenChange={setClearCartDialog}>
@@ -330,8 +256,6 @@ const POS = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default POS;
