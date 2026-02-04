@@ -14,6 +14,7 @@ import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
 import AuthModal from '@/components/AuthModal';
+import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 
 const Home = () => {
   const { user } = useAuth();
@@ -74,6 +75,9 @@ const Home = () => {
       
       {/* Mobile Bottom Navigation */}
       {isMobile && <MobileBottomNav onCartClick={() => setShowCartModal(true)} onAuthClick={() => setAuthModalOpen(true)} />}
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppFloatingButton className={isMobile ? 'bottom-24' : ''} />
     </div>
   );
 };
