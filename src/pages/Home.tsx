@@ -54,7 +54,7 @@ const Home = () => {
         <PersonalizedRecommendations />
 
         {/* Flash Sale */}
-        <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} />
+        <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} onAuthRequired={() => setAuthModalOpen(true)} />
 
         {/* Products Section */}
         <div className="mb-8">

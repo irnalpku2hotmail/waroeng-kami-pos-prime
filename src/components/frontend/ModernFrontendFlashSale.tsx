@@ -90,6 +90,17 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
 
   const handleAddToCart = (item: any, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Require login before adding to cart
+    if (!user) {
+      onAuthRequired?.();
+      toast({
+        title: 'Login Diperlukan',
+        description: 'Silakan login terlebih dahulu untuk berbelanja',
+      });
+      return;
+    }
+
     const product = item.products;
     const remaining = item.stock_quantity - item.sold_quantity;
     
