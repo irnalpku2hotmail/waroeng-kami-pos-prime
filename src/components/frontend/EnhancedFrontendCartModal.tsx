@@ -440,6 +440,15 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   )}
                 </span>
               </div>
+              {serviceFee > 0 && (
+                <div className="flex justify-between text-orange-600">
+                  <span className="flex items-center gap-1">
+                    <Package className="h-4 w-4" />
+                    Biaya Layanan
+                  </span>
+                  <span>Rp {serviceFee.toLocaleString('id-ID')}</span>
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>

@@ -69,8 +69,8 @@ const Home = () => {
       {/* Minimal Footer */}
       <MinimalFooter />
 
-      {/* Modals */}
-      {user && <EnhancedFrontendCartModal open={showCartModal} onOpenChange={setShowCartModal} />}
+      {/* Modals - Show cart for all users but require login */}
+      <EnhancedFrontendCartModal open={showCartModal} onOpenChange={setShowCartModal} />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       
       {/* Mobile Bottom Navigation */}
