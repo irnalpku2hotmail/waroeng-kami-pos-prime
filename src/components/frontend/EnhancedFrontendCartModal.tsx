@@ -219,12 +219,18 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
   };
 
   // Cast COD settings to proper type for calculations
-  const settings = codSettings as CODSettings;
-  const deliveryFee = settings?.delivery_fee || 10000;
-  const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
+  const codSettingsTyped = codSettings as CODSettings;
+  const deliveryFee = codSettingsTyped?.delivery_fee || 10000;
+  const freeShippingMinimum = codSettingsTyped?.free_shipping_minimum || 100000;
+  const serviceFeeAmount = codSettingsTyped?.service_fee || 5000;
   const subtotal = getTotalPriceWithVariants();
   const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
-  const total = subtotal + finalDeliveryFee;
+  
+  // Check if any product in cart has service fee
+  const hasServiceFeeProduct = productsWithServiceFee && productsWithServiceFee.length > 0;
+  const serviceFee = hasServiceFeeProduct ? serviceFeeAmount : 0;
+  
+  const total = subtotal + finalDeliveryFee + serviceFee;
   const isEligibleForFreeShipping = subtotal >= freeShippingMinimum;
 
   if (!user) {

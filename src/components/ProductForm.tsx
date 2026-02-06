@@ -451,6 +451,15 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
               />
               <Label htmlFor="is_active">Produk Aktif</Label>
             </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="has_service_fee"
+                checked={formData.has_service_fee}
+                onCheckedChange={(checked) => setFormData({ ...formData, has_service_fee: checked })}
+              />
+              <Label htmlFor="has_service_fee">Kenakan Biaya Layanan</Label>
+            </div>
           </CardContent>
         </Card>
 

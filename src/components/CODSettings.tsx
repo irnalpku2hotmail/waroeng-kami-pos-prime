@@ -157,6 +157,21 @@ const CODSettings = () => {
                 Nilai minimum pesanan untuk dapat menggunakan layanan COD
               </p>
             </div>
+
+            {/* Service Fee */}
+            <div className="space-y-2">
+              <Label htmlFor="service_fee">Biaya Layanan (Rp)</Label>
+              <Input
+                id="service_fee"
+                type="number"
+                value={settings.service_fee}
+                onChange={(e) => handleInputChange('service_fee', Number(e.target.value))}
+                placeholder="5000"
+              />
+              <p className="text-sm text-gray-500">
+                Biaya layanan yang dikenakan satu kali per transaksi jika ada produk dengan biaya layanan di keranjang
+              </p>
+            </div>
           </>
         )}
 
