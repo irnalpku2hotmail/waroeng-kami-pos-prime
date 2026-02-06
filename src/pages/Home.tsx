@@ -54,12 +54,12 @@ const Home = () => {
         <PersonalizedRecommendations />
 
         {/* Flash Sale */}
-        <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} />
+        <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} onAuthRequired={() => setAuthModalOpen(true)} />
 
         {/* Products Section */}
         <div className="mb-8">
           <h2 className="font-bold mb-6 text-destructive text-base">Produk Unggulan</h2>
-          <ProductGridSmall searchTerm={searchTerm} selectedCategory={selectedCategory} limit={24} />
+          <ProductGridSmall searchTerm={searchTerm} selectedCategory={selectedCategory} limit={24} onAuthRequired={() => setAuthModalOpen(true)} />
         </div>
 
         {/* Categories Carousel */}
@@ -69,8 +69,8 @@ const Home = () => {
       {/* Minimal Footer */}
       <MinimalFooter />
 
-      {/* Modals */}
-      {user && <EnhancedFrontendCartModal open={showCartModal} onOpenChange={setShowCartModal} />}
+      {/* Modals - Show cart for all users but require login */}
+      <EnhancedFrontendCartModal open={showCartModal} onOpenChange={setShowCartModal} />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       
       {/* Mobile Bottom Navigation */}

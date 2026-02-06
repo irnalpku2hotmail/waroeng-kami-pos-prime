@@ -7,16 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 interface ModernFrontendFlashSaleProps {
   onProductClick: (product: any) => void;
+  onAuthRequired?: () => void;
 }
 
-const ModernFrontendFlashSale = ({ onProductClick }: ModernFrontendFlashSaleProps) => {
+const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFrontendFlashSaleProps) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [currentIndex, setCurrentIndex] = useState(0);
   const { addToCart } = useCart();
+  const { user } = useAuth();
 
   const { data: flashSales, isLoading } = useQuery({
     queryKey: ['active-flash-sales'],
@@ -87,6 +90,17 @@ const ModernFrontendFlashSale = ({ onProductClick }: ModernFrontendFlashSaleProp
 
   const handleAddToCart = (item: any, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Require login before adding to cart
+    if (!user) {
+      onAuthRequired?.();
+      toast({
+        title: 'Login Diperlukan',
+        description: 'Silakan login terlebih dahulu untuk berbelanja',
+      });
+      return;
+    }
+
     const product = item.products;
     const remaining = item.stock_quantity - item.sold_quantity;
     

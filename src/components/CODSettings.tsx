@@ -15,7 +15,8 @@ const CODSettings = () => {
     enabled: true,
     delivery_fee: 10000,
     max_distance: 10,
-    min_order: 50000
+    min_order: 50000,
+    service_fee: 5000
   });
 
   const queryClient = useQueryClient();
@@ -154,6 +155,21 @@ const CODSettings = () => {
               />
               <p className="text-sm text-gray-500">
                 Nilai minimum pesanan untuk dapat menggunakan layanan COD
+              </p>
+            </div>
+
+            {/* Service Fee */}
+            <div className="space-y-2">
+              <Label htmlFor="service_fee">Biaya Layanan (Rp)</Label>
+              <Input
+                id="service_fee"
+                type="number"
+                value={settings.service_fee}
+                onChange={(e) => handleInputChange('service_fee', Number(e.target.value))}
+                placeholder="5000"
+              />
+              <p className="text-sm text-gray-500">
+                Biaya layanan yang dikenakan satu kali per transaksi jika ada produk dengan biaya layanan di keranjang
               </p>
             </div>
           </>

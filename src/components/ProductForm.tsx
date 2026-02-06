@@ -43,7 +43,8 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     loyalty_points: 0,
     category_id: '',
     unit_id: '',
-    is_active: true
+    is_active: true,
+    has_service_fee: false
   });
 
   const [priceVariants, setPriceVariants] = useState<PriceVariant[]>([]);
@@ -120,7 +121,8 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         loyalty_points: product.loyalty_points || 1,
         category_id: product.category_id || '',
         unit_id: product.unit_id || '',
-        is_active: product.is_active !== false
+        is_active: product.is_active !== false,
+        has_service_fee: product.has_service_fee || false
       });
 
       if (product.price_variants) {
@@ -448,6 +450,15 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
               />
               <Label htmlFor="is_active">Produk Aktif</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="has_service_fee"
+                checked={formData.has_service_fee}
+                onCheckedChange={(checked) => setFormData({ ...formData, has_service_fee: checked })}
+              />
+              <Label htmlFor="has_service_fee">Kenakan Biaya Layanan</Label>
             </div>
           </CardContent>
         </Card>

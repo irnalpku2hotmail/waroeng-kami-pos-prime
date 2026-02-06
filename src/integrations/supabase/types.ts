@@ -740,6 +740,7 @@ export type Database = {
           created_at: string
           current_stock: number
           description: string | null
+          has_service_fee: boolean
           id: string
           image_url: string | null
           is_active: boolean
@@ -759,6 +760,7 @@ export type Database = {
           created_at?: string
           current_stock?: number
           description?: string | null
+          has_service_fee?: boolean
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -778,6 +780,7 @@ export type Database = {
           created_at?: string
           current_stock?: number
           description?: string | null
+          has_service_fee?: boolean
           id?: string
           image_url?: string | null
           is_active?: boolean

@@ -24,6 +24,7 @@ interface EnhancedFrontendCartModalProps {
 interface CODSettings {
   delivery_fee?: number;
   free_shipping_minimum?: number;
+  service_fee?: number;
 }
 
 const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartModalProps) => {
@@ -60,8 +61,27 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      return data?.value || { delivery_fee: 10000, free_shipping_minimum: 100000 };
+      return data?.value || { delivery_fee: 10000, free_shipping_minimum: 100000, service_fee: 5000 };
     }
+  });
+
+  // Fetch products with service fee info
+  const { data: productsWithServiceFee } = useQuery({
+    queryKey: ['products-service-fee', items.map(item => item.id)],
+    queryFn: async () => {
+      if (items.length === 0) return [];
+      
+      const productIds = items.map(item => item.product_id || item.id);
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, has_service_fee')
+        .in('id', productIds)
+        .eq('has_service_fee', true);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: items.length > 0
   });
 
   // Fetch price variants for products
@@ -119,12 +139,18 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
       }
 
       // Cast COD settings to proper type
-      const settings = codSettings as CODSettings;
-      const deliveryFee = settings?.delivery_fee || 10000;
-      const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
-      const subtotal = getTotalPriceWithVariants();
-      const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
-      const totalAmount = subtotal + finalDeliveryFee;
+      const orderSettings = codSettings as CODSettings;
+      const orderDeliveryFee = orderSettings?.delivery_fee || 10000;
+      const orderFreeShippingMinimum = orderSettings?.free_shipping_minimum || 100000;
+      const orderServiceFeeAmount = orderSettings?.service_fee || 5000;
+      const orderSubtotal = getTotalPriceWithVariants();
+      const orderFinalDeliveryFee = orderSubtotal >= orderFreeShippingMinimum ? 0 : orderDeliveryFee;
+      
+      // Check if any product in cart has service fee
+      const hasServiceFee = productsWithServiceFee && productsWithServiceFee.length > 0;
+      const orderServiceFee = hasServiceFee ? orderServiceFeeAmount : 0;
+      
+      const totalAmount = orderSubtotal + orderFinalDeliveryFee + orderServiceFee;
       const orderNumber = generateOrderNumber();
 
       const { data: order, error: orderError } = await supabase
@@ -134,9 +160,9 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
-          notes: customerInfo.notes || 'Pesanan dari website',
+          notes: customerInfo.notes ? `${customerInfo.notes}${orderServiceFee > 0 ? ` | Biaya Layanan: Rp ${orderServiceFee.toLocaleString('id-ID')}` : ''}` : (orderServiceFee > 0 ? `Biaya Layanan: Rp ${orderServiceFee.toLocaleString('id-ID')}` : 'Pesanan dari website'),
           total_amount: totalAmount,
-          delivery_fee: finalDeliveryFee,
+          delivery_fee: orderFinalDeliveryFee,
           payment_method: 'cod',
           status: 'pending',
           customer_id: user.id
@@ -199,16 +225,48 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
   };
 
   // Cast COD settings to proper type for calculations
-  const settings = codSettings as CODSettings;
-  const deliveryFee = settings?.delivery_fee || 10000;
-  const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
+  const codSettingsTyped = codSettings as CODSettings;
+  const deliveryFee = codSettingsTyped?.delivery_fee || 10000;
+  const freeShippingMinimum = codSettingsTyped?.free_shipping_minimum || 100000;
+  const serviceFeeAmount = codSettingsTyped?.service_fee || 5000;
   const subtotal = getTotalPriceWithVariants();
   const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
-  const total = subtotal + finalDeliveryFee;
+  
+  // Check if any product in cart has service fee
+  const hasServiceFeeProduct = productsWithServiceFee && productsWithServiceFee.length > 0;
+  const serviceFee = hasServiceFeeProduct ? serviceFeeAmount : 0;
+  
+  const total = subtotal + finalDeliveryFee + serviceFee;
   const isEligibleForFreeShipping = subtotal >= freeShippingMinimum;
 
   if (!user) {
-    return null; // Don't show cart modal if not logged in
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className={`${isMobile ? 'max-w-[95vw] mx-2' : 'max-w-md'}`}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Keranjang Belanja
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8 space-y-4">
+            <User className="h-16 w-16 mx-auto text-muted-foreground" />
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg">Login Diperlukan</h3>
+              <p className="text-muted-foreground">
+                Silakan login terlebih dahulu untuk berbelanja dan melihat keranjang Anda.
+              </p>
+            </div>
+            <Button 
+              onClick={() => onOpenChange(false)}
+              className="w-full"
+            >
+              Tutup
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -408,6 +466,15 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   )}
                 </span>
               </div>
+              {serviceFee > 0 && (
+                <div className="flex justify-between text-orange-600">
+                  <span className="flex items-center gap-1">
+                    <Package className="h-4 w-4" />
+                    Biaya Layanan
+                  </span>
+                  <span>Rp {serviceFee.toLocaleString('id-ID')}</span>
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
