@@ -15,7 +15,8 @@ const CODSettings = () => {
     enabled: true,
     delivery_fee: 10000,
     max_distance: 10,
-    min_order: 50000
+    min_order: 50000,
+    service_fee: 5000
   });
 
   const queryClient = useQueryClient();
