@@ -24,6 +24,7 @@ interface EnhancedFrontendCartModalProps {
 interface CODSettings {
   delivery_fee?: number;
   free_shipping_minimum?: number;
+  service_fee?: number;
 }
 
 const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartModalProps) => {
