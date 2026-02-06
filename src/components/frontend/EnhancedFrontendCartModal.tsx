@@ -61,8 +61,27 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      return data?.value || { delivery_fee: 10000, free_shipping_minimum: 100000 };
+      return data?.value || { delivery_fee: 10000, free_shipping_minimum: 100000, service_fee: 5000 };
     }
+  });
+
+  // Fetch products with service fee info
+  const { data: productsWithServiceFee } = useQuery({
+    queryKey: ['products-service-fee', items.map(item => item.id)],
+    queryFn: async () => {
+      if (items.length === 0) return [];
+      
+      const productIds = items.map(item => item.product_id || item.id);
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, has_service_fee')
+        .in('id', productIds)
+        .eq('has_service_fee', true);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: items.length > 0
   });
 
   // Fetch price variants for products
