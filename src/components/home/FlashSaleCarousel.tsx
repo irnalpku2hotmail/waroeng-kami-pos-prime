@@ -104,8 +104,7 @@ const FlashSaleCarousel = ({ onProductClick }: FlashSaleCarouselProps) => {
       {validFlashSaleItems.map((item) => (
         <Card 
           key={item.id} 
-          className="cursor-pointer hover:shadow-md transition-shadow duration-200 group relative overflow-hidden"
-          onClick={() => item.products && onProductClick(item.products)}
+          className="hover:shadow-md transition-shadow duration-200 group relative overflow-hidden"
         >
           <div className="absolute top-1 left-1 z-10">
             <Badge className="bg-red-500 text-white text-xs px-1 py-0">

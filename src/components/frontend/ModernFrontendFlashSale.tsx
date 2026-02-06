@@ -216,8 +216,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
                 return (
                   <Card
                     key={item.id}
-                    className="flex-shrink-0 w-[calc(50%-4px)] sm:w-[calc(25%-9px)] cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden border border-transparent hover:border-orange-400"
-                    onClick={() => onProductClick(product)}
+                    className="flex-shrink-0 w-[calc(50%-4px)] sm:w-[calc(25%-9px)] hover:shadow-lg transition-all duration-300 overflow-hidden border border-transparent hover:border-orange-400"
                   >
                     {/* Image with Badges */}
                     <div className="relative aspect-square overflow-hidden">
