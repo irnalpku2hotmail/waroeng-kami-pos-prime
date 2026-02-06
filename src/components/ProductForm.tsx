@@ -43,7 +43,8 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     loyalty_points: 0,
     category_id: '',
     unit_id: '',
-    is_active: true
+    is_active: true,
+    has_service_fee: false
   });
 
   const [priceVariants, setPriceVariants] = useState<PriceVariant[]>([]);
