@@ -240,7 +240,33 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
   const isEligibleForFreeShipping = subtotal >= freeShippingMinimum;
 
   if (!user) {
-    return null; // Don't show cart modal if not logged in
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className={`${isMobile ? 'max-w-[95vw] mx-2' : 'max-w-md'}`}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Keranjang Belanja
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8 space-y-4">
+            <User className="h-16 w-16 mx-auto text-muted-foreground" />
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg">Login Diperlukan</h3>
+              <p className="text-muted-foreground">
+                Silakan login terlebih dahulu untuk berbelanja dan melihat keranjang Anda.
+              </p>
+            </div>
+            <Button 
+              onClick={() => onOpenChange(false)}
+              className="w-full"
+            >
+              Tutup
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
