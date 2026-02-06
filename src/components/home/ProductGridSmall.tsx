@@ -146,10 +146,19 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12, onAuthRequ
                   Terbatas
                 </Badge>
               )}
+              
+              {/* Add to Cart Button */}
+              <Button
+                size="icon"
+                className="absolute bottom-1 right-1 h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => handleAddToCart(product, e)}
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+              </Button>
             </div>
             
             <div className="space-y-1">
-              <h3 className="font-medium text-sm text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+              <h3 className="font-medium text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                 {product.name}
               </h3>
               
@@ -160,10 +169,10 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12, onAuthRequ
               )}
               
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-blue-600">
+                <p className="text-sm font-bold text-primary">
                   {formatPrice(product.selling_price)}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Stok: {product.current_stock}
                 </p>
               </div>
