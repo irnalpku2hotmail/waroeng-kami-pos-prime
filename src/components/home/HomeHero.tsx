@@ -133,8 +133,7 @@ const HomeHero = ({ storeName = 'Waroeng Kami', storeDescription, onProductClick
               {flashSaleProducts.map((item) => (
                 <Card 
                   key={item.id} 
-                  className="group hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
-                  onClick={() => item.products && handleProductClick(item.products)}
+                  className="group hover:shadow-lg transition-all duration-200 overflow-hidden"
                 >
                   <div className="relative">
                     <img
