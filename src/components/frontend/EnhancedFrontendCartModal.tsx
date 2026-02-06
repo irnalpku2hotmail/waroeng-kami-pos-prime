@@ -160,9 +160,9 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
           customer_address: customerInfo.address,
-          notes: customerInfo.notes || 'Pesanan dari website',
+          notes: customerInfo.notes ? `${customerInfo.notes}${orderServiceFee > 0 ? ` | Biaya Layanan: Rp ${orderServiceFee.toLocaleString('id-ID')}` : ''}` : (orderServiceFee > 0 ? `Biaya Layanan: Rp ${orderServiceFee.toLocaleString('id-ID')}` : 'Pesanan dari website'),
           total_amount: totalAmount,
-          delivery_fee: finalDeliveryFee,
+          delivery_fee: orderFinalDeliveryFee,
           payment_method: 'cod',
           status: 'pending',
           customer_id: user.id
