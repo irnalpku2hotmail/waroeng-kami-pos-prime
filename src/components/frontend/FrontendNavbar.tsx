@@ -159,25 +159,23 @@ const FrontendNavbar = ({
 
             {/* Actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Notification & Cart - Only show if user is logged in */}
-              {user && (
-                <>
-                  <NotificationDropdown />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="relative hover:bg-blue-50 p-2"
-                    onClick={handleCartClick}
-                  >
-                    <ShoppingCart className="h-5 w-5" />
-                    {getTotalItems() > 0 && (
-                      <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
-                        {getTotalItems()}
-                      </Badge>
-                    )}
-                  </Button>
-                </>
-              )}
+              {/* Notification - Only show if user is logged in */}
+              {user && <NotificationDropdown />}
+              
+              {/* Cart - Show to all users */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative hover:bg-blue-50 p-2"
+                onClick={handleCartClick}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {user && getTotalItems() > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
+                    {getTotalItems()}
+                  </Badge>
+                )}
+              </Button>
 
               {/* User Menu - Desktop */}
               {!isMobile && (
