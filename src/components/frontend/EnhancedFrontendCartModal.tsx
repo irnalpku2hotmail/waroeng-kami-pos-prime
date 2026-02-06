@@ -139,12 +139,18 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
       }
 
       // Cast COD settings to proper type
-      const settings = codSettings as CODSettings;
-      const deliveryFee = settings?.delivery_fee || 10000;
-      const freeShippingMinimum = settings?.free_shipping_minimum || 100000;
-      const subtotal = getTotalPriceWithVariants();
-      const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
-      const totalAmount = subtotal + finalDeliveryFee;
+      const orderSettings = codSettings as CODSettings;
+      const orderDeliveryFee = orderSettings?.delivery_fee || 10000;
+      const orderFreeShippingMinimum = orderSettings?.free_shipping_minimum || 100000;
+      const orderServiceFeeAmount = orderSettings?.service_fee || 5000;
+      const orderSubtotal = getTotalPriceWithVariants();
+      const orderFinalDeliveryFee = orderSubtotal >= orderFreeShippingMinimum ? 0 : orderDeliveryFee;
+      
+      // Check if any product in cart has service fee
+      const hasServiceFee = productsWithServiceFee && productsWithServiceFee.length > 0;
+      const orderServiceFee = hasServiceFee ? orderServiceFeeAmount : 0;
+      
+      const totalAmount = orderSubtotal + orderFinalDeliveryFee + orderServiceFee;
       const orderNumber = generateOrderNumber();
 
       const { data: order, error: orderError } = await supabase
