@@ -4,17 +4,24 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 interface ProductGridSmallProps {
   searchTerm?: string;
   selectedCategory?: string;
   limit?: number;
+  onAuthRequired?: () => void;
 }
 
-const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12 }: ProductGridSmallProps) => {
+const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12, onAuthRequired }: ProductGridSmallProps) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { user } = useAuth();
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products-small', searchTerm, selectedCategory, limit],
