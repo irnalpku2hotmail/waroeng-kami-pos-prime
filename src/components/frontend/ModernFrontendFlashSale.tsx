@@ -7,10 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 interface ModernFrontendFlashSaleProps {
   onProductClick: (product: any) => void;
+  onAuthRequired?: () => void;
 }
 
 const ModernFrontendFlashSale = ({ onProductClick }: ModernFrontendFlashSaleProps) => {
