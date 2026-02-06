@@ -70,6 +70,46 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12, onAuthRequ
     return data.publicUrl;
   };
 
+  const handleAddToCart = (product: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Require login before adding to cart
+    if (!user) {
+      onAuthRequired?.();
+      toast({
+        title: 'Login Diperlukan',
+        description: 'Silakan login terlebih dahulu untuk berbelanja',
+      });
+      return;
+    }
+
+    if (product.current_stock <= 0) {
+      toast({
+        title: 'Stok habis',
+        description: 'Produk ini sedang tidak tersedia',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: 1,
+      image: product.image_url,
+      stock: product.current_stock,
+      product_id: product.id,
+      unit_price: product.selling_price,
+      total_price: product.selling_price,
+    });
+
+    toast({
+      title: 'Ditambahkan ke keranjang',
+      description: `${product.name} berhasil ditambahkan`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
