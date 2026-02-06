@@ -15,10 +15,11 @@ interface ModernFrontendFlashSaleProps {
   onAuthRequired?: () => void;
 }
 
-const ModernFrontendFlashSale = ({ onProductClick }: ModernFrontendFlashSaleProps) => {
+const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFrontendFlashSaleProps) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [currentIndex, setCurrentIndex] = useState(0);
   const { addToCart } = useCart();
+  const { user } = useAuth();
 
   const { data: flashSales, isLoading } = useQuery({
     queryKey: ['active-flash-sales'],
