@@ -132,7 +132,13 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12, onAuthRequ
         <Card 
           key={product.id} 
           className="group hover:shadow-md transition-shadow duration-300 cursor-pointer border-2 border-transparent hover:border-orange-400"
-          onClick={() => navigate(`/product/${product.id}`)}
+          onClick={() => {
+            if (!user) {
+              onAuthRequired?.();
+              return;
+            }
+            navigate(`/product/${product.id}`);
+          }}
         >
           <CardContent className="p-3">
             <div className="relative mb-2">
