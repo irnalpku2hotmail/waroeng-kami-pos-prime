@@ -7,11 +7,14 @@ import { useCart } from '@/contexts/CartContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, ChevronRight, ShoppingCart, Sparkles, Star } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-const PersonalizedRecommendations = () => {
+interface PersonalizedRecommendationsProps {
+  onAuthRequired?: () => void;
+}
+
+const PersonalizedRecommendations = ({ onAuthRequired }: PersonalizedRecommendationsProps) => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const { addItem } = useCart();
@@ -25,7 +28,6 @@ const PersonalizedRecommendations = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // Get customer_id from profiles
       const { data: profileData } = await supabase
         .from('profiles')
         .select('id')
@@ -34,7 +36,6 @@ const PersonalizedRecommendations = () => {
 
       if (!profileData) return [];
 
-      // Get transactions for this customer
       const { data: transactions } = await supabase
         .from('transactions')
         .select('id')
@@ -44,18 +45,13 @@ const PersonalizedRecommendations = () => {
 
       const transactionIds = transactions.map(t => t.id);
 
-      // Get products from transaction items
       const { data: items } = await supabase
         .from('transaction_items')
         .select(`
           product_id,
           quantity,
           products:product_id (
-            id,
-            name,
-            selling_price,
-            image_url,
-            current_stock,
+            id, name, selling_price, image_url, current_stock,
             categories(name)
           )
         `)
@@ -63,7 +59,6 @@ const PersonalizedRecommendations = () => {
 
       if (!items) return [];
 
-      // Aggregate by product and sort by frequency
       const productMap = new Map();
       items.forEach((item: any) => {
         if (item.products) {
@@ -93,7 +88,6 @@ const PersonalizedRecommendations = () => {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Get recent search terms
       const { data: searches } = await supabase
         .from('search_history')
         .select('search_term')
@@ -103,21 +97,12 @@ const PersonalizedRecommendations = () => {
 
       if (!searches || searches.length === 0) return [];
 
-      // Get unique search terms
       const uniqueTerms = [...new Set(searches.map(s => s.search_term))].slice(0, 5);
 
-      // Search for products matching these terms
       const productPromises = uniqueTerms.map(term =>
         supabase
           .from('products')
-          .select(`
-            id,
-            name,
-            selling_price,
-            image_url,
-            current_stock,
-            categories(name)
-          `)
+          .select(`id, name, selling_price, image_url, current_stock, categories(name)`)
           .eq('is_active', true)
           .ilike('name', `%${term}%`)
           .limit(3)
@@ -126,7 +111,6 @@ const PersonalizedRecommendations = () => {
       const results = await Promise.all(productPromises);
       const products = results.flatMap(r => r.data || []);
 
-      // Remove duplicates
       const uniqueProducts = products.filter((product, index, self) =>
         index === self.findIndex(p => p.id === product.id)
       );
@@ -136,14 +120,31 @@ const PersonalizedRecommendations = () => {
     enabled: !!user?.id
   });
 
+  // Fetch popular products for guests
+  const { data: popularProducts = [] } = useQuery({
+    queryKey: ['popular-products-guest'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('products')
+        .select(`id, name, selling_price, image_url, current_stock, categories(name)`)
+        .eq('is_active', true)
+        .gt('current_stock', 0)
+        .order('created_at', { ascending: false })
+        .limit(15);
+      return (data || []).map(p => ({ ...p, type: 'popular' }));
+    },
+    enabled: !user
+  });
+
   // Combine and deduplicate recommendations
   const recommendations = React.useMemo(() => {
+    if (!user) return popularProducts;
     const allProducts = [...purchasedProducts, ...searchedProducts];
     const uniqueProducts = allProducts.filter((product, index, self) =>
       index === self.findIndex(p => p.id === product.id)
     );
     return uniqueProducts.slice(0, 15);
-  }, [purchasedProducts, searchedProducts]);
+  }, [purchasedProducts, searchedProducts, popularProducts, user]);
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -153,11 +154,11 @@ const PersonalizedRecommendations = () => {
     }
   };
 
-  const scrollLeft = () => {
+  const scrollLeftFn = () => {
     scrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' });
   };
 
-  const scrollRight = () => {
+  const scrollRightFn = () => {
     scrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' });
   };
 
@@ -179,44 +180,31 @@ const PersonalizedRecommendations = () => {
 
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
     if (product.current_stock <= 0) {
-      toast({
-        title: 'Stok Habis',
-        description: 'Produk ini sedang tidak tersedia.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Stok Habis', description: 'Produk ini sedang tidak tersedia.', variant: 'destructive' });
       return;
     }
     addItem({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      quantity: 1,
-      image: product.image_url,
-      stock: product.current_stock,
+      id: product.id, name: product.name, price: product.selling_price,
+      quantity: 1, image: product.image_url, stock: product.current_stock,
     });
-    toast({
-      title: 'Ditambahkan ke Keranjang',
-      description: `${product.name} berhasil ditambahkan.`,
-    });
+    toast({ title: 'Ditambahkan ke Keranjang', description: `${product.name} berhasil ditambahkan.` });
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
   };
 
-  // Don't render if no user or no recommendations
-  if (!user || recommendations.length === 0) return null;
+  if (recommendations.length === 0) return null;
 
-  const userName = profile?.full_name?.split(' ')[0] || 'Anda';
+  const userName = user ? (profile?.full_name?.split(' ')[0] || 'Anda') : 'Anda';
 
   return (
     <div className="mb-8">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-amber-500" />
@@ -225,28 +213,15 @@ const PersonalizedRecommendations = () => {
           </h2>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={scrollLeft}
-            disabled={!canScrollLeft}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={scrollLeftFn} disabled={!canScrollLeft}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={scrollRight}
-            disabled={!canScrollRight}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={scrollRightFn} disabled={!canScrollRight}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Carousel */}
       <div
         ref={scrollRef}
         className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
@@ -256,33 +231,22 @@ const PersonalizedRecommendations = () => {
           <Card
             key={product.id}
             className="flex-shrink-0 w-36 cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
-            onClick={() => navigate(`/product/${product.id}`)}
+            onClick={() => {
+              if (!user) {
+                onAuthRequired?.();
+                return;
+              }
+              navigate(`/product/${product.id}`);
+            }}
           >
-            {/* Image */}
             <div className="relative aspect-square bg-gradient-to-br from-amber-50 to-orange-100 p-1">
-              <img
-                src={getImageUrl(product.image_url)}
-                alt={product.name}
-                className="w-full h-full object-cover rounded"
-                loading="lazy"
-              />
-              {/* Type Badge */}
-              <Badge 
-                variant="secondary" 
-                className="absolute top-1 left-1 text-[9px] px-1.5 py-0.5 bg-amber-500/90 text-white border-0"
-              >
-                {product.type === 'purchased' ? '🛒 Dibeli' : '🔍 Dicari'}
+              <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover rounded" loading="lazy" />
+              <Badge variant="secondary" className="absolute top-1 left-1 text-[9px] px-1.5 py-0.5 bg-amber-500/90 text-white border-0">
+                {product.type === 'purchased' ? '🛒 Dibeli' : product.type === 'searched' ? '🔍 Dicari' : '⭐ Populer'}
               </Badge>
-              {/* Out of Stock */}
               {product.current_stock <= 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute top-1 right-1 text-[9px] px-1.5 py-0.5"
-                >
-                  Habis
-                </Badge>
+                <Badge variant="destructive" className="absolute top-1 right-1 text-[9px] px-1.5 py-0.5">Habis</Badge>
               )}
-              {/* Add to Cart Button */}
               <Button
                 size="icon"
                 className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary shadow-lg"
@@ -293,18 +257,11 @@ const PersonalizedRecommendations = () => {
               </Button>
             </div>
 
-            {/* Info */}
             <div className="p-2">
-              <p className="text-xs text-muted-foreground truncate">
-                {product.categories?.name || 'Kategori'}
-              </p>
-              <h3 className="font-medium text-xs line-clamp-2 h-8 text-foreground">
-                {product.name}
-              </h3>
+              <p className="text-xs text-muted-foreground truncate">{product.categories?.name || 'Kategori'}</p>
+              <h3 className="font-medium text-xs line-clamp-2 h-8 text-foreground">{product.name}</h3>
               <div className="flex items-center justify-between mt-1">
-                <span className="text-primary font-bold text-xs">
-                  {formatPrice(product.selling_price)}
-                </span>
+                <span className="text-primary font-bold text-xs">{formatPrice(product.selling_price)}</span>
                 <div className="flex items-center gap-0.5">
                   <Star className="h-3 w-3 text-amber-400 fill-current" />
                   <span className="text-[10px] text-muted-foreground">4.5</span>

@@ -51,7 +51,7 @@ const Home = () => {
         <EnhancedShippingInfo />
 
         {/* Personalized Recommendations */}
-        <PersonalizedRecommendations />
+        <PersonalizedRecommendations onAuthRequired={() => setAuthModalOpen(true)} />
 
         {/* Flash Sale */}
         <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} onAuthRequired={() => setAuthModalOpen(true)} />
