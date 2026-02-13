@@ -31,22 +31,24 @@ const CreditManagement = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Manajemen Piutang Pelanggan</h1>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl md:text-3xl font-bold text-blue-800">Manajemen Piutang</h1>
         </div>
 
         <EnhancedCreditStats />
 
         <Tabs defaultValue="active" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="active" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Piutang Aktif
+          <TabsList className="mb-4 w-full grid grid-cols-2">
+            <TabsTrigger value="active" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <CreditCard className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Piutang Aktif</span>
+              <span className="sm:hidden">Aktif</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Riwayat Pembayaran
+            <TabsTrigger value="history" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <History className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Riwayat Pembayaran</span>
+              <span className="sm:hidden">Riwayat</span>
             </TabsTrigger>
           </TabsList>
 

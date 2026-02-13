@@ -211,19 +211,20 @@ const Returns = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Manajemen Return</h1>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl md:text-3xl font-bold text-blue-800">Manajemen Return</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditReturn(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Return
+              <Button onClick={() => setEditReturn(null)} size="sm" className="text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2">
+                <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Tambah Return</span>
+                <span className="sm:hidden">Tambah</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] md:w-auto">
               <DialogHeader>
-                <DialogTitle>{editReturn ? 'Edit Return' : 'Tambah Return Baru'}</DialogTitle>
+                <DialogTitle className="text-sm md:text-base">{editReturn ? 'Edit Return' : 'Tambah Return Baru'}</DialogTitle>
               </DialogHeader>
               <ReturnsForm 
                 returnData={editReturn}
@@ -254,9 +255,9 @@ const Returns = () => {
         </div>
 
         <Tabs defaultValue="supplier" className="w-full">
-          <TabsList>
-            <TabsTrigger value="supplier">Retur Supplier</TabsTrigger>
-            <TabsTrigger value="customer">Retur Pelanggan</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="supplier" className="text-xs md:text-sm">Retur Supplier</TabsTrigger>
+            <TabsTrigger value="customer" className="text-xs md:text-sm">Retur Pelanggan</TabsTrigger>
           </TabsList>
           
           <TabsContent value="supplier">

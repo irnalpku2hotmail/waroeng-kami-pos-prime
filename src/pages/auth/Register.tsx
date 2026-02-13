@@ -4,15 +4,18 @@ import { Link, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Store, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Store, Mail, Lock, User, Eye, EyeOff, Phone, MapPin } from 'lucide-react';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp, user } = useAuth();
@@ -27,7 +30,16 @@ const Register = () => {
     if (!email || !password || !fullName) {
       toast({
         title: 'Error',
-        description: 'Semua field harus diisi',
+        description: 'Nama, email dan password harus diisi',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (phone && !/^[0-9+\-\s()]{7,20}$/.test(phone)) {
+      toast({
+        title: 'Error',
+        description: 'Format nomor telepon tidak valid',
         variant: 'destructive',
       });
       return;
@@ -35,7 +47,7 @@ const Register = () => {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, fullName, 'buyer');
+    const { error } = await signUp(email, password, fullName, 'buyer', phone, address);
 
     if (error) {
       toast({
@@ -58,15 +70,14 @@ const Register = () => {
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-blue-600 to-purple-600">
         <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 via-blue-600/20 to-purple-600/20 animate-pulse"></div>
-        {/* Floating shapes */}
         <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-white/10 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
         <div className="absolute bottom-1/4 left-1/4 w-72 h-72 bg-green-300/20 rounded-full mix-blend-multiply filter blur-xl animate-float-delayed"></div>
         <div className="absolute top-3/4 right-1/2 w-80 h-80 bg-blue-300/20 rounded-full mix-blend-multiply filter blur-xl animate-float-slow"></div>
       </div>
 
       {/* Register Card */}
-      <Card className="w-full max-w-md relative z-10 bg-white/95 backdrop-blur-sm border-white/20 shadow-2xl">
-        <CardHeader className="text-center space-y-4">
+      <Card className="w-full max-w-md relative z-10 bg-white/95 backdrop-blur-sm border-white/20 shadow-2xl mx-4">
+        <CardHeader className="text-center space-y-4 pb-4">
           <div className="flex justify-center">
             <div className="bg-gradient-to-r from-green-600 to-blue-600 p-4 rounded-2xl shadow-lg">
               <Store className="h-8 w-8 text-white" />
@@ -81,11 +92,11 @@ const Register = () => {
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+        <CardContent className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1.5">
               <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
-                Nama Lengkap
+                Nama Lengkap *
               </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -97,31 +108,51 @@ const Register = () => {
                   onChange={(e) => setFullName(e.target.value)}
                   required
                   disabled={loading}
-                  className="pl-10 h-12 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  maxLength={100}
+                  className="pl-10 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                No. WhatsApp / Telepon
+              </Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="08xxxxxxxxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                  maxLength={20}
+                  className="pl-10 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email
+                Email *
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@waroengkami.com"
+                  placeholder="email@contoh.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="pl-10 h-12 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  maxLength={255}
+                  className="pl-10 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password
+                Password *
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -134,7 +165,7 @@ const Register = () => {
                   required
                   disabled={loading}
                   minLength={6}
-                  className="pl-10 pr-10 h-12 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  className="pl-10 pr-10 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
                 <button
                   type="button"
@@ -145,9 +176,27 @@ const Register = () => {
                 </button>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="address" className="text-sm font-medium text-gray-700">
+                Alamat
+              </Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Textarea
+                  id="address"
+                  placeholder="Masukkan alamat lengkap"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  disabled={loading}
+                  maxLength={500}
+                  rows={2}
+                  className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500 resize-none"
+                />
+              </div>
+            </div>
             <Button 
               type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105" 
+              className="w-full h-11 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105" 
               disabled={loading}
             >
               {loading ? (

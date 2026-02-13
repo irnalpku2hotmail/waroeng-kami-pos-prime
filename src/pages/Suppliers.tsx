@@ -89,39 +89,39 @@ const Suppliers = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Users className="h-8 w-8 text-blue-800" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-blue-800">Manajemen Supplier</h1>
+            <Users className="h-6 w-6 md:h-8 md:w-8 text-blue-800" />
+            <h1 className="text-xl md:text-3xl font-bold text-blue-800">Manajemen Supplier</h1>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-2 md:gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Supplier</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Supplier</CardTitle>
+              <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{suppliers?.length || 0}</div>
-              <p className="text-xs text-muted-foreground">
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{suppliers?.length || 0}</div>
+              <p className="text-[10px] md:text-xs text-muted-foreground hidden md:block">
                 Supplier yang terdaftar
               </p>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Aktif Bulan Ini</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Aktif Bulan Ini</CardTitle>
+              <UserCheck className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeThisMonth || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Supplier dengan transaksi pembelian
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{activeThisMonth || 0}</div>
+              <p className="text-[10px] md:text-xs text-muted-foreground hidden md:block">
+                Supplier dengan transaksi
               </p>
             </CardContent>
           </Card>

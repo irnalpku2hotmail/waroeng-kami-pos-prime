@@ -68,19 +68,19 @@ const UserManagement = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">User Management</h1>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl md:text-3xl font-bold">User Management</h1>
           <CreateUserDialog />
         </div>
 
         <UserStats usersCount={usersCount} />
 
         <Card>
-          <CardHeader>
-            <CardTitle>All Users</CardTitle>
+          <CardHeader className="p-3 md:p-6">
+            <CardTitle className="text-sm md:text-lg">All Users</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2 md:p-6 pt-0">
             <UsersTable
               users={users}
               currentPage={currentPage}

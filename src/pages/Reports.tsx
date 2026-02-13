@@ -14,19 +14,21 @@ const Reports = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-blue-800">Laporan</h1>
+      <div className="space-y-4 md:space-y-6">
+        <h1 className="text-xl md:text-3xl font-bold text-blue-800">Laporan</h1>
 
         <Tabs defaultValue="pos-sales" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="pos-sales">Penjualan POS</TabsTrigger>
-            <TabsTrigger value="cod-sales">Penjualan COD</TabsTrigger>
-            <TabsTrigger value="customers">Customer</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            <TabsTrigger value="expenses">Pengeluaran</TabsTrigger>
-            <TabsTrigger value="cod">COD</TabsTrigger>
-            <TabsTrigger value="search" onClick={() => navigate('/search-analytics')}>Search Analytics</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-2 px-2">
+            <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-7">
+              <TabsTrigger value="pos-sales" className="text-xs md:text-sm whitespace-nowrap">POS</TabsTrigger>
+              <TabsTrigger value="cod-sales" className="text-xs md:text-sm whitespace-nowrap">COD</TabsTrigger>
+              <TabsTrigger value="customers" className="text-xs md:text-sm whitespace-nowrap">Customer</TabsTrigger>
+              <TabsTrigger value="inventory" className="text-xs md:text-sm whitespace-nowrap">Inventory</TabsTrigger>
+              <TabsTrigger value="expenses" className="text-xs md:text-sm whitespace-nowrap">Pengeluaran</TabsTrigger>
+              <TabsTrigger value="cod" className="text-xs md:text-sm whitespace-nowrap">COD Report</TabsTrigger>
+              <TabsTrigger value="search" className="text-xs md:text-sm whitespace-nowrap" onClick={() => navigate('/search-analytics')}>Search</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="pos-sales" className="space-y-6">
             <POSSalesReports />

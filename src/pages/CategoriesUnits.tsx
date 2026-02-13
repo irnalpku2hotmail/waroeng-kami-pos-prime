@@ -10,13 +10,13 @@ const CategoriesUnits = () => {
   return (
     <AccessControl allowedRoles={['admin', 'manager', 'staff']} resource="Categories & Units">
       <Layout>
-        <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Kategori & Unit</h1>
+        <div className="space-y-4 md:space-y-6">
+          <h1 className="text-xl md:text-3xl font-bold">Kategori & Unit</h1>
 
           <Tabs defaultValue="categories" className="w-full">
-            <TabsList>
-              <TabsTrigger value="categories">Kategori</TabsTrigger>
-              <TabsTrigger value="units">Unit</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="categories" className="text-xs md:text-sm">Kategori</TabsTrigger>
+              <TabsTrigger value="units" className="text-xs md:text-sm">Unit</TabsTrigger>
             </TabsList>
 
             <TabsContent value="categories">
