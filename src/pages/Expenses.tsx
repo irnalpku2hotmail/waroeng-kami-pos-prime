@@ -180,38 +180,38 @@ const Expenses = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Pengeluaran</CardTitle>
+              <FileText className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold text-blue-600">
                 {stats?.totalExpenses || 0}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Nilai</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Nilai</CardTitle>
+              <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-sm md:text-2xl font-bold text-green-600">
                 {formatCurrency(stats?.totalAmount || 0)}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bulan Ini</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <Card className="col-span-2 md:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-2 md:p-4">
+              <CardTitle className="text-xs md:text-sm font-medium">Bulan Ini</CardTitle>
+              <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-sm md:text-2xl font-bold text-purple-600">
                 {formatCurrency(stats?.thisMonthAmount || 0)}
               </div>
             </CardContent>
@@ -219,7 +219,7 @@ const Expenses = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
@@ -236,7 +236,7 @@ const Expenses = () => {
             setCategoryFilter(value as 'all' | ExpenseCategory);
             setCurrentPage(1);
           }}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter Kategori" />
             </SelectTrigger>
             <SelectContent>

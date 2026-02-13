@@ -98,21 +98,23 @@ const Settings = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div className="flex items-center gap-2">
-          <SettingsIcon className="h-8 w-8 text-blue-800" />
-          <h1 className="text-3xl font-bold text-blue-800">Pengaturan Toko</h1>
+          <SettingsIcon className="h-6 w-6 md:h-8 md:w-8 text-blue-800" />
+          <h1 className="text-xl md:text-3xl font-bold text-blue-800">Pengaturan Toko</h1>
         </div>
 
         <Tabs defaultValue="store-info" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
-            <TabsTrigger value="store-info">Info Toko</TabsTrigger>
-            <TabsTrigger value="receipt">Struk</TabsTrigger>
-            <TabsTrigger value="cod">COD</TabsTrigger>
-            <TabsTrigger value="frontend">Frontend</TabsTrigger>
-            <TabsTrigger value="seo">SEO</TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-2 px-2">
+            <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-6">
+              <TabsTrigger value="store-info" className="text-xs md:text-sm whitespace-nowrap">Info Toko</TabsTrigger>
+              <TabsTrigger value="receipt" className="text-xs md:text-sm whitespace-nowrap">Struk</TabsTrigger>
+              <TabsTrigger value="cod" className="text-xs md:text-sm whitespace-nowrap">COD</TabsTrigger>
+              <TabsTrigger value="frontend" className="text-xs md:text-sm whitespace-nowrap">Frontend</TabsTrigger>
+              <TabsTrigger value="seo" className="text-xs md:text-sm whitespace-nowrap">SEO</TabsTrigger>
+              <TabsTrigger value="permissions" className="text-xs md:text-sm whitespace-nowrap">Permissions</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="store-info">
             <Card>

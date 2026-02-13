@@ -185,9 +185,9 @@ const Inventory = () => {
   return (
     <AccessControl allowedRoles={['admin', 'manager', 'staff']} resource="Inventory">
       <Layout>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Manajemen Inventori</h1>
+        <div className="space-y-4 md:space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h1 className="text-xl md:text-3xl font-bold">Manajemen Inventori</h1>
           </div>
 
           {/* Search */}
@@ -208,10 +208,10 @@ const Inventory = () => {
           />
 
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <TabsList>
-              <TabsTrigger value="products">Level Stok</TabsTrigger>
-              <TabsTrigger value="adjustments">Penyesuaian</TabsTrigger>
-              <TabsTrigger value="low-stock">Peringatan Stok Rendah</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="products" className="text-xs md:text-sm">Level Stok</TabsTrigger>
+              <TabsTrigger value="adjustments" className="text-xs md:text-sm">Penyesuaian</TabsTrigger>
+              <TabsTrigger value="low-stock" className="text-xs md:text-sm">Stok Rendah</TabsTrigger>
             </TabsList>
 
             <TabsContent value="products" className="space-y-4">
