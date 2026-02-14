@@ -24,26 +24,26 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
   const isMobile = useIsMobile();
 
   const menuItems = [
-    { name: 'Home', path: '/', icon: Home, resource: 'dashboard' },
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, resource: 'dashboard' },
-    { name: 'POS', path: '/pos', icon: ShoppingCart, resource: 'pos' },
-    { name: 'Products', path: '/products', icon: Package, resource: 'products' },
-    { name: 'Categories & Units', path: '/categories', icon: Archive, resource: 'categories' },
-    { name: 'Inventory', path: '/inventory', icon: TrendingUp, resource: 'inventory' },
-    { name: 'Orders', path: '/orders', icon: FileText, resource: 'orders' },
-    { name: 'Purchases', path: '/purchases', icon: Truck, resource: 'purchases' },
-    { name: 'Returns', path: '/returns', icon: Archive, resource: 'returns' },
-    { name: 'Suppliers', path: '/suppliers', icon: Truck, resource: 'suppliers' },
-    { name: 'Customers', path: '/customers', icon: Users, resource: 'customers' },
-    { name: 'Credit Management', path: '/credit-management', icon: CreditCard, resource: 'credit-management' },
-    { name: 'User Management', path: '/user-management', icon: UserCheck, resource: 'users' },
-    { name: 'User Locations', path: '/user-locations', icon: MapPin, resource: 'user-locations' },
-    { name: 'Point Exchange', path: '/point-exchange', icon: Star, resource: 'point-exchange' },
-    { name: 'Points & Rewards', path: '/points-rewards', icon: Star, resource: 'points-rewards' },
-    { name: 'Flash Sales', path: '/flash-sales', icon: Zap, resource: 'flash-sales' },
-    { name: 'Expenses', path: '/expenses', icon: FileText, resource: 'expenses' },
-    { name: 'Reports', path: '/reports', icon: BarChart3, resource: 'reports' },
-    { name: 'Settings', path: '/settings', icon: Settings, resource: 'settings' },
+    { name: 'Home', path: '/', icon: Home, resource: 'dashboard', color: 'text-blue-500', bg: 'bg-blue-50' },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, resource: 'dashboard', color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    { name: 'POS', path: '/pos', icon: ShoppingCart, resource: 'pos', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { name: 'Products', path: '/products', icon: Package, resource: 'products', color: 'text-orange-500', bg: 'bg-orange-50' },
+    { name: 'Categories & Units', path: '/categories', icon: Archive, resource: 'categories', color: 'text-amber-500', bg: 'bg-amber-50' },
+    { name: 'Inventory', path: '/inventory', icon: TrendingUp, resource: 'inventory', color: 'text-teal-500', bg: 'bg-teal-50' },
+    { name: 'Orders', path: '/orders', icon: FileText, resource: 'orders', color: 'text-cyan-500', bg: 'bg-cyan-50' },
+    { name: 'Purchases', path: '/purchases', icon: Truck, resource: 'purchases', color: 'text-violet-500', bg: 'bg-violet-50' },
+    { name: 'Returns', path: '/returns', icon: Archive, resource: 'returns', color: 'text-rose-500', bg: 'bg-rose-50' },
+    { name: 'Suppliers', path: '/suppliers', icon: Truck, resource: 'suppliers', color: 'text-purple-500', bg: 'bg-purple-50' },
+    { name: 'Customers', path: '/customers', icon: Users, resource: 'customers', color: 'text-sky-500', bg: 'bg-sky-50' },
+    { name: 'Credit Management', path: '/credit-management', icon: CreditCard, resource: 'credit-management', color: 'text-pink-500', bg: 'bg-pink-50' },
+    { name: 'User Management', path: '/user-management', icon: UserCheck, resource: 'users', color: 'text-lime-600', bg: 'bg-lime-50' },
+    { name: 'User Locations', path: '/user-locations', icon: MapPin, resource: 'user-locations', color: 'text-red-500', bg: 'bg-red-50' },
+    { name: 'Point Exchange', path: '/point-exchange', icon: Star, resource: 'point-exchange', color: 'text-yellow-500', bg: 'bg-yellow-50' },
+    { name: 'Points & Rewards', path: '/points-rewards', icon: Star, resource: 'points-rewards', color: 'text-amber-600', bg: 'bg-amber-50' },
+    { name: 'Flash Sales', path: '/flash-sales', icon: Zap, resource: 'flash-sales', color: 'text-orange-600', bg: 'bg-orange-50' },
+    { name: 'Expenses', path: '/expenses', icon: FileText, resource: 'expenses', color: 'text-slate-500', bg: 'bg-slate-50' },
+    { name: 'Reports', path: '/reports', icon: BarChart3, resource: 'reports', color: 'text-blue-600', bg: 'bg-blue-50' },
+    { name: 'Settings', path: '/settings', icon: Settings, resource: 'settings', color: 'text-gray-500', bg: 'bg-gray-100' },
   ];
 
   const allowedMenuItems = menuItems.filter(item => canAccessRoute(item.resource));
@@ -89,7 +89,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
           </div>
 
           <ScrollArea className="flex-1 px-3 py-3 scrollbar-thin">
-            <nav className="space-y-0.5">
+            <nav className="space-y-1">
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -99,7 +99,9 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
                     onClick={handleLinkClick}
                     className={({ isActive }) => navLinkClasses(isActive, true)}
                   >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <span className={`flex items-center justify-center h-7 w-7 rounded-lg ${item.bg} flex-shrink-0`}>
+                      <Icon className={`h-4 w-4 ${item.color}`} />
+                    </span>
                     <span className="truncate">{item.name}</span>
                   </NavLink>
                 );
@@ -132,7 +134,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
 
         {/* Navigation */}
         <ScrollArea className="flex-1 px-3 py-3 scrollbar-thin">
-          <nav className="space-y-0.5">
+          <nav className="space-y-1">
             {allowedMenuItems.map((item) => {
               const Icon = item.icon;
               
@@ -146,12 +148,14 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
                         className={({ isActive }) =>
                           `flex items-center justify-center h-10 w-10 mx-auto rounded-xl transition-all duration-200 ease-in-out ${
                             isActive
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                              ? 'bg-primary/10'
+                              : 'hover:bg-accent'
                           }`
                         }
                       >
-                        <Icon className="h-[18px] w-[18px]" />
+                        <span className={`flex items-center justify-center h-7 w-7 rounded-lg ${item.bg}`}>
+                          <Icon className={`h-[16px] w-[16px] ${item.color}`} />
+                        </span>
                       </NavLink>
                     </TooltipTrigger>
                     <TooltipContent side="right" className="text-xs">
@@ -168,7 +172,9 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
                   onClick={handleLinkClick}
                   className={({ isActive }) => navLinkClasses(isActive, false)}
                 >
-                  <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                  <span className={`flex items-center justify-center h-7 w-7 rounded-lg ${item.bg} flex-shrink-0`}>
+                    <Icon className={`h-[16px] w-[16px] ${item.color}`} />
+                  </span>
                   <span className="truncate">{item.name}</span>
                 </NavLink>
               );
