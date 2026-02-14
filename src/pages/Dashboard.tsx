@@ -2,17 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  Package, 
-  Users, 
-  ShoppingCart, 
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  History,
-  Wifi,
-  Calendar,
-  Clock
+  Package, Users, ShoppingCart, DollarSign,
+  TrendingUp, TrendingDown, AlertTriangle, History,
+  Wifi, Calendar, Clock
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,51 +14,31 @@ import { usePresence } from '@/contexts/PresenceContext';
 const Dashboard = () => {
   const { onlineUsers } = usePresence();
 
-  // Get today's date in local timezone for better accuracy
   const today = new Date();
-  const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
-  
-  // Create proper date boundaries for today in local timezone
+  const todayString = today.toISOString().split('T')[0];
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-  
   const startOfTodayISO = startOfToday.toISOString();
   const endOfTodayISO = endOfToday.toISOString();
 
-  console.log('Today filter improved:', { 
-    todayString, 
-    startOfTodayISO, 
-    endOfTodayISO,
-    localDate: today.toLocaleDateString(),
-    localTime: today.toLocaleTimeString()
-  });
-
-  // Total produk
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*');
+      const { data, error } = await supabase.from('products').select('*');
       if (error) throw error;
       return data;
     }
   });
 
-  // Produk stok rendah
   const { data: lowStock } = useQuery({
     queryKey: ['low-stock'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .lt('current_stock', 10);
+      const { data, error } = await supabase.from('products').select('*').lt('current_stock', 10);
       if (error) throw error;
       return data;
     }
   });
 
-  // Produk kadaluarsa (berdasarkan purchase_items dengan tanggal kadaluarsa)
   const { data: expiredProducts } = useQuery({
     queryKey: ['expired-products'],
     queryFn: async () => {
@@ -76,31 +48,25 @@ const Dashboard = () => {
         .not('expiration_date', 'is', null)
         .lt('expiration_date', todayString);
       if (error) throw error;
-      // Count unique products that are expired
       const uniqueProducts = new Set(data?.map(item => item.product_id) || []);
       return Array.from(uniqueProducts);
     }
   });
 
-  // Total pelanggan
   const { data: customers } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*');
+      const { data, error } = await supabase.from('customers').select('*');
       if (error) throw error;
       return data;
     }
   });
 
-  // Pesanan masuk hari ini
   const { data: todayOrders } = useQuery({
     queryKey: ['today-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('orders')
-        .select('*')
+        .from('orders').select('*')
         .gte('created_at', startOfTodayISO)
         .lte('created_at', endOfTodayISO);
       if (error) throw error;
@@ -108,40 +74,19 @@ const Dashboard = () => {
     }
   });
 
-  // Fixed POS sales calculation with proper date filtering
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales', todayString],
     queryFn: async () => {
-      console.log('Fetching POS sales with improved date filter:', {
-        startOfTodayISO,
-        endOfTodayISO
-      });
-      
       const { data, error } = await supabase
         .from('transactions')
         .select('id, transaction_number, total_amount, customer_id, created_at')
         .gte('created_at', startOfTodayISO)
         .lte('created_at', endOfTodayISO);
-      
-      if (error) {
-        console.error('Error fetching POS sales:', error);
-        throw error;
-      }
-      
-      console.log('POS sales data fetched:', {
-        count: data?.length || 0,
-        data: data?.map(t => ({
-          id: t.id,
-          amount: t.total_amount,
-          created_at: t.created_at
-        }))
-      });
-      
+      if (error) throw error;
       return data;
     }
   });
 
-  // COD: Pendapatan COD hari ini (orders delivered hari ini)
   const { data: codSalesToday } = useQuery({
     queryKey: ['cod-revenue-today'],
     queryFn: async () => {
@@ -156,39 +101,16 @@ const Dashboard = () => {
     }
   });
 
-  // Calculate statistics
   const totalProducts = products?.length || 0;
   const lowStockProducts = lowStock?.length || 0;
   const expiredProductsCount = expiredProducts?.length || 0;
   const totalCustomers = customers?.length || 0;
   const todayOrdersCount = todayOrders?.length || 0;
 
-  // Fixed POS sales calculation with better logging
-  const todaySales = posSales?.reduce((sum, trx) => {
-    const amount = Number(trx.total_amount) || 0;
-    console.log('Processing transaction:', {
-      id: trx.id,
-      amount: amount,
-      created_at: trx.created_at
-    });
-    return sum + amount;
-  }, 0) || 0;
+  const todaySales = posSales?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
   const todayTransactions = posSales?.length || 0;
-
-  console.log('Final POS sales calculation:', { 
-    todaySales, 
-    todayTransactions, 
-    totalTransactions: posSales?.length,
-    transactionDetails: posSales?.map(t => ({ 
-      amount: t.total_amount, 
-      created: t.created_at 
-    }))
-  });
-
-  // Calculate COD income today
   const codIncomeToday = codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
 
-  // Prepare sales table data
   const todaySalesTable = (posSales ?? []).map(trx => {
     let customerName = 'Umum';
     if (trx.customer_id) {
@@ -196,23 +118,16 @@ const Dashboard = () => {
       customerName = matchCustomer?.name || 'Umum';
     }
     return {
-      id: trx.id,
-      number: trx.transaction_number,
-      name: customerName,
-      total: trx.total_amount,
-      status: 'POS',
-      created_at: trx.created_at,
+      id: trx.id, number: trx.transaction_number,
+      name: customerName, total: trx.total_amount,
+      status: 'POS', created_at: trx.created_at,
     };
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // COD Sales Table Today
   const codSalesTable = (codSalesToday ?? []).map(trx => ({
-    id: trx.id,
-    number: trx.order_number,
-    name: trx.customer_name || 'Umum',
-    total: trx.total_amount,
-    status: trx.status,
-    created_at: trx.created_at,
+    id: trx.id, number: trx.order_number,
+    name: trx.customer_name || 'Umum', total: trx.total_amount,
+    status: trx.status, created_at: trx.created_at,
   })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const getOrderStatusBadge = (status: string | null) => {
@@ -220,156 +135,92 @@ const Dashboard = () => {
       case 'pending':
         return <Badge variant="secondary">Pending</Badge>;
       case 'delivered':
-        return <Badge className="bg-green-100 text-green-800">Selesai</Badge>;
+        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Selesai</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Dibatalkan</Badge>;
       case 'processing':
-        return <Badge className="bg-blue-100 text-blue-800">Diproses</Badge>;
+        return <Badge className="bg-blue-50 text-blue-700 border-blue-200">Diproses</Badge>;
       case 'shipped':
-        return <Badge className="bg-yellow-100 text-yellow-800">Dikirim</Badge>;
+        return <Badge className="bg-amber-50 text-amber-700 border-amber-200">Dikirim</Badge>;
       default:
         return <Badge>{String(status || '')}</Badge>;
     }
   };
 
+  const statCards = [
+    { title: 'User Online', value: String(onlineUsers || 0), sub: 'User aktif login', icon: Wifi, color: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+    { title: 'Total Produk', value: String(totalProducts), sub: 'Produk tersedia', icon: Package, color: 'text-primary', iconBg: 'bg-primary/10' },
+    { title: 'Stok Menipis', value: String(lowStockProducts), sub: 'Produk < 10 stok', icon: AlertTriangle, color: 'text-amber-600', iconBg: 'bg-amber-50' },
+    { title: 'Produk Kadaluarsa', value: String(expiredProductsCount), sub: 'Produk expired', icon: Clock, color: 'text-destructive', iconBg: 'bg-red-50' },
+    { title: 'Total Pelanggan', value: String(totalCustomers), sub: 'Pelanggan terdaftar', icon: Users, color: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+    { title: 'Pesanan Hari Ini', value: String(todayOrdersCount), sub: 'Pesanan masuk', icon: Calendar, color: 'text-primary', iconBg: 'bg-primary/10' },
+    { title: 'Penjualan Hari Ini', value: `Rp ${todaySales?.toLocaleString('id-ID') || '0'}`, sub: `Dari ${String(todayTransactions)} transaksi POS`, icon: DollarSign, color: 'text-violet-600', iconBg: 'bg-violet-50' },
+    { title: 'Pendapatan COD', value: `Rp ${codIncomeToday?.toLocaleString('id-ID') || '0'}`, sub: 'COD delivered hari ini', icon: TrendingUp, color: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  ];
+
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-blue-800 mb-2">Dashboard</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Ringkasan bisnis Anda hari ini</p>
+        </div>
         
-        {/* Statistics Cards - 8 cards in 2 rows */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">User Online</CardTitle>
-              <Wifi className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-green-600">{String(onlineUsers || 0)}</div>
-              <p className="text-[10px] text-muted-foreground">User aktif login</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Total Produk</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-blue-600">{String(totalProducts)}</div>
-              <p className="text-[10px] text-muted-foreground">Produk tersedia</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Stok Menipis</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-orange-600">{String(lowStockProducts)}</div>
-              <p className="text-[10px] text-muted-foreground">Produk &lt; 10 stok</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Produk Kadaluarsa</CardTitle>
-              <Clock className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-red-600">{String(expiredProductsCount)}</div>
-              <p className="text-[10px] text-muted-foreground">Produk expired</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Total Pelanggan</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-green-600">{String(totalCustomers)}</div>
-              <p className="text-[10px] text-muted-foreground">Pelanggan terdaftar</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Pesanan Hari Ini</CardTitle>
-              <Calendar className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-blue-600">{String(todayOrdersCount)}</div>
-              <p className="text-[10px] text-muted-foreground">Pesanan masuk</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Penjualan Hari Ini</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-purple-600">
-                Rp {String(todaySales?.toLocaleString('id-ID') || '0')}
-              </div>
-              <p className="text-[10px] text-muted-foreground">Dari {String(todayTransactions)} transaksi POS</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="px-3 py-2">
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-1">
-              <CardTitle className="text-xs font-semibold">Pendapatan COD Hari Ini</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent className="pb-1">
-              <div className="text-lg font-bold text-green-600">
-                Rp {String(codIncomeToday?.toLocaleString('id-ID') || '0')}
-              </div>
-              <p className="text-[10px] text-muted-foreground">COD delivered hari ini</p>
-            </CardContent>
-          </Card>
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          {statCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.title} className="rounded-2xl border-border/60 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-muted-foreground">{card.title}</span>
+                    <div className={`h-8 w-8 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                      <Icon className={`h-4 w-4 ${card.color}`} />
+                    </div>
+                  </div>
+                  <div className={`text-lg font-bold ${card.color}`}>{card.value}</div>
+                  <p className="text-[11px] text-muted-foreground mt-1">{card.sub}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Tabel Transaksi Penjualan Hari Ini (POS saja) */}
-        <div className="grid grid-cols-1 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <History className="h-5 w-5 text-blue-500" />
-                Transaksi Penjualan Hari Ini (POS)
+        {/* Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <Card className="rounded-2xl border-border/60 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <History className="h-3.5 w-3.5 text-primary" />
+                </div>
+                Transaksi POS Hari Ini
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">No. Transaksi</TableHead>
-                    <TableHead className="text-xs">Pelanggan</TableHead>
-                    <TableHead className="text-xs">Tipe</TableHead>
-                    <TableHead className="text-xs text-right">Total</TableHead>
+                  <TableRow className="border-border/50">
+                    <TableHead className="text-xs text-muted-foreground font-medium">No. Transaksi</TableHead>
+                    <TableHead className="text-xs text-muted-foreground font-medium">Pelanggan</TableHead>
+                    <TableHead className="text-xs text-muted-foreground font-medium">Tipe</TableHead>
+                    <TableHead className="text-xs text-muted-foreground font-medium text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {todaySalesTable.length > 0 ? (
                     todaySalesTable.map(order => (
-                      <TableRow key={order.id}>
+                      <TableRow key={order.id} className="border-border/30 hover:bg-accent/50 transition-colors">
                         <TableCell className="font-medium text-xs">{String(order.number || '')}</TableCell>
-                        <TableCell className="text-xs">{String(order.name || '')}</TableCell>
-                        <TableCell className="text-xs">
-                          <Badge variant="secondary">
-                            POS
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-xs">
-                          Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}
-                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{String(order.name || '')}</TableCell>
+                        <TableCell className="text-xs"><Badge variant="secondary" className="text-[10px] px-2 py-0.5">POS</Badge></TableCell>
+                        <TableCell className="text-right text-xs font-medium">Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-16 text-center text-xs">
+                      <TableCell colSpan={4} className="h-20 text-center text-xs text-muted-foreground">
                         Tidak ada transaksi POS hari ini.
                       </TableCell>
                     </TableRow>
@@ -378,44 +229,39 @@ const Dashboard = () => {
               </Table>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Tabel Transaksi COD Hari Ini */}
-        <div className="grid grid-cols-1 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <History className="h-5 w-5 text-green-500" />
-                Transaksi COD Hari Ini (Selesai)
+          <Card className="rounded-2xl border-border/60 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <History className="h-3.5 w-3.5 text-emerald-600" />
+                </div>
+                Transaksi COD Hari Ini
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">No. Order</TableHead>
-                    <TableHead className="text-xs">Pelanggan</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs text-right">Total</TableHead>
+                  <TableRow className="border-border/50">
+                    <TableHead className="text-xs text-muted-foreground font-medium">No. Order</TableHead>
+                    <TableHead className="text-xs text-muted-foreground font-medium">Pelanggan</TableHead>
+                    <TableHead className="text-xs text-muted-foreground font-medium">Status</TableHead>
+                    <TableHead className="text-xs text-muted-foreground font-medium text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {codSalesTable.length > 0 ? (
                     codSalesTable.map(order => (
-                      <TableRow key={order.id}>
+                      <TableRow key={order.id} className="border-border/30 hover:bg-accent/50 transition-colors">
                         <TableCell className="font-medium text-xs">{String(order.number || '')}</TableCell>
-                        <TableCell className="text-xs">{String(order.name || '')}</TableCell>
-                        <TableCell className="text-xs">
-                          {getOrderStatusBadge(order.status)}
-                        </TableCell>
-                        <TableCell className="text-right text-xs">
-                          Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}
-                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{String(order.name || '')}</TableCell>
+                        <TableCell className="text-xs">{getOrderStatusBadge(order.status)}</TableCell>
+                        <TableCell className="text-right text-xs font-medium">Rp {String(Number(order.total)?.toLocaleString('id-ID') || 0)}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-16 text-center text-xs">
+                      <TableCell colSpan={4} className="h-20 text-center text-xs text-muted-foreground">
                         Tidak ada transaksi COD selesai hari ini.
                       </TableCell>
                     </TableRow>

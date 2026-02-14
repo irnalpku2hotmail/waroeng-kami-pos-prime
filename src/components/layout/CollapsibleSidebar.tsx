@@ -2,32 +2,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  Home, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  BarChart3, 
-  Settings,
-  CreditCard,
-  UserCheck,
-  MapPin,
-  Truck,
-  FileText,
-  Star,
-  Zap,
-  Archive,
-  TrendingUp,
-  LayoutDashboard,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  X
+  Home, Package, ShoppingCart, Users, BarChart3, Settings,
+  CreditCard, UserCheck, MapPin, Truck, FileText, Star,
+  Zap, Archive, TrendingUp, LayoutDashboard,
+  ChevronLeft, ChevronRight, Menu, X
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSidebarContext } from '@/contexts/SidebarContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CollapsibleSidebarProps {
   onLinkClick?: () => void;
@@ -70,38 +55,41 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
     onLinkClick?.();
   };
 
-  // Mobile: show/hide sidebar with slide animation
+  const navLinkClasses = (isActive: boolean, isMobileView: boolean) =>
+    `flex items-center gap-3 px-3 py-2.5 rounded-xl ${isMobileView ? 'text-[13px]' : 'text-sm'} font-medium transition-all duration-200 ease-in-out ${
+      isActive
+        ? 'bg-primary/10 text-primary'
+        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+    }`;
+
+  // Mobile sidebar
   if (isMobile) {
     return (
       <>
-        {/* Mobile toggle button - fixed position */}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="fixed top-2 left-2 z-50 h-10 w-10 p-0 bg-white shadow-md border"
+          className="fixed top-3 left-3 z-50 h-9 w-9 p-0 rounded-xl bg-card shadow-sm border border-border"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4 text-foreground" />
         </Button>
 
-        {/* Mobile sidebar - slide from left */}
-        <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-40 transform transition-transform duration-300 ${collapsed ? '-translate-x-full' : 'translate-x-0'}`}>
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b border-gray-200 min-h-[52px]">
-            <h2 className="text-sm font-semibold text-gray-900">Menu</h2>
+        <div className={`fixed left-0 top-0 h-screen w-72 bg-card border-r border-border flex flex-col z-40 transform transition-transform duration-300 ease-in-out ${collapsed ? '-translate-x-full' : 'translate-x-0'}`}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+            <span className="text-base font-semibold text-foreground tracking-tight">Menu</span>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setCollapsed(true)}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 rounded-lg hover:bg-accent"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Navigation */}
-          <ScrollArea className="flex-1 px-2 py-2">
-            <nav className="space-y-1">
+          <ScrollArea className="flex-1 px-3 py-3 scrollbar-thin">
+            <nav className="space-y-0.5">
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -109,13 +97,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
                     key={item.path}
                     to={item.path}
                     onClick={handleLinkClick}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                        isActive
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`
-                    }
+                    className={({ isActive }) => navLinkClasses(isActive, true)}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">{item.name}</span>
@@ -131,49 +113,70 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
 
   // Desktop sidebar
   return (
-    <div className={`${collapsed ? 'w-16' : 'w-56'} transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 h-screen z-20`}>
-      {/* Header with toggle button */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 min-h-[60px] flex-shrink-0">
-        {!collapsed && (
-          <h2 className="text-sm font-semibold text-gray-900 truncate">Menu</h2>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 p-0 flex-shrink-0"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
-      </div>
+    <TooltipProvider delayDuration={0}>
+      <div className={`${collapsed ? 'w-[68px]' : 'w-60'} transition-all duration-300 ease-in-out bg-card border-r border-border flex flex-col fixed left-0 top-0 h-screen z-20`}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-4 border-b border-border min-h-[60px] flex-shrink-0">
+          {!collapsed && (
+            <span className="text-base font-semibold text-foreground tracking-tight">Menu</span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCollapsed(!collapsed)}
+            className="h-8 w-8 p-0 flex-shrink-0 rounded-lg hover:bg-accent mx-auto"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        </div>
 
-      {/* Navigation */}
-      <ScrollArea className="flex-1 px-2 py-2">
-        <nav className="space-y-1">
-          {allowedMenuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group ${
-                    isActive
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`
-                }
-                title={collapsed ? item.name : undefined}
-              >
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                {!collapsed && <span className="truncate">{item.name}</span>}
-              </NavLink>
-            );
-          })}
-        </nav>
-      </ScrollArea>
-    </div>
+        {/* Navigation */}
+        <ScrollArea className="flex-1 px-3 py-3 scrollbar-thin">
+          <nav className="space-y-0.5">
+            {allowedMenuItems.map((item) => {
+              const Icon = item.icon;
+              
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.path}>
+                    <TooltipTrigger asChild>
+                      <NavLink
+                        to={item.path}
+                        onClick={handleLinkClick}
+                        className={({ isActive }) =>
+                          `flex items-center justify-center h-10 w-10 mx-auto rounded-xl transition-all duration-200 ease-in-out ${
+                            isActive
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                          }`
+                        }
+                      >
+                        <Icon className="h-[18px] w-[18px]" />
+                      </NavLink>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">
+                      {item.name}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={handleLinkClick}
+                  className={({ isActive }) => navLinkClasses(isActive, false)}
+                >
+                  <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+        </ScrollArea>
+      </div>
+    </TooltipProvider>
   );
 };
 
