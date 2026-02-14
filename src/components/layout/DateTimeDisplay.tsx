@@ -5,32 +5,34 @@ import { Calendar, Clock } from 'lucide-react';
 const DateTimeDisplay = () => {
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
-  // Update date and time every second
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentDateTime(new Date());
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="hidden md:flex items-center gap-4 text-sm text-gray-600">
+    <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground">
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4" />
-        {currentDateTime.toLocaleDateString('id-ID', { 
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric'
-        })}
+        <Calendar className="h-3.5 w-3.5" />
+        <span className="font-medium">
+          {currentDateTime.toLocaleDateString('id-ID', { 
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          })}
+        </span>
       </div>
       <div className="flex items-center gap-2">
-        <Clock className="h-4 w-4" />
-        {currentDateTime.toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
+        <Clock className="h-3.5 w-3.5" />
+        <span className="tabular-nums font-medium">
+          {currentDateTime.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </span>
       </div>
     </div>
   );
