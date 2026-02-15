@@ -207,7 +207,10 @@ const Wishlist: React.FC = () => {
       
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <MobileBottomNav />
+        <MobileBottomNav 
+          onCartClick={() => setShowCartModal(true)}
+          onAuthClick={() => setAuthModalOpen(true)}
+        />
       )}
 
       {/* WhatsApp Floating Button */}

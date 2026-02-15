@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Package, Heart, Info } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Heart } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import MinimalFooter from '@/components/frontend/MinimalFooter';
@@ -28,8 +29,10 @@ import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToCart, getTotalItems } = useCart();
   const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
@@ -116,7 +119,31 @@ const ProductDetail = () => {
     }).format(price);
   };
 
-  // Cart disabled in catalog mode
+  const handleAddToCart = () => {
+    if (!product) return;
+    
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: currentPrice,
+      quantity: quantity,
+      image: product.image_url,
+      stock: product.current_stock,
+      product_id: product.id,
+      unit_price: currentPrice,
+      total_price: currentPrice * quantity,
+      product: {
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url
+      }
+    });
+
+    toast({
+      title: 'Berhasil!',
+      description: `${product.name} telah ditambahkan ke keranjang`,
+    });
+  };
 
   const handleLike = async () => {
     if (!user?.id || !id) {
@@ -178,6 +205,7 @@ const ProductDetail = () => {
       <FrontendNavbar 
         searchTerm={searchTerm} 
         onSearchChange={setSearchTerm} 
+        onCartClick={() => setCartModalOpen(true)} 
         searchComponent={
           <EnhancedHomeSearch 
             searchTerm={searchTerm} 
@@ -274,14 +302,65 @@ const ProductDetail = () => {
               </Badge>
             </div>
 
-            {/* Catalog Mode Notice */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                <Info className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                <p className="text-sm text-amber-800">
-                  Produk hanya untuk katalog, pemesanan belum tersedia.
-                </p>
+              <div>
+                <Label htmlFor="quantity" className="text-sm font-medium">
+                  Jumlah
+                </Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 text-center"
+                    min="1"
+                    max={product.current_stock}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
+                    disabled={quantity >= product.current_stock}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-gray-500 ml-2">
+                    {product.units?.abbreviation || 'unit'}
+                  </span>
+                </div>
               </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={product.current_stock === 0}
+                  className="flex-1 flex items-center gap-2"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Tambah ke Keranjang
+                </Button>
+                <Button
+                  onClick={handleAddToCart}
+                  variant="outline"
+                  disabled={product.current_stock === 0}
+                  className="px-6"
+                >
+                  Beli Sekarang
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-6 text-sm text-gray-500">
+              <p>Total: <span className="font-bold text-gray-900">{formatPrice(currentPrice * quantity)}</span></p>
             </div>
           </div>
         </div>
@@ -327,12 +406,20 @@ const ProductDetail = () => {
       </div>
 
       <MinimalFooter />
-      
+      {user && (
+        <EnhancedFrontendCartModal 
+          open={cartModalOpen} 
+          onOpenChange={setCartModalOpen} 
+        />
+      )}
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <MobileBottomNav />
+        <MobileBottomNav 
+          onCartClick={() => setCartModalOpen(true)}
+          onAuthClick={() => setAuthModalOpen(true)}
+        />
       )}
 
       {/* WhatsApp Floating Button */}

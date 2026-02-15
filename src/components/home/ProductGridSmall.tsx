@@ -4,18 +4,24 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 interface ProductGridSmallProps {
   searchTerm?: string;
   selectedCategory?: string;
   limit?: number;
+  onAuthRequired?: () => void;
 }
 
-const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12 }: ProductGridSmallProps) => {
+const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12, onAuthRequired }: ProductGridSmallProps) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { user } = useAuth();
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products-small', searchTerm, selectedCategory, limit],
@@ -64,6 +70,46 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12 }: ProductG
     return data.publicUrl;
   };
 
+  const handleAddToCart = (product: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Require login before adding to cart
+    if (!user) {
+      onAuthRequired?.();
+      toast({
+        title: 'Login Diperlukan',
+        description: 'Silakan login terlebih dahulu untuk berbelanja',
+      });
+      return;
+    }
+
+    if (product.current_stock <= 0) {
+      toast({
+        title: 'Stok habis',
+        description: 'Produk ini sedang tidak tersedia',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.selling_price,
+      quantity: 1,
+      image: product.image_url,
+      stock: product.current_stock,
+      product_id: product.id,
+      unit_price: product.selling_price,
+      total_price: product.selling_price,
+    });
+
+    toast({
+      title: 'Ditambahkan ke keranjang',
+      description: `${product.name} berhasil ditambahkan`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -86,7 +132,13 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12 }: ProductG
         <Card 
           key={product.id} 
           className="group hover:shadow-md transition-shadow duration-300 cursor-pointer border-2 border-transparent hover:border-orange-400"
-          onClick={() => navigate(`/product/${product.id}`)}
+          onClick={() => {
+            if (!user) {
+              onAuthRequired?.();
+              return;
+            }
+            navigate(`/product/${product.id}`);
+          }}
         >
           <CardContent className="p-3">
             <div className="relative mb-2">
@@ -101,16 +153,13 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 12 }: ProductG
                 </Badge>
               )}
               
-              {/* View Detail Button */}
+              {/* Add to Cart Button */}
               <Button
                 size="icon"
                 className="absolute bottom-1 right-1 h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/product/${product.id}`);
-                }}
+                onClick={(e) => handleAddToCart(product, e)}
               >
-                <Eye className="h-3.5 w-3.5" />
+                <ShoppingCart className="h-3.5 w-3.5" />
               </Button>
             </div>
             

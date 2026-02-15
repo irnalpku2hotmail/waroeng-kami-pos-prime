@@ -3,15 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
+import { useCart } from '@/contexts/CartContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Sparkles, Star, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingCart, Sparkles, Star } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
-const PersonalizedRecommendations = () => {
+interface PersonalizedRecommendationsProps {
+  onAuthRequired?: () => void;
+}
+
+const PersonalizedRecommendations = ({ onAuthRequired }: PersonalizedRecommendationsProps) => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const { addItem } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -172,7 +178,22 @@ const PersonalizedRecommendations = () => {
     return data.publicUrl;
   };
 
-  // Cart disabled in catalog mode
+  const handleAddToCart = (product: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
+    if (product.current_stock <= 0) {
+      toast({ title: 'Stok Habis', description: 'Produk ini sedang tidak tersedia.', variant: 'destructive' });
+      return;
+    }
+    addItem({
+      id: product.id, name: product.name, price: product.selling_price,
+      quantity: 1, image: product.image_url, stock: product.current_stock,
+    });
+    toast({ title: 'Ditambahkan ke Keranjang', description: `${product.name} berhasil ditambahkan.` });
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
@@ -210,7 +231,13 @@ const PersonalizedRecommendations = () => {
           <Card
             key={product.id}
             className="flex-shrink-0 w-36 cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
-            onClick={() => navigate(`/product/${product.id}`)}
+            onClick={() => {
+              if (!user) {
+                onAuthRequired?.();
+                return;
+              }
+              navigate(`/product/${product.id}`);
+            }}
           >
             <div className="relative aspect-square bg-gradient-to-br from-amber-50 to-orange-100 p-1">
               <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover rounded" loading="lazy" />
@@ -223,12 +250,10 @@ const PersonalizedRecommendations = () => {
               <Button
                 size="icon"
                 className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary shadow-lg"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/product/${product.id}`);
-                }}
+                onClick={(e) => handleAddToCart(product, e)}
+                disabled={product.current_stock <= 0}
               >
-                <Eye className="h-3.5 w-3.5" />
+                <ShoppingCart className="h-3.5 w-3.5" />
               </Button>
             </div>
 

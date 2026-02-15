@@ -1,11 +1,21 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, Heart, User } from 'lucide-react';
+import { Home, Search, Heart, ShoppingCart, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-const MobileBottomNav: React.FC = () => {
+interface MobileBottomNavProps {
+  onCartClick?: () => void;
+  onAuthClick?: () => void;
+}
+
+const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onCartClick, onAuthClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const { getTotalItems } = useCart();
 
   const navItems = [
     {
@@ -24,13 +34,40 @@ const MobileBottomNav: React.FC = () => {
       icon: Heart,
       label: 'Wishlist',
       path: '/wishlist',
-      action: () => navigate('/wishlist'),
+      action: () => {
+        if (user) {
+          navigate('/wishlist');
+        } else {
+          onAuthClick?.();
+        }
+      },
+      requiresAuth: true,
+    },
+    {
+      icon: ShoppingCart,
+      label: 'Keranjang',
+      path: '/cart',
+      action: () => {
+        if (user) {
+          onCartClick?.();
+        } else {
+          onAuthClick?.();
+        }
+      },
+      requiresAuth: true,
+      badge: user ? getTotalItems() : 0,
     },
     {
       icon: User,
       label: 'Akun',
       path: '/profile',
-      action: () => navigate('/profile'),
+      action: () => {
+        if (user) {
+          navigate('/profile');
+        } else {
+          onAuthClick?.();
+        }
+      },
     },
   ];
 
@@ -61,6 +98,13 @@ const MobileBottomNav: React.FC = () => {
             >
               <div className="relative">
                 <Icon className={cn("h-5 w-5", active && "fill-current")} />
+                {item.badge !== undefined && item.badge > 0 && (
+                  <Badge 
+                    className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center text-[10px] p-0 bg-destructive hover:bg-destructive"
+                  >
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </Badge>
+                )}
               </div>
               <span className={cn(
                 "text-[10px] font-medium",
