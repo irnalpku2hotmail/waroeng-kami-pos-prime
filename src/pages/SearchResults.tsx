@@ -324,10 +324,7 @@ const SearchResults = () => {
 
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <MobileBottomNav 
-          onCartClick={() => setShowCartModal(true)}
-          onAuthClick={() => setAuthModalOpen(true)}
-        />
+        <MobileBottomNav />
       )}
 
       {/* WhatsApp Floating Button */}

@@ -1,25 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Flame, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Flame, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface ModernFrontendFlashSaleProps {
   onProductClick: (product: any) => void;
-  onAuthRequired?: () => void;
 }
 
-const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFrontendFlashSaleProps) => {
+const ModernFrontendFlashSale = ({ onProductClick }: ModernFrontendFlashSaleProps) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [currentIndex, setCurrentIndex] = useState(0);
-  const { addToCart } = useCart();
-  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: flashSales, isLoading } = useQuery({
     queryKey: ['active-flash-sales'],
@@ -88,50 +84,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
     }).format(price);
   };
 
-  const handleAddToCart = (item: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    // Require login before adding to cart
-    if (!user) {
-      onAuthRequired?.();
-      toast({
-        title: 'Login Diperlukan',
-        description: 'Silakan login terlebih dahulu untuk berbelanja',
-      });
-      return;
-    }
-
-    const product = item.products;
-    const remaining = item.stock_quantity - item.sold_quantity;
-    
-    if (remaining <= 0) {
-      toast({
-        title: 'Stok habis',
-        description: 'Produk flash sale ini sudah habis',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: item.sale_price,
-      quantity: 1,
-      image: product.image_url,
-      stock: remaining,
-      flashSalePrice: item.sale_price,
-      isFlashSale: true,
-      product_id: product.id,
-      unit_price: item.sale_price,
-      total_price: item.sale_price,
-    });
-
-    toast({
-      title: 'Ditambahkan ke keranjang',
-      description: `${product.name} berhasil ditambahkan`,
-    });
-  };
+  // Cart disabled in catalog mode
 
   const handleNext = () => {
     if (currentIndex < items.length - 1) {
@@ -231,13 +184,16 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
                         -{Math.round(item.discount_percentage)}%
                       </div>
 
-                      {/* Add to Cart Button */}
+                      {/* View Detail Button */}
                       <Button
                         size="icon"
                         className="absolute bottom-1 right-1 h-7 w-7 sm:h-8 sm:w-8 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg"
-                        onClick={(e) => handleAddToCart(item, e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/product/${product.id}`);
+                        }}
                       >
-                        <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
 
                       {/* Stock Badge */}
