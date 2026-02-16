@@ -122,6 +122,11 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return;
     
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    
     addToCart({
       id: product.id,
       name: product.name,
@@ -147,11 +152,7 @@ const ProductDetail = () => {
 
   const handleLike = async () => {
     if (!user?.id || !id) {
-      toast({
-        title: 'Info',
-        description: 'Silakan login untuk menyimpan produk favorit',
-        variant: 'default',
-      });
+      setAuthModalOpen(true);
       return;
     }
 
@@ -406,12 +407,16 @@ const ProductDetail = () => {
       </div>
 
       <MinimalFooter />
-      {user && (
-        <EnhancedFrontendCartModal 
-          open={cartModalOpen} 
-          onOpenChange={setCartModalOpen} 
-        />
-      )}
+      <EnhancedFrontendCartModal 
+        open={cartModalOpen} 
+        onOpenChange={(open) => {
+          if (!user && open) {
+            setAuthModalOpen(true);
+            return;
+          }
+          setCartModalOpen(open);
+        }} 
+      />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       
       {/* Mobile Bottom Navigation */}
