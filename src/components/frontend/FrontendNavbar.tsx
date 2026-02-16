@@ -170,7 +170,7 @@ const FrontendNavbar = ({
                 onClick={handleCartClick}
               >
                 <ShoppingCart className="h-5 w-5" />
-                {user && getTotalItems() > 0 && (
+                {getTotalItems() > 0 && (
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
                     {getTotalItems()}
                   </Badge>
