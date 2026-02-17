@@ -220,7 +220,7 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
   );
 
   return (
-    <div>
+    <div className="min-h-[450px]">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Flame className="h-5 w-5 text-destructive" />

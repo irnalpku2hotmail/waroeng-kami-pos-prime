@@ -123,7 +123,7 @@ const CompactBannerCarousel = () => {
   const offset = -(currentIndex * slideWidth) + peekSize + (dragDelta / (containerRef.current?.offsetWidth || 1)) * 100;
 
   return (
-    <div className="w-full mb-6 select-none">
+    <div className="w-full mb-6 select-none min-h-[168px] md:min-h-[232px]">
       <div
         ref={containerRef}
         className="relative overflow-hidden"
