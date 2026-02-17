@@ -117,7 +117,7 @@ const EnhancedShippingInfo = () => {
   };
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 min-h-[328px]">
       {/* Enhanced Location Detection */}
       <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 shadow-lg border border-blue-100">
         <div className="flex flex-col lg:flex-row gap-6">
