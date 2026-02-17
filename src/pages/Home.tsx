@@ -49,10 +49,8 @@ const Home = () => {
         {/* Banner Carousel */}
         <CompactBannerCarousel />
 
-        {/* Shipping Info - placeholder matches component height to prevent CLS */}
-        <Suspense fallback={
-          <div className="mb-8 min-h-[328px] bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 shadow-lg border border-blue-100 animate-pulse" />
-        }>
+        {/* Shipping Info */}
+        <Suspense fallback={<div className="mb-8 min-h-[328px]" />}>
           <EnhancedShippingInfo />
         </Suspense>
 
@@ -67,8 +65,8 @@ const Home = () => {
         </Suspense>
 
         {/* Products Section */}
-        <div className="mb-8 min-h-[450px]">
-          <Suspense fallback={<div className="min-h-[450px] flex gap-3 overflow-hidden animate-pulse"><div className="flex-shrink-0 w-36 h-40 bg-muted rounded-lg" /><div className="flex-shrink-0 w-36 h-40 bg-muted rounded-lg" /><div className="flex-shrink-0 w-36 h-40 bg-muted rounded-lg" /></div>}>
+        <div className="mb-8">
+          <Suspense fallback={<div className="min-h-[450px]" />}>
             <ProductGridSmall searchTerm={searchTerm} selectedCategory={selectedCategory} limit={24} onAuthRequired={() => setAuthModalOpen(true)} />
           </Suspense>
         </div>

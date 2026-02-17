@@ -64,17 +64,9 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
 
   const getImageUrl = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) {
-      // For Supabase storage URLs, use image transformation
-      if (imageUrl.includes('/storage/v1/object/public/')) {
-        const transformed = imageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-        return `${transformed}?width=320&height=320&resize=cover`;
-      }
-      return imageUrl;
-    }
+    if (imageUrl.startsWith('http')) return imageUrl;
     const { data } = supabase.storage.from('product-images').getPublicUrl(imageUrl);
-    const transformed = data.publicUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-    return `${transformed}?width=320&height=320&resize=cover`;
+    return data.publicUrl;
   };
 
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
@@ -145,7 +137,7 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
 
   if (isLoading) {
     return (
-      <div className="min-h-[450px] flex gap-3 overflow-hidden">
+      <div className="flex gap-3 overflow-hidden">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="flex-shrink-0 w-36 space-y-2">
             <div className="animate-pulse">
@@ -184,8 +176,6 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
           alt={product.name}
           className="w-full h-full object-cover rounded"
           loading="lazy"
-          width={160}
-          height={160}
         />
         {product.current_stock <= product.min_stock && product.current_stock > 0 && (
           <Badge variant="destructive" className="absolute top-1 left-1 text-[9px] px-1.5 py-0.5 border-0">
