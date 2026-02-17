@@ -58,7 +58,6 @@ const Home = () => {
 
         {/* Products Section */}
         <div className="mb-8">
-          <h2 className="font-bold mb-6 text-destructive text-base">Produk Unggulan</h2>
           <ProductGridSmall searchTerm={searchTerm} selectedCategory={selectedCategory} limit={24} onAuthRequired={() => setAuthModalOpen(true)} />
         </div>
 
