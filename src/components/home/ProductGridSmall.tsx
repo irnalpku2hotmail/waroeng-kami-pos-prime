@@ -145,7 +145,7 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
 
   if (isLoading) {
     return (
-      <div className="flex gap-3 overflow-hidden">
+      <div className="min-h-[450px] flex gap-3 overflow-hidden">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="flex-shrink-0 w-36 space-y-2">
             <div className="animate-pulse">
