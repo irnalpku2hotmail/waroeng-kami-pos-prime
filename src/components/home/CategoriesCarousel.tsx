@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Package2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 const CATEGORY_COLORS = [
   { bg: 'from-rose-400 to-pink-500', light: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
@@ -140,9 +141,12 @@ const CategoriesCarousel = () => {
                       <div className={`w-12 h-12 md:w-14 md:h-14 mx-auto rounded-xl bg-gradient-to-br ${color.bg} flex items-center justify-center shadow-md mb-2 transition-transform duration-300 group-hover:rotate-3`}>
                         {category.icon_url ? (
                           <img
-                            src={category.icon_url}
+                            src={getOptimizedImageUrl(category.icon_url, 64, 64)}
                             alt={category.name}
                             className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-sm"
+                            width={32}
+                            height={32}
+                            loading="lazy"
                           />
                         ) : (
                           <Package2 className="h-6 w-6 md:h-7 md:w-7 text-white drop-shadow-sm" />

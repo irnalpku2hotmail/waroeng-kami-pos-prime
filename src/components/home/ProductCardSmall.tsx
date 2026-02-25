@@ -6,6 +6,7 @@ import { ShoppingCart, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 import WishlistButton from '@/components/wishlist/WishlistButton';
+import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 interface Product {
   id: string;
@@ -72,9 +73,12 @@ const ProductCardSmall: React.FC<ProductCardSmallProps> = ({ product, onProductC
         <div className="relative w-full h-32 mb-3 bg-gray-100 rounded-lg overflow-hidden">
           {product.image_url ? (
             <img
-              src={product.image_url}
+              src={getOptimizedImageUrl(product.image_url || '', 300, 300)}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+              width={150}
+              height={150}
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
