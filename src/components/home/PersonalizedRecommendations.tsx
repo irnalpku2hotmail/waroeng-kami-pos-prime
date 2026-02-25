@@ -175,7 +175,11 @@ const PersonalizedRecommendations = ({ onAuthRequired }: PersonalizedRecommendat
     if (!imageUrl) return '/placeholder.svg';
     if (imageUrl.startsWith('http')) return imageUrl;
     const { data } = supabase.storage.from('product-images').getPublicUrl(imageUrl);
-    return data.publicUrl;
+    const url = data.publicUrl;
+    if (url.includes('supabase.co/storage/v1/object/public/')) {
+      return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=300&height=300&resize=contain&quality=80';
+    }
+    return url;
   };
 
   const handleAddToCart = (product: any, e: React.MouseEvent) => {

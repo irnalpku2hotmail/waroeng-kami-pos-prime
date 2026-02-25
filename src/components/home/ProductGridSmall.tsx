@@ -69,6 +69,16 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
     return data.publicUrl;
   };
 
+  const getOptimizedProductUrl = (imageUrl: string | null | undefined) => {
+    const url = getImageUrl(imageUrl);
+    if (url === '/placeholder.svg') return url;
+    // Import dynamically to avoid circular deps
+    if (url.includes('supabase.co/storage/v1/object/public/')) {
+      return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=300&height=300&resize=contain&quality=80';
+    }
+    return url;
+  };
+
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
@@ -172,9 +182,11 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
     >
       <div className="relative aspect-square bg-gradient-to-br from-muted/30 to-muted/60 p-1">
         <img
-          src={getImageUrl(product.image_url)}
+          src={getOptimizedProductUrl(product.image_url)}
           alt={product.name}
           className="w-full h-full object-cover rounded"
+          width={300}
+          height={300}
           loading="lazy"
         />
         {product.current_stock <= product.min_stock && product.current_stock > 0 && (
