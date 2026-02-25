@@ -123,7 +123,7 @@ const CompactBannerCarousel = () => {
   const offset = -(currentIndex * slideWidth) + peekSize + (dragDelta / (containerRef.current?.offsetWidth || 1)) * 100;
 
   return (
-    <div className="w-full mb-6 select-none min-h-[168px] md:min-h-[232px]">
+    <div className="w-full mb-6 select-none">
       <div
         ref={containerRef}
         className="relative overflow-hidden"
@@ -159,10 +159,7 @@ const CompactBannerCarousel = () => {
                     alt={`Banner ${index + 1}`}
                     className="w-full h-full object-cover pointer-events-none"
                     loading={index <= 2 ? 'eager' : 'lazy'}
-                    fetchPriority={index <= 1 ? 'high' : 'auto'}
                     draggable={false}
-                    width={960}
-                    height={240}
                   />
                   {!isActive && (
                     <div className="absolute inset-0 bg-black/10" />

@@ -1,22 +1,20 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
+import ProductGridSmall from '@/components/home/ProductGridSmall';
 import CompactBannerCarousel from '@/components/home/CompactBannerCarousel';
+import EnhancedShippingInfo from '@/components/home/EnhancedShippingInfo';
+import ModernFrontendFlashSale from '@/components/frontend/ModernFrontendFlashSale';
+import CategoriesCarousel from '@/components/home/CategoriesCarousel';
 import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
+import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
 import AuthModal from '@/components/AuthModal';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
-
-// Lazy load below-fold components to improve Speed Index
-const ProductGridSmall = lazy(() => import('@/components/home/ProductGridSmall'));
-const EnhancedShippingInfo = lazy(() => import('@/components/home/EnhancedShippingInfo'));
-const ModernFrontendFlashSale = lazy(() => import('@/components/frontend/ModernFrontendFlashSale'));
-const CategoriesCarousel = lazy(() => import('@/components/home/CategoriesCarousel'));
-const PersonalizedRecommendations = lazy(() => import('@/components/home/PersonalizedRecommendations'));
 
 const Home = () => {
   const { user } = useAuth();
@@ -50,31 +48,21 @@ const Home = () => {
         <CompactBannerCarousel />
 
         {/* Shipping Info */}
-        <Suspense fallback={<div className="mb-8 min-h-[328px]" />}>
-          <EnhancedShippingInfo />
-        </Suspense>
+        <EnhancedShippingInfo />
 
         {/* Personalized Recommendations */}
-        <Suspense fallback={null}>
-          <PersonalizedRecommendations onAuthRequired={() => setAuthModalOpen(true)} />
-        </Suspense>
+        <PersonalizedRecommendations onAuthRequired={() => setAuthModalOpen(true)} />
 
         {/* Flash Sale */}
-        <Suspense fallback={null}>
-          <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} onAuthRequired={() => setAuthModalOpen(true)} />
-        </Suspense>
+        <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} onAuthRequired={() => setAuthModalOpen(true)} />
 
         {/* Products Section */}
         <div className="mb-8">
-          <Suspense fallback={<div className="min-h-[450px]" />}>
-            <ProductGridSmall searchTerm={searchTerm} selectedCategory={selectedCategory} limit={24} onAuthRequired={() => setAuthModalOpen(true)} />
-          </Suspense>
+          <ProductGridSmall searchTerm={searchTerm} selectedCategory={selectedCategory} limit={24} onAuthRequired={() => setAuthModalOpen(true)} />
         </div>
 
         {/* Categories Carousel */}
-        <Suspense fallback={null}>
-          <CategoriesCarousel />
-        </Suspense>
+        <CategoriesCarousel />
       </div>
 
       {/* Minimal Footer */}
