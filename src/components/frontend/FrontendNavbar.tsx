@@ -84,11 +84,11 @@ const FrontendNavbar = ({
 
   return (
     <>
-      <nav className="bg-white shadow-lg border-b sticky top-0 z-50">
+      <nav className="bg-background/95 backdrop-blur-md shadow-sm border-b border-border sticky top-0 z-50 w-full">
         {/* Top bar with contact info - Hidden on mobile */}
         {!isMobile && (
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
-            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
+          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-1.5">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-xs">
               <div className="flex items-center space-x-4">
                 {contactInfo.phone && (
                   <span>📞 {contactInfo.phone}</span>
