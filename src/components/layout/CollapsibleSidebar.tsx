@@ -41,6 +41,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
     { name: 'Point Exchange', path: '/point-exchange', icon: Star, resource: 'point-exchange', color: 'text-yellow-500', bg: 'bg-yellow-50' },
     { name: 'Points & Rewards', path: '/points-rewards', icon: Star, resource: 'points-rewards', color: 'text-amber-600', bg: 'bg-amber-50' },
     { name: 'Flash Sales', path: '/flash-sales', icon: Zap, resource: 'flash-sales', color: 'text-orange-600', bg: 'bg-orange-50' },
+    { name: 'Paket Bundling', path: '/bundles', icon: Package, resource: 'flash-sales', color: 'text-fuchsia-500', bg: 'bg-fuchsia-50' },
     { name: 'Expenses', path: '/expenses', icon: FileText, resource: 'expenses', color: 'text-slate-500', bg: 'bg-slate-50' },
     { name: 'Reports', path: '/reports', icon: BarChart3, resource: 'reports', color: 'text-blue-600', bg: 'bg-blue-50' },
     { name: 'Settings', path: '/settings', icon: Settings, resource: 'settings', color: 'text-gray-500', bg: 'bg-gray-100' },

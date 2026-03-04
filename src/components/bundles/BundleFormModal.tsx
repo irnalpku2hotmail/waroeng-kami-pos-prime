@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { X, Search, Plus } from 'lucide-react';
+import { X, Search, Plus, Upload, ImageIcon, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface BundleFormModalProps {
@@ -28,6 +27,9 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
   const [discountPrice, setDiscountPrice] = useState(0);
   const [selectedProducts, setSelectedProducts] = useState<{ product_id: string; quantity: number; name: string; price: number; stock: number }[]>([]);
   const [productSearch, setProductSearch] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: products = [] } = useQuery({
     queryKey: ['bundle-products-search', productSearch],
@@ -46,6 +48,7 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
       setName(bundle.name);
       setDescription(bundle.description || '');
       setImageUrl(bundle.image_url || '');
+      setImagePreview(bundle.image_url || null);
       setBundleType(bundle.bundle_type);
       setStatus(bundle.status);
       setDiscountPrice(bundle.discount_price);
@@ -59,9 +62,55 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
         }))
       );
     } else {
-      setName(''); setDescription(''); setImageUrl(''); setBundleType('fixed'); setStatus('draft'); setDiscountPrice(0); setSelectedProducts([]);
+      setName(''); setDescription(''); setImageUrl(''); setImagePreview(null); setBundleType('fixed'); setStatus('draft'); setDiscountPrice(0); setSelectedProducts([]);
     }
   }, [bundle, open]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Error', description: 'File harus berupa gambar', variant: 'destructive' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'Ukuran file maksimal 5MB', variant: 'destructive' });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `bundles/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('bundle-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('bundle-images')
+        .getPublicUrl(filePath);
+
+      setImageUrl(urlData.publicUrl);
+      setImagePreview(urlData.publicUrl);
+      toast({ title: 'Berhasil', description: 'Gambar berhasil diupload' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Gagal upload gambar', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setImageUrl('');
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const originalPrice = selectedProducts.reduce((sum, p) => sum + p.price * p.quantity, 0);
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -82,7 +131,6 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
         const { error } = await supabase.from('bundles').update(bundleData).eq('id', bundle.id);
         if (error) throw error;
         bundleId = bundle.id;
-        // Delete old items and re-insert
         await supabase.from('bundle_items').delete().eq('bundle_id', bundleId);
       } else {
         const { data, error } = await supabase.from('bundles').insert(bundleData).select('id').single();
@@ -90,7 +138,6 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
         bundleId = data.id;
       }
 
-      // Insert bundle items
       const items = selectedProducts.map(p => ({ bundle_id: bundleId, product_id: p.product_id, quantity: p.quantity }));
       const { error: itemsError } = await supabase.from('bundle_items').insert(items);
       if (itemsError) throw itemsError;
@@ -158,9 +205,64 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Image Upload */}
             <div className="col-span-2">
-              <Label>URL Gambar</Label>
-              <Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." />
+              <Label>Gambar Bundling</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              {imagePreview ? (
+                <div className="relative mt-2 rounded-lg overflow-hidden border border-border bg-muted/30">
+                  <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover" />
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 px-2 backdrop-blur-sm bg-background/80"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      <span className="ml-1 text-xs">Ganti</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="h-8 px-2 backdrop-blur-sm"
+                      onClick={removeImage}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="mt-2 w-full h-36 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span className="text-sm">Mengupload...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="h-8 w-8" />
+                      <span className="text-sm font-medium">Klik untuk upload gambar</span>
+                      <span className="text-xs">JPG, PNG, WebP • Maks 5MB</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
@@ -216,7 +318,7 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
             )}
           </div>
 
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="w-full">
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || uploading} className="w-full">
             {saveMutation.isPending ? 'Menyimpan...' : bundle ? 'Update Bundling' : 'Simpan Bundling'}
           </Button>
         </div>
