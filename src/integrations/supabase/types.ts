@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      bundle_items: {
+        Row: {
+          bundle_id: string
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          bundle_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          bundle_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bundle_items_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bundle_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bundles: {
+        Row: {
+          bundle_type: string
+          created_at: string
+          description: string | null
+          discount_price: number
+          id: string
+          image_url: string | null
+          name: string
+          original_price: number
+          savings_amount: number | null
+          savings_percentage: number | null
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bundle_type?: string
+          created_at?: string
+          description?: string | null
+          discount_price?: number
+          id?: string
+          image_url?: string | null
+          name: string
+          original_price?: number
+          savings_amount?: number | null
+          savings_percentage?: number | null
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bundle_type?: string
+          created_at?: string
+          description?: string | null
+          discount_price?: number
+          id?: string
+          image_url?: string | null
+          name?: string
+          original_price?: number
+          savings_amount?: number | null
+          savings_percentage?: number | null
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
