@@ -32,6 +32,8 @@ import OrderHistory from "./pages/OrderHistory";
 import Notifications from "./pages/Notifications";
 import SearchAnalytics from "./pages/SearchAnalytics";
 import Wishlist from "./pages/Wishlist";
+import Bundles from "./pages/Bundles";
+import BundleDetail from "./pages/BundleDetail";
 
 // Auth pages
 import Login from "./pages/auth/Login";
@@ -50,6 +52,7 @@ function App() {
                 <Route path="/search" element={<SearchResults />} />
                 <Route path="/order-history" element={<OrderHistory />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/bundle/:slug" element={<BundleDetail />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
@@ -77,6 +80,7 @@ function App() {
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/search-analytics" element={<ProtectedRoute><SearchAnalytics /></ProtectedRoute>} />
+                <Route path="/bundles" element={<ProtectedRoute><Bundles /></ProtectedRoute>} />
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />

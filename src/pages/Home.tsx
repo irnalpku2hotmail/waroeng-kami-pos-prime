@@ -16,6 +16,7 @@ const PersonalizedRecommendations = lazy(() => import('@/components/home/Persona
 const ModernFrontendFlashSale = lazy(() => import('@/components/frontend/ModernFrontendFlashSale'));
 const ProductGridSmall = lazy(() => import('@/components/home/ProductGridSmall'));
 const CategoriesCarousel = lazy(() => import('@/components/home/CategoriesCarousel'));
+const BundleCarousel = lazy(() => import('@/components/bundles/BundleCarousel'));
 const MinimalFooter = lazy(() => import('@/components/frontend/MinimalFooter'));
 const MobileBottomNav = lazy(() => import('@/components/home/MobileBottomNav'));
 
@@ -88,6 +89,13 @@ const Home = () => {
       <LazySection height="h-64">
         <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} onAuthRequired={() => setAuthModalOpen(true)} />
       </LazySection>
+
+      {/* Bundle Deals */}
+      <div className={isMobile ? 'px-3 py-2' : 'px-4 py-2 max-w-7xl mx-auto'}>
+        <LazySection height="h-64">
+          <BundleCarousel />
+        </LazySection>
+      </div>
 
       {/* Products & Categories */}
       <div className={isMobile ? 'px-3 py-2' : 'px-4 py-4 max-w-7xl mx-auto'}>

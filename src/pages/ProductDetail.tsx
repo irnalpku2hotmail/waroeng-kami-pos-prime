@@ -25,6 +25,7 @@ import PriceHistoryChart from '@/components/product/PriceHistoryChart';
 import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
+import BundleCarousel from '@/components/bundles/BundleCarousel';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -396,6 +397,9 @@ const ProductDetail = () => {
             <ProductReviews productId={product.id} />
           </TabsContent>
         </Tabs>
+
+        {/* Bundle Upsell */}
+        <BundleCarousel title="🛒 Sering Dibeli Bersama" limit={6} />
 
         {/* Similar Products */}
         {product.categories && (
