@@ -52,6 +52,7 @@ function App() {
                 <Route path="/search" element={<SearchResults />} />
                 <Route path="/order-history" element={<OrderHistory />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/bundle/:slug" element={<BundleDetail />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
