@@ -32,6 +32,8 @@ import OrderHistory from "./pages/OrderHistory";
 import Notifications from "./pages/Notifications";
 import SearchAnalytics from "./pages/SearchAnalytics";
 import Wishlist from "./pages/Wishlist";
+import Bundles from "./pages/Bundles";
+import BundleDetail from "./pages/BundleDetail";
 
 // Auth pages
 import Login from "./pages/auth/Login";
