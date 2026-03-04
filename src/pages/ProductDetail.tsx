@@ -398,6 +398,9 @@ const ProductDetail = () => {
           </TabsContent>
         </Tabs>
 
+        {/* Bundle Upsell */}
+        <BundleCarousel title="🛒 Sering Dibeli Bersama" limit={6} />
+
         {/* Similar Products */}
         {product.categories && (
           <ProductSimilarCarousel 
