@@ -16,6 +16,7 @@ const PersonalizedRecommendations = lazy(() => import('@/components/home/Persona
 const ModernFrontendFlashSale = lazy(() => import('@/components/frontend/ModernFrontendFlashSale'));
 const ProductGridSmall = lazy(() => import('@/components/home/ProductGridSmall'));
 const CategoriesCarousel = lazy(() => import('@/components/home/CategoriesCarousel'));
+const BundleCarousel = lazy(() => import('@/components/bundles/BundleCarousel'));
 const MinimalFooter = lazy(() => import('@/components/frontend/MinimalFooter'));
 const MobileBottomNav = lazy(() => import('@/components/home/MobileBottomNav'));
 
