@@ -23,44 +23,6 @@ interface FrontendNavbarProps {
   showSearch?: boolean;
 }
 
-const BatikPattern = () => (
-  <svg className="absolute inset-0 w-full h-full opacity-[0.12] pointer-events-none" preserveAspectRatio="none" viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern id="batikFrontNav" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-        <ellipse cx="30" cy="30" rx="12" ry="18" fill="white" opacity="0.5" transform="rotate(0 30 30)" />
-        <ellipse cx="30" cy="30" rx="12" ry="18" fill="white" opacity="0.5" transform="rotate(90 30 30)" />
-        <circle cx="30" cy="30" r="5" fill="white" opacity="0.7" />
-        <circle cx="0" cy="0" r="4" fill="white" opacity="0.3" />
-        <circle cx="60" cy="0" r="4" fill="white" opacity="0.3" />
-        <circle cx="0" cy="60" r="4" fill="white" opacity="0.3" />
-        <circle cx="60" cy="60" r="4" fill="white" opacity="0.3" />
-        <path d="M0 0 Q15 15 0 30" stroke="white" strokeWidth="1" fill="none" opacity="0.3" />
-        <path d="M60 0 Q45 15 60 30" stroke="white" strokeWidth="1" fill="none" opacity="0.3" />
-        <path d="M0 30 Q15 45 0 60" stroke="white" strokeWidth="1" fill="none" opacity="0.3" />
-        <path d="M60 30 Q45 45 60 60" stroke="white" strokeWidth="1" fill="none" opacity="0.3" />
-      </pattern>
-    </defs>
-    <rect width="800" height="120" fill="url(#batikFrontNav)" />
-  </svg>
-);
-
-const BatikTopBar = () => (
-  <svg className="absolute inset-0 w-full h-full opacity-[0.15] pointer-events-none" preserveAspectRatio="none" viewBox="0 0 800 40" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern id="batikFrontTop" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-        <circle cx="20" cy="20" r="8" fill="none" stroke="white" strokeWidth="1" opacity="0.6" />
-        <circle cx="20" cy="20" r="3" fill="white" opacity="0.5" />
-        <circle cx="0" cy="0" r="3" fill="white" opacity="0.3" />
-        <circle cx="40" cy="0" r="3" fill="white" opacity="0.3" />
-        <circle cx="0" cy="40" r="3" fill="white" opacity="0.3" />
-        <circle cx="40" cy="40" r="3" fill="white" opacity="0.3" />
-        <path d="M0 20 Q10 10 20 20 Q30 30 40 20" stroke="white" strokeWidth="0.8" fill="none" opacity="0.4" />
-      </pattern>
-    </defs>
-    <rect width="800" height="40" fill="url(#batikFrontTop)" />
-  </svg>
-);
-
 const FrontendNavbar = ({ 
   searchTerm = '',
   onSearchChange,
@@ -76,8 +38,10 @@ const FrontendNavbar = ({
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   const isMobile = useIsMobile();
 
+  // Fetch store settings
   const { data: settings } = useSettings();
 
+  // Fetch user profile
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
@@ -120,14 +84,11 @@ const FrontendNavbar = ({
 
   return (
     <>
-      <nav className="shadow-lg border-b border-emerald-700/30 sticky top-0 z-50 w-full bg-gradient-to-r from-emerald-700 via-green-600 to-emerald-700 relative overflow-hidden">
-        <BatikPattern />
-
+      <nav className="bg-background/95 backdrop-blur-md shadow-sm border-b border-border sticky top-0 z-50 w-full">
         {/* Top bar with contact info - Hidden on mobile */}
         {!isMobile && (
-          <div className="relative bg-gradient-to-r from-emerald-900 via-green-800 to-emerald-900 text-white/90 py-1.5 overflow-hidden">
-            <BatikTopBar />
-            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-xs relative z-10">
+          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-1.5">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-xs">
               <div className="flex items-center space-x-4">
                 {contactInfo.phone && (
                   <span>📞 {contactInfo.phone}</span>
@@ -144,7 +105,7 @@ const FrontendNavbar = ({
         )}
 
         {/* Main navbar */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 relative z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo & Store Name */}
             <div 
@@ -156,20 +117,21 @@ const FrontendNavbar = ({
                   <img 
                     src={logoUrl} 
                     alt={storeName} 
-                    className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-white/50`} 
+                    className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-blue-500`} 
                   />
                 </div>
               )}
               {!logoUrl && (
-                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/30`}>
+                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-blue-600 flex items-center justify-center`}>
                   <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
                 </div>
               )}
               <div>
-                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-white drop-shadow-sm`}>
+                <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
                   {isMobile ? storeName.slice(0, 15) + (storeName.length > 15 ? '...' : '') : storeName}
                 </h1>
-                <p className="text-xs text-emerald-100/80 truncate max-w-[150px] sm:max-w-none">
+                {/* Tagline - shown on both mobile and desktop */}
+                <p className="text-xs text-gray-500 truncate max-w-[150px] sm:max-w-none">
                   {tagline}
                 </p>
               </div>
@@ -185,9 +147,9 @@ const FrontendNavbar = ({
                       value={localSearchTerm}
                       onChange={(e) => setLocalSearchTerm(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                      className="flex-1 bg-white/95 border-emerald-300/50 focus:border-white placeholder:text-gray-400"
+                      className="flex-1"
                     />
-                    <Button onClick={handleSearch} className="bg-amber-500 hover:bg-amber-600 text-white border-0">
+                    <Button onClick={handleSearch}>
                       <Search className="h-4 w-4" />
                     </Button>
                   </div>
@@ -197,17 +159,19 @@ const FrontendNavbar = ({
 
             {/* Actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Notification - Only show if user is logged in */}
               {user && <NotificationDropdown />}
               
+              {/* Cart - Show to all users */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="relative hover:bg-white/15 p-2 text-white"
+                className="relative hover:bg-blue-50 p-2"
                 onClick={handleCartClick}
               >
                 <ShoppingCart className="h-5 w-5" />
                 {getTotalItems() > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-amber-500 hover:bg-amber-600 border-0">
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600">
                     {getTotalItems()}
                   </Badge>
                 )}
@@ -219,12 +183,12 @@ const FrontendNavbar = ({
                   {user ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-white/15 px-3 py-2 rounded-xl text-white">
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-blue-50 px-3 py-2 rounded-xl">
                           {profile?.avatar_url ? (
                             <img 
                               src={profile.avatar_url} 
                               alt="Profile" 
-                              className="h-6 w-6 rounded-full object-cover ring-1 ring-white/40"
+                              className="h-6 w-6 rounded-full object-cover"
                             />
                           ) : (
                             <UserCircle className="h-6 w-6" />
@@ -254,7 +218,7 @@ const FrontendNavbar = ({
                       variant="outline" 
                       size="sm" 
                       onClick={() => setAuthModalOpen(true)}
-                      className="border-white/40 text-white hover:bg-white/15 hover:text-white px-4 bg-white/10 backdrop-blur-sm"
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50 px-4"
                     >
                       <LogIn className="h-4 w-4 mr-2" />
                       Masuk
@@ -268,7 +232,7 @@ const FrontendNavbar = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="p-2 text-white hover:bg-white/15"
+                  className="p-2"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 >
                   {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -287,9 +251,9 @@ const FrontendNavbar = ({
                     value={localSearchTerm}
                     onChange={(e) => setLocalSearchTerm(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    className="flex-1 bg-white/95 border-emerald-300/50 focus:border-white placeholder:text-gray-400"
+                    className="flex-1"
                   />
-                  <Button onClick={handleSearch} className="bg-amber-500 hover:bg-amber-600 text-white border-0">
+                  <Button onClick={handleSearch}>
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
@@ -300,15 +264,16 @@ const FrontendNavbar = ({
 
         {/* Mobile Menu */}
         {mobileMenuOpen && isMobile && (
-          <div className="bg-emerald-800/95 backdrop-blur-md border-t border-emerald-600/30 relative z-10">
+          <div className="bg-white border-t shadow-lg">
             <div className="px-4 py-4 space-y-4">
+              {/* Contact info on mobile */}
               {contactInfo.phone && (
-                <div className="text-sm text-emerald-100/70 pb-2 border-b border-emerald-600/30">
+                <div className="text-sm text-gray-600 pb-2 border-b">
                   📞 {contactInfo.phone}
                 </div>
               )}
               
-              <div className="border-t border-emerald-600/30 pt-4">
+              <div className="border-t pt-4">
                 {user ? (
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3 py-2">
@@ -319,13 +284,13 @@ const FrontendNavbar = ({
                           className="h-8 w-8 rounded-full object-cover"
                         />
                       ) : (
-                        <UserCircle className="h-8 w-8 text-emerald-200" />
+                        <UserCircle className="h-8 w-8 text-gray-400" />
                       )}
                       <div>
-                        <p className="font-medium text-white">
+                        <p className="font-medium text-gray-900">
                           {profile?.full_name || 'User'}
                         </p>
-                        <p className="text-sm text-emerald-200/70">
+                        <p className="text-sm text-gray-500">
                           {user.email}
                         </p>
                       </div>
@@ -337,7 +302,7 @@ const FrontendNavbar = ({
                         navigate('/profile');
                         setMobileMenuOpen(false);
                       }}
-                      className="w-full justify-start mb-2 border-emerald-500/40 text-white hover:bg-white/10 bg-transparent"
+                      className="w-full justify-start mb-2"
                     >
                       <Settings className="h-4 w-4 mr-2" />
                       Profile
@@ -349,7 +314,7 @@ const FrontendNavbar = ({
                         navigate('/wishlist');
                         setMobileMenuOpen(false);
                       }}
-                      className="w-full justify-start mb-2 border-emerald-500/40 text-white hover:bg-white/10 bg-transparent"
+                      className="w-full justify-start mb-2"
                     >
                       <Heart className="h-4 w-4 mr-2" />
                       Wishlist
@@ -358,7 +323,7 @@ const FrontendNavbar = ({
                       variant="outline"
                       size="sm"
                       onClick={handleSignOut}
-                      className="w-full justify-start border-emerald-500/40 text-white hover:bg-white/10 bg-transparent"
+                      className="w-full justify-start"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Logout
@@ -372,7 +337,7 @@ const FrontendNavbar = ({
                       setAuthModalOpen(true);
                       setMobileMenuOpen(false);
                     }}
-                    className="w-full justify-start border-emerald-400/40 text-white hover:bg-white/10 bg-white/10"
+                    className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
                   >
                     <LogIn className="h-4 w-4 mr-2" />
                     Masuk
