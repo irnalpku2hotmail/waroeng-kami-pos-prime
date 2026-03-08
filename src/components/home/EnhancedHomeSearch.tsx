@@ -271,7 +271,7 @@ const EnhancedHomeSearch = ({
 
       {/* Search Suggestions */}
       {showSuggestions && suggestions.length > 0 && (
-        <Card className="absolute top-full left-0 right-0 mt-1 z-50 shadow-lg border">
+        <Card className="absolute top-full left-0 right-0 mt-1 z-[60] shadow-xl border bg-white">
           <CardContent className="p-2">
             <div className="space-y-1">
               {suggestions.map((product, index) => (
