@@ -117,9 +117,9 @@ const FrontendNavbar = ({
         {/* Main navbar */}
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-16">
-            {/* Logo & Store Name */}
+            {/* Logo & Store Name - Always visible */}
             <div 
-              className="flex items-center space-x-2 cursor-pointer flex-shrink-0" 
+              className="flex items-center space-x-2 cursor-pointer flex-shrink-0 min-w-[80px]" 
               onClick={() => navigate('/')}
             >
               {logoUrl ? (
@@ -133,16 +133,16 @@ const FrontendNavbar = ({
                   <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
                 </div>
               )}
-              {!isMobile && (
-                <div>
-                  <h1 className="text-xl font-bold text-white">
-                    {storeName}
-                  </h1>
+              <div className={isMobile ? '' : ''}>
+                <h1 className={`${isMobile ? 'text-sm' : 'text-xl'} font-semibold text-white whitespace-nowrap`}>
+                  {isMobile ? (storeName.length > 10 ? storeName.split(' ')[0] || storeName.substring(0, 8) : storeName) : storeName}
+                </h1>
+                {!isMobile && (
                   <p className="text-xs text-white/70 truncate max-w-[180px]">
                     {tagline}
                   </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Search Bar - Desktop */}

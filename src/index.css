@@ -140,31 +140,35 @@
   }
 }
 
-/* Navbar batik pattern */
+/* Navbar batik pattern - Enhanced visibility */
 .navbar-batik {
-  background-color: #03AC0E;
+  background: linear-gradient(180deg, #03AC0E 0%, #029B0C 100%);
   position: relative;
 }
 .navbar-batik::before {
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.06;
+  opacity: 0.10;
   pointer-events: none;
+  z-index: 0;
   background-image:
-    radial-gradient(circle at 20% 50%, #ffffff 1.5px, transparent 1.5px),
-    radial-gradient(circle at 80% 50%, #ffffff 1.5px, transparent 1.5px),
-    radial-gradient(circle at 50% 20%, #ffffff 1px, transparent 1px),
-    radial-gradient(circle at 50% 80%, #ffffff 1px, transparent 1px),
-    radial-gradient(ellipse at 50% 50%, transparent 12px, #ffffff 12.5px, #ffffff 13px, transparent 13.5px),
-    radial-gradient(ellipse at 25% 25%, transparent 8px, #ffffff 8.5px, #ffffff 9px, transparent 9.5px),
-    radial-gradient(ellipse at 75% 75%, transparent 8px, #ffffff 8.5px, #ffffff 9px, transparent 9.5px),
-    radial-gradient(ellipse at 75% 25%, transparent 6px, #ffffff 6.5px, #ffffff 7px, transparent 7.5px),
-    radial-gradient(ellipse at 25% 75%, transparent 6px, #ffffff 6.5px, #ffffff 7px, transparent 7.5px);
-  background-size: 48px 48px;
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.12) 2px, transparent 2px),
+    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.10) 3px, transparent 3px),
+    radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08) 2px, transparent 2px),
+    radial-gradient(ellipse at 50% 50%, transparent 12px, rgba(255,255,255,0.15) 12.5px, rgba(255,255,255,0.15) 13px, transparent 13.5px),
+    radial-gradient(ellipse at 25% 25%, transparent 8px, rgba(255,255,255,0.12) 8.5px, rgba(255,255,255,0.12) 9px, transparent 9.5px),
+    radial-gradient(ellipse at 75% 75%, transparent 8px, rgba(255,255,255,0.12) 8.5px, rgba(255,255,255,0.12) 9px, transparent 9.5px),
+    radial-gradient(ellipse at 75% 25%, transparent 6px, rgba(255,255,255,0.10) 6.5px, rgba(255,255,255,0.10) 7px, transparent 7.5px),
+    radial-gradient(ellipse at 25% 75%, transparent 6px, rgba(255,255,255,0.10) 6.5px, rgba(255,255,255,0.10) 7px, transparent 7.5px);
+  background-size: 60px 60px, 80px 80px, 100px 100px, 48px 48px, 48px 48px, 48px 48px, 48px 48px, 48px 48px;
+}
+.navbar-batik > * {
+  position: relative;
+  z-index: 1;
 }
 .navbar-batik-scrolled {
-  box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.20);
 }
 .navbar-batik-idle {
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
