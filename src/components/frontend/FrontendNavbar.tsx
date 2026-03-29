@@ -129,7 +129,7 @@ const FrontendNavbar = ({
 
         {/* Main navbar */}
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className={`flex items-center justify-between ${isMobile ? 'h-12' : 'h-16'}`}>
             {/* Logo & Store Name with Category Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
