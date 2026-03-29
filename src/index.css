@@ -149,19 +149,32 @@
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.10;
   pointer-events: none;
   z-index: 0;
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.12) 2px, transparent 2px),
-    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.10) 3px, transparent 3px),
-    radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08) 2px, transparent 2px),
-    radial-gradient(ellipse at 50% 50%, transparent 12px, rgba(255,255,255,0.15) 12.5px, rgba(255,255,255,0.15) 13px, transparent 13.5px),
-    radial-gradient(ellipse at 25% 25%, transparent 8px, rgba(255,255,255,0.12) 8.5px, rgba(255,255,255,0.12) 9px, transparent 9.5px),
-    radial-gradient(ellipse at 75% 75%, transparent 8px, rgba(255,255,255,0.12) 8.5px, rgba(255,255,255,0.12) 9px, transparent 9.5px),
-    radial-gradient(ellipse at 75% 25%, transparent 6px, rgba(255,255,255,0.10) 6.5px, rgba(255,255,255,0.10) 7px, transparent 7.5px),
-    radial-gradient(ellipse at 25% 75%, transparent 6px, rgba(255,255,255,0.10) 6.5px, rgba(255,255,255,0.10) 7px, transparent 7.5px);
-  background-size: 60px 60px, 80px 80px, 100px 100px, 48px 48px, 48px 48px, 48px 48px, 48px 48px, 48px 48px;
+    /* Diamond lattice pattern - row 1 */
+    linear-gradient(45deg, transparent 43%, rgba(255,255,255,0.18) 43%, rgba(255,255,255,0.18) 45%, transparent 45%),
+    linear-gradient(-45deg, transparent 43%, rgba(255,255,255,0.18) 43%, rgba(255,255,255,0.18) 45%, transparent 45%),
+    linear-gradient(45deg, transparent 55%, rgba(255,255,255,0.18) 55%, rgba(255,255,255,0.18) 57%, transparent 57%),
+    linear-gradient(-45deg, transparent 55%, rgba(255,255,255,0.18) 55%, rgba(255,255,255,0.18) 57%, transparent 57%),
+    /* Kawung circles at diamond intersections */
+    radial-gradient(ellipse at 50% 50%, transparent 5px, rgba(255,255,255,0.14) 5.5px, rgba(255,255,255,0.14) 7px, transparent 7.5px),
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 3px, transparent 3.5px),
+    /* Flower petals - 4-petal cross pattern */
+    radial-gradient(ellipse 4px 7px at 50% 35%, rgba(255,255,255,0.15) 100%, transparent 100%),
+    radial-gradient(ellipse 4px 7px at 50% 65%, rgba(255,255,255,0.15) 100%, transparent 100%),
+    radial-gradient(ellipse 7px 4px at 35% 50%, rgba(255,255,255,0.15) 100%, transparent 100%),
+    radial-gradient(ellipse 7px 4px at 65% 50%, rgba(255,255,255,0.15) 100%, transparent 100%),
+    /* Small dots accent */
+    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.10) 1.5px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(255,255,255,0.10) 1.5px, transparent 2px),
+    radial-gradient(circle at 75% 25%, rgba(255,255,255,0.10) 1.5px, transparent 2px),
+    radial-gradient(circle at 25% 75%, rgba(255,255,255,0.10) 1.5px, transparent 2px);
+  background-size:
+    40px 40px, 40px 40px, 40px 40px, 40px 40px,
+    40px 40px, 40px 40px,
+    40px 40px, 40px 40px, 40px 40px, 40px 40px,
+    40px 40px, 40px 40px, 40px 40px, 40px 40px;
 }
 .navbar-batik > * {
   position: relative;
