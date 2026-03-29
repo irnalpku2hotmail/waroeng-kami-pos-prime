@@ -5,12 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { SlidersHorizontal, Check } from 'lucide-react';
 import VoiceSearch from '@/components/VoiceSearch';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import SmartSearchSuggestions from '@/components/home/SmartSearchSuggestions';
-import { useQuery } from '@tanstack/react-query';
+
 
 interface EnhancedHomeSearchProps {
   searchTerm: string;
@@ -50,19 +48,6 @@ const EnhancedHomeSearch = ({
       console.error('Error saving search history:', error);
     }
   };
-
-  // Fetch categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data || [];
-    }
-  });
 
   const handleSearch = useCallback((query?: string) => {
     const searchQuery = query || searchTerm;
@@ -127,39 +112,6 @@ const EnhancedHomeSearch = ({
   return (
     <div ref={searchRef} className="relative w-full max-w-2xl mx-auto">
       <div className="flex gap-2">
-        {/* Category Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className={`h-10 w-10 flex-shrink-0 bg-white border-0 ${selectedCategory && selectedCategory !== 'all' ? 'ring-2 ring-[#03AC0E]/50' : ''}`}
-              aria-label="Filter kategori"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuItem 
-              onClick={() => onCategoryChange('all')}
-              className="flex items-center justify-between"
-            >
-              Semua Kategori
-              {(!selectedCategory || selectedCategory === 'all') && <Check className="h-4 w-4 text-[#03AC0E]" />}
-            </DropdownMenuItem>
-            {categories.map((category) => (
-              <DropdownMenuItem 
-                key={category.id} 
-                onClick={() => onCategoryChange(category.id)}
-                className="flex items-center justify-between"
-              >
-                {category.name}
-                {selectedCategory === category.id && <Check className="h-4 w-4 text-[#03AC0E]" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* Search Input */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />

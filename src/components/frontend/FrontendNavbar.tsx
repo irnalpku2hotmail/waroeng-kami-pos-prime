@@ -49,6 +49,19 @@ const FrontendNavbar = ({
   // Fetch store settings
   const { data: settings } = useSettings();
 
+  // Fetch categories for brand dropdown
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   // Fetch user profile
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -93,7 +106,7 @@ const FrontendNavbar = ({
   return (
     <>
       <nav
-        className={`navbar-batik sticky top-0 z-50 w-full transition-shadow duration-300 ${scrolled ? 'navbar-batik-scrolled' : 'navbar-batik-idle'}`}
+        className={`navbar-batik fixed top-0 z-50 w-full transition-shadow duration-300 ${scrolled ? 'navbar-batik-scrolled' : 'navbar-batik-idle'}`}
       >
         {/* Top bar with contact info - Hidden on mobile */}
         {!isMobile && (
@@ -117,33 +130,49 @@ const FrontendNavbar = ({
         {/* Main navbar */}
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-16">
-            {/* Logo & Store Name - Always visible */}
-            <div 
-              className="flex items-center space-x-2 cursor-pointer flex-shrink-0 min-w-[80px]" 
-              onClick={() => navigate('/')}
-            >
-              {logoUrl ? (
-                <img 
-                  src={logoUrl} 
-                  alt={storeName} 
-                  className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-white/40`} 
-                />
-              ) : (
-                <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-white/20 flex items-center justify-center`}>
-                  <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+            {/* Logo & Store Name with Category Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div 
+                  className="flex items-center space-x-2 cursor-pointer flex-shrink-0 min-w-[80px]" 
+                >
+                  {logoUrl ? (
+                    <img 
+                      src={logoUrl} 
+                      alt={storeName} 
+                      className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-white/40`} 
+                    />
+                  ) : (
+                    <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-white/20 flex items-center justify-center`}>
+                      <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                    </div>
+                  )}
+                  <div>
+                    <h1 className={`${isMobile ? 'text-sm' : 'text-xl'} font-extrabold text-white whitespace-nowrap`}>
+                      {isMobile ? (storeName.length > 10 ? storeName.split(' ')[0] || storeName.substring(0, 8) : storeName) : storeName}
+                    </h1>
+                    {!isMobile && (
+                      <p className="text-xs text-white/70 truncate max-w-[180px]">
+                        {tagline}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              )}
-              <div className={isMobile ? '' : ''}>
-                <h1 className={`${isMobile ? 'text-sm' : 'text-xl'} font-semibold text-white whitespace-nowrap`}>
-                  {isMobile ? (storeName.length > 10 ? storeName.split(' ')[0] || storeName.substring(0, 8) : storeName) : storeName}
-                </h1>
-                {!isMobile && (
-                  <p className="text-xs text-white/70 truncate max-w-[180px]">
-                    {tagline}
-                  </p>
-                )}
-              </div>
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                <DropdownMenuItem onClick={() => navigate('/')}>
+                  🏠 Beranda
+                </DropdownMenuItem>
+                {categories.map((category: any) => (
+                  <DropdownMenuItem 
+                    key={category.id} 
+                    onClick={() => navigate(`/search?category=${category.id}`)}
+                  >
+                    📦 {category.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Search Bar - Desktop */}
             {!isMobile && showSearch && (
@@ -170,20 +199,22 @@ const FrontendNavbar = ({
               {/* Notification */}
               {user && <NotificationDropdown />}
 
-              {/* Cart */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative p-2 text-white hover:bg-white/10"
-                onClick={handleCartClick}
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {getTotalItems() > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-[10px] bg-red-500 hover:bg-red-600 border-0">
-                    {getTotalItems()}
-                  </Badge>
-                )}
-              </Button>
+              {/* Cart - Desktop only (mobile has bottom nav) */}
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative p-2 text-white hover:bg-white/10"
+                  onClick={handleCartClick}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {getTotalItems() > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-[10px] bg-red-500 hover:bg-red-600 border-0">
+                      {getTotalItems()}
+                    </Badge>
+                  )}
+                </Button>
+              )}
 
               {/* User Menu - Desktop */}
               {!isMobile && (
