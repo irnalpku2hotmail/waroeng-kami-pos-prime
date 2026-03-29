@@ -134,29 +134,34 @@ const FrontendNavbar = ({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <div 
-                  className="flex items-center space-x-2 cursor-pointer flex-shrink-0 min-w-[80px]" 
+                  className="flex items-center space-x-2 cursor-pointer flex-shrink-0" 
                 >
                   {logoUrl ? (
                     <img 
                       src={logoUrl} 
                       alt={storeName} 
-                      className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-white/40`} 
+                      className={`${isMobile ? 'h-7 w-7' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-white/40`} 
                     />
                   ) : (
-                    <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} rounded-full bg-white/20 flex items-center justify-center`}>
-                      <Store className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-white`} />
+                    <div className={`${isMobile ? 'h-7 w-7' : 'h-10 w-10'} rounded-full bg-white/20 flex items-center justify-center`}>
+                      <Store className={`${isMobile ? 'h-3.5 w-3.5' : 'h-5 w-5'} text-white`} />
                     </div>
                   )}
-                  <div>
-                    <h1 className={`${isMobile ? 'text-sm' : 'text-xl'} font-extrabold text-white whitespace-nowrap`}>
-                      {isMobile ? (storeName.length > 10 ? storeName.split(' ')[0] || storeName.substring(0, 8) : storeName) : storeName}
-                    </h1>
-                    {!isMobile && (
+                  {!isMobile && (
+                    <div>
+                      <h1 className="text-xl font-extrabold text-white whitespace-nowrap">
+                        {storeName}
+                      </h1>
                       <p className="text-xs text-white/70 truncate max-w-[180px]">
                         {tagline}
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                  {isMobile && (
+                    <h1 className="text-sm font-extrabold text-white whitespace-nowrap">
+                      {storeName.length > 8 ? storeName.split(' ')[0] || storeName.substring(0, 7) : storeName}
+                    </h1>
+                  )}
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-52">
@@ -174,20 +179,20 @@ const FrontendNavbar = ({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Search Bar - Desktop */}
-            {!isMobile && showSearch && (
-              <div className="flex-1 max-w-2xl mx-8">
+            {/* Search Bar - Inline for both mobile and desktop */}
+            {showSearch && (
+              <div className={`flex-1 ${isMobile ? 'mx-2' : 'max-w-2xl mx-8'}`}>
                 {searchComponent || (
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <Input
-                      placeholder="Cari produk, toko, atau kategori"
+                      placeholder="Cari produk..."
                       value={localSearchTerm}
                       onChange={(e) => setLocalSearchTerm(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                      className="flex-1 bg-white border-0 h-10 rounded-lg"
+                      className={`flex-1 bg-white border-0 rounded-lg ${isMobile ? 'h-8 text-xs' : 'h-10'}`}
                     />
-                    <Button onClick={handleSearch} className="bg-[#028A0B] hover:bg-[#026d09] h-10 rounded-lg">
-                      <Search className="h-4 w-4 text-white" />
+                    <Button onClick={handleSearch} className={`bg-[#028A0B] hover:bg-[#026d09] rounded-lg ${isMobile ? 'h-8 w-8 p-0' : 'h-10'}`}>
+                      <Search className={`${isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} text-white`} />
                     </Button>
                   </div>
                 )}
