@@ -5,8 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { SlidersHorizontal, Check } from 'lucide-react';
 import VoiceSearch from '@/components/VoiceSearch';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import SmartSearchSuggestions from '@/components/home/SmartSearchSuggestions';
@@ -50,19 +48,6 @@ const EnhancedHomeSearch = ({
       console.error('Error saving search history:', error);
     }
   };
-
-  // Fetch categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data || [];
-    }
-  });
 
   const handleSearch = useCallback((query?: string) => {
     const searchQuery = query || searchTerm;
