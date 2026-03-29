@@ -284,26 +284,6 @@ const FrontendNavbar = ({
               )}
             </div>
           </div>
-
-          {/* Mobile Search - preserves existing searchComponent untouched */}
-          {isMobile && showSearch && (
-            <div className="pb-3">
-              {searchComponent || (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Cari produk, toko, atau kategori"
-                    value={localSearchTerm}
-                    onChange={(e) => setLocalSearchTerm(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    className="flex-1 bg-white border-0 h-10 rounded-lg shadow-sm"
-                  />
-                  <Button onClick={handleSearch} className="bg-[#028A0B] hover:bg-[#026d09] h-10 rounded-lg">
-                    <Search className="h-4 w-4 text-white" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Mobile Menu */}
