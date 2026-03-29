@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import VoiceSearch from '@/components/VoiceSearch';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import SmartSearchSuggestions from '@/components/home/SmartSearchSuggestions';
-import { useQuery } from '@tanstack/react-query';
+
 
 interface EnhancedHomeSearchProps {
   searchTerm: string;
