@@ -147,7 +147,7 @@ const Suppliers = () => {
                 <span className="sm:hidden">Tambah</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md mx-auto w-[95vw] md:w-auto">
+            <DialogContent className="max-w-2xl mx-auto w-[95vw] md:w-full">
               <DialogHeader>
                 <DialogTitle className="text-sm md:text-base">
                   {editSupplier ? 'Edit Supplier' : 'Tambah Supplier Baru'}

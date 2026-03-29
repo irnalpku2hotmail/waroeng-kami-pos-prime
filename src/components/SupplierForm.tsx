@@ -82,53 +82,58 @@ const SupplierForm = ({ supplier, onSuccess, onClose }: SupplierFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Nama Supplier *</Label>
-        <Input
-          id="name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          placeholder="Masukkan nama supplier"
-          required
-        />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Row 1: Nama + Kontak Person */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nama Supplier *</Label>
+          <Input
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Masukkan nama supplier"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="contact_person">Kontak Person</Label>
+          <Input
+            id="contact_person"
+            name="contact_person"
+            value={formData.contact_person}
+            onChange={handleChange}
+            placeholder="Masukkan nama kontak person"
+          />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="contact_person">Kontak Person</Label>
-        <Input
-          id="contact_person"
-          name="contact_person"
-          value={formData.contact_person}
-          onChange={handleChange}
-          placeholder="Masukkan nama kontak person"
-        />
+      {/* Row 2: Telepon + Email */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telepon</Label>
+          <Input
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="Masukkan nomor telepon"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Masukkan email"
+          />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="phone">Telepon</Label>
-        <Input
-          id="phone"
-          name="phone"
-          value={formData.phone}
-          onChange={handleChange}
-          placeholder="Masukkan nomor telepon"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="Masukkan email"
-        />
-      </div>
-
+      {/* Row 3: Alamat (full width) */}
       <div className="space-y-2">
         <Label htmlFor="address">Alamat</Label>
         <Textarea
@@ -141,6 +146,7 @@ const SupplierForm = ({ supplier, onSuccess, onClose }: SupplierFormProps) => {
         />
       </div>
 
+      {/* Row 4: Catatan (full width) */}
       <div className="space-y-2">
         <Label htmlFor="notes">Catatan</Label>
         <Textarea
@@ -153,7 +159,7 @@ const SupplierForm = ({ supplier, onSuccess, onClose }: SupplierFormProps) => {
         />
       </div>
 
-      <div className="flex gap-2 justify-end">
+      <div className="flex gap-2 justify-end pt-2">
         <Button type="button" variant="outline" onClick={onClose}>
           Batal
         </Button>
