@@ -49,6 +49,19 @@ const FrontendNavbar = ({
   // Fetch store settings
   const { data: settings } = useSettings();
 
+  // Fetch categories for brand dropdown
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   // Fetch user profile
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
