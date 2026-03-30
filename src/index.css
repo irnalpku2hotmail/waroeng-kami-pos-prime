@@ -179,6 +179,13 @@
   position: relative;
   z-index: 1;
 }
+.navbar-batik::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
 .navbar-batik-scrolled {
   box-shadow: 0 6px 20px rgba(0,0,0,0.20);
 }
