@@ -51,8 +51,8 @@ const Home = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className={`min-h-screen bg-background ${isMobile ? 'pb-16 pt-12' : 'pt-[88px]'}`}>
-      {/* Fixed Navbar - edge to edge */}
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-16' : ''}`}>
+      {/* Sticky Navbar - edge to edge */}
       <FrontendNavbar 
         searchTerm={searchTerm} 
         onSearchChange={setSearchTerm} 
