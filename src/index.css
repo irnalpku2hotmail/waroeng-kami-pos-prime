@@ -143,7 +143,6 @@
 /* Navbar batik pattern - Enhanced visibility */
 .navbar-batik {
   background: linear-gradient(180deg, #03AC0E 0%, #029B0C 100%);
-  position: relative;
 }
 .navbar-batik::before {
   content: '';

@@ -51,9 +51,9 @@ const Home = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className={`min-h-screen bg-background ${isMobile ? 'pb-16' : ''}`}>
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-16' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
       {/* Sticky Navbar - edge to edge */}
-      <FrontendNavbar 
+      <FrontendNavbar
         searchTerm={searchTerm} 
         onSearchChange={setSearchTerm} 
         onCartClick={() => setShowCartModal(true)} 
