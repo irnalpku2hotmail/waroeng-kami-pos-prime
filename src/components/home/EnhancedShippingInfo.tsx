@@ -2,7 +2,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Navigation, RefreshCw, Truck, Zap, Shield } from 'lucide-react';
+import { MapPin, RefreshCw, Truck, Zap, Shield } from 'lucide-react';
+import locationPinImg from '@/assets/location-pin.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
