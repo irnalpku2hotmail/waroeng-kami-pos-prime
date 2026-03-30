@@ -114,7 +114,7 @@ const BundleDetail = () => {
   const allInStock = bundle.bundle_items?.every((item: any) => item.products?.current_stock >= item.quantity);
 
   return (
-    <div className={`min-h-screen bg-background ${isMobile ? 'pb-20' : ''}`}>
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
       <FrontendNavbar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}

@@ -202,7 +202,7 @@ const ProductDetail = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''}`}>
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
       {/* Navbar - Reusing FrontendNavbar with EnhancedHomeSearch */}
       <FrontendNavbar 
         searchTerm={searchTerm} 
