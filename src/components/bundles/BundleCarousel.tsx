@@ -83,49 +83,34 @@ const BundleCarousel = ({ title = '🔥 Paket Hemat Untuk Anda', limit = 10, cat
             key={bundle.id}
             onClick={() => navigate(`/bundle/${bundle.slug}`)}
             className="flex-shrink-0 snap-start cursor-pointer group"
-            style={{ width: isMobile ? '200px' : '240px' }}
+            style={{ width: isMobile ? '140px' : '170px' }}
           >
-            <div className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1 active:scale-[0.97]">
-              {/* Image */}
-              <div className="aspect-square bg-gradient-to-br from-orange-50 to-rose-50 relative overflow-hidden">
+            <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
+              <div className="aspect-[4/3] bg-gradient-to-br from-orange-50 to-rose-50 relative overflow-hidden">
                 {bundle.image_url ? (
                   <img src={bundle.image_url} alt={bundle.name} className="w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Package className="h-12 w-12 text-orange-300" />
+                    <Package className="h-8 w-8 text-orange-300" />
                   </div>
                 )}
-                {/* Badge */}
-                <div className="absolute top-2 left-2">
-                  <span className="bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
-                    Bundle Deal
-                  </span>
-                </div>
-                {/* Savings badge */}
                 {bundle.savings_percentage && Number(bundle.savings_percentage) > 0 && (
-                  <div className="absolute top-2 right-2">
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                  <div className="absolute top-1 left-1">
+                    <span className="bg-destructive text-destructive-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-md">
                       -{Number(bundle.savings_percentage).toFixed(0)}%
                     </span>
                   </div>
                 )}
               </div>
-
-              {/* Content */}
-              <div className="p-3">
-                <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-tight mb-2">
+              <div className="p-2">
+                <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-tight mb-1">
                   {bundle.name}
                 </h3>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-base font-bold text-primary">{formatPrice(bundle.discount_price)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground line-through">{formatPrice(bundle.original_price)}</span>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] text-muted-foreground">{bundle.bundle_items?.length || 0} Produk</span>
+                <span className="text-xs font-bold text-primary">{formatPrice(bundle.discount_price)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground line-through">{formatPrice(bundle.original_price)}</span>
                   <span className="text-[10px] font-medium text-green-600">
-                    Hemat {formatPrice(Number(bundle.savings_amount || 0))}
+                    -{formatPrice(Number(bundle.savings_amount || 0))}
                   </span>
                 </div>
               </div>
