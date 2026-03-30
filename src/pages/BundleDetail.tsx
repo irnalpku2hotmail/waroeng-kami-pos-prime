@@ -87,7 +87,7 @@ const BundleDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className={`min-h-screen bg-background ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
         <FrontendNavbar searchTerm="" onSearchChange={() => {}} onCartClick={() => {}} searchComponent={<div />} />
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
           <Skeleton className="h-8 w-48" />
@@ -114,7 +114,7 @@ const BundleDetail = () => {
   const allInStock = bundle.bundle_items?.every((item: any) => item.products?.current_stock >= item.quantity);
 
   return (
-    <div className={`min-h-screen bg-background ${isMobile ? 'pb-20' : ''}`}>
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
       <FrontendNavbar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
