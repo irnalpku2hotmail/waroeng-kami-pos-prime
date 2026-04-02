@@ -147,13 +147,15 @@ const EnhancedHomeSearch = ({
                 <X className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'}`} />
               </Button>
             )}
-            <VoiceSearch 
-              onVoiceResult={(text) => {
-                onSearchChange(text);
-                setShowSuggestions(true);
-              }} 
-            />
-            <BarcodeScanner onScanSuccess={handleBarcodeScan} />
+            <div className={isMobile ? 'scale-75 origin-right flex items-center gap-0' : ''}>
+              <VoiceSearch 
+                onVoiceResult={(text) => {
+                  onSearchChange(text);
+                  setShowSuggestions(true);
+                }} 
+              />
+              <BarcodeScanner onScanSuccess={handleBarcodeScan} />
+            </div>
           </div>
         </div>
       </div>
