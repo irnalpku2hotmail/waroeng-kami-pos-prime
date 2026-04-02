@@ -136,16 +136,18 @@ const FrontendNavbar = ({
                 <div 
                   className="flex items-center space-x-2 cursor-pointer flex-shrink-0" 
                 >
-                  {logoUrl ? (
-                    <img 
-                      src={logoUrl} 
-                      alt={storeName} 
-                      className={`${isMobile ? 'h-7 w-7' : 'h-10 w-10'} rounded-full object-cover ring-2 ring-white/40`} 
-                    />
-                  ) : (
-                    <div className={`${isMobile ? 'h-7 w-7' : 'h-10 w-10'} rounded-full bg-white/20 flex items-center justify-center`}>
-                      <Store className={`${isMobile ? 'h-3.5 w-3.5' : 'h-5 w-5'} text-white`} />
-                    </div>
+                  {!isMobile && (
+                    logoUrl ? (
+                      <img 
+                        src={logoUrl} 
+                        alt={storeName} 
+                        className="h-10 w-10 rounded-full object-cover ring-2 ring-white/40" 
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                        <Store className="h-5 w-5 text-white" />
+                      </div>
+                    )
                   )}
                   {!isMobile && (
                     <div>

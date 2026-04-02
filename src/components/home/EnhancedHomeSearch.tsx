@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import VoiceSearch from '@/components/VoiceSearch';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import SmartSearchSuggestions from '@/components/home/SmartSearchSuggestions';
@@ -29,6 +30,7 @@ const EnhancedHomeSearch = ({
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   // Debounce 300ms
   useEffect(() => {
@@ -114,10 +116,12 @@ const EnhancedHomeSearch = ({
       <div className="flex gap-2">
         {/* Search Input */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          {!isMobile && (
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          )}
           <Input
             type="text"
-            placeholder="Cari produk..."
+            placeholder={isMobile ? "Cari produk..." : "Cari produk..."}
             value={searchTerm}
             onChange={(e) => {
               onSearchChange(e.target.value);
@@ -126,30 +130,32 @@ const EnhancedHomeSearch = ({
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowSuggestions(true)}
-            className="pl-10 pr-24 bg-white border-0 focus:ring-2 focus:ring-[#03AC0E]/30 transition-colors h-10 rounded-lg"
+            className={`${isMobile ? 'pl-3 pr-16 h-7 text-[11px] placeholder:text-[11px]' : 'pl-10 pr-24 h-10'} bg-white border-0 focus:ring-2 focus:ring-[#03AC0E]/30 transition-colors rounded-lg`}
           />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-0.5">
+          <div className={`absolute ${isMobile ? 'right-1' : 'right-2'} top-1/2 transform -translate-y-1/2 flex items-center gap-0.5`}>
             {searchTerm && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-muted"
+                className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} p-0 hover:bg-muted`}
                 onClick={() => {
                   onSearchChange('');
                   setShowSuggestions(false);
                 }}
                 aria-label="Hapus pencarian"
               >
-                <X className="h-3 w-3" />
+                <X className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'}`} />
               </Button>
             )}
-            <VoiceSearch 
-              onVoiceResult={(text) => {
-                onSearchChange(text);
-                setShowSuggestions(true);
-              }} 
-            />
-            <BarcodeScanner onScanSuccess={handleBarcodeScan} />
+            <div className={isMobile ? 'scale-75 origin-right flex items-center gap-0' : ''}>
+              <VoiceSearch 
+                onVoiceResult={(text) => {
+                  onSearchChange(text);
+                  setShowSuggestions(true);
+                }} 
+              />
+              <BarcodeScanner onScanSuccess={handleBarcodeScan} />
+            </div>
           </div>
         </div>
       </div>
