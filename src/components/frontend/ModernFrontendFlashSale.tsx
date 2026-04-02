@@ -21,6 +21,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
   const [currentIndex, setCurrentIndex] = useState(0);
   const { addToCart } = useCart();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const { data: flashSales, isLoading } = useQuery({
     queryKey: ['active-flash-sales'],
