@@ -30,6 +30,7 @@ const EnhancedHomeSearch = ({
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   // Debounce 300ms
   useEffect(() => {
