@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import VoiceSearch from '@/components/VoiceSearch';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import SmartSearchSuggestions from '@/components/home/SmartSearchSuggestions';
