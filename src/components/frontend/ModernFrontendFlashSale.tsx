@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ModernFrontendFlashSaleProps {
   onProductClick: (product: any) => void;
