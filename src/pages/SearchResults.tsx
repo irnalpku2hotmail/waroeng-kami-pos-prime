@@ -84,6 +84,10 @@ const SearchResults = () => {
         query = query.eq('category_id', selectedCategory);
       }
 
+      if (selectedBrand && selectedBrand !== 'all') {
+        query = query.eq('brand_id', selectedBrand);
+      }
+
       if (minPrice) {
         query = query.gte('selling_price', parseFloat(minPrice));
       }
