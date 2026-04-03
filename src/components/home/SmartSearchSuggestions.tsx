@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, Clock, TrendingUp, Folder } from 'lucide-react';
+import { Search, Package, Clock, TrendingUp, Folder, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface SmartSearchSuggestionsProps {
