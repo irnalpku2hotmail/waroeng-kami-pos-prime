@@ -70,7 +70,8 @@ const SearchResults = () => {
         .select(`
           *,
           categories(id, name),
-          units(name, abbreviation)
+          units(name, abbreviation),
+          product_brands(id, name, logo_url)
         `)
         .eq('is_active', true)
         .order('name');
