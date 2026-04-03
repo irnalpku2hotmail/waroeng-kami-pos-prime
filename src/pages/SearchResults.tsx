@@ -30,12 +30,23 @@ const SearchResults = () => {
   
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [selectedBrand, setSelectedBrand] = useState('all');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
   const isMobile = useIsMobile();
+
+  // Fetch brands
+  const { data: brands = [] } = useQuery({
+    queryKey: ['brands-filter'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('product_brands').select('id, name').eq('is_active', true).order('name');
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
