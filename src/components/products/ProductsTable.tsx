@@ -55,6 +55,7 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
             </div>
           </TableCell>
           <TableCell>{product.categories?.name || '-'}</TableCell>
+          <TableCell className="hidden md:table-cell">{product.product_brands?.name || '-'}</TableCell>
           <TableCell>{product.units?.name || '-'}</TableCell>
           <TableCell>Rp {product.selling_price?.toLocaleString('id-ID')}</TableCell>
           <TableCell>

@@ -456,6 +456,27 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
               </Select>
             </div>
 
+            <div>
+              <Label htmlFor="brand">Brand</Label>
+              <Select value={formData.brand_id} onValueChange={(value) => setFormData({ ...formData, brand_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map(brand => (
+                    <SelectItem key={brand.id} value={brand.id}>
+                      <div className="flex items-center gap-2">
+                        {brand.logo_url && (
+                          <img src={brand.logo_url} alt={brand.name} className="w-4 h-4 object-contain rounded" />
+                        )}
+                        {brand.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center space-x-2">
               <Switch
                 id="is_active"

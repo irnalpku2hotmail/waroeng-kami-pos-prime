@@ -330,11 +330,18 @@ const SearchResults = () => {
                   <p className="text-blue-600 font-bold">
                     {formatPrice(product.selling_price)}
                   </p>
-                  {product.categories?.name && (
-                    <Badge variant="secondary" className="mt-2 text-xs">
-                      {product.categories.name}
-                    </Badge>
-                  )}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {product.categories?.name && (
+                      <Badge variant="secondary" className="text-xs">
+                        {product.categories.name}
+                      </Badge>
+                    )}
+                    {product.product_brands?.name && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.product_brands.name}
+                      </Badge>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}

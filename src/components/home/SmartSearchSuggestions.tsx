@@ -271,6 +271,30 @@ const SmartSearchSuggestions = ({
           </div>
         )}
 
+        {/* Brand suggestions */}
+        {searchTerm.length >= 2 && brandMatches.length > 0 && (
+          <div className="mb-2">
+            <p className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Brand</p>
+            {brandMatches.map((brand) => (
+              <button
+                key={brand.id}
+                onClick={() => {
+                  navigate(`/search?q=${encodeURIComponent(searchTerm)}&brand=${brand.id}`);
+                  onClose();
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded transition-colors text-left"
+              >
+                {brand.logo_url ? (
+                  <img src={brand.logo_url} alt={brand.name} className="h-4 w-4 object-contain rounded flex-shrink-0" />
+                ) : (
+                  <Tag className="h-3.5 w-3.5 text-[#03AC0E] flex-shrink-0" />
+                )}
+                <span>{brand.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Product suggestions */}
         {searchTerm.length >= 2 && suggestions.length > 0 && (
           <div className="space-y-0.5">

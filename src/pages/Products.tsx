@@ -38,7 +38,8 @@ const Products = () => {
           *,
           categories(name),
           units(name),
-          price_variants(*)
+          price_variants(*),
+          product_brands(name, logo_url)
         `, { count: 'exact' });
 
       // Apply search filter
