@@ -165,6 +165,22 @@ const SmartSearchSuggestions = ({
     enabled: searchTerm.length >= 2,
   });
 
+  // Brand suggestions
+  const { data: brandMatches = [] } = useQuery({
+    queryKey: ['brand-suggestions', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm.trim() || searchTerm.length < 2) return [];
+      const { data } = await supabase
+        .from('product_brands')
+        .select('id, name, logo_url')
+        .eq('is_active', true)
+        .ilike('name', `%${searchTerm}%`)
+        .limit(3);
+      return data || [];
+    },
+    enabled: searchTerm.length >= 2,
+  });
+
   // Detect potential typo correction
   const hasFuzzyOnly = suggestions.length > 0 && suggestions.every((s: any) => s._fuzzy);
   const fuzzyTopName = hasFuzzyOnly ? suggestions[0]?.name : null;
