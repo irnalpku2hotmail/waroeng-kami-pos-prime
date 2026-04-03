@@ -190,7 +190,8 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         ...formData,
         image_url: imageUrl,
         category_id: formData.category_id || null,
-        unit_id: formData.unit_id || null
+        unit_id: formData.unit_id || null,
+        brand_id: formData.brand_id || null
       };
 
       if (product) {
