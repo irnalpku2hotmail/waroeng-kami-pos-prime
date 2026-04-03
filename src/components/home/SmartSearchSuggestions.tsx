@@ -192,7 +192,7 @@ const SmartSearchSuggestions = ({
 
   const hasContent =
     searchTerm.length >= 2
-      ? suggestions.length > 0 || categoryMatches.length > 0
+      ? suggestions.length > 0 || categoryMatches.length > 0 || brandMatches.length > 0
       : recentSearches.length > 0 || trendingSearches.length > 0;
 
   if (!hasContent) return null;
