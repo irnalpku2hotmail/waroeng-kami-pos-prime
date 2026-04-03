@@ -216,18 +216,33 @@ const SearchResults = () => {
           {showFilters && (
             <Card className="mb-6">
               <CardContent className="p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <Label className="text-sm font-medium mb-2">Kategori</Label>
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-2 border rounded-md text-sm"
                     >
                       <option value="all">Semua Kategori</option>
                       {categories.map((category: any) => (
                         <option key={category.id} value={category.id}>
                           {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium mb-2">Brand</Label>
+                    <select
+                      value={selectedBrand}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      className="w-full p-2 border rounded-md text-sm"
+                    >
+                      <option value="all">Semua Brand</option>
+                      {brands.map((brand: any) => (
+                        <option key={brand.id} value={brand.id}>
+                          {brand.name}
                         </option>
                       ))}
                     </select>
