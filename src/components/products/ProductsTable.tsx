@@ -16,6 +16,7 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
         <TableHead>Gambar</TableHead>
         <TableHead>Nama Produk</TableHead>
         <TableHead>Kategori</TableHead>
+        <TableHead className="hidden md:table-cell">Brand</TableHead>
         <TableHead>Unit</TableHead>
         <TableHead>Harga Jual</TableHead>
         <TableHead>Stok</TableHead>
