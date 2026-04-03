@@ -63,7 +63,7 @@ const SearchResults = () => {
 
   // Fetch products with search and filters
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['search-products', searchQuery, selectedCategory, minPrice, maxPrice],
+    queryKey: ['search-products', searchQuery, selectedCategory, selectedBrand, minPrice, maxPrice],
     queryFn: async () => {
       let query = supabase
         .from('products')
