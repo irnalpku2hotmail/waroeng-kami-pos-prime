@@ -16,6 +16,7 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
         <TableHead>Gambar</TableHead>
         <TableHead>Nama Produk</TableHead>
         <TableHead>Kategori</TableHead>
+        <TableHead className="hidden md:table-cell">Brand</TableHead>
         <TableHead>Unit</TableHead>
         <TableHead>Harga Jual</TableHead>
         <TableHead>Stok</TableHead>
@@ -54,6 +55,7 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
             </div>
           </TableCell>
           <TableCell>{product.categories?.name || '-'}</TableCell>
+          <TableCell className="hidden md:table-cell">{product.product_brands?.name || '-'}</TableCell>
           <TableCell>{product.units?.name || '-'}</TableCell>
           <TableCell>Rp {product.selling_price?.toLocaleString('id-ID')}</TableCell>
           <TableCell>

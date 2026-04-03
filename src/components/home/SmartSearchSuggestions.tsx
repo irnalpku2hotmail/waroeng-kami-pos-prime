@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, Clock, TrendingUp, Folder } from 'lucide-react';
+import { Search, Package, Clock, TrendingUp, Folder, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface SmartSearchSuggestionsProps {
@@ -165,6 +165,22 @@ const SmartSearchSuggestions = ({
     enabled: searchTerm.length >= 2,
   });
 
+  // Brand suggestions
+  const { data: brandMatches = [] } = useQuery({
+    queryKey: ['brand-suggestions', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm.trim() || searchTerm.length < 2) return [];
+      const { data } = await supabase
+        .from('product_brands')
+        .select('id, name, logo_url')
+        .eq('is_active', true)
+        .ilike('name', `%${searchTerm}%`)
+        .limit(3);
+      return data || [];
+    },
+    enabled: searchTerm.length >= 2,
+  });
+
   // Detect potential typo correction
   const hasFuzzyOnly = suggestions.length > 0 && suggestions.every((s: any) => s._fuzzy);
   const fuzzyTopName = hasFuzzyOnly ? suggestions[0]?.name : null;
@@ -176,7 +192,7 @@ const SmartSearchSuggestions = ({
 
   const hasContent =
     searchTerm.length >= 2
-      ? suggestions.length > 0 || categoryMatches.length > 0
+      ? suggestions.length > 0 || categoryMatches.length > 0 || brandMatches.length > 0
       : recentSearches.length > 0 || trendingSearches.length > 0;
 
   if (!hasContent) return null;
@@ -250,6 +266,30 @@ const SmartSearchSuggestions = ({
               >
                 <Folder className="h-3.5 w-3.5 text-[#03AC0E] flex-shrink-0" />
                 <span>{cat.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Brand suggestions */}
+        {searchTerm.length >= 2 && brandMatches.length > 0 && (
+          <div className="mb-2">
+            <p className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Brand</p>
+            {brandMatches.map((brand) => (
+              <button
+                key={brand.id}
+                onClick={() => {
+                  navigate(`/search?q=${encodeURIComponent(searchTerm)}&brand=${brand.id}`);
+                  onClose();
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded transition-colors text-left"
+              >
+                {brand.logo_url ? (
+                  <img src={brand.logo_url} alt={brand.name} className="h-4 w-4 object-contain rounded flex-shrink-0" />
+                ) : (
+                  <Tag className="h-3.5 w-3.5 text-[#03AC0E] flex-shrink-0" />
+                )}
+                <span>{brand.name}</span>
               </button>
             ))}
           </div>

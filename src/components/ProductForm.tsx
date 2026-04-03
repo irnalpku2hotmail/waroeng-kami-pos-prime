@@ -43,6 +43,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     loyalty_points: 0,
     category_id: '',
     unit_id: '',
+    brand_id: '',
     is_active: true,
     has_service_fee: false
   });
@@ -69,6 +70,16 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     queryKey: ['units'],
     queryFn: async () => {
       const { data, error } = await supabase.from('units').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch brands
+  const { data: brands = [] } = useQuery({
+    queryKey: ['brands'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('product_brands').select('*').eq('is_active', true).order('name');
       if (error) throw error;
       return data;
     }
@@ -121,6 +132,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         loyalty_points: product.loyalty_points || 1,
         category_id: product.category_id || '',
         unit_id: product.unit_id || '',
+        brand_id: product.brand_id || '',
         is_active: product.is_active !== false,
         has_service_fee: product.has_service_fee || false
       });
@@ -178,7 +190,8 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         ...formData,
         image_url: imageUrl,
         category_id: formData.category_id || null,
-        unit_id: formData.unit_id || null
+        unit_id: formData.unit_id || null,
+        brand_id: formData.brand_id || null
       };
 
       if (product) {
@@ -437,6 +450,27 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                   {units.map(unit => (
                     <SelectItem key={unit.id} value={unit.id}>
                       {unit.name} ({unit.abbreviation})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="brand">Brand</Label>
+              <Select value={formData.brand_id} onValueChange={(value) => setFormData({ ...formData, brand_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map(brand => (
+                    <SelectItem key={brand.id} value={brand.id}>
+                      <div className="flex items-center gap-2">
+                        {brand.logo_url && (
+                          <img src={brand.logo_url} alt={brand.name} className="w-4 h-4 object-contain rounded" />
+                        )}
+                        {brand.name}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

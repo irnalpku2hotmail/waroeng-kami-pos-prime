@@ -27,15 +27,27 @@ const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const initialCategory = searchParams.get('category') || 'all';
+  const initialBrand = searchParams.get('brand') || 'all';
   
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
   const isMobile = useIsMobile();
+
+  // Fetch brands
+  const { data: brands = [] } = useQuery({
+    queryKey: ['brands-filter'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('product_brands').select('id, name').eq('is_active', true).order('name');
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -52,14 +64,15 @@ const SearchResults = () => {
 
   // Fetch products with search and filters
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['search-products', searchQuery, selectedCategory, minPrice, maxPrice],
+    queryKey: ['search-products', searchQuery, selectedCategory, selectedBrand, minPrice, maxPrice],
     queryFn: async () => {
       let query = supabase
         .from('products')
         .select(`
           *,
           categories(id, name),
-          units(name, abbreviation)
+          units(name, abbreviation),
+          product_brands(id, name, logo_url)
         `)
         .eq('is_active', true)
         .order('name');
@@ -70,6 +83,10 @@ const SearchResults = () => {
 
       if (selectedCategory && selectedCategory !== 'all') {
         query = query.eq('category_id', selectedCategory);
+      }
+
+      if (selectedBrand && selectedBrand !== 'all') {
+        query = query.eq('brand_id', selectedBrand);
       }
 
       if (minPrice) {
@@ -101,7 +118,8 @@ const SearchResults = () => {
             .select(`
               *,
               categories(id, name),
-              units(name, abbreviation)
+              units(name, abbreviation),
+              product_brands(id, name, logo_url)
             `)
             .in('id', productIds)
             .eq('is_active', true);
@@ -137,6 +155,7 @@ const SearchResults = () => {
 
   const handleClearFilters = () => {
     setSelectedCategory('all');
+    setSelectedBrand('all');
     setMinPrice('');
     setMaxPrice('');
   };
@@ -199,18 +218,33 @@ const SearchResults = () => {
           {showFilters && (
             <Card className="mb-6">
               <CardContent className="p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <Label className="text-sm font-medium mb-2">Kategori</Label>
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-2 border rounded-md text-sm"
                     >
                       <option value="all">Semua Kategori</option>
                       {categories.map((category: any) => (
                         <option key={category.id} value={category.id}>
                           {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium mb-2">Brand</Label>
+                    <select
+                      value={selectedBrand}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      className="w-full p-2 border rounded-md text-sm"
+                    >
+                      <option value="all">Semua Brand</option>
+                      {brands.map((brand: any) => (
+                        <option key={brand.id} value={brand.id}>
+                          {brand.name}
                         </option>
                       ))}
                     </select>
@@ -298,11 +332,18 @@ const SearchResults = () => {
                   <p className="text-blue-600 font-bold">
                     {formatPrice(product.selling_price)}
                   </p>
-                  {product.categories?.name && (
-                    <Badge variant="secondary" className="mt-2 text-xs">
-                      {product.categories.name}
-                    </Badge>
-                  )}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {product.categories?.name && (
+                      <Badge variant="secondary" className="text-xs">
+                        {product.categories.name}
+                      </Badge>
+                    )}
+                    {product.product_brands?.name && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.product_brands.name}
+                      </Badge>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
