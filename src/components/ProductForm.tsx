@@ -132,6 +132,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         loyalty_points: product.loyalty_points || 1,
         category_id: product.category_id || '',
         unit_id: product.unit_id || '',
+        brand_id: product.brand_id || '',
         is_active: product.is_active !== false,
         has_service_fee: product.has_service_fee || false
       });
