@@ -75,6 +75,16 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     }
   });
 
+  // Fetch brands
+  const { data: brands = [] } = useQuery({
+    queryKey: ['brands'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('product_brands').select('*').eq('is_active', true).order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Ambil konversi unit dari Supabase saat edit atau refresh
   useEffect(() => {
     if (product?.id) {
