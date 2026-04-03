@@ -43,6 +43,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     loyalty_points: 0,
     category_id: '',
     unit_id: '',
+    brand_id: '',
     is_active: true,
     has_service_fee: false
   });
