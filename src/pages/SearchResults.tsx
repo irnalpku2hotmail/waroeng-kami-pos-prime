@@ -153,6 +153,7 @@ const SearchResults = () => {
 
   const handleClearFilters = () => {
     setSelectedCategory('all');
+    setSelectedBrand('all');
     setMinPrice('');
     setMaxPrice('');
   };
