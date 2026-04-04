@@ -160,6 +160,10 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
       if (product.image_url) {
         setImagePreview(product.image_url);
       }
+
+      if (product.tags && Array.isArray(product.tags)) {
+        setTags(product.tags);
+      }
     }
   }, [product]);
 
