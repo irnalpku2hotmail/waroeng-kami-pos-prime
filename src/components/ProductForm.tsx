@@ -406,6 +406,11 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
             </div>
 
             <div>
+              <Label htmlFor="tags">Tags Produk</Label>
+              <TagInput tags={tags} onChange={setTags} />
+            </div>
+
+            <div>
               <Label htmlFor="description">Deskripsi</Label>
               <Textarea
                 id="description"
