@@ -53,6 +53,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
   const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [tags, setTags] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
 
