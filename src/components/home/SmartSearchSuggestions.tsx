@@ -87,17 +87,18 @@ const SmartSearchSuggestions = ({
       let query = supabase
         .from('products')
         .select(`
-          id, name, image_url, selling_price, current_stock,
+          id, name, image_url, selling_price, current_stock, tags,
           categories (id, name)
         `)
         .eq('is_active', true)
-        .limit(10);
+        .limit(15);
 
       if (selectedCategory && selectedCategory !== 'all') {
         query = query.eq('category_id', selectedCategory);
       }
 
-      query = query.ilike('name', `%${searchTerm}%`);
+      // Search by name OR tags
+      query = query.or(`name.ilike.%${searchTerm}%,tags.cs.{"${searchTerm.toLowerCase()}"}`);
       const { data: exactMatches } = await query;
 
       // If few results, try fuzzy via RPC

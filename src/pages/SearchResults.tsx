@@ -62,57 +62,29 @@ const SearchResults = () => {
     }
   });
 
-  // Fetch products with search and filters
+  // Fetch products with ranked search
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['search-products', searchQuery, selectedCategory, selectedBrand, minPrice, maxPrice],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          categories(id, name),
-          units(name, abbreviation),
-          product_brands(id, name, logo_url)
-        `)
-        .eq('is_active', true)
-        .order('name');
+      let finalData: any[] = [];
 
       if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`);
-      }
-
-      if (selectedCategory && selectedCategory !== 'all') {
-        query = query.eq('category_id', selectedCategory);
-      }
-
-      if (selectedBrand && selectedBrand !== 'all') {
-        query = query.eq('brand_id', selectedBrand);
-      }
-
-      if (minPrice) {
-        query = query.gte('selling_price', parseFloat(minPrice));
-      }
-
-      if (maxPrice) {
-        query = query.lte('selling_price', parseFloat(maxPrice));
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // If no results and we have a search query, try fuzzy search
-      let finalData = data;
-      if ((!data || data.length === 0) && searchQuery) {
-        const { data: similarProducts, error: similarError } = await supabase
-          .rpc('get_similar_products' as any, {
+        // Use the ranked search RPC
+        const { data: rankedResults, error: rpcError } = await supabase
+          .rpc('search_products_ranked' as any, {
             search_term: searchQuery,
             category_filter: selectedCategory !== 'all' ? selectedCategory : null,
-            similarity_threshold: 0.2,
-            max_results: 20
+            brand_filter: selectedBrand !== 'all' ? selectedBrand : null,
+            min_price: minPrice ? parseFloat(minPrice) : null,
+            max_price: maxPrice ? parseFloat(maxPrice) : null,
+            max_results: 100
           });
 
-        if (!similarError && similarProducts && Array.isArray(similarProducts) && similarProducts.length > 0) {
-          const productIds = (similarProducts as any[]).map((p: any) => p.id);
+        if (!rpcError && rankedResults && Array.isArray(rankedResults) && rankedResults.length > 0) {
+          // Fetch full product data with relations for the ranked results
+          const productIds = (rankedResults as any[]).map((p: any) => p.id);
+          const scoreMap = new Map((rankedResults as any[]).map((p: any) => [p.id, p.relevance_score]));
+          
           const { data: fullProducts } = await supabase
             .from('products')
             .select(`
@@ -123,9 +95,44 @@ const SearchResults = () => {
             `)
             .in('id', productIds)
             .eq('is_active', true);
-          
-          finalData = fullProducts || [];
+
+          // Sort by relevance score from RPC
+          finalData = (fullProducts || []).sort((a, b) => {
+            const scoreA = scoreMap.get(a.id) || 0;
+            const scoreB = scoreMap.get(b.id) || 0;
+            return Number(scoreB) - Number(scoreA);
+          });
+        } else {
+          // Fallback: basic ilike search
+          let query = supabase
+            .from('products')
+            .select(`*, categories(id, name), units(name, abbreviation), product_brands(id, name, logo_url)`)
+            .eq('is_active', true)
+            .ilike('name', `%${searchQuery}%`);
+
+          if (selectedCategory !== 'all') query = query.eq('category_id', selectedCategory);
+          if (selectedBrand !== 'all') query = query.eq('brand_id', selectedBrand);
+          if (minPrice) query = query.gte('selling_price', parseFloat(minPrice));
+          if (maxPrice) query = query.lte('selling_price', parseFloat(maxPrice));
+
+          const { data } = await query.order('name').limit(100);
+          finalData = data || [];
         }
+      } else {
+        // No search query - just apply filters
+        let query = supabase
+          .from('products')
+          .select(`*, categories(id, name), units(name, abbreviation), product_brands(id, name, logo_url)`)
+          .eq('is_active', true)
+          .order('name');
+
+        if (selectedCategory !== 'all') query = query.eq('category_id', selectedCategory);
+        if (selectedBrand !== 'all') query = query.eq('brand_id', selectedBrand);
+        if (minPrice) query = query.gte('selling_price', parseFloat(minPrice));
+        if (maxPrice) query = query.lte('selling_price', parseFloat(maxPrice));
+
+        const { data } = await query.limit(100);
+        finalData = data || [];
       }
 
       // Log search analytics

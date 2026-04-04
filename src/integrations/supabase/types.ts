@@ -836,6 +836,7 @@ export type Database = {
           min_stock: number
           name: string
           selling_price: number
+          tags: string[] | null
           unit_id: string | null
           updated_at: string
         }
@@ -856,6 +857,7 @@ export type Database = {
           min_stock?: number
           name: string
           selling_price?: number
+          tags?: string[] | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -876,6 +878,7 @@ export type Database = {
           min_stock?: number
           name?: string
           selling_price?: number
+          tags?: string[] | null
           unit_id?: string | null
           updated_at?: string
         }
@@ -1943,6 +1946,34 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      search_products_ranked: {
+        Args: {
+          brand_filter?: string
+          category_filter?: string
+          max_price?: number
+          max_results?: number
+          min_price?: number
+          search_term: string
+        }
+        Returns: {
+          barcode: string
+          base_price: number
+          brand_id: string
+          category_id: string
+          current_stock: number
+          description: string
+          has_service_fee: boolean
+          id: string
+          image_url: string
+          is_active: boolean
+          loyalty_points: number
+          min_quantity: number
+          name: string
+          relevance_score: number
+          selling_price: number
+          tags: string[]
+        }[]
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Minus, X, Upload } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import BarcodeScanner from '@/components/BarcodeScanner';
+import TagInput from '@/components/TagInput';
 
 interface PriceVariant {
   id?: string;
@@ -52,6 +53,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
   const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [tags, setTags] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
 
@@ -158,6 +160,10 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
       if (product.image_url) {
         setImagePreview(product.image_url);
       }
+
+      if (product.tags && Array.isArray(product.tags)) {
+        setTags(product.tags);
+      }
     }
   }, [product]);
 
@@ -191,7 +197,8 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
         image_url: imageUrl,
         category_id: formData.category_id || null,
         unit_id: formData.unit_id || null,
-        brand_id: formData.brand_id || null
+        brand_id: formData.brand_id || null,
+        tags: tags
       };
 
       if (product) {
@@ -396,6 +403,11 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                 placeholder="Nama produk"
                 required
               />
+            </div>
+
+            <div>
+              <Label htmlFor="tags">Tags Produk</Label>
+              <TagInput tags={tags} onChange={setTags} />
             </div>
 
             <div>
