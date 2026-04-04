@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Minus, X, Upload } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import BarcodeScanner from '@/components/BarcodeScanner';
+import TagInput from '@/components/TagInput';
 
 interface PriceVariant {
   id?: string;
