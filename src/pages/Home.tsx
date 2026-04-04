@@ -12,11 +12,12 @@ import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton
 
 // Lazy load below-the-fold sections
 const EnhancedShippingInfo = lazy(() => import('@/components/home/EnhancedShippingInfo'));
-const PersonalizedRecommendations = lazy(() => import('@/components/home/PersonalizedRecommendations'));
+const CategoryGrid = lazy(() => import('@/components/home/CategoryGrid'));
+const BrandScroller = lazy(() => import('@/components/home/BrandScroller'));
 const ModernFrontendFlashSale = lazy(() => import('@/components/frontend/ModernFrontendFlashSale'));
-const ProductGridSmall = lazy(() => import('@/components/home/ProductGridSmall'));
-const CategoriesCarousel = lazy(() => import('@/components/home/CategoriesCarousel'));
 const BundleCarousel = lazy(() => import('@/components/bundles/BundleCarousel'));
+const PromoProducts = lazy(() => import('@/components/home/PromoProducts'));
+const AllProducts = lazy(() => import('@/components/home/AllProducts'));
 const MinimalFooter = lazy(() => import('@/components/frontend/MinimalFooter'));
 const MobileBottomNav = lazy(() => import('@/components/home/MobileBottomNav'));
 
@@ -48,85 +49,111 @@ const Home = () => {
   const [showCartModal, setShowCartModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const isMobile = useIsMobile();
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('all');
+    setSelectedBrand('all');
+  };
 
   return (
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-16' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
-      {/* Sticky Navbar - edge to edge */}
+      {/* Fixed Navbar */}
       <FrontendNavbar
-        searchTerm={searchTerm} 
-        onSearchChange={setSearchTerm} 
-        onCartClick={() => setShowCartModal(true)} 
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onCartClick={() => setShowCartModal(true)}
         searchComponent={
-          <EnhancedHomeSearch 
-            searchTerm={searchTerm} 
-            onSearchChange={setSearchTerm} 
-            selectedCategory={selectedCategory} 
-            onCategoryChange={setSelectedCategory} 
+          <EnhancedHomeSearch
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
           />
-        } 
+        }
       />
 
-      {/* Banner - full width, no container padding on mobile */}
+      {/* 1. Banner Promo */}
       <div className={isMobile ? 'px-0 pt-2' : 'px-4 pt-4 max-w-7xl mx-auto'}>
         <CompactBannerCarousel />
       </div>
 
-      {/* Main Content */}
-      <div className={isMobile ? 'px-3 py-2' : 'px-4 py-4 max-w-7xl mx-auto'}>
-        {/* Shipping Info - lazy */}
-        <LazySection height="h-32" rootMargin="100px">
+      {/* Content area - clean spacing */}
+      <div className={isMobile ? 'px-3 space-y-5' : 'px-4 max-w-7xl mx-auto space-y-8'}>
+        {/* Shipping Info */}
+        <LazySection height="h-16" rootMargin="100px">
           <EnhancedShippingInfo />
         </LazySection>
 
-        {/* Recommendations - lazy */}
-        <LazySection height="h-56">
-          <PersonalizedRecommendations onAuthRequired={() => setAuthModalOpen(true)} />
+        {/* 2. Kategori Grid */}
+        <LazySection height="h-32" rootMargin="200px">
+          <CategoryGrid />
+        </LazySection>
+
+        {/* 3. Brand Carousel */}
+        <LazySection height="h-24" rootMargin="200px">
+          <BrandScroller />
         </LazySection>
       </div>
 
-      {/* Flash Sale - full bleed */}
-      <LazySection height="h-64">
-        <ModernFrontendFlashSale onProductClick={product => navigate(`/product/${product.id}`)} onAuthRequired={() => setAuthModalOpen(true)} />
-      </LazySection>
+      {/* 4. Flash Sale - full bleed */}
+      <div className="mt-5 md:mt-8">
+        <LazySection height="h-48">
+          <ModernFrontendFlashSale
+            onProductClick={product => navigate(`/product/${product.id}`)}
+            onAuthRequired={() => setAuthModalOpen(true)}
+          />
+        </LazySection>
+      </div>
 
-      {/* Bundle Deals */}
-      <div className={isMobile ? 'px-3 py-2' : 'px-4 py-2 max-w-7xl mx-auto'}>
-        <LazySection height="h-64">
+      {/* Content sections */}
+      <div className={isMobile ? 'px-3 space-y-5 mt-5' : 'px-4 max-w-7xl mx-auto space-y-8 mt-8'}>
+        {/* Bundle Deals */}
+        <LazySection height="h-48">
           <BundleCarousel />
         </LazySection>
-      </div>
 
-      {/* Products & Categories */}
-      <div className={isMobile ? 'px-3 py-2' : 'px-4 py-4 max-w-7xl mx-auto'}>
+        {/* 5. Promo / Rekomendasi */}
         <LazySection height="h-64">
-          <div className="mb-6">
-            <ProductGridSmall searchTerm={searchTerm} selectedCategory={selectedCategory} limit={24} onAuthRequired={() => setAuthModalOpen(true)} />
-          </div>
+          <PromoProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
 
-        <LazySection height="h-48">
-          <CategoriesCarousel />
+        {/* Separator */}
+        <div className="border-t border-border/30" />
+
+        {/* 6. Semua Produk */}
+        <LazySection height="h-64">
+          <AllProducts
+            searchTerm={searchTerm}
+            selectedCategory={selectedCategory}
+            selectedBrand={selectedBrand}
+            onAuthRequired={() => setAuthModalOpen(true)}
+            onClearFilters={clearFilters}
+          />
         </LazySection>
       </div>
 
-      {/* Footer - lazy */}
-      <LazySection height="h-48" rootMargin="200px">
-        <MinimalFooter />
-      </LazySection>
+      {/* Footer */}
+      <div className="mt-8">
+        <LazySection height="h-48" rootMargin="200px">
+          <MinimalFooter />
+        </LazySection>
+      </div>
 
       {/* Modals */}
       <EnhancedFrontendCartModal open={showCartModal} onOpenChange={setShowCartModal} />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
-      
-      {/* Mobile Bottom Navigation */}
+
+      {/* Mobile Bottom Nav */}
       {isMobile && (
         <Suspense fallback={null}>
           <MobileBottomNav onCartClick={() => setShowCartModal(true)} onAuthClick={() => setAuthModalOpen(true)} />
         </Suspense>
       )}
 
-      {/* WhatsApp Floating Button */}
+      {/* WhatsApp */}
       <WhatsAppFloatingButton className={isMobile ? 'bottom-20' : ''} />
     </div>
   );
