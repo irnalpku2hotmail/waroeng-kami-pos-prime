@@ -77,37 +77,37 @@ const Home = () => {
       />
 
       {/* 1. Banner Promo */}
-      <div className={isMobile ? 'px-0 pt-2' : 'px-4 pt-4 max-w-7xl mx-auto'}>
+      <div className={isMobile ? 'px-0 pt-1' : 'px-4 pt-2 max-w-7xl mx-auto'}>
         <CompactBannerCarousel />
       </div>
 
-      {/* Content area - clean spacing */}
-      <div className={isMobile ? 'px-3 space-y-5' : 'px-4 max-w-7xl mx-auto space-y-8'}>
+      {/* Content area - compact spacing */}
+      <div className={isMobile ? 'px-3 space-y-3' : 'px-4 max-w-7xl mx-auto space-y-4'}>
         {/* Shipping Info */}
-        <LazySection height="h-16" rootMargin="100px">
+        <LazySection height="h-12" rootMargin="100px">
           <EnhancedShippingInfo />
         </LazySection>
 
         {/* 2. Kategori Grid */}
-        <LazySection height="h-32" rootMargin="200px">
+        <LazySection height="h-28" rootMargin="200px">
           <CategoryGrid />
         </LazySection>
 
         {/* 3. Brand Carousel */}
-        <LazySection height="h-24" rootMargin="200px">
+        <LazySection height="h-20" rootMargin="200px">
           <BrandScroller />
         </LazySection>
       </div>
 
       {/* Produk Sering Dicari */}
-      <div className="mt-5 md:mt-8">
+      <div className="mt-3 md:mt-4">
         <LazySection height="h-48">
           <TrendingProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
       </div>
 
       {/* 4. Flash Sale - full bleed */}
-      <div className="mt-5 md:mt-8">
+      <div className="mt-3 md:mt-4">
         <LazySection height="h-48">
           <ModernFrontendFlashSale
             onProductClick={product => navigate(`/product/${product.id}`)}
@@ -117,7 +117,7 @@ const Home = () => {
       </div>
 
       {/* Content sections */}
-      <div className={isMobile ? 'px-3 space-y-5 mt-5' : 'px-4 max-w-7xl mx-auto space-y-8 mt-8'}>
+      <div className={isMobile ? 'px-3 space-y-3 mt-3' : 'px-4 max-w-7xl mx-auto space-y-4 mt-4'}>
         {/* Bundle Deals */}
         <LazySection height="h-48">
           <BundleCarousel />
@@ -144,7 +144,7 @@ const Home = () => {
       </div>
 
       {/* Footer */}
-      <div className="mt-8">
+      <div className="mt-4">
         <LazySection height="h-48" rootMargin="200px">
           <MinimalFooter />
         </LazySection>

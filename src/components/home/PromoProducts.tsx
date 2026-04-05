@@ -85,11 +85,11 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <TrendingUp className="h-4 w-4 text-primary" />
         <h2 className="font-bold text-sm md:text-base text-foreground">Rekomendasi Untukmu</h2>
       </div>
-      <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3'}`}>
+      <div className={`grid ${isMobile ? 'grid-cols-3 gap-2' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'}`}>
         {products.map((product: any) => (
           <div
             key={product.id}
@@ -97,10 +97,10 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
               if (!user) { onAuthRequired?.(); return; }
               navigate(`/product/${product.id}`);
             }}
-            className="bg-card rounded-lg overflow-hidden border border-border/40 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
+            className="bg-card rounded-xl overflow-hidden border border-border/50 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]"
           >
             {/* Image */}
-            <div className="relative aspect-square overflow-hidden bg-accent/20">
+            <div className="relative aspect-[4/3] overflow-hidden bg-accent/20">
               <img
                 src={getImageUrl(product.image_url)}
                 alt={product.name}
@@ -125,17 +125,19 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
                   Sisa {product.current_stock}
                 </Badge>
               )}
-              <Button
-                size="icon"
-                className="absolute bottom-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary shadow-md"
-                onClick={(e) => handleAddToCart(product, e)}
-              >
-                <ShoppingCart className="h-3.5 w-3.5" />
-              </Button>
+              {product.current_stock > 0 && (
+                <Button
+                  size="icon"
+                  className="absolute bottom-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary shadow-md"
+                  onClick={(e) => handleAddToCart(product, e)}
+                >
+                  <ShoppingCart className="h-3 w-3" />
+                </Button>
+              )}
             </div>
             {/* Info */}
             <div className="p-2">
-              <h3 className="text-xs font-medium text-foreground line-clamp-2 leading-tight mb-1 min-h-[28px]">
+              <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-tight mb-1">
                 {product.name}
               </h3>
               <p className="text-primary font-bold text-xs">{formatPrice(product.selling_price)}</p>

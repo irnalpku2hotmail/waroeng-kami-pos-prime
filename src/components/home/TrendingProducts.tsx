@@ -89,7 +89,6 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
           .from('products')
           .select('*')
           .eq('is_active', true)
-          .gt('current_stock', 0)
           .or(uniqueTerms.map(t => `name.ilike.%${t}%`).join(','))
           .order('current_stock', { ascending: false })
           .limit(20);
@@ -103,7 +102,6 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
           .from('products')
           .select('*')
           .eq('is_active', true)
-          .gt('current_stock', 0)
           .order('current_stock', { ascending: false })
           .limit(20);
         
@@ -125,7 +123,7 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
       return;
     }
     if (product.current_stock <= 0) {
-      toast({ title: 'Stok Habis', description: 'Produk tidak tersedia', variant: 'destructive' });
+      toast({ title: 'Stok Habis', description: 'Produk ini sedang habis', variant: 'destructive' });
       return;
     }
     addItem({
@@ -161,9 +159,9 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
   if (!products?.length) return null;
 
   return (
-    <div className="py-4">
+    <div className="py-2">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 px-3 md:px-0">
+      <div className="flex items-center justify-between mb-2 px-3 md:px-0">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-orange-500" />
           <div>
@@ -205,6 +203,12 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
                     <Package className="h-8 w-8 text-muted-foreground" />
                   </div>
                 )}
+                {/* Out of stock overlay */}
+                {product.current_stock <= 0 && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <Badge variant="destructive" className="text-[10px]">Habis</Badge>
+                  </div>
+                )}
                 {/* Trending badge */}
                 <div className="absolute top-1 left-1">
                   <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
@@ -212,13 +216,15 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
                   </span>
                 </div>
                 {/* Cart button */}
-                <Button
-                  size="icon"
-                  className="absolute bottom-1 right-1 h-6 w-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow"
-                  onClick={(e) => handleAddToCart(product, e)}
-                >
-                  <ShoppingCart className="h-3 w-3" />
-                </Button>
+                {product.current_stock > 0 && (
+                  <Button
+                    size="icon"
+                    className="absolute bottom-1 right-1 h-6 w-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow"
+                    onClick={(e) => handleAddToCart(product, e)}
+                  >
+                    <ShoppingCart className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
 
               {/* Info */}
