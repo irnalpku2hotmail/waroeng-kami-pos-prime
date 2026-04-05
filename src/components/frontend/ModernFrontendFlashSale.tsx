@@ -158,166 +158,91 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
   const visibleItems = getVisibleItems();
 
   return (
-    <div className={isMobile ? 'px-3 py-2' : 'bg-gradient-to-r from-orange-50 to-red-50 py-6'}>
-      <div className={isMobile ? '' : 'container mx-auto px-4'}>
-        {isMobile ? (
-          <>
-            {/* Mobile: Header row - icon + title + countdown */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Flame className="h-5 w-5 text-orange-500" />
-                <h2 className="text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500 tracking-tight">
-                  FLASH SALE
-                </h2>
-              </div>
-              <div className="flex items-center gap-1">
-                {[
-                  { val: timeLeft.hours, label: 'Jam' },
-                  { val: timeLeft.minutes, label: 'Menit' },
-                  { val: timeLeft.seconds, label: 'Detik' },
-                ].map((t, i) => (
-                  <div key={i} className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded text-center min-w-[28px]">
-                    <div className="text-xs font-bold leading-tight">{String(t.val).padStart(2, '0')}</div>
-                    <div className="text-[7px] leading-tight">{t.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Mobile: Compact product grid */}
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {items.map((item: any) => {
-                const product = item.products;
-                const remaining = item.stock_quantity - item.sold_quantity;
-
-                return (
-                  <div
-                    key={item.id}
-                    className="flex-shrink-0 w-[140px] bg-card rounded-lg overflow-hidden border shadow-sm"
-                  >
-                    {/* Image */}
-                    <div className="relative aspect-[4/3] overflow-hidden">
-                      <img
-                        src={product.image_url || '/placeholder.svg'}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-1 right-1 bg-gradient-to-br from-yellow-400 to-orange-500 text-white px-1 py-0.5 rounded text-[9px] font-bold">
-                        -{Math.round(item.discount_percentage)}%
-                      </div>
-                      {remaining < 10 && (
-                        <Badge className="absolute top-1 left-1 bg-orange-600 text-white px-1 py-0 text-[7px] h-auto">
-                          Sisa {remaining}
-                        </Badge>
-                      )}
-                      <Button
-                        size="icon"
-                        className="absolute bottom-1 right-1 h-6 w-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow"
-                        onClick={(e) => handleAddToCart(item, e)}
-                      >
-                        <ShoppingCart className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    {/* Info */}
-                    <div className="p-1.5">
-                      <h3 className="font-medium text-[11px] line-clamp-1 text-foreground">{product.name}</h3>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-xs font-bold text-orange-600">{formatPrice(item.sale_price)}</span>
-                      </div>
-                      <span className="text-[9px] text-muted-foreground line-through">{formatPrice(item.original_price)}</span>
-                      <div className="text-[9px] text-muted-foreground mt-0.5">Terjual {item.sold_quantity}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          /* Desktop: Keep existing layout */
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <div className="flex flex-row items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-lg">
-                  <Flame className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">
-                    FLASH SALE
-                  </h2>
-                  <p className="text-sm text-gray-600">{flashSales.description || 'Diskon Terbatas!'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-orange-600" />
-                <div className="flex gap-1">
-                  {[
-                    { val: timeLeft.hours, label: 'Jam' },
-                    { val: timeLeft.minutes, label: 'Menit' },
-                    { val: timeLeft.seconds, label: 'Detik' },
-                  ].map((t, i) => (
-                    <div key={i} className="bg-gradient-to-br from-orange-500 to-red-500 text-white px-2 py-1 rounded text-center min-w-[40px]">
-                      <div className="text-lg font-bold">{String(t.val).padStart(2, '0')}</div>
-                      <div className="text-[10px]">{t.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="relative">
-              {currentIndex > 0 && (
-                <Button variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 bg-white shadow-lg rounded-full h-10 w-10" onClick={handlePrev}>
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-              )}
-              <div className="flex gap-3 overflow-hidden">
-                {visibleItems.map((item: any) => {
-                  const product = item.products;
-                  const soldPercentage = (item.sold_quantity / item.stock_quantity) * 100;
-                  const remaining = item.stock_quantity - item.sold_quantity;
-                  return (
-                    <Card key={item.id} className="flex-shrink-0 w-[calc(25%-9px)] hover:shadow-lg transition-all duration-300 overflow-hidden border border-transparent hover:border-orange-400">
-                      <div className="relative aspect-square overflow-hidden">
-                        <img src={product.image_url || '/placeholder.svg'} alt={product.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                        <div className="absolute top-1 right-1 bg-gradient-to-br from-yellow-400 to-orange-500 text-white px-1.5 py-0.5 rounded text-xs font-bold">-{Math.round(item.discount_percentage)}%</div>
-                        <Button size="icon" className="absolute bottom-1 right-1 h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg" onClick={(e) => handleAddToCart(item, e)}>
-                          <ShoppingCart className="h-4 w-4" />
-                        </Button>
-                        {remaining < 10 && (
-                          <Badge className="absolute top-1 left-1 bg-orange-600 text-white px-1 py-0.5 text-[10px]">Sisa {remaining}</Badge>
-                        )}
-                      </div>
-                      <div className="p-2 space-y-1">
-                        <h3 className="font-medium text-sm line-clamp-1">{product.name}</h3>
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <span className="text-base font-bold text-orange-600">{formatPrice(item.sale_price)}</span>
-                          <span className="text-xs text-gray-500 line-through">{formatPrice(item.original_price)}</span>
-                        </div>
-                        <div className="space-y-0.5">
-                          <Progress value={soldPercentage} className="h-1.5" />
-                          <div className="text-xs text-gray-500">Terjual {item.sold_quantity}</div>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-              {currentIndex + 4 < items.length && (
-                <Button variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 bg-white shadow-lg rounded-full h-10 w-10" onClick={handleNext}>
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-              )}
-            </div>
-            {items.length > 4 && (
-              <div className="flex justify-center gap-1.5 mt-3">
-                {Array.from({ length: Math.ceil(items.length / 4) }).map((_, idx) => (
-                  <button key={idx} className={`h-1.5 rounded-full transition-all ${Math.floor(currentIndex / 4) === idx ? 'w-6 bg-orange-600' : 'w-1.5 bg-gray-300'}`} onClick={() => setCurrentIndex(idx * 4)} />
-                ))}
-              </div>
+    <div className="py-4">
+      {/* Header: icon + title + description + countdown */}
+      <div className="flex items-center justify-between mb-3 px-3 md:px-0">
+        <div className="flex items-center gap-2">
+          <Flame className="h-5 w-5 text-orange-500" />
+          <div>
+            <h2 className="text-base md:text-lg font-bold text-foreground">
+              FLASH SALE
+            </h2>
+            {!isMobile && flashSales.description && (
+              <p className="text-xs text-muted-foreground">{flashSales.description}</p>
             )}
           </div>
-        )}
+        </div>
+        <div className="flex items-center gap-1">
+          {[
+            { val: timeLeft.hours, label: 'Jam' },
+            { val: timeLeft.minutes, label: 'Menit' },
+            { val: timeLeft.seconds, label: 'Detik' },
+          ].map((t, i) => (
+            <div key={i} className="bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded text-center min-w-[28px]">
+              <div className="text-xs font-bold leading-tight">{String(t.val).padStart(2, '0')}</div>
+              <div className="text-[7px] leading-tight">{t.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Product cards - horizontal scroll, no container */}
+      <div
+        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {items.map((item: any) => {
+          const product = item.products;
+          const remaining = item.stock_quantity - item.sold_quantity;
+
+          return (
+            <div
+              key={item.id}
+              className="flex-shrink-0 group"
+              style={{ width: isMobile ? '140px' : '170px' }}
+            >
+              <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
+                {/* Image */}
+                <div className="aspect-[4/3] relative overflow-hidden">
+                  <img
+                    src={product.image_url || '/placeholder.svg'}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  {/* Discount badge */}
+                  <div className="absolute top-1 left-1">
+                    <span className="bg-destructive text-destructive-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                      -{Math.round(item.discount_percentage)}%
+                    </span>
+                  </div>
+                  {remaining < 10 && (
+                    <Badge className="absolute top-1 right-1 bg-orange-600 text-white px-1 py-0 text-[7px] h-auto">
+                      Sisa {remaining}
+                    </Badge>
+                  )}
+                  <Button
+                    size="icon"
+                    className="absolute bottom-1 right-1 h-6 w-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow"
+                    onClick={(e) => handleAddToCart(item, e)}
+                  >
+                    <ShoppingCart className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {/* Info */}
+                <div className="p-2">
+                  <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-tight mb-1">{product.name}</h3>
+                  <span className="text-xs font-bold text-primary">{formatPrice(item.sale_price)}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground line-through">{formatPrice(item.original_price)}</span>
+                  </div>
+                  <div className="text-[9px] text-muted-foreground mt-0.5">Terjual {item.sold_quantity}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
