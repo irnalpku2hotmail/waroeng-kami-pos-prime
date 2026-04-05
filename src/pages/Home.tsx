@@ -14,6 +14,7 @@ import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton
 const EnhancedShippingInfo = lazy(() => import('@/components/home/EnhancedShippingInfo'));
 const CategoryGrid = lazy(() => import('@/components/home/CategoryGrid'));
 const BrandScroller = lazy(() => import('@/components/home/BrandScroller'));
+const TrendingProducts = lazy(() => import('@/components/home/TrendingProducts'));
 const ModernFrontendFlashSale = lazy(() => import('@/components/frontend/ModernFrontendFlashSale'));
 const BundleCarousel = lazy(() => import('@/components/bundles/BundleCarousel'));
 const PromoProducts = lazy(() => import('@/components/home/PromoProducts'));
@@ -95,6 +96,13 @@ const Home = () => {
         {/* 3. Brand Carousel */}
         <LazySection height="h-24" rootMargin="200px">
           <BrandScroller />
+        </LazySection>
+      </div>
+
+      {/* Produk Sering Dicari */}
+      <div className="mt-5 md:mt-8">
+        <LazySection height="h-48">
+          <TrendingProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
       </div>
 
