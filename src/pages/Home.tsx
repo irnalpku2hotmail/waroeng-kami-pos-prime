@@ -99,6 +99,13 @@ const Home = () => {
         </LazySection>
       </div>
 
+      {/* Produk Sering Dicari */}
+      <div className="mt-5 md:mt-8">
+        <LazySection height="h-48">
+          <TrendingProducts onAuthRequired={() => setAuthModalOpen(true)} />
+        </LazySection>
+      </div>
+
       {/* 4. Flash Sale - full bleed */}
       <div className="mt-5 md:mt-8">
         <LazySection height="h-48">
