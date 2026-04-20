@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -79,11 +78,6 @@ const EnhancedShippingInfo = () => {
     );
   };
 
-  // Truncate address for compact display
-  const shortAddress = locationAddress
-    ? locationAddress.length > 50 ? locationAddress.substring(0, 50) + '…' : locationAddress
-    : null;
-
   return (
     <div className="mb-4">
       {/* Compact location bar */}
@@ -91,8 +85,8 @@ const EnhancedShippingInfo = () => {
         <img src={locationPinImg} alt="Lokasi" className="h-6 w-6 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-semibold text-primary leading-tight">Lokasi Anda</p>
-          {shortAddress ? (
-            <p className="text-xs text-foreground/70 truncate">{shortAddress}</p>
+          {locationAddress ? (
+            <p className="text-xs text-foreground/70 line-clamp-1 md:line-clamp-2">{locationAddress}</p>
           ) : (
             <p className="text-xs text-muted-foreground">Deteksi lokasi untuk info pengiriman</p>
           )}
