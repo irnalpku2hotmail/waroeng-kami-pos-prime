@@ -159,7 +159,7 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
   if (!products?.length) return null;
 
   return (
-    <div className="py-2">
+    <div className="py-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-2 px-3 md:px-0">
         <div className="flex items-center gap-2">
