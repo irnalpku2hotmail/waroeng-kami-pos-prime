@@ -55,7 +55,7 @@ const BundleCarousel = ({ title = '🔥 Paket Hemat Untuk Anda', limit = 10, cat
   if (bundles.length === 0) return null;
 
   return (
-    <div className="py-4">
+    <div className="py-0">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
           <Flame className="h-5 w-5 text-orange-500" />

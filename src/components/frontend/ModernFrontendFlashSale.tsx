@@ -158,7 +158,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
   const visibleItems = getVisibleItems();
 
   return (
-    <div className="py-4">
+    <div className="py-0">
       {/* Header: icon + title + description + countdown */}
       <div className="flex items-center justify-between mb-3 px-3 md:px-0">
         <div className="flex items-center gap-2">
