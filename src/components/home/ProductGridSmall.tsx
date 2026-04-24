@@ -250,11 +250,11 @@ const ProductGridSmall = ({ searchTerm, selectedCategory, limit = 24, onAuthRequ
 
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto pb-2"
+        className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {productPairs.map((pair, index) => (
-          <div key={index} className="flex-shrink-0 w-36 sm:w-40 flex flex-col gap-3">
+          <div key={index} className="flex-shrink-0 snap-start w-36 sm:w-40 flex flex-col gap-3">
             {pair.map((product) => renderProductCard(product))}
           </div>
         ))}

@@ -114,14 +114,14 @@ const RecentlyBoughtProducts = ({ onProductClick }: RecentlyBoughtProductsProps)
       {/* Products Container */}
       <div 
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
+        className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory scroll-smooth"
         onScroll={handleScroll}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {products?.map((product) => (
           <Card 
             key={product.id} 
-            className="flex-none w-36 md:w-44 cursor-pointer hover:shadow-md transition-shadow duration-200 group"
+            className="flex-none snap-start w-36 md:w-44 cursor-pointer hover:shadow-md transition-shadow duration-200 group"
             onClick={() => onProductClick(product)}
           >
             <CardContent className="p-2 md:p-3">

@@ -77,13 +77,13 @@ const EnhancedCategoriesSlider = ({ onCategorySelect }: EnhancedCategoriesSlider
       
       <div 
         ref={scrollRef}
-        className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
+        className="flex gap-6 overflow-x-auto scrollbar-hide pb-4 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {categories.map((category) => (
           <div
             key={category.id}
-            className="flex-none group cursor-pointer text-center"
+            className="flex-none snap-start group cursor-pointer text-center"
             onClick={() => handleCategoryClick(category.id, category.name)}
           >
             <div className="relative mb-3">
