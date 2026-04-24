@@ -160,7 +160,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
   return (
     <div className="py-0">
       {/* Header: icon + title + description + countdown */}
-      <div className="flex items-center justify-between mb-3 px-3 md:px-0">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Flame className="h-5 w-5 text-orange-500" />
           <div>
@@ -186,9 +186,9 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
         </div>
       </div>
 
-      {/* Product cards - horizontal scroll, no container */}
+      {/* Product cards - horizontal scroll */}
       <div
-        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0 snap-x snap-mandatory scroll-smooth scroll-px-3 md:scroll-px-0"
+        className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {items.map((item: any) => {

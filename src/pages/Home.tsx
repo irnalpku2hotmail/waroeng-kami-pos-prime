@@ -99,25 +99,19 @@ const Home = () => {
         </LazySection>
       </div>
 
-      {/* Produk Sering Dicari */}
-      <div className="mt-3 md:mt-4">
+      {/* Produk Sering Dicari + Flash Sale + Bundle - aligned in same container */}
+      <div className={isMobile ? 'px-3 space-y-3 mt-3' : 'px-4 max-w-7xl mx-auto space-y-4 mt-4'}>
         <LazySection height="h-48">
           <TrendingProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
-      </div>
 
-      {/* 4. Flash Sale - full bleed */}
-      <div className="mt-3 md:mt-4">
         <LazySection height="h-48">
           <ModernFrontendFlashSale
             onProductClick={product => navigate(`/product/${product.id}`)}
             onAuthRequired={() => setAuthModalOpen(true)}
           />
         </LazySection>
-      </div>
 
-      {/* Content sections */}
-      <div className={isMobile ? 'px-3 space-y-3 mt-3' : 'px-4 max-w-7xl mx-auto space-y-4 mt-4'}>
         {/* Bundle Deals */}
         <LazySection height="h-48">
           <BundleCarousel />
