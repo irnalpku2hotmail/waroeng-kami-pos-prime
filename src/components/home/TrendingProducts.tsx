@@ -161,7 +161,7 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
   return (
     <div className="py-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2 px-3 md:px-0">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-orange-500" />
           <div>
@@ -178,7 +178,7 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
 
       {/* Product cards - horizontal scroll */}
       <div
-        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0 snap-x snap-mandatory scroll-smooth scroll-px-3 md:scroll-px-0"
+        className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {products.map((product: any) => (
