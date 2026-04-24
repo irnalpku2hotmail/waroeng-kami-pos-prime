@@ -75,14 +75,14 @@ const BundleCarousel = ({ title = '🔥 Paket Hemat Untuk Anda', limit = 10, cat
 
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2"
+        className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 lg:grid lg:grid-cols-6 lg:gap-3 lg:overflow-visible lg:pb-0 lg:snap-none"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {bundles.map(bundle => (
+        {bundles.slice(0, 12).map(bundle => (
           <div
             key={bundle.id}
             onClick={() => navigate(`/bundle/${bundle.slug}`)}
-            className="flex-shrink-0 snap-start cursor-pointer group"
+            className="flex-shrink-0 lg:flex-shrink lg:w-auto snap-start cursor-pointer group"
             style={{ width: isMobile ? '140px' : '170px' }}
           >
             <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">

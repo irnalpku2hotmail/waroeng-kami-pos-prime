@@ -186,19 +186,19 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
         </div>
       </div>
 
-      {/* Product cards - horizontal scroll, no container */}
+      {/* Product cards - horizontal scroll on mobile/tablet, grid on desktop */}
       <div
-        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0"
+        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0 lg:grid lg:grid-cols-6 lg:gap-3 lg:overflow-visible lg:pb-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {items.map((item: any) => {
+        {items.slice(0, 12).map((item: any) => {
           const product = item.products;
           const remaining = item.stock_quantity - item.sold_quantity;
 
           return (
             <div
               key={item.id}
-              className="flex-shrink-0 group"
+              className="flex-shrink-0 lg:flex-shrink lg:w-auto group"
               style={{ width: isMobile ? '140px' : '170px' }}
             >
               <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
