@@ -138,7 +138,7 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
         </div>
       ) : (
         <>
-          <div className={`grid ${isMobile ? 'grid-cols-3 gap-2' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'}`}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
             {visibleProducts.map((product: any) => (
               <div
                 key={product.id}
