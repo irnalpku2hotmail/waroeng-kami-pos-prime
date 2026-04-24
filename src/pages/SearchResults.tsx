@@ -558,11 +558,11 @@ const SearchResults = () => {
           {/* Product grid */}
           <main className="flex-1 min-w-0">
             {isLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3">
                 {[...Array(10)].map((_, i) => (
                   <Card key={i} className="animate-pulse overflow-hidden">
-                    <div className="aspect-square bg-muted" />
-                    <CardContent className="p-2.5 space-y-1.5">
+                    <div className="aspect-[4/3] bg-muted" />
+                    <CardContent className="p-2 space-y-1.5">
                       <div className="h-3 bg-muted rounded" />
                       <div className="h-3 bg-muted rounded w-2/3" />
                       <div className="h-4 bg-muted rounded w-1/2" />
@@ -587,17 +587,17 @@ const SearchResults = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3">
                 {filteredProducts.map((product: any) => {
                   const rating = ratingsMap[product.id];
                   const outOfStock = product.current_stock <= 0;
                   return (
                     <Card
                       key={product.id}
-                      className="overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer group border-border/60 active:scale-[0.98]"
+                      className="overflow-hidden cursor-pointer group border border-border/60 hover:border-orange-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98] rounded-xl"
                       onClick={() => navigate(`/product/${product.id}`)}
                     >
-                      <div className="aspect-square relative overflow-hidden bg-muted">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                         {product.image_url ? (
                           <img
                             src={product.image_url}
@@ -611,12 +611,12 @@ const SearchResults = () => {
                           </div>
                         )}
                         {/* Wishlist */}
-                        <div className="absolute top-1.5 right-1.5 z-10">
+                        <div className="absolute top-1 right-1 z-10">
                           <WishlistButton productId={product.id} size="sm" />
                         </div>
                         {/* Brand badge */}
                         {product.product_brands?.name && (
-                          <div className="absolute top-1.5 left-1.5">
+                          <div className="absolute top-1 left-1">
                             <span className="bg-background/90 backdrop-blur-sm text-[9px] font-semibold text-foreground px-1.5 py-0.5 rounded">
                               {product.product_brands.name}
                             </span>
@@ -624,35 +624,30 @@ const SearchResults = () => {
                         )}
                         {outOfStock && (
                           <div className="absolute inset-0 bg-background/70 backdrop-blur-[1px] flex items-center justify-center">
-                            <Badge variant="destructive" className="text-xs">Habis</Badge>
+                            <Badge variant="destructive" className="text-[10px]">Habis</Badge>
                           </div>
                         )}
                       </div>
-                      <CardContent className="p-2.5">
-                        <h3 className="font-medium text-xs md:text-sm text-foreground line-clamp-2 leading-snug mb-1.5 min-h-[2.4em]">
+                      <CardContent className="p-2">
+                        <h3 className="font-semibold text-xs text-foreground line-clamp-2 leading-tight mb-1 min-h-[2em]">
                           {product.name}
                         </h3>
-                        <p className="text-sm md:text-base font-bold text-primary mb-1.5">
+                        <p className="text-xs font-bold text-primary mb-1">
                           {formatPrice(product.selling_price)}
                         </p>
                         <div className="flex items-center justify-between gap-1">
                           {rating && rating.count > 0 ? (
-                            <div className="flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                              <span className="text-[10px] font-medium text-foreground">
+                            <div className="flex items-center gap-0.5">
+                              <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                              <span className="text-[9px] font-medium text-foreground">
                                 {rating.avg.toFixed(1)}
                               </span>
-                              <span className="text-[10px] text-muted-foreground">
+                              <span className="text-[9px] text-muted-foreground">
                                 ({rating.count})
                               </span>
                             </div>
                           ) : (
-                            <span className="text-[10px] text-muted-foreground">Belum ada ulasan</span>
-                          )}
-                          {product.categories?.name && (
-                            <span className="text-[9px] text-muted-foreground truncate max-w-[60%] text-right">
-                              {product.categories.name}
-                            </span>
+                            <span className="text-[9px] text-muted-foreground">Belum ada ulasan</span>
                           )}
                         </div>
                       </CardContent>
