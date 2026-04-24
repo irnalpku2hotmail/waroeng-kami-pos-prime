@@ -176,15 +176,16 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
         )}
       </div>
 
-      {/* Product cards - horizontal scroll on mobile/tablet, grid on desktop */}
+      {/* Product cards - horizontal scroll */}
       <div
-        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0 lg:grid lg:grid-cols-6 lg:gap-3 lg:overflow-visible lg:pb-0"
+        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {products.slice(0, 12).map((product: any) => (
+        {products.map((product: any) => (
           <div
             key={product.id}
-            className="flex-shrink-0 lg:flex-shrink lg:w-auto w-[140px] md:w-[170px] group cursor-pointer"
+            className="flex-shrink-0 group cursor-pointer"
+            style={{ width: isMobile ? 140 : 170 }}
             onClick={() => navigate(`/product/${product.id}`)}
           >
             <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
