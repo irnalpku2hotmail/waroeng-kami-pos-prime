@@ -178,13 +178,13 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
 
       {/* Product cards - horizontal scroll */}
       <div
-        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0"
+        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0 snap-x snap-mandatory scroll-smooth scroll-px-3 md:scroll-px-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {products.map((product: any) => (
           <div
             key={product.id}
-            className="flex-shrink-0 group cursor-pointer"
+            className="flex-shrink-0 snap-start group cursor-pointer"
             style={{ width: isMobile ? 140 : 170 }}
             onClick={() => navigate(`/product/${product.id}`)}
           >

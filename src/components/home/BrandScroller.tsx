@@ -61,14 +61,14 @@ const BrandScroller = () => {
       </div>
       <div
         ref={scrollRef}
-        className="flex gap-4 md:gap-5 overflow-x-auto pb-1"
+        className="flex gap-4 md:gap-5 overflow-x-auto pb-1 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {brands.map((brand) => (
           <button
             key={brand.id}
             onClick={() => navigate(`/search?brand=${brand.id}`)}
-            className="flex flex-col items-center gap-1.5 flex-shrink-0 group"
+            className="flex flex-col items-center gap-1.5 flex-shrink-0 snap-start group"
           >
             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-card border-2 border-border/50 flex items-center justify-center overflow-hidden transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg group-hover:border-primary/40">
               {brand.logo_url ? (

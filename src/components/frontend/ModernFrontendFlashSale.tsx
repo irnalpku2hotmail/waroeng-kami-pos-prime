@@ -188,7 +188,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
 
       {/* Product cards - horizontal scroll, no container */}
       <div
-        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0"
+        className="flex gap-3 overflow-x-auto pb-2 px-3 md:px-0 snap-x snap-mandatory scroll-smooth scroll-px-3 md:scroll-px-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {items.map((item: any) => {
@@ -198,7 +198,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
           return (
             <div
               key={item.id}
-              className="flex-shrink-0 group"
+              className="flex-shrink-0 snap-start group"
               style={{ width: isMobile ? '140px' : '170px' }}
             >
               <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">

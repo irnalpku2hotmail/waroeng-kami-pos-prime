@@ -224,13 +224,13 @@ const PersonalizedRecommendations = ({ onAuthRequired }: PersonalizedRecommendat
 
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
+        className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {recommendations.map((product) => (
           <Card
             key={product.id}
-            className="flex-shrink-0 w-36 cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
+            className="flex-shrink-0 snap-start w-36 cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
             onClick={() => {
               if (!user) {
                 onAuthRequired?.();
