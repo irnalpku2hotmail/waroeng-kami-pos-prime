@@ -198,8 +198,7 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
           return (
             <div
               key={item.id}
-              className="flex-shrink-0 lg:flex-shrink lg:w-auto group"
-              style={{ width: isMobile ? '140px' : '170px' }}
+              className="flex-shrink-0 lg:flex-shrink lg:w-auto w-[140px] md:w-[170px] group"
             >
               <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
                 {/* Image */}

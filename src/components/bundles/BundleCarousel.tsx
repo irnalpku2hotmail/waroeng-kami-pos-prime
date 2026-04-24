@@ -82,8 +82,7 @@ const BundleCarousel = ({ title = '🔥 Paket Hemat Untuk Anda', limit = 10, cat
           <div
             key={bundle.id}
             onClick={() => navigate(`/bundle/${bundle.slug}`)}
-            className="flex-shrink-0 lg:flex-shrink lg:w-auto snap-start cursor-pointer group"
-            style={{ width: isMobile ? '140px' : '170px' }}
+            className="flex-shrink-0 lg:flex-shrink lg:w-auto w-[140px] md:w-[170px] snap-start cursor-pointer group"
           >
             <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
               <div className="aspect-[4/3] bg-gradient-to-br from-orange-50 to-rose-50 relative overflow-hidden">

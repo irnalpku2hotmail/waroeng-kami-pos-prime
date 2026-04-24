@@ -184,8 +184,7 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
         {products.slice(0, 12).map((product: any) => (
           <div
             key={product.id}
-            className="flex-shrink-0 lg:flex-shrink lg:w-auto group cursor-pointer"
-            style={{ width: isMobile ? 140 : 170 }}
+            className="flex-shrink-0 lg:flex-shrink lg:w-auto w-[140px] md:w-[170px] group cursor-pointer"
             onClick={() => navigate(`/product/${product.id}`)}
           >
             <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
