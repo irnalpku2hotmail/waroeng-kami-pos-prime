@@ -85,7 +85,7 @@ const BundleCarousel = ({ title = '🔥 Paket Hemat Untuk Anda', limit = 10, cat
             className="flex-shrink-0 snap-start cursor-pointer group"
             style={{ width: isMobile ? '140px' : '170px' }}
           >
-            <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
+            <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/60 group-hover:border-orange-500 transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.98]">
               <div className="aspect-[4/3] bg-gradient-to-br from-orange-50 to-rose-50 relative overflow-hidden">
                 {bundle.image_url ? (
                   <img src={bundle.image_url} alt={bundle.name} className="w-full h-full object-cover" loading="lazy" />

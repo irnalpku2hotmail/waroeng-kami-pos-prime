@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import VoiceSearch from '@/components/VoiceSearch';
 import BarcodeScanner from '@/components/BarcodeScanner';
@@ -29,6 +29,7 @@ const EnhancedHomeSearch = ({
   const [debouncedTerm, setDebouncedTerm] = useState(searchTerm);
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
@@ -37,6 +38,25 @@ const EnhancedHomeSearch = ({
     const timer = setTimeout(() => setDebouncedTerm(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Auto-trigger search when on /search page after typing finishes
+  useEffect(() => {
+    if (location.pathname !== '/search') return;
+    const term = debouncedTerm.trim();
+    if (!term) return;
+    // Avoid redundant navigation if URL already reflects the query
+    const currentQ = new URLSearchParams(location.search).get('q') || '';
+    if (currentQ === term) return;
+    saveSearchHistory(term);
+    const params = new URLSearchParams();
+    params.set('q', term);
+    if (selectedCategory && selectedCategory !== 'all') {
+      params.set('category', selectedCategory);
+    }
+    navigate(`/search?${params.toString()}`, { replace: true });
+    setShowSuggestions(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedTerm, location.pathname]);
 
   // Save search to history
   const saveSearchHistory = async (term: string) => {

@@ -4,11 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Package, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCart } from '@/contexts/CartContext';
-import { toast } from '@/hooks/use-toast';
+import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
+import WishlistButton from '@/components/wishlist/WishlistButton';
 
 interface ProductSimilarCarouselProps {
   categoryId: string;
@@ -16,8 +16,8 @@ interface ProductSimilarCarouselProps {
 }
 
 const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilarCarouselProps) => {
-  const { addToCart } = useCart();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: similarProducts = [], isLoading } = useQuery({
@@ -28,12 +28,13 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
         .select(`
           *,
           categories (name, id),
-          units (name, abbreviation)
+          units (name, abbreviation),
+          product_brands (id, name, logo_url)
         `)
         .eq('category_id', categoryId)
         .eq('is_active', true)
         .neq('id', currentProductId)
-        .limit(10);
+        .limit(12);
 
       if (error) throw error;
       return data || [];
@@ -41,159 +42,126 @@ const ProductSimilarCarousel = ({ categoryId, currentProductId }: ProductSimilar
     enabled: !!categoryId
   });
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const handleAddToCart = (product: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!product || !product.id || !product.name) {
-      toast({
-        title: 'Error',
-        description: 'Produk tidak valid',
-        variant: 'destructive',
+  const productIds = similarProducts.map((p: any) => p.id);
+  const { data: ratingsMap = {} } = useQuery({
+    queryKey: ['similar-ratings', productIds],
+    queryFn: async () => {
+      if (productIds.length === 0) return {} as Record<string, { avg: number; count: number }>;
+      const { data } = await supabase
+        .from('product_reviews')
+        .select('product_id, rating')
+        .in('product_id', productIds);
+      const map: Record<string, { avg: number; count: number }> = {};
+      (data || []).forEach((r: any) => {
+        if (!map[r.product_id]) map[r.product_id] = { avg: 0, count: 0 };
+        map[r.product_id].count += 1;
+        map[r.product_id].avg += r.rating;
       });
-      return;
-    }
-    
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price || 0,
-      quantity: 1,
-      image: product.image_url,
-      stock: product.current_stock || 0,
-      product_id: product.id,
-      unit_price: product.selling_price || 0,
-      total_price: (product.selling_price || 0) * 1,
-      product: {
-        id: product.id,
-        name: product.name,
-        image_url: product.image_url
-      }
-    });
+      Object.keys(map).forEach(id => { map[id].avg = map[id].avg / map[id].count; });
+      return map;
+    },
+    enabled: productIds.length > 0,
+  });
 
-    toast({
-      title: 'Berhasil!',
-      description: `${product.name} telah ditambahkan ke keranjang`,
-    });
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+
+  const scroll = (dir: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    const amount = isMobile ? 260 : 400;
+    scrollRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
   };
 
-  const handleProductClick = (productId: string) => {
-    navigate(`/product/${productId}`);
-  };
-
-  const scrollLeft = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  // Filter out null/invalid products
-  const validProducts = similarProducts?.filter(product => 
-    product && 
-    typeof product === 'object' && 
-    product.id && 
-    product.name
-  ) || [];
-
-  if (validProducts.length === 0) {
-    return null;
-  }
+  if (isLoading) return null;
+  const validProducts = similarProducts.filter((p: any) => p && p.id && p.name);
+  if (validProducts.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Produk Serupa</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={scrollLeft}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={scrollRight}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base md:text-lg font-bold text-foreground">Produk Serupa</h2>
+        {!isMobile && (
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => scroll('left')}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => scroll('right')}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div 
+      <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
+        className="flex gap-2 md:gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {validProducts.map((product) => (
-          <Card 
-            key={product.id} 
-            className="flex-none w-40 group hover:shadow-md transition-all duration-200 border-gray-200 cursor-pointer"
-            onClick={() => handleProductClick(product.id)}
-          >
-            <CardContent className="p-3">
-              {/* Product Image */}
-              <div className="relative w-full h-32 mb-3 bg-gray-100 rounded-lg overflow-hidden">
+        {validProducts.map((product: any) => {
+          const rating = ratingsMap[product.id];
+          const outOfStock = (product.current_stock || 0) <= 0;
+          return (
+            <Card
+              key={product.id}
+              className="flex-shrink-0 snap-start overflow-hidden cursor-pointer group border border-border/60 hover:border-orange-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98] rounded-xl"
+              style={{ width: isMobile ? 130 : 170 }}
+              onClick={() => navigate(`/product/${product.id}`)}
+            >
+              <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                 {product.image_url ? (
-                  <img 
-                    src={product.image_url} 
+                  <img
+                    src={product.image_url}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="h-8 w-8 text-gray-400" />
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                    No Image
                   </div>
                 )}
-                
-                {/* Stock Badge */}
-                <Badge 
-                  variant={(product.current_stock || 0) > 0 ? "secondary" : "destructive"}
-                  className="absolute bottom-2 left-2 text-xs"
-                >
-                  {(product.current_stock || 0) > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
-                </Badge>
+                <div className="absolute top-1 right-1 z-10">
+                  <WishlistButton productId={product.id} size="sm" />
+                </div>
+                {product.product_brands?.name && (
+                  <div className="absolute top-1 left-1">
+                    <span className="bg-background/90 backdrop-blur-sm text-[9px] font-semibold text-foreground px-1.5 py-0.5 rounded">
+                      {product.product_brands.name}
+                    </span>
+                  </div>
+                )}
+                {outOfStock && (
+                  <div className="absolute inset-0 bg-background/70 backdrop-blur-[1px] flex items-center justify-center">
+                    <Badge variant="destructive" className="text-[10px]">Habis</Badge>
+                  </div>
+                )}
               </div>
-
-              {/* Product Info */}
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 leading-tight">
+              <CardContent className="p-2">
+                <h3 className="font-semibold text-xs text-foreground line-clamp-2 leading-tight mb-1 min-h-[2em]">
                   {product.name}
                 </h3>
-                
-                {/* Price */}
-                <div className="text-blue-600 font-bold text-sm mb-3">
+                <p className="text-xs font-bold text-primary mb-1">
                   {formatPrice(product.selling_price || 0)}
+                </p>
+                <div className="flex items-center justify-between gap-1">
+                  {rating && rating.count > 0 ? (
+                    <div className="flex items-center gap-0.5">
+                      <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-[9px] font-medium text-foreground">
+                        {rating.avg.toFixed(1)}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground">
+                        ({rating.count})
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-[9px] text-muted-foreground">Belum ada ulasan</span>
+                  )}
                 </div>
-
-                {/* Action Button */}
-                <Button
-                  onClick={(e) => handleAddToCart(product, e)}
-                  disabled={(product.current_stock || 0) === 0}
-                  className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700"
-                  size="sm"
-                >
-                  <ShoppingCart className="h-3 w-3 mr-1" />
-                  {(product.current_stock || 0) > 0 ? 'Tambah' : 'Habis'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
