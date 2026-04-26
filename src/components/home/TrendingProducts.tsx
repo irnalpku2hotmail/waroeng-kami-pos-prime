@@ -188,7 +188,7 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
             style={{ width: isMobile ? 140 : 170 }}
             onClick={() => navigate(`/product/${product.id}`)}
           >
-            <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/50 transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.97]">
+            <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/60 group-hover:border-orange-500 transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.98]">
               {/* Image */}
               <div className="aspect-[4/3] relative overflow-hidden">
                 {product.image_url ? (
