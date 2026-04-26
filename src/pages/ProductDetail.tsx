@@ -228,24 +228,26 @@ const ProductDetail = () => {
           Kembali
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Product Image */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="aspect-square bg-gray-100 flex items-center justify-center">
-              {product.image_url ? (
-                <img 
-                  src={product.image_url} 
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Package className="h-16 w-16 text-gray-400" />
-              )}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6">
+          {/* Product Image - smaller, sticky on desktop */}
+          <div className="lg:col-span-4">
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden lg:sticky lg:top-[100px]">
+              <div className="aspect-square bg-gray-100 flex items-center justify-center max-w-sm mx-auto">
+                {product.image_url ? (
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Package className="h-16 w-16 text-gray-400" />
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Product Details */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          {/* Product Details + Description + Reviews */}
+          <div className="lg:col-span-8 bg-white rounded-lg shadow-sm p-4 md:p-6">
             <div className="flex items-center justify-between mb-4">
               {product.categories && (
                 <Badge variant="secondary">
@@ -364,6 +366,32 @@ const ProductDetail = () => {
             <div className="mt-6 text-sm text-gray-500">
               <p>Total: <span className="font-bold text-gray-900">{formatPrice(currentPrice * quantity)}</span></p>
             </div>
+
+            {/* Description & Reviews integrated into details container */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <Tabs defaultValue="description" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="description">Deskripsi</TabsTrigger>
+                  <TabsTrigger value="reviews">Review & Rating</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="description" className="mt-4">
+                  {product.description ? (
+                    <div className="prose max-w-none">
+                      <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-line">
+                        {product.description}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">Belum ada deskripsi untuk produk ini.</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="reviews" className="mt-4">
+                  <ProductReviews productId={product.id} />
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         </div>
 
@@ -371,32 +399,6 @@ const ProductDetail = () => {
         <div className="mb-8">
           <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
         </div>
-
-        {/* Product Details & Reviews Tabs */}
-        <Tabs defaultValue="description" className="mb-8">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="description">Deskripsi</TabsTrigger>
-            <TabsTrigger value="reviews">Review & Rating</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="description" className="space-y-4">
-            <Card>
-              <CardContent className="p-6">
-                {product.description ? (
-                  <div className="prose max-w-none">
-                    <p className="text-gray-700 leading-relaxed">{product.description}</p>
-                  </div>
-                ) : (
-                  <p className="text-gray-500 italic">Belum ada deskripsi untuk produk ini.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="reviews" className="space-y-4">
-            <ProductReviews productId={product.id} />
-          </TabsContent>
-        </Tabs>
 
         {/* Bundle Upsell */}
         <BundleCarousel title="🛒 Sering Dibeli Bersama" limit={6} />
