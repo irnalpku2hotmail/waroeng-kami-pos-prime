@@ -218,20 +218,20 @@ const ProductDetail = () => {
         } 
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-4">
         <Button 
           variant="ghost" 
           onClick={() => navigate(-1)}
-          className="mb-6 flex items-center gap-2"
+          className="mb-3 flex items-center gap-2 h-8"
         >
           <ArrowLeft className="h-4 w-4" />
           Kembali
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4 mb-4">
           {/* Product Image - smaller, sticky on desktop */}
           <div className="lg:col-span-4">
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden lg:sticky lg:top-[100px]">
+            <div className="bg-white rounded-xl border border-border/60 overflow-hidden lg:sticky lg:top-[100px]">
               <div className="aspect-square bg-gray-100 flex items-center justify-center max-w-sm mx-auto">
                 {product.image_url ? (
                   <img 
@@ -247,10 +247,10 @@ const ProductDetail = () => {
           </div>
 
           {/* Product Details + Description + Reviews */}
-          <div className="lg:col-span-8 bg-white rounded-lg shadow-sm p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="lg:col-span-8 bg-white rounded-xl border border-border/60 p-3 md:p-4">
+            <div className="flex items-center justify-between mb-2">
               {product.categories && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {product.categories.name}
                 </Badge>
               )}
@@ -258,19 +258,24 @@ const ProductDetail = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleLike}
-                className={`${isLiked ? 'text-red-500' : 'text-gray-400'}`}
+                className={`h-8 w-8 p-0 ${isLiked ? 'text-red-500' : 'text-gray-400'}`}
               >
                 <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
               </Button>
             </div>
 
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
               {product.name}
             </h1>
 
-            <div className="mb-6">
-              <div className="flex items-center gap-4 mb-2">
-                <span className="text-3xl font-bold text-blue-600">
+            {/* Price History inline (compact) */}
+            <div className="mb-3">
+              <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
+            </div>
+
+            <div className="mb-3">
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                <span className="text-2xl md:text-3xl font-bold text-blue-600">
                   {formatPrice(currentPrice)}
                 </span>
                 {selectedVariant && (
@@ -281,9 +286,9 @@ const ProductDetail = () => {
               </div>
               
               {product.price_variants && product.price_variants.length > 0 && (
-                <div className="text-sm text-gray-500">
-                  <p className="mb-2">Harga berdasarkan jumlah pembelian:</p>
-                  <div className="space-y-1">
+                <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 mt-2">
+                  <p className="mb-1 font-medium text-gray-700">Harga berdasarkan jumlah pembelian:</p>
+                  <div className="space-y-0.5">
                     {product.price_variants
                       .filter(v => v.is_active)
                       .sort((a, b) => a.minimum_quantity - b.minimum_quantity)
@@ -298,15 +303,16 @@ const ProductDetail = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-3 mb-3">
               <Badge 
                 variant={product.current_stock > 0 ? 'default' : 'destructive'}
+                className="text-xs"
               >
                 {product.current_stock > 0 ? `Stok: ${product.current_stock}` : 'Habis'}
               </Badge>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
                 <Label htmlFor="quantity" className="text-sm font-medium">
                   Jumlah
@@ -317,6 +323,7 @@ const ProductDetail = () => {
                     size="sm"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1}
+                    className="h-8 w-8 p-0"
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -325,7 +332,7 @@ const ProductDetail = () => {
                     type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 text-center"
+                    className="w-16 h-8 text-center"
                     min="1"
                     max={product.current_stock}
                   />
@@ -334,16 +341,17 @@ const ProductDetail = () => {
                     size="sm"
                     onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
                     disabled={quantity >= product.current_stock}
+                    className="h-8 w-8 p-0"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm text-gray-500 ml-2">
+                  <span className="text-xs text-gray-500 ml-2">
                     {product.units?.abbreviation || 'unit'}
                   </span>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <Button
                   onClick={handleAddToCart}
                   disabled={product.current_stock === 0}
@@ -356,48 +364,42 @@ const ProductDetail = () => {
                   onClick={handleAddToCart}
                   variant="outline"
                   disabled={product.current_stock === 0}
-                  className="px-6"
+                  className="px-4"
                 >
                   Beli Sekarang
                 </Button>
               </div>
             </div>
 
-            <div className="mt-6 text-sm text-gray-500">
+            <div className="mt-3 text-sm text-gray-500">
               <p>Total: <span className="font-bold text-gray-900">{formatPrice(currentPrice * quantity)}</span></p>
-            </div>
-
-            {/* Description & Reviews integrated into details container */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <Tabs defaultValue="description" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="description">Deskripsi</TabsTrigger>
-                  <TabsTrigger value="reviews">Review & Rating</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="description" className="mt-4">
-                  {product.description ? (
-                    <div className="prose max-w-none">
-                      <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-line">
-                        {product.description}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 italic text-sm">Belum ada deskripsi untuk produk ini.</p>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="reviews" className="mt-4">
-                  <ProductReviews productId={product.id} />
-                </TabsContent>
-              </Tabs>
             </div>
           </div>
         </div>
 
-        {/* Price History Chart */}
-        <div className="mb-8">
-          <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
+        {/* Description & Reviews — 3-column grid on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
+          {/* Description */}
+          <div className="bg-white rounded-xl border border-border/60 p-3 md:p-4 lg:col-span-1">
+            <h2 className="text-sm font-semibold text-gray-900 mb-2 pb-2 border-b border-border/60">
+              Deskripsi Produk
+            </h2>
+            {product.description ? (
+              <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-line">
+                {product.description}
+              </p>
+            ) : (
+              <p className="text-gray-500 italic text-sm">Belum ada deskripsi untuk produk ini.</p>
+            )}
+          </div>
+
+          {/* Reviews & Rating — spans 2 cols on desktop */}
+          <div className="bg-white rounded-xl border border-border/60 p-3 md:p-4 lg:col-span-2">
+            <h2 className="text-sm font-semibold text-gray-900 mb-2 pb-2 border-b border-border/60">
+              Review & Rating
+            </h2>
+            <ProductReviews productId={product.id} />
+          </div>
         </div>
 
         {/* Bundle Upsell */}
