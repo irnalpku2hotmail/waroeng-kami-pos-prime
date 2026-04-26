@@ -146,7 +146,7 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
                   if (!user) { onAuthRequired?.(); return; }
                   navigate(`/product/${product.id}`);
                 }}
-                className="bg-card rounded-xl overflow-hidden border border-border/50 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]"
+                className="bg-card rounded-xl overflow-hidden border border-border/60 hover:border-orange-500 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-accent/20">
                   <img
