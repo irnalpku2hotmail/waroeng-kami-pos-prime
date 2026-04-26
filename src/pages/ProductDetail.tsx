@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Heart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
