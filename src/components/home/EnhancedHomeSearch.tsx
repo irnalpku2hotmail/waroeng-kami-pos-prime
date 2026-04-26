@@ -42,8 +42,10 @@ const EnhancedHomeSearch = ({
   // Auto-trigger search when on /search page after typing finishes
   useEffect(() => {
     if (location.pathname !== '/search') return;
+    // Guard: do NOT trigger search on empty input or whitespace-only input.
+    if (!debouncedTerm || !debouncedTerm.trim()) return;
     const term = debouncedTerm.trim();
-    if (!term) return;
+    if (term.length < 2) return; // avoid single-char noise
     // Avoid redundant navigation if URL already reflects the query
     const currentQ = new URLSearchParams(location.search).get('q') || '';
     if (currentQ === term) return;
