@@ -142,7 +142,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
       // Cast COD settings to proper type
       const orderSettings = codSettings as CODSettings;
       const orderDeliveryFee = orderSettings?.delivery_fee || 10000;
-      const orderFreeShippingMinimum = orderSettings?.free_shipping_minimum || 100000;
+      const orderFreeShippingMinimum = orderSettings?.min_order ?? orderSettings?.free_shipping_minimum ?? 100000;
       const orderServiceFeeAmount = orderSettings?.service_fee || 5000;
       const orderSubtotal = getTotalPriceWithVariants();
       const orderFinalDeliveryFee = orderSubtotal >= orderFreeShippingMinimum ? 0 : orderDeliveryFee;
@@ -228,7 +228,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
   // Cast COD settings to proper type for calculations
   const codSettingsTyped = codSettings as CODSettings;
   const deliveryFee = codSettingsTyped?.delivery_fee || 10000;
-  const freeShippingMinimum = codSettingsTyped?.free_shipping_minimum || 100000;
+  const freeShippingMinimum = codSettingsTyped?.min_order ?? codSettingsTyped?.free_shipping_minimum ?? 100000;
   const serviceFeeAmount = codSettingsTyped?.service_fee || 5000;
   const subtotal = getTotalPriceWithVariants();
   const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
