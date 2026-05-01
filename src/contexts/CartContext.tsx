@@ -81,7 +81,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = (newItem: CartItem) => {
     setItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(item => item.id === newItem.id);
+      // Bundle items must not merge with manually-added items of the same product.
+      // Match only when bundle_id matches (both undefined/null = manual; both same id = same bundle).
+      const existingItemIndex = prevItems.findIndex(
+        item => item.id === newItem.id && (item.bundle_id ?? null) === (newItem.bundle_id ?? null)
+      );
       
       if (existingItemIndex > -1) {
         const updatedItems = [...prevItems];
