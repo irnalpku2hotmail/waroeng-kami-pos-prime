@@ -53,6 +53,7 @@ const BundleDetail = () => {
     if (!bundle?.bundle_items) return;
 
     let outOfStock = false;
+    const bundleItemsCount = bundle.bundle_items.length;
     for (const item of bundle.bundle_items) {
       const product = (item as any).products;
       if (!product || product.current_stock < item.quantity) {
@@ -76,6 +77,11 @@ const BundleDetail = () => {
         product_id: product.id,
         unit_price: discountedUnitPrice,
         total_price: discountedUnitPrice * item.quantity,
+        bundle_id: bundle.id,
+        is_bundle: true,
+        original_price: product.selling_price,
+        bundle_price: discountedUnitPrice,
+        bundle_total_items: bundleItemsCount,
         product: { id: product.id, name: product.name, image_url: product.image_url },
       });
     }
