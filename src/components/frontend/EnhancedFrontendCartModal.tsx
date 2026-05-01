@@ -24,6 +24,7 @@ interface EnhancedFrontendCartModalProps {
 interface CODSettings {
   delivery_fee?: number;
   free_shipping_minimum?: number;
+  min_order?: number;
   service_fee?: number;
 }
 
@@ -61,7 +62,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      return data?.value || { delivery_fee: 10000, free_shipping_minimum: 100000, service_fee: 5000 };
+      return data?.value || { delivery_fee: 10000, min_order: 100000, service_fee: 5000 };
     }
   });
 
