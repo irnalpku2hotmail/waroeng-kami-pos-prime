@@ -20,6 +20,7 @@ export interface CartItem {
   original_price?: number;
   bundle_price?: number;
   bundle_total_items?: number; // expected number of distinct products in the bundle
+  bundle_quantity?: number; // original quantity defined by the bundle (max allowed at bundle price)
   product?: {
     id: string;
     name: string;
@@ -40,7 +41,7 @@ interface CartContextType {
   addItem: (item: Omit<CartItem, 'id' | 'product_id' | 'unit_price' | 'total_price'> & { id: string }) => void;
   removeFromCart: (id: string) => void;
   removeItem: (productId: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  updateQuantity: (id: string, quantity: number, bundleId?: string | null) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -206,7 +207,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const updateQuantity = (id: string, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number, bundleId?: string | null) => {
     if (quantity <= 0) {
       removeFromCart(id);
       return;
@@ -214,7 +215,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setItems(prevItems => 
       prevItems.map(item => {
-        if (item.id === id || item.product_id === id) {
+        // Match by id/product_id AND bundle_id to keep bundle items isolated from manual items.
+        const idMatches = item.id === id || item.product_id === id;
+        const bundleMatches = bundleId === undefined
+          ? true
+          : (item.bundle_id ?? null) === (bundleId ?? null);
+        if (idMatches && bundleMatches) {
           if (quantity > item.stock) {
             toast({
               title: 'Stok tidak mencukupi',
@@ -223,10 +229,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             return item;
           }
+          // Anti-exploit: bundle items cannot exceed their original bundle quantity
+          // at the discounted price. To buy more, user adds the product manually at normal price.
+          if (item.bundle_id && item.bundle_quantity && quantity > item.bundle_quantity) {
+            toast({
+              title: 'Batas Quantity Bundle',
+              description: `Maksimal ${item.bundle_quantity} di harga paket. Tambahkan terpisah untuk lebih.`,
+              variant: 'destructive',
+            });
+            return { ...item, quantity: item.bundle_quantity, total_price: item.unit_price * item.bundle_quantity };
+          }
           return { 
             ...item, 
             quantity,
-            total_price: item.unit_price * quantity
+            total_price: item.unit_price * quantity,
+            // Preserve bundle integrity flags explicitly.
+            is_bundle: item.is_bundle,
+            bundle_id: item.bundle_id,
+            bundle_price: item.bundle_price,
           };
         }
         return item;

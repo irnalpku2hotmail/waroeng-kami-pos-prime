@@ -52,18 +52,26 @@ const BundleDetail = () => {
     if (!user) { setAuthModalOpen(true); return; }
     if (!bundle?.bundle_items) return;
 
-    let outOfStock = false;
     const bundleItemsCount = bundle.bundle_items.length;
+
+    // Validate stock for ALL items first — bundle is all-or-nothing.
+    // If any item is short on stock, the entire bundle cannot be added.
+    const insufficient = bundle.bundle_items.find((item: any) => {
+      const p = item.products;
+      return !p || p.current_stock < item.quantity;
+    });
+    if (insufficient) {
+      const p = (insufficient as any).products;
+      toast({
+        title: 'Bundle Tidak Tersedia',
+        description: `Stok ${p?.name || 'salah satu produk'} tidak mencukupi. Harga paket dinonaktifkan.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     for (const item of bundle.bundle_items) {
       const product = (item as any).products;
-      if (!product || product.current_stock < item.quantity) {
-        outOfStock = true;
-        toast({ title: 'Stok Habis', description: `${product?.name || 'Produk'} tidak tersedia`, variant: 'destructive' });
-        continue;
-      }
-
-      // Calculate proportional bundle discount per item
-      const itemOriginalTotal = product.selling_price * item.quantity;
       const discountRatio = bundle.discount_price / bundle.original_price;
       const discountedUnitPrice = Math.round(product.selling_price * discountRatio);
 
@@ -82,13 +90,12 @@ const BundleDetail = () => {
         original_price: product.selling_price,
         bundle_price: discountedUnitPrice,
         bundle_total_items: bundleItemsCount,
+        bundle_quantity: item.quantity,
         product: { id: product.id, name: product.name, image_url: product.image_url },
       });
     }
 
-    if (!outOfStock) {
-      toast({ title: 'Berhasil! 🎉', description: 'Semua produk paket ditambahkan ke keranjang' });
-    }
+    toast({ title: 'Berhasil! 🎉', description: 'Semua produk paket ditambahkan ke keranjang' });
   };
 
   if (isLoading) {
