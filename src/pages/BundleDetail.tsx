@@ -90,6 +90,7 @@ const BundleDetail = () => {
         original_price: product.selling_price,
         bundle_price: discountedUnitPrice,
         bundle_total_items: bundleItemsCount,
+        bundle_quantity: item.quantity,
         product: { id: product.id, name: product.name, image_url: product.image_url },
       });
     }
