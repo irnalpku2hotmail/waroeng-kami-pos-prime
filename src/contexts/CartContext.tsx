@@ -14,6 +14,12 @@ export interface CartItem {
   product_id: string;
   unit_price: number;
   total_price: number;
+  // Bundle integrity fields
+  bundle_id?: string | null;
+  is_bundle?: boolean;
+  original_price?: number;
+  bundle_price?: number;
+  bundle_total_items?: number; // expected number of distinct products in the bundle
   product?: {
     id: string;
     name: string;
@@ -140,11 +146,60 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeFromCart = (id: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== id));
+    setItems(prevItems => {
+      const target = prevItems.find(item => item.id === id);
+      const bundleId = target?.bundle_id;
+      // If item belongs to a bundle, revert sibling items to original price
+      if (bundleId) {
+        return prevItems
+          .filter(item => item.id !== id)
+          .map(item => {
+            if (item.bundle_id === bundleId) {
+              const original = item.original_price ?? item.unit_price;
+              return {
+                ...item,
+                unit_price: original,
+                price: original,
+                total_price: original * item.quantity,
+                is_bundle: false,
+                bundle_id: null,
+                bundle_price: undefined,
+                bundle_total_items: undefined,
+              };
+            }
+            return item;
+          });
+      }
+      return prevItems.filter(item => item.id !== id);
+    });
   };
 
   const removeItem = (productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.product_id !== productId));
+    setItems(prevItems => {
+      const target = prevItems.find(item => item.product_id === productId);
+      const bundleId = target?.bundle_id;
+      if (bundleId) {
+        return prevItems
+          .filter(item => item.product_id !== productId)
+          .map(item => {
+            if (item.bundle_id === bundleId) {
+              const original = item.original_price ?? item.unit_price;
+              return {
+                ...item,
+                unit_price: original,
+                price: original,
+                total_price: original * item.quantity,
+                is_bundle: false,
+                bundle_id: null,
+                bundle_price: undefined,
+                bundle_total_items: undefined,
+              };
+            }
+            return item;
+          });
+      }
+      return prevItems.filter(item => item.product_id !== productId);
+    });
   };
 
   const updateQuantity = (id: string, quantity: number) => {
