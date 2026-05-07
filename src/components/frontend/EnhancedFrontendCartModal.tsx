@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck, Info, AlertTriangle, Tag } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -29,7 +30,7 @@ interface CODSettings {
 }
 
 const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartModalProps) => {
-  const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart();
+  const { items, updateQuantity, removeItem, clearCart, getTotalPrice, revertBundle } = useCart();
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -104,6 +105,49 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     },
     enabled: items.length > 0
   });
+
+  // Real-time bundle stock validation: re-fetch current stock for all bundle products
+  // when the cart opens, and revert bundle pricing if any item's stock is insufficient.
+  const bundleProductIds = items.filter(i => i.bundle_id).map(i => i.product_id || i.id);
+  const { data: liveBundleStock } = useQuery({
+    queryKey: ['cart-bundle-stock', bundleProductIds.sort().join(',')],
+    queryFn: async () => {
+      if (bundleProductIds.length === 0) return [] as { id: string; current_stock: number }[];
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, current_stock')
+        .in('id', bundleProductIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && bundleProductIds.length > 0,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
+
+  // Detect insufficient stock per bundle and auto-revert with toast/audit log.
+  useEffect(() => {
+    if (!open || !liveBundleStock || liveBundleStock.length === 0) return;
+    const stockMap = new Map(liveBundleStock.map(p => [p.id, p.current_stock]));
+    const broken = new Map<string, string>(); // bundleId -> product name
+    items.forEach(item => {
+      if (!item.bundle_id) return;
+      const pid = item.product_id || item.id;
+      const live = stockMap.get(pid);
+      if (typeof live === 'number' && live < item.quantity) {
+        broken.set(item.bundle_id, item.product?.name || item.name);
+      }
+    });
+    broken.forEach((productName, bundleId) => {
+      revertBundle(bundleId, `Stok ${productName} tidak mencukupi — harga bundle dinonaktifkan`);
+      toast({
+        title: 'Harga Bundle Dinonaktifkan',
+        description: `Stok "${productName}" tidak mencukupi. Item dikembalikan ke harga normal.`,
+        variant: 'destructive',
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, liveBundleStock]);
 
   const generateOrderNumber = () => {
     const timestamp = Date.now();
@@ -322,7 +366,9 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
               {items.map((item) => {
                 const itemPrice = getItemPrice(item);
                 const savings = (item.price - itemPrice) * item.quantity;
-                
+                const isBundleItem = !!item.bundle_id;
+                const liveStock = liveBundleStock?.find(p => p.id === (item.product_id || item.id))?.current_stock;
+                const stockShort = isBundleItem && typeof liveStock === 'number' && liveStock < item.quantity;
                 return (
                   <Card key={item.id}>
                     <CardContent className="p-4">
@@ -333,7 +379,44 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                           className={`${isMobile ? 'w-20 h-20' : 'w-16 h-16'} object-cover rounded-md`}
                         />
                         <div className={`flex-1 ${isMobile ? 'text-center' : ''}`}>
-                          <h4 className="font-medium">{item.product?.name || item.name}</h4>
+                          <div className={`flex items-center gap-2 flex-wrap ${isMobile ? 'justify-center' : ''}`}>
+                            <h4 className="font-medium">{item.product?.name || item.name}</h4>
+                            {isBundleItem ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border border-orange-300 gap-1">
+                                    <Tag className="h-3 w-3" /> Bundle
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[240px] text-xs">
+                                  Item ini bagian dari paket bundling. Harga paket berlaku selama semua item bundle lengkap dan stok mencukupi.
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Info className="h-3 w-3" /> Manual
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[240px] text-xs">
+                                  Item ditambahkan secara manual dengan harga normal — tidak terkait paket bundling.
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {stockShort && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="destructive" className="gap-1">
+                                    <AlertTriangle className="h-3 w-3" /> Stok kurang
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[260px] text-xs">
+                                  Stok tersedia hanya {liveStock}. Bundle ditolak / harga paket dinonaktifkan karena tidak semua item bisa dipenuhi.
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
                             <p className="text-sm font-medium text-blue-600">
                               Rp {itemPrice.toLocaleString('id-ID')}
@@ -349,12 +432,17 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                               Hemat Rp {savings.toLocaleString('id-ID')}
                             </p>
                           )}
+                          {isBundleItem && item.bundle_quantity && (
+                            <p className="text-[11px] text-orange-600 mt-0.5">
+                              Maks {item.bundle_quantity} pcs di harga paket
+                            </p>
+                          )}
                         </div>
                         <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateQuantity(item.product_id || item.id, Math.max(1, item.quantity - 1))}
+                            onClick={() => updateQuantity(item.product_id || item.id, Math.max(1, item.quantity - 1), item.bundle_id ?? null)}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
@@ -362,7 +450,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateQuantity(item.product_id || item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.product_id || item.id, item.quantity + 1, item.bundle_id ?? null)}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
