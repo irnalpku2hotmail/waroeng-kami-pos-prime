@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck, Info, AlertTriangle, Tag } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -29,7 +30,7 @@ interface CODSettings {
 }
 
 const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartModalProps) => {
-  const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart();
+  const { items, updateQuantity, removeItem, clearCart, getTotalPrice, revertBundle } = useCart();
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -104,6 +105,49 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     },
     enabled: items.length > 0
   });
+
+  // Real-time bundle stock validation: re-fetch current stock for all bundle products
+  // when the cart opens, and revert bundle pricing if any item's stock is insufficient.
+  const bundleProductIds = items.filter(i => i.bundle_id).map(i => i.product_id || i.id);
+  const { data: liveBundleStock } = useQuery({
+    queryKey: ['cart-bundle-stock', bundleProductIds.sort().join(',')],
+    queryFn: async () => {
+      if (bundleProductIds.length === 0) return [] as { id: string; current_stock: number }[];
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, current_stock')
+        .in('id', bundleProductIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && bundleProductIds.length > 0,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
+
+  // Detect insufficient stock per bundle and auto-revert with toast/audit log.
+  useEffect(() => {
+    if (!open || !liveBundleStock || liveBundleStock.length === 0) return;
+    const stockMap = new Map(liveBundleStock.map(p => [p.id, p.current_stock]));
+    const broken = new Map<string, string>(); // bundleId -> product name
+    items.forEach(item => {
+      if (!item.bundle_id) return;
+      const pid = item.product_id || item.id;
+      const live = stockMap.get(pid);
+      if (typeof live === 'number' && live < item.quantity) {
+        broken.set(item.bundle_id, item.product?.name || item.name);
+      }
+    });
+    broken.forEach((productName, bundleId) => {
+      revertBundle(bundleId, `Stok ${productName} tidak mencukupi — harga bundle dinonaktifkan`);
+      toast({
+        title: 'Harga Bundle Dinonaktifkan',
+        description: `Stok "${productName}" tidak mencukupi. Item dikembalikan ke harga normal.`,
+        variant: 'destructive',
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, liveBundleStock]);
 
   const generateOrderNumber = () => {
     const timestamp = Date.now();
