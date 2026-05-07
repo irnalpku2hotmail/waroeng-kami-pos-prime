@@ -366,7 +366,9 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
               {items.map((item) => {
                 const itemPrice = getItemPrice(item);
                 const savings = (item.price - itemPrice) * item.quantity;
-                
+                const isBundleItem = !!item.bundle_id;
+                const liveStock = liveBundleStock?.find(p => p.id === (item.product_id || item.id))?.current_stock;
+                const stockShort = isBundleItem && typeof liveStock === 'number' && liveStock < item.quantity;
                 return (
                   <Card key={item.id}>
                     <CardContent className="p-4">
@@ -377,7 +379,44 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                           className={`${isMobile ? 'w-20 h-20' : 'w-16 h-16'} object-cover rounded-md`}
                         />
                         <div className={`flex-1 ${isMobile ? 'text-center' : ''}`}>
-                          <h4 className="font-medium">{item.product?.name || item.name}</h4>
+                          <div className={`flex items-center gap-2 flex-wrap ${isMobile ? 'justify-center' : ''}`}>
+                            <h4 className="font-medium">{item.product?.name || item.name}</h4>
+                            {isBundleItem ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border border-orange-300 gap-1">
+                                    <Tag className="h-3 w-3" /> Bundle
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[240px] text-xs">
+                                  Item ini bagian dari paket bundling. Harga paket berlaku selama semua item bundle lengkap dan stok mencukupi.
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Info className="h-3 w-3" /> Manual
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[240px] text-xs">
+                                  Item ditambahkan secara manual dengan harga normal — tidak terkait paket bundling.
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {stockShort && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="destructive" className="gap-1">
+                                    <AlertTriangle className="h-3 w-3" /> Stok kurang
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[260px] text-xs">
+                                  Stok tersedia hanya {liveStock}. Bundle ditolak / harga paket dinonaktifkan karena tidak semua item bisa dipenuhi.
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
                             <p className="text-sm font-medium text-blue-600">
                               Rp {itemPrice.toLocaleString('id-ID')}
@@ -393,12 +432,17 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                               Hemat Rp {savings.toLocaleString('id-ID')}
                             </p>
                           )}
+                          {isBundleItem && item.bundle_quantity && (
+                            <p className="text-[11px] text-orange-600 mt-0.5">
+                              Maks {item.bundle_quantity} pcs di harga paket
+                            </p>
+                          )}
                         </div>
                         <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateQuantity(item.product_id || item.id, Math.max(1, item.quantity - 1))}
+                            onClick={() => updateQuantity(item.product_id || item.id, Math.max(1, item.quantity - 1), item.bundle_id ?? null)}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
@@ -406,7 +450,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateQuantity(item.product_id || item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.product_id || item.id, item.quantity + 1, item.bundle_id ?? null)}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
