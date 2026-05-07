@@ -28,6 +28,17 @@ export interface CartItem {
   };
 }
 
+export interface CartAuditEntry {
+  timestamp: number;
+  action: 'add' | 'update_quantity' | 'remove' | 'revert_bundle' | 'clear';
+  source: 'bundle' | 'manual' | 'system';
+  productId?: string;
+  bundleId?: string | null;
+  fromQuantity?: number;
+  toQuantity?: number;
+  reason?: string;
+}
+
 interface CustomerInfo {
   name: string;
   phone: string;
@@ -49,12 +60,15 @@ interface CartContextType {
   setCustomerInfo: React.Dispatch<React.SetStateAction<CustomerInfo>>;
   shippingCost: number;
   setShippingCost: React.Dispatch<React.SetStateAction<number>>;
+  auditLog: CartAuditEntry[];
+  revertBundle: (bundleId: string, reason: string) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [auditLog, setAuditLog] = useState<CartAuditEntry[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
     phone: '',
@@ -73,12 +87,33 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error loading cart from localStorage:', error);
       }
     }
+    const savedAudit = localStorage.getItem('cart_audit_log');
+    if (savedAudit) {
+      try {
+        setAuditLog(JSON.parse(savedAudit));
+      } catch (error) {
+        console.error('Error loading cart audit log:', error);
+      }
+    }
   }, []);
 
   // Save cart to localStorage whenever items change
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
+
+  // Persist audit log (cap at 200 entries to avoid bloat)
+  useEffect(() => {
+    const capped = auditLog.slice(-200);
+    localStorage.setItem('cart_audit_log', JSON.stringify(capped));
+  }, [auditLog]);
+
+  const logAudit = (entry: Omit<CartAuditEntry, 'timestamp'>) => {
+    const full: CartAuditEntry = { ...entry, timestamp: Date.now() };
+    // eslint-disable-next-line no-console
+    console.info('[CartAudit]', full);
+    setAuditLog(prev => [...prev.slice(-199), full]);
+  };
 
   const addToCart = (newItem: CartItem) => {
     setItems(prevItems => {
@@ -107,6 +142,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           quantity: newQuantity,
           total_price: newItem.unit_price * newQuantity
         };
+        logAudit({
+          action: 'update_quantity',
+          source: newItem.bundle_id ? 'bundle' : 'manual',
+          productId: newItem.id,
+          bundleId: newItem.bundle_id ?? null,
+          fromQuantity: existingItem.quantity,
+          toQuantity: newQuantity,
+          reason: 'addToCart merge',
+        });
         return updatedItems;
       } else {
         if (newItem.quantity > newItem.stock) {
@@ -129,7 +173,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             image_url: newItem.image
           }
         };
-        
+        logAudit({
+          action: 'add',
+          source: newItem.bundle_id ? 'bundle' : 'manual',
+          productId: newItem.id,
+          bundleId: newItem.bundle_id ?? null,
+          toQuantity: newItem.quantity,
+        });
         return [...prevItems, cartItem];
       }
     });
@@ -154,6 +204,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems(prevItems => {
       const target = prevItems.find(item => item.id === id);
       const bundleId = target?.bundle_id;
+      logAudit({
+        action: 'remove',
+        source: bundleId ? 'bundle' : 'manual',
+        productId: target?.product_id ?? id,
+        bundleId: bundleId ?? null,
+        fromQuantity: target?.quantity,
+        toQuantity: 0,
+        reason: bundleId ? 'bundle item removed → siblings reverted to normal price' : undefined,
+      });
       // If item belongs to a bundle, revert sibling items to original price
       if (bundleId) {
         return prevItems
@@ -183,6 +242,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems(prevItems => {
       const target = prevItems.find(item => item.product_id === productId);
       const bundleId = target?.bundle_id;
+      logAudit({
+        action: 'remove',
+        source: bundleId ? 'bundle' : 'manual',
+        productId,
+        bundleId: bundleId ?? null,
+        fromQuantity: target?.quantity,
+        toQuantity: 0,
+        reason: bundleId ? 'bundle item removed → siblings reverted to normal price' : undefined,
+      });
       if (bundleId) {
         return prevItems
           .filter(item => item.product_id !== productId)
@@ -227,6 +295,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
               description: `Stok tersedia: ${item.stock}`,
               variant: 'destructive',
             });
+            logAudit({
+              action: 'update_quantity',
+              source: item.bundle_id ? 'bundle' : 'manual',
+              productId: item.product_id,
+              bundleId: item.bundle_id ?? null,
+              fromQuantity: item.quantity,
+              toQuantity: quantity,
+              reason: `rejected: stok hanya ${item.stock}`,
+            });
             return item;
           }
           // Anti-exploit: bundle items cannot exceed their original bundle quantity
@@ -237,8 +314,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
               description: `Maksimal ${item.bundle_quantity} di harga paket. Tambahkan terpisah untuk lebih.`,
               variant: 'destructive',
             });
+            logAudit({
+              action: 'update_quantity',
+              source: 'bundle',
+              productId: item.product_id,
+              bundleId: item.bundle_id ?? null,
+              fromQuantity: item.quantity,
+              toQuantity: quantity,
+              reason: `capped at bundle_quantity ${item.bundle_quantity}`,
+            });
             return { ...item, quantity: item.bundle_quantity, total_price: item.unit_price * item.bundle_quantity };
           }
+          logAudit({
+            action: 'update_quantity',
+            source: item.bundle_id ? 'bundle' : 'manual',
+            productId: item.product_id,
+            bundleId: item.bundle_id ?? null,
+            fromQuantity: item.quantity,
+            toQuantity: quantity,
+          });
           return { 
             ...item, 
             quantity,
@@ -255,7 +349,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearCart = () => {
+    logAudit({ action: 'clear', source: 'system' });
     setItems([]);
+  };
+
+  // Revert all items belonging to a bundle back to normal price (bundle integrity broken).
+  const revertBundle = (bundleId: string, reason: string) => {
+    setItems(prevItems => prevItems.map(item => {
+      if (item.bundle_id === bundleId) {
+        const original = item.original_price ?? item.unit_price;
+        return {
+          ...item,
+          unit_price: original,
+          price: original,
+          total_price: original * item.quantity,
+          is_bundle: false,
+          bundle_id: null,
+          bundle_price: undefined,
+          bundle_total_items: undefined,
+        };
+      }
+      return item;
+    }));
+    logAudit({
+      action: 'revert_bundle',
+      source: 'system',
+      bundleId,
+      reason,
+    });
   };
 
   const getTotalItems = () => {
@@ -284,6 +405,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCustomerInfo,
       shippingCost,
       setShippingCost,
+      auditLog,
+      revertBundle,
     }}>
       {children}
     </CartContext.Provider>
