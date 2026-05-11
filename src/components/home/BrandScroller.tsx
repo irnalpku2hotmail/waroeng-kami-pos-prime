@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +28,44 @@ const BrandScroller = () => {
   const scroll = (dir: 'left' | 'right') => {
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
   };
+
+  // Auto-scroll with pause on user interaction
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !brands.length) return;
+
+    let rafId: number;
+    let paused = false;
+    let resumeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const step = () => {
+      if (!paused && el) {
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 1) {
+          el.scrollLeft = 0;
+        } else {
+          el.scrollLeft += 0.5;
+        }
+      }
+      rafId = requestAnimationFrame(step);
+    };
+
+    const pause = () => {
+      paused = true;
+      if (resumeTimer) clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(() => { paused = false; }, 2000);
+    };
+
+    el.addEventListener('pointerdown', pause, { passive: true });
+    el.addEventListener('wheel', pause, { passive: true });
+    el.addEventListener('mouseenter', () => { paused = true; });
+    el.addEventListener('mouseleave', () => { paused = false; });
+
+    rafId = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (resumeTimer) clearTimeout(resumeTimer);
+    };
+  }, [brands.length]);
 
   if (isLoading) {
     return (
@@ -75,6 +113,8 @@ const BrandScroller = () => {
                 <img
                   src={brand.logo_url}
                   alt={brand.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-full"
                 />
               ) : (
