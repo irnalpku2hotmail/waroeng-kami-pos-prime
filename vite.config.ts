@@ -11,15 +11,6 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'supabase': ['@supabase/supabase-js'],
-          'query': ['@tanstack/react-query'],
-        },
-      },
-    },
   },
   plugins: [
     react(),

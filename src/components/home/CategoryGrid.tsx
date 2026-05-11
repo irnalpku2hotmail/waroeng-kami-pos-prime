@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 const CategoryGrid = () => {
   const navigate = useNavigate();
@@ -78,12 +77,8 @@ const CategoryGrid = () => {
                   <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-card border-2 border-border/50 flex items-center justify-center overflow-hidden transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg group-hover:border-primary/40">
                     {category.icon_url ? (
                       <img
-                        src={getOptimizedImageUrl(category.icon_url, { width: 96, height: 96, quality: 70 })}
+                        src={category.icon_url}
                         alt={category.name}
-                        width={48}
-                        height={48}
-                        loading="lazy"
-                        decoding="async"
                         className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-full"
                       />
                     ) : (
