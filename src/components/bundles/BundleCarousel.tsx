@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Flame, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface BundleCarouselProps {
   title?: string;
@@ -88,7 +89,7 @@ const BundleCarousel = ({ title = '🔥 Paket Hemat Untuk Anda', limit = 10, cat
             <div className="bg-card rounded-xl overflow-hidden shadow-sm border border-border/60 group-hover:border-orange-500 transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-[0.98]">
               <div className="aspect-[4/3] bg-gradient-to-br from-orange-50 to-rose-50 relative overflow-hidden">
                 {bundle.image_url ? (
-                  <img src={bundle.image_url} alt={bundle.name} className="w-full h-full object-cover" loading="lazy" />
+                  <img src={getOptimizedImageUrl(bundle.image_url, { width: 360, quality: 70 })} alt={bundle.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <Package className="h-8 w-8 text-orange-300" />
