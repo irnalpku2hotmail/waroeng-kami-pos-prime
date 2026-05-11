@@ -159,6 +159,8 @@ const CompactBannerCarousel = () => {
                     alt={`Banner ${index + 1}`}
                     className="w-full h-full object-cover pointer-events-none"
                     loading={index <= 2 ? 'eager' : 'lazy'}
+                    fetchPriority={index === 1 ? 'high' : 'auto'}
+                    decoding={index <= 2 ? 'sync' : 'async'}
                     draggable={false}
                   />
                   {!isActive && (
