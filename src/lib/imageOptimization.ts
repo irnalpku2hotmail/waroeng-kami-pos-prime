@@ -34,10 +34,8 @@ export function getOptimizedImageUrl(
   if (opts.height) params.set('height', String(Math.round(opts.height)));
   params.set('quality', String(opts.quality ?? 70));
   params.set('resize', opts.resize ?? 'cover');
-  // webp format gives ~30-60% size reduction over jpg/png
-  if (opts.format !== 'origin') params.set('format', 'origin');
-  // Note: Supabase image transform auto-negotiates webp via Accept header,
-  // so we don't force format unless explicitly requested.
+  // Supabase image transform auto-negotiates webp via the Accept header,
+  // so no `format` param is needed for the WebP win.
 
   return `${transformed}?${params.toString()}`;
 }
