@@ -92,11 +92,6 @@ const Home = () => {
         <LazySection height="min-h-[228px]" rootMargin="200px">
           <CategoryGrid />
         </LazySection>
-
-        {/* 3. Brand Carousel */}
-        <LazySection height="min-h-[130px]" rootMargin="200px">
-          <BrandScroller />
-        </LazySection>
       </div>
 
       {/* Produk Sering Dicari + Flash Sale + Bundle - aligned in same container */}
@@ -120,6 +115,11 @@ const Home = () => {
         {/* 5. Promo / Rekomendasi */}
         <LazySection height="min-h-[480px]">
           <PromoProducts onAuthRequired={() => setAuthModalOpen(true)} />
+        </LazySection>
+
+        {/* Brand Carousel - moved below recommendations */}
+        <LazySection height="min-h-[130px]" rootMargin="200px">
+          <BrandScroller />
         </LazySection>
 
         {/* Separator */}
