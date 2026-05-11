@@ -160,7 +160,6 @@ const CompactBannerCarousel = () => {
                     className="w-full h-full object-cover pointer-events-none"
                     loading={index <= 2 ? 'eager' : 'lazy'}
                     fetchPriority={index === 1 ? 'high' : 'auto'}
-                    {...(index === 1 ? { fetchpriority: 'high' as any } : {})}
                     decoding={index <= 2 ? 'sync' : 'async'}
                     draggable={false}
                   />
