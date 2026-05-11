@@ -89,23 +89,23 @@ const Home = () => {
         </LazySection>
 
         {/* 2. Kategori Grid */}
-        <LazySection height="h-28" rootMargin="200px">
+        <LazySection height="min-h-[228px]" rootMargin="200px">
           <CategoryGrid />
         </LazySection>
 
         {/* 3. Brand Carousel */}
-        <LazySection height="h-20" rootMargin="200px">
+        <LazySection height="min-h-[130px]" rootMargin="200px">
           <BrandScroller />
         </LazySection>
       </div>
 
       {/* Produk Sering Dicari + Flash Sale + Bundle - aligned in same container */}
       <div className={isMobile ? 'px-3 space-y-3 mt-3' : 'px-4 max-w-7xl mx-auto space-y-4 mt-4'}>
-        <LazySection height="min-h-[320px]">
+        <LazySection height="min-h-[260px]">
           <TrendingProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
 
-        <LazySection height="min-h-[320px]">
+        <LazySection height="min-h-[340px]">
           <ModernFrontendFlashSale
             onProductClick={product => navigate(`/product/${product.id}`)}
             onAuthRequired={() => setAuthModalOpen(true)}
@@ -113,7 +113,7 @@ const Home = () => {
         </LazySection>
 
         {/* Bundle Deals */}
-        <LazySection height="min-h-[280px]">
+        <LazySection height="min-h-[300px]">
           <BundleCarousel />
         </LazySection>
 
