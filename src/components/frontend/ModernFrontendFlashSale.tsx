@@ -10,6 +10,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface ModernFrontendFlashSaleProps {
   onProductClick: (product: any) => void;
@@ -205,10 +206,11 @@ const ModernFrontendFlashSale = ({ onProductClick, onAuthRequired }: ModernFront
                 {/* Image */}
                 <div className="aspect-[4/3] relative overflow-hidden">
                   <img
-                    src={product.image_url || '/placeholder.svg'}
+                    src={getOptimizedImageUrl(product.image_url, { width: 360, quality: 70 })}
                     alt={product.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
+                    decoding="async"
                   />
                   {/* Discount badge */}
                   <div className="absolute top-1 left-1">

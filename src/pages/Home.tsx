@@ -84,28 +84,28 @@ const Home = () => {
       {/* Content area - compact spacing */}
       <div className={isMobile ? 'px-3 space-y-3' : 'px-4 max-w-7xl mx-auto space-y-4'}>
         {/* Shipping Info */}
-        <LazySection height="h-12" rootMargin="100px">
+        <LazySection height="h-10" rootMargin="100px">
           <EnhancedShippingInfo />
         </LazySection>
 
         {/* 2. Kategori Grid */}
-        <LazySection height="h-28" rootMargin="200px">
+        <LazySection height={isMobile ? 'h-40' : 'h-44'} rootMargin="200px">
           <CategoryGrid />
         </LazySection>
 
         {/* 3. Brand Carousel */}
-        <LazySection height="h-20" rootMargin="200px">
+        <LazySection height={isMobile ? 'h-24' : 'h-28'} rootMargin="200px">
           <BrandScroller />
         </LazySection>
       </div>
 
       {/* Produk Sering Dicari + Flash Sale + Bundle - aligned in same container */}
       <div className={isMobile ? 'px-3 space-y-3 mt-3' : 'px-4 max-w-7xl mx-auto space-y-4 mt-4'}>
-        <LazySection height="h-48">
+        <LazySection height={isMobile ? 'h-[260px]' : 'h-[280px]'}>
           <TrendingProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
 
-        <LazySection height="h-48">
+        <LazySection height={isMobile ? 'h-[260px]' : 'h-[280px]'}>
           <ModernFrontendFlashSale
             onProductClick={product => navigate(`/product/${product.id}`)}
             onAuthRequired={() => setAuthModalOpen(true)}
@@ -113,12 +113,12 @@ const Home = () => {
         </LazySection>
 
         {/* Bundle Deals */}
-        <LazySection height="h-48">
+        <LazySection height={isMobile ? 'h-[240px]' : 'h-[260px]'}>
           <BundleCarousel />
         </LazySection>
 
         {/* 5. Promo / Rekomendasi */}
-        <LazySection height="h-64">
+        <LazySection height={isMobile ? 'h-[520px]' : 'h-[600px]'}>
           <PromoProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
 
@@ -126,7 +126,7 @@ const Home = () => {
         <div className="border-t border-border/30" />
 
         {/* 6. Semua Produk */}
-        <LazySection height="h-64">
+        <LazySection height={isMobile ? 'h-[640px]' : 'h-[720px]'}>
           <AllProducts
             searchTerm={searchTerm}
             selectedCategory={selectedCategory}
@@ -139,7 +139,7 @@ const Home = () => {
 
       {/* Footer */}
       <div className="mt-4">
-        <LazySection height="h-48" rootMargin="200px">
+        <LazySection height="h-64" rootMargin="200px">
           <MinimalFooter />
         </LazySection>
       </div>

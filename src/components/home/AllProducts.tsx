@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface AllProductsProps {
   searchTerm?: string;
@@ -58,9 +59,10 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
 
   const getImageUrl = (imageUrl: string | null) => {
     if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    const { data } = supabase.storage.from('product-images').getPublicUrl(imageUrl);
-    return data.publicUrl;
+    const fullUrl = imageUrl.startsWith('http')
+      ? imageUrl
+      : supabase.storage.from('product-images').getPublicUrl(imageUrl).data.publicUrl;
+    return getOptimizedImageUrl(fullUrl, { width: 360, quality: 70 });
   };
 
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
@@ -154,6 +156,7 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
+                    decoding="async"
                   />
                   {product.current_stock <= 0 && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
