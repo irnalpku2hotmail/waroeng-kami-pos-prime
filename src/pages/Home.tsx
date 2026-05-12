@@ -96,11 +96,11 @@ const Home = () => {
 
       {/* Produk Sering Dicari + Flash Sale + Bundle - aligned in same container */}
       <div className={isMobile ? 'px-3 space-y-3 mt-3' : 'px-4 max-w-7xl mx-auto space-y-4 mt-4'}>
-        <LazySection height="min-h-[260px]">
+        <LazySection height="min-h-[290px]">
           <TrendingProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
 
-        <LazySection height="min-h-[340px]">
+        <LazySection height="min-h-[360px]">
           <ModernFrontendFlashSale
             onProductClick={product => navigate(`/product/${product.id}`)}
             onAuthRequired={() => setAuthModalOpen(true)}
@@ -108,17 +108,17 @@ const Home = () => {
         </LazySection>
 
         {/* Bundle Deals */}
-        <LazySection height="min-h-[300px]">
+        <LazySection height="min-h-[320px]">
           <BundleCarousel />
         </LazySection>
 
         {/* 5. Promo / Rekomendasi */}
-        <LazySection height="min-h-[480px]">
+        <LazySection height="min-h-[520px]">
           <PromoProducts onAuthRequired={() => setAuthModalOpen(true)} />
         </LazySection>
 
         {/* Brand Carousel - moved below recommendations */}
-        <LazySection height="min-h-[130px]" rootMargin="200px">
+        <LazySection height="min-h-[140px]" rootMargin="200px">
           <BrandScroller />
         </LazySection>
 
