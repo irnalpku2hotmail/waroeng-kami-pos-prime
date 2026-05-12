@@ -532,7 +532,7 @@ const SearchResults = () => {
                     Filter Produk
                   </SheetTitle>
                 </SheetHeader>
-                <FilterSidebar />
+                {FilterSidebar()}
                 <div className="mt-6 sticky bottom-0 bg-background pt-3 border-t">
                   <Button onClick={() => setMobileFilterOpen(false)} className="w-full">
                     Lihat {filteredProducts.length} Produk
@@ -625,7 +625,7 @@ const SearchResults = () => {
                   <Filter className="h-4 w-4 text-primary" />
                   <h2 className="text-sm font-bold text-foreground">Filter Produk</h2>
                 </div>
-                <FilterSidebar />
+                {FilterSidebar()}
               </div>
             </aside>
           )}
