@@ -10,6 +10,7 @@ import { TrendingUp, ShoppingCart, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 interface TrendingProductsProps {
   onAuthRequired?: () => void;
