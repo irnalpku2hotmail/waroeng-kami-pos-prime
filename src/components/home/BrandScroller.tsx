@@ -6,6 +6,7 @@ import { Store, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 const BrandScroller = () => {
   const navigate = useNavigate();
@@ -111,10 +112,12 @@ const BrandScroller = () => {
             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-card border-2 border-border/50 flex items-center justify-center overflow-hidden transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg group-hover:border-primary/40">
               {brand.logo_url ? (
                 <img
-                  src={brand.logo_url}
+                  src={getOptimizedImageUrl(brand.logo_url, { width: 96, height: 96, quality: 60, resize: 'contain' }, 'website-assets') || brand.logo_url}
                   alt={brand.name}
                   loading="lazy"
                   decoding="async"
+                  width={48}
+                  height={48}
                   className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-full"
                 />
               ) : (
