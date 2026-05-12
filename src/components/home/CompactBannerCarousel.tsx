@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 const CompactBannerCarousel = () => {
   const isMobile = useIsMobile();
@@ -155,7 +156,7 @@ const CompactBannerCarousel = () => {
                   }`}
                 >
                   <img
-                    src={imageUrl || '/placeholder.svg'}
+                    src={getOptimizedImageUrl(imageUrl, { width: isMobile ? 720 : 1200, height: isMobile ? 240 : 400, quality: 72 }) || '/placeholder.svg'}
                     alt={`Banner ${index + 1}`}
                     className="w-full h-full object-cover pointer-events-none"
                     loading={index <= 2 ? 'eager' : 'lazy'}
