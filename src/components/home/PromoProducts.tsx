@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 interface PromoProductsProps {
   onAuthRequired?: () => void;
@@ -48,10 +47,9 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
 
   const getImageUrl = (imageUrl: string | null) => {
     if (!imageUrl) return '/placeholder.svg';
-    const url = imageUrl.startsWith('http')
-      ? imageUrl
-      : supabase.storage.from('product-images').getPublicUrl(imageUrl).data.publicUrl;
-    return getOptimizedImageUrl(url, { width: 400, height: 300, quality: 70 });
+    if (imageUrl.startsWith('http')) return imageUrl;
+    const { data } = supabase.storage.from('product-images').getPublicUrl(imageUrl);
+    return data.publicUrl;
   };
 
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
