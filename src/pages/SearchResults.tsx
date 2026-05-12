@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { ShoppingCart, ArrowLeft, Filter, Star, X, SlidersHorizontal, Check } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Filter, Star, X, SlidersHorizontal, Check, ChevronDown, Search as SearchIcon } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
@@ -44,6 +44,10 @@ const SearchResults = () => {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
+  const [brandSearch, setBrandSearch] = useState('');
+  const [catOpen, setCatOpen] = useState(true);
+  const [brandOpen, setBrandOpen] = useState(true);
   const isMobile = useIsMobile();
 
   // Fetch brands
@@ -249,80 +253,151 @@ const SearchResults = () => {
   };
 
   // Filter Sidebar Content (reused for mobile sheet + desktop sidebar)
+  const filteredCategories = categories.filter((c: any) =>
+    c.name?.toLowerCase().includes(catSearch.toLowerCase())
+  );
+  const filteredBrands = brands.filter((b: any) =>
+    b.name?.toLowerCase().includes(brandSearch.toLowerCase())
+  );
+
   const FilterSidebar = () => (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Category */}
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-2.5">Kategori</h3>
-        <ScrollArea className="max-h-48">
-          <div className="space-y-1.5">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={cn(
-                'flex items-center justify-between w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors',
-                selectedCategory === 'all'
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-foreground/80 hover:bg-muted'
+        <button
+          type="button"
+          onClick={() => setCatOpen(o => !o)}
+          className="flex items-center justify-between w-full mb-1.5"
+        >
+          <h3 className="text-sm font-bold text-foreground">Kategori</h3>
+          <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', !catOpen && '-rotate-90')} />
+        </button>
+        {catOpen && (
+          <>
+            <div className="relative mb-1.5">
+              <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              <Input
+                value={catSearch}
+                onChange={(e) => setCatSearch(e.target.value)}
+                placeholder="Cari kategori..."
+                className="h-7 pl-6 pr-6 text-xs"
+              />
+              {catSearch && (
+                <button
+                  onClick={() => setCatSearch('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Hapus"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               )}
-            >
-              <span>Semua Kategori</span>
-              {selectedCategory === 'all' && <Check className="h-3.5 w-3.5" />}
-            </button>
-            {categories.map((cat: any) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={cn(
-                  'flex items-center justify-between w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors',
-                  selectedCategory === cat.id
-                    ? 'bg-primary/10 text-primary font-semibold'
-                    : 'text-foreground/80 hover:bg-muted'
+            </div>
+            <ScrollArea className="h-44 pr-1">
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={cn(
+                    'flex items-center justify-between w-full text-left text-xs px-2 py-1 rounded-md transition-colors',
+                    selectedCategory === 'all'
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-foreground/80 hover:bg-muted'
+                  )}
+                >
+                  <span>Semua Kategori</span>
+                  {selectedCategory === 'all' && <Check className="h-3 w-3" />}
+                </button>
+                {filteredCategories.map((cat: any) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={cn(
+                      'flex items-center justify-between w-full text-left text-xs px-2 py-1 rounded-md transition-colors',
+                      selectedCategory === cat.id
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-foreground/80 hover:bg-muted'
+                    )}
+                  >
+                    <span className="truncate">{cat.name}</span>
+                    {selectedCategory === cat.id && <Check className="h-3 w-3 flex-shrink-0" />}
+                  </button>
+                ))}
+                {filteredCategories.length === 0 && (
+                  <p className="text-xs text-muted-foreground px-2 py-1">Tidak ditemukan</p>
                 )}
-              >
-                <span className="truncate">{cat.name}</span>
-                {selectedCategory === cat.id && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
+              </div>
+            </ScrollArea>
+          </>
+        )}
       </div>
 
       <Separator />
 
       {/* Brand */}
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-2.5">Brand</h3>
-        <ScrollArea className="max-h-48">
-          <div className="space-y-1.5">
-            <button
-              onClick={() => setSelectedBrand('all')}
-              className={cn(
-                'flex items-center justify-between w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors',
-                selectedBrand === 'all'
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-foreground/80 hover:bg-muted'
+        <button
+          type="button"
+          onClick={() => setBrandOpen(o => !o)}
+          className="flex items-center justify-between w-full mb-1.5"
+        >
+          <h3 className="text-sm font-bold text-foreground">Brand</h3>
+          <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', !brandOpen && '-rotate-90')} />
+        </button>
+        {brandOpen && (
+          <>
+            <div className="relative mb-1.5">
+              <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              <Input
+                value={brandSearch}
+                onChange={(e) => setBrandSearch(e.target.value)}
+                placeholder="Cari brand..."
+                className="h-7 pl-6 pr-6 text-xs"
+              />
+              {brandSearch && (
+                <button
+                  onClick={() => setBrandSearch('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Hapus"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               )}
-            >
-              <span>Semua Brand</span>
-              {selectedBrand === 'all' && <Check className="h-3.5 w-3.5" />}
-            </button>
-            {brands.map((brand: any) => (
-              <button
-                key={brand.id}
-                onClick={() => setSelectedBrand(brand.id)}
-                className={cn(
-                  'flex items-center justify-between w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors',
-                  selectedBrand === brand.id
-                    ? 'bg-primary/10 text-primary font-semibold'
-                    : 'text-foreground/80 hover:bg-muted'
+            </div>
+            <ScrollArea className="h-44 pr-1">
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => setSelectedBrand('all')}
+                  className={cn(
+                    'flex items-center justify-between w-full text-left text-xs px-2 py-1 rounded-md transition-colors',
+                    selectedBrand === 'all'
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-foreground/80 hover:bg-muted'
+                  )}
+                >
+                  <span>Semua Brand</span>
+                  {selectedBrand === 'all' && <Check className="h-3 w-3" />}
+                </button>
+                {filteredBrands.map((brand: any) => (
+                  <button
+                    key={brand.id}
+                    onClick={() => setSelectedBrand(brand.id)}
+                    className={cn(
+                      'flex items-center justify-between w-full text-left text-xs px-2 py-1 rounded-md transition-colors',
+                      selectedBrand === brand.id
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-foreground/80 hover:bg-muted'
+                    )}
+                  >
+                    <span className="truncate">{brand.name}</span>
+                    {selectedBrand === brand.id && <Check className="h-3 w-3 flex-shrink-0" />}
+                  </button>
+                ))}
+                {filteredBrands.length === 0 && (
+                  <p className="text-xs text-muted-foreground px-2 py-1">Tidak ditemukan</p>
                 )}
-              >
-                <span className="truncate">{brand.name}</span>
-                {selectedBrand === brand.id && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
+              </div>
+            </ScrollArea>
+          </>
+        )}
       </div>
 
       <Separator />
