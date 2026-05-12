@@ -27,18 +27,27 @@ const CategoryGrid = () => {
 
   if (isLoading) {
     return (
-      <div className="flex gap-4 overflow-hidden">
-        {[...Array(8)].map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-            <Skeleton className="w-14 h-14 rounded-full" />
-            <Skeleton className="h-3 w-12" />
-          </div>
-        ))}
+      <div style={{ minHeight: 228 }}>
+        <div className="flex items-center justify-between mb-3">
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className="flex flex-col gap-3">
+          {[0, 1].map((rowIdx) => (
+            <div key={rowIdx} className="flex gap-4 md:gap-5 overflow-hidden">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                  <Skeleton className="w-14 h-14 md:w-16 md:h-16 rounded-full" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (!categories.length) return null;
+  if (!categories.length) return <div style={{ minHeight: 228 }} />;
 
   // Split categories into 2 rows
   const half = Math.ceil(categories.length / 2);
@@ -46,7 +55,7 @@ const CategoryGrid = () => {
   const row2 = categories.slice(half);
 
   return (
-    <div>
+    <div style={{ minHeight: 228 }}>
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-bold text-sm md:text-base text-foreground">Kategori</h2>
         {!isMobile && (
