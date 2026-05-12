@@ -159,9 +159,9 @@ const CompactBannerCarousel = () => {
                     src={getOptimizedImageUrl(imageUrl, { width: isMobile ? 720 : 1200, height: isMobile ? 240 : 400, quality: 72 }) || '/placeholder.svg'}
                     alt={`Banner ${index + 1}`}
                     className="w-full h-full object-cover pointer-events-none"
-                    loading={index <= 2 ? 'eager' : 'lazy'}
-                    fetchPriority={index === 1 ? 'high' : 'auto'}
-                    decoding={index <= 2 ? 'sync' : 'async'}
+                    loading={index === 1 ? 'eager' : 'lazy'}
+                    fetchPriority={index === 1 ? 'high' : 'low'}
+                    decoding={index === 1 ? 'sync' : 'async'}
                     draggable={false}
                   />
                   {!isActive && (
