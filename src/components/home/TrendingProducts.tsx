@@ -10,6 +10,7 @@ import { TrendingUp, ShoppingCart, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 interface TrendingProductsProps {
   onAuthRequired?: () => void;
@@ -193,10 +194,13 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
               <div className="aspect-[4/3] relative overflow-hidden">
                 {product.image_url ? (
                   <img
-                    src={product.image_url}
+                    src={getOptimizedImageUrl(product.image_url, { width: 300, height: 225, quality: 60 })}
                     alt={product.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
+                    decoding="async"
+                    width={300}
+                    height={225}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-muted">
