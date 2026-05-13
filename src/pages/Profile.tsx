@@ -69,13 +69,19 @@ const Profile = () => {
 
   // Upload avatar
   const uploadAvatar = async (file: File, userId: string) => {
-    const fileExt = file.name.split('.').pop();
+    const { optimizeImage, OPTIMIZED_CACHE_CONTROL } = await import('@/utils/imageOptimization');
+    const { file: optimized } = await optimizeImage(file, 'avatar');
+    const fileExt = optimized.name.split('.').pop();
     const fileName = `${userId}-${Math.random()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(filePath, file);
+      .upload(filePath, optimized, {
+        contentType: optimized.type,
+        cacheControl: OPTIMIZED_CACHE_CONTROL,
+        upsert: false,
+      });
 
     if (uploadError) throw uploadError;
 

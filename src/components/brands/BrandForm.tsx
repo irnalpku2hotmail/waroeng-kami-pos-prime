@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { Upload, X, Tag } from 'lucide-react';
+import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
 
 const brandSchema = z.object({
   name: z.string().min(1, 'Nama brand wajib diisi'),
@@ -55,12 +56,17 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
   };
 
   const uploadLogo = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
+    const { file: optimized } = await optimizeImage(file, 'brand');
+    const fileExt = optimized.name.split('.').pop();
     const fileName = `brand_${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('website-assets')
-      .upload(fileName, file);
+      .upload(fileName, optimized, {
+        contentType: optimized.type,
+        cacheControl: OPTIMIZED_CACHE_CONTROL,
+        upsert: false,
+      });
 
     if (uploadError) throw uploadError;
 

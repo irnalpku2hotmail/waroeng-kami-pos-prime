@@ -82,13 +82,19 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const { optimizeImage, OPTIMIZED_CACHE_CONTROL } = await import('@/utils/imageOptimization');
+      const { file: optimized } = await optimizeImage(file, 'product');
+      const fileExt = optimized.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `bundles/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('bundle-images')
-        .upload(filePath, file);
+        .upload(filePath, optimized, {
+          contentType: optimized.type,
+          cacheControl: OPTIMIZED_CACHE_CONTROL,
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 

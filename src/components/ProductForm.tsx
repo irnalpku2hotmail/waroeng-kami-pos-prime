@@ -12,6 +12,7 @@ import { Plus, Minus, X, Upload } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import TagInput from '@/components/TagInput';
+import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
 
 interface PriceVariant {
   id?: string;
@@ -168,12 +169,17 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
   }, [product]);
 
   const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
+    const { file: optimized } = await optimizeImage(file, 'product');
+    const fileExt = optimized.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
-    
+
     const { error: uploadError } = await supabase.storage
       .from('product-images')
-      .upload(fileName, file);
+      .upload(fileName, optimized, {
+        contentType: optimized.type,
+        cacheControl: OPTIMIZED_CACHE_CONTROL,
+        upsert: false,
+      });
 
     if (uploadError) throw uploadError;
 
