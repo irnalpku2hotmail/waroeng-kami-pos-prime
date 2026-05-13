@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getOptimizedImageUrl } from '@/utils/imageOptimization';
 
 interface PromoProductsProps {
   onAuthRequired?: () => void;
@@ -47,9 +48,10 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
 
   const getImageUrl = (imageUrl: string | null) => {
     if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    const { data } = supabase.storage.from('product-images').getPublicUrl(imageUrl);
-    return data.publicUrl;
+    const url = imageUrl.startsWith('http')
+      ? imageUrl
+      : supabase.storage.from('product-images').getPublicUrl(imageUrl).data.publicUrl;
+    return getOptimizedImageUrl(url, { width: 300, height: 225, quality: 60 });
   };
 
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
@@ -106,6 +108,9 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
                 alt={product.name}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
+                decoding="async"
+                width={300}
+                height={225}
               />
               {/* Labels */}
               <div className="absolute top-1 left-1 flex flex-col gap-0.5">
