@@ -194,13 +194,11 @@ const TrendingProducts: React.FC<TrendingProductsProps> = ({ onAuthRequired }) =
               <div className="aspect-[4/3] relative overflow-hidden">
                 {product.image_url ? (
                   <img
-                    src={getOptimizedImageUrl(product.image_url, { width: 300, height: 225, quality: 60 })}
+                    src={getOptimizedImageUrl(product.image_url, { width: 320, height: 240, quality: 65 }) || product.image_url}
                     alt={product.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
                     decoding="async"
-                    width={300}
-                    height={225}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-muted">

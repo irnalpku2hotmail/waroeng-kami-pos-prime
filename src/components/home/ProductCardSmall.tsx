@@ -73,12 +73,10 @@ const ProductCardSmall: React.FC<ProductCardSmallProps> = ({ product, onProductC
         <div className="relative w-full h-32 mb-3 bg-gray-100 rounded-lg overflow-hidden">
           {product.image_url ? (
             <img
-              src={getOptimizedImageUrl(product.image_url, { width: 300, height: 300, quality: 65 })}
+              src={getOptimizedImageUrl(product.image_url, { width: 320, height: 240, quality: 65 }) || product.image_url}
               alt={product.name}
               loading="lazy"
               decoding="async"
-              width={300}
-              height={300}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
             />
           ) : (

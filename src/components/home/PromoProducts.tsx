@@ -48,10 +48,7 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
 
   const getImageUrl = (imageUrl: string | null) => {
     if (!imageUrl) return '/placeholder.svg';
-    const url = imageUrl.startsWith('http')
-      ? imageUrl
-      : supabase.storage.from('product-images').getPublicUrl(imageUrl).data.publicUrl;
-    return getOptimizedImageUrl(url, { width: 300, height: 225, quality: 60 });
+    return getOptimizedImageUrl(imageUrl, { width: 320, height: 240, quality: 65 }) || '/placeholder.svg';
   };
 
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
@@ -108,9 +105,6 @@ const PromoProducts = ({ onAuthRequired }: PromoProductsProps) => {
                 alt={product.name}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
-                decoding="async"
-                width={300}
-                height={225}
               />
               {/* Labels */}
               <div className="absolute top-1 left-1 flex flex-col gap-0.5">
