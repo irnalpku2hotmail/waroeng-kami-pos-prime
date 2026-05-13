@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Upload, X, Package } from 'lucide-react';
+import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Nama kategori wajib diisi'),
@@ -57,13 +58,18 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
   };
 
   const uploadIcon = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
+    const { file: optimized } = await optimizeImage(file, 'category');
+    const fileExt = optimized.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('category-icons')
-      .upload(filePath, file);
+      .upload(filePath, optimized, {
+        contentType: optimized.type,
+        cacheControl: OPTIMIZED_CACHE_CONTROL,
+        upsert: false,
+      });
 
     if (uploadError) {
       throw uploadError;

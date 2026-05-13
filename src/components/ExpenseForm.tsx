@@ -96,13 +96,24 @@ const ExpenseForm = ({ expense, onSuccess, onClose }: ExpenseFormProps) => {
   };
 
   const uploadReceipt = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
+    // Only optimize images; PDF receipts are uploaded as-is.
+    let toUpload: File = file;
+    if (file.type.startsWith('image/')) {
+      const { optimizeImage } = await import('@/utils/imageOptimization');
+      toUpload = (await optimizeImage(file, 'receipt')).file;
+    }
+    const { OPTIMIZED_CACHE_CONTROL } = await import('@/utils/imageOptimization');
+    const fileExt = toUpload.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('expense-receipts')
-      .upload(filePath, file);
+      .upload(filePath, toUpload, {
+        contentType: toUpload.type || undefined,
+        cacheControl: OPTIMIZED_CACHE_CONTROL,
+        upsert: false,
+      });
 
     if (uploadError) {
       throw uploadError;
