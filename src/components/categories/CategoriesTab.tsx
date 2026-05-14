@@ -60,8 +60,13 @@ const CategoriesTab = () => {
 
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
+      const { data: row } = await supabase.from('categories').select('icon_url').eq('id', id).maybeSingle();
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
+      if (row?.icon_url) {
+        const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+        deleteStorageFileByUrlAsync(row.icon_url);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
