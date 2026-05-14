@@ -25,6 +25,7 @@ import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import BundleCarousel from '@/components/bundles/BundleCarousel';
+import SEO from '@/components/SEO';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -202,6 +203,11 @@ const ProductDetail = () => {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
+      <SEO
+        title={`${product?.name ?? 'Produk'} — LAPAU.ID`}
+        description={(product?.description?.toString().slice(0, 155)) || `Beli ${product?.name ?? 'produk'} di LAPAU.ID dengan harga terbaik dan gratis ongkir ke seluruh Indonesia.`}
+        path={`/product/${id}`}
+      />
       {/* Navbar - Reusing FrontendNavbar with EnhancedHomeSearch */}
       <FrontendNavbar 
         searchTerm={searchTerm} 
