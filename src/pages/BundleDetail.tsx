@@ -18,6 +18,7 @@ import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCar
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import { Skeleton } from '@/components/ui/skeleton';
+import SEO from '@/components/SEO';
 
 const BundleDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -128,6 +129,11 @@ const BundleDetail = () => {
 
   return (
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
+      <SEO
+        title={`${bundle?.name ?? 'Bundle'} — Paket Hemat LAPAU.ID`}
+        description={(bundle?.description?.toString().slice(0, 155)) || `Dapatkan paket hemat ${bundle?.name ?? ''} di LAPAU.ID dengan harga spesial dan gratis ongkir.`}
+        path={`/bundle/${slug}`}
+      />
       <FrontendNavbar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
