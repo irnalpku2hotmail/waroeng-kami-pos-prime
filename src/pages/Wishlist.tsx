@@ -18,6 +18,7 @@ import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import WishlistButton from '@/components/wishlist/WishlistButton';
 import { toast } from '@/hooks/use-toast';
+import SEO from '@/components/SEO';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 
 const Wishlist: React.FC = () => {
@@ -104,6 +105,7 @@ const Wishlist: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
+      <SEO title="Wishlist Saya — LAPAU.ID" description="Daftar produk favorit Anda di LAPAU.ID. Pantau harga dan dapatkan notifikasi diskon untuk produk yang Anda sukai." path="/wishlist" />
       {/* Reusable Navbar */}
       <FrontendNavbar
         onCartClick={() => setShowCartModal(true)}
