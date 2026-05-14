@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import SEO from '@/components/SEO';
 
 const SearchResults = () => {
   const navigate = useNavigate();
@@ -463,6 +464,11 @@ const SearchResults = () => {
 
   return (
     <div className={`min-h-screen bg-muted/20 ${isMobile ? 'pb-20 pt-12' : 'pt-[88px]'}`}>
+      <SEO
+        title={searchQuery ? `Cari "${searchQuery}" — LAPAU.ID` : 'Pencarian Produk — LAPAU.ID'}
+        description={searchQuery ? `Hasil pencarian untuk "${searchQuery}" di LAPAU.ID. Temukan produk terbaik dengan harga hemat dan gratis ongkir.` : 'Cari produk pilihan di LAPAU.ID dengan filter kategori, brand, dan harga.'}
+        path={`/search${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}`}
+      />
       <FrontendNavbar
         searchTerm={searchQuery}
         onSearchChange={setSearchQuery}
