@@ -9,6 +9,7 @@ import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 import CompactBannerCarousel from '@/components/home/CompactBannerCarousel';
 import AuthModal from '@/components/AuthModal';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
+import SEO from '@/components/SEO';
 
 // Lazy load below-the-fold sections
 const EnhancedShippingInfo = lazy(() => import('@/components/home/EnhancedShippingInfo'));
@@ -61,6 +62,11 @@ const Home = () => {
 
   return (
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-16' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
+      <SEO
+        title="LAPAU.ID — Marketplace Belanja Mudah & Berkualitas"
+        description="LAPAU.ID — marketplace belanja online mudah, hemat & berkualitas dengan gratis ongkir ke seluruh Indonesia. Temukan ribuan produk pilihan."
+        path="/"
+      />
       {/* Fixed Navbar */}
       <FrontendNavbar
         searchTerm={searchTerm}
