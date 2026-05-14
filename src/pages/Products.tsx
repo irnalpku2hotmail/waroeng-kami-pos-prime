@@ -83,8 +83,18 @@ const Products = () => {
 
   const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
+      // Fetch image URL first so we can clean storage after row delete
+      const { data: prod } = await supabase
+        .from('products')
+        .select('image_url')
+        .eq('id', id)
+        .maybeSingle();
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
+      if (prod?.image_url) {
+        const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+        deleteStorageFileByUrlAsync(prod.image_url);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });

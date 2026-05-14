@@ -45,8 +45,13 @@ const Bundles = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      const { data: row } = await supabase.from('bundles').select('image_url').eq('id', id).maybeSingle();
       const { error } = await supabase.from('bundles').delete().eq('id', id);
       if (error) throw error;
+      if (row?.image_url) {
+        const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+        deleteStorageFileByUrlAsync(row.image_url);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-bundles'] });

@@ -92,8 +92,13 @@ const Expenses = () => {
 
   const deleteExpense = useMutation({
     mutationFn: async (id: string) => {
+      const { data: row } = await supabase.from('expenses').select('receipt_url').eq('id', id).maybeSingle();
       const { error } = await supabase.from('expenses').delete().eq('id', id);
       if (error) throw error;
+      if (row?.receipt_url) {
+        const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+        deleteStorageFileByUrlAsync(row.receipt_url);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
