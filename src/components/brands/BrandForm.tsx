@@ -115,11 +115,7 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
 
       if (logoFile) {
         // Replacing an existing logo — clean the old one from storage
-        if (brand?.logo_url && brand.logo_url !== logoPreview) {
-          deleteStorageFileByUrlAsync(brand.logo_url);
-        } else if (brand?.logo_url) {
-          deleteStorageFileByUrlAsync(brand.logo_url);
-        }
+        if (brand?.logo_url) deleteStorageFileByUrlAsync(brand.logo_url);
         logo_url = await uploadLogo(logoFile);
       } else if (brand?.logo_url && !logoPreview) {
         // User cleared the logo
