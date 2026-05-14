@@ -96,8 +96,13 @@ const Categories = () => {
   // Delete mutations
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
+      const { data: row } = await supabase.from('categories').select('icon_url').eq('id', id).maybeSingle();
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
+      if (row?.icon_url) {
+        const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+        deleteStorageFileByUrlAsync(row.icon_url);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
@@ -128,8 +133,13 @@ const Categories = () => {
 
   const deleteBrand = useMutation({
     mutationFn: async (id: string) => {
+      const { data: row } = await supabase.from('product_brands').select('logo_url').eq('id', id).maybeSingle();
       const { error } = await supabase.from('product_brands').delete().eq('id', id);
       if (error) throw error;
+      if (row?.logo_url) {
+        const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+        deleteStorageFileByUrlAsync(row.logo_url);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brands'] });
