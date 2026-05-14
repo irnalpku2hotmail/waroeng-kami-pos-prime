@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { Upload, X, Tag } from 'lucide-react';
 import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { deleteStorageFileByUrlAsync } from '@/utils/storageCleanup';
 
 const brandSchema = z.object({
   name: z.string().min(1, 'Nama brand wajib diisi'),
@@ -113,7 +114,16 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
       let logo_url = logoPreview;
 
       if (logoFile) {
+        // Replacing an existing logo — clean the old one from storage
+        if (brand?.logo_url && brand.logo_url !== logoPreview) {
+          deleteStorageFileByUrlAsync(brand.logo_url);
+        } else if (brand?.logo_url) {
+          deleteStorageFileByUrlAsync(brand.logo_url);
+        }
         logo_url = await uploadLogo(logoFile);
+      } else if (brand?.logo_url && !logoPreview) {
+        // User cleared the logo
+        deleteStorageFileByUrlAsync(brand.logo_url);
       }
 
       const formData = {
