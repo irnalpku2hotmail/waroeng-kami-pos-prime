@@ -12,6 +12,7 @@ import { Package, Search, Calendar, MapPin, Phone, User, CreditCard } from 'luci
 import HomeNavbar from '@/components/home/HomeNavbar';
 import HomeFooter from '@/components/home/HomeFooter';
 import CartModal from '@/components/CartModal';
+import SEO from '@/components/SEO';
 
 const OrderHistory = () => {
   const { user } = useAuth();
@@ -108,6 +109,7 @@ const OrderHistory = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO title="Riwayat Pesanan — LAPAU.ID" description="Lihat riwayat pesanan dan status pengiriman Anda di LAPAU.ID. Pantau setiap transaksi belanja Anda dengan mudah." path="/order-history" />
       <HomeNavbar 
         onCartClick={() => setCartModalOpen(true)}
         searchTerm={searchTerm}
