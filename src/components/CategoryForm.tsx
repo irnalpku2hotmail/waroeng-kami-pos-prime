@@ -150,7 +150,14 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
       let icon_url = iconPreview;
 
       if (iconFile) {
+        if (category?.icon_url) {
+          const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+          deleteStorageFileByUrlAsync(String(category.icon_url));
+        }
         icon_url = await uploadIcon(iconFile);
+      } else if (category?.icon_url && !iconPreview) {
+        const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
+        deleteStorageFileByUrlAsync(String(category.icon_url));
       }
 
       const formData = { 
