@@ -1,51 +1,58 @@
-
+import { lazy, Suspense } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-// Import pages
+// Eagerly load the public homepage so first-paint is fast
 import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-import ProductDetails from "./pages/ProductDetails";
-import ProductDetail from "./pages/ProductDetail";
-import Categories from "./pages/Categories";
-import Suppliers from "./pages/Suppliers";
-import Customers from "./pages/Customers";
-import Purchases from "./pages/Purchases";
-import Returns from "./pages/Returns";
-import POS from "./pages/POS";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import Expenses from "./pages/Expenses";
-import Profile from "./pages/Profile";
-import Orders from "./pages/Orders";
-import FlashSales from "./pages/FlashSales";
-import PointsRewards from "./pages/PointsRewards";
-import PointExchange from "./pages/PointExchange";
-import CreditManagement from "./pages/CreditManagement";
-import UserManagement from "./pages/UserManagement";
-import UserLocations from "./pages/UserLocations";
-import Inventory from "./pages/Inventory";
-import SearchResults from "./pages/SearchResults";
-import OrderHistory from "./pages/OrderHistory";
-import Notifications from "./pages/Notifications";
-import SearchAnalytics from "./pages/SearchAnalytics";
-import Wishlist from "./pages/Wishlist";
-import Bundles from "./pages/Bundles";
-import BundleDetail from "./pages/BundleDetail";
 
-// Auth pages
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
+// Lazy-load all other routes to shrink the initial JS bundle.
+// Each route is fetched only when the user navigates to it.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Products = lazy(() => import("./pages/Products"));
+const ProductDetails = lazy(() => import("./pages/ProductDetails"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Categories = lazy(() => import("./pages/Categories"));
+const Suppliers = lazy(() => import("./pages/Suppliers"));
+const Customers = lazy(() => import("./pages/Customers"));
+const Purchases = lazy(() => import("./pages/Purchases"));
+const Returns = lazy(() => import("./pages/Returns"));
+const POS = lazy(() => import("./pages/POS"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Orders = lazy(() => import("./pages/Orders"));
+const FlashSales = lazy(() => import("./pages/FlashSales"));
+const PointsRewards = lazy(() => import("./pages/PointsRewards"));
+const PointExchange = lazy(() => import("./pages/PointExchange"));
+const CreditManagement = lazy(() => import("./pages/CreditManagement"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const UserLocations = lazy(() => import("./pages/UserLocations"));
+const Inventory = lazy(() => import("./pages/Inventory"));
+const SearchResults = lazy(() => import("./pages/SearchResults"));
+const OrderHistory = lazy(() => import("./pages/OrderHistory"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const SearchAnalytics = lazy(() => import("./pages/SearchAnalytics"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
+const Bundles = lazy(() => import("./pages/Bundles"));
+const BundleDetail = lazy(() => import("./pages/BundleDetail"));
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
-// 404 page
-import NotFound from "./pages/NotFound";
+// Lightweight fallback (no large skeleton — just keeps layout from jumping)
+const RouteFallback = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+  </div>
+);
 
 function App() {
   return (
     <TooltipProvider>
-      <Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Home />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
@@ -84,7 +91,8 @@ function App() {
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </TooltipProvider>
   );
 }
