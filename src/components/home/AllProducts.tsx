@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -53,17 +53,7 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
     }
   });
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
-
-  const getImageUrl = (imageUrl: string | null) => {
-    if (!imageUrl) return '/placeholder.svg';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    const { data } = supabase.storage.from('product-images').getPublicUrl(imageUrl);
-    return data.publicUrl;
-  };
-
-  const handleAddToCart = (product: any, e: React.MouseEvent) => {
+  const handleAddToCart = useCallback((product: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) { onAuthRequired?.(); return; }
     if (product.current_stock <= 0) return;
@@ -73,7 +63,12 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
       product_id: product.id, unit_price: product.selling_price, total_price: product.selling_price,
     });
     toast({ title: 'Ditambahkan', description: `${product.name} ke keranjang` });
-  };
+  }, [user, onAuthRequired, addToCart]);
+
+  const handleCardClick = useCallback((productId: string) => {
+    if (!user) { onAuthRequired?.(); return; }
+    navigate(`/product/${productId}`);
+  }, [user, onAuthRequired, navigate]);
 
   const visibleProducts = products.slice(0, visibleCount);
 
@@ -140,54 +135,12 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
         <>
           <div className={`grid ${isMobile ? 'grid-cols-3 gap-2' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'}`}>
             {visibleProducts.map((product: any) => (
-              <div
+              <ProductCard
                 key={product.id}
-                onClick={() => {
-                  if (!user) { onAuthRequired?.(); return; }
-                  navigate(`/product/${product.id}`);
-                }}
-                className="bg-card rounded-xl overflow-hidden border border-border/60 hover:border-orange-500 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
-              >
-                <div className="relative aspect-[4/3] overflow-hidden bg-accent/20">
-                  <img
-                    src={getImageUrl(product.image_url)}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  {product.current_stock <= 0 && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <Badge variant="destructive" className="text-[10px]">Habis</Badge>
-                    </div>
-                  )}
-                  {product.current_stock > 0 && (
-                    <Button
-                      size="icon"
-                      className="absolute bottom-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary shadow-md"
-                      onClick={(e) => handleAddToCart(product, e)}
-                    >
-                      <ShoppingCart className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-                <div className="p-2">
-                  <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-tight mb-1">
-                    {product.name}
-                  </h3>
-                  <p className="text-primary font-bold text-xs">{formatPrice(product.selling_price)}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {product.categories?.name && (
-                      <span className="text-[9px] text-muted-foreground truncate">{product.categories.name}</span>
-                    )}
-                    {product.product_brands?.name && (
-                      <>
-                        <span className="text-[9px] text-muted-foreground">·</span>
-                        <span className="text-[9px] text-muted-foreground truncate">{product.product_brands.name}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+                product={product}
+                onClick={handleCardClick}
+                onAddToCart={handleAddToCart}
+              />
             ))}
           </div>
           {visibleCount < products.length && (
@@ -209,3 +162,79 @@ const AllProducts = ({ searchTerm, selectedCategory, selectedBrand, onAuthRequir
 };
 
 export default AllProducts;
+
+// --- Memoized product card -------------------------------------------------
+// Extracted + memoized so list re-renders (e.g. paging) don't re-render
+// every card. Pure presentational; identity-stable callbacks from parent.
+
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+
+const getImageUrl = (imageUrl: string | null) => {
+  if (!imageUrl) return '/placeholder.svg';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  const { data } = supabase.storage.from('product-images').getPublicUrl(imageUrl);
+  return data.publicUrl;
+};
+
+interface ProductCardProps {
+  product: any;
+  onClick: (id: string) => void;
+  onAddToCart: (product: any, e: React.MouseEvent) => void;
+}
+
+const ProductCard = memo(function ProductCard({ product, onClick, onAddToCart }: ProductCardProps) {
+  return (
+    <div
+      onClick={() => onClick(product.id)}
+      className="bg-card rounded-xl overflow-hidden border border-border/60 hover:border-orange-500 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-accent/20">
+        <img
+          src={getImageUrl(product.image_url)}
+          alt={product.name}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+        />
+        {product.current_stock <= 0 && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <Badge variant="destructive" className="text-[10px]">Habis</Badge>
+          </div>
+        )}
+        {product.current_stock > 0 && (
+          <Button
+            size="icon"
+            className="absolute bottom-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary shadow-md"
+            onClick={(e) => onAddToCart(product, e)}
+          >
+            <ShoppingCart className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+      <div className="p-2">
+        <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-tight mb-1">
+          {product.name}
+        </h3>
+        <p className="text-primary font-bold text-xs">{formatPrice(product.selling_price)}</p>
+        <div className="flex items-center gap-1 mt-0.5">
+          {product.categories?.name && (
+            <span className="text-[9px] text-muted-foreground truncate">{product.categories.name}</span>
+          )}
+          {product.product_brands?.name && (
+            <>
+              <span className="text-[9px] text-muted-foreground">·</span>
+              <span className="text-[9px] text-muted-foreground truncate">{product.product_brands.name}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}, (prev, next) =>
+  prev.product.id === next.product.id &&
+  prev.product.current_stock === next.product.current_stock &&
+  prev.product.selling_price === next.product.selling_price &&
+  prev.onClick === next.onClick &&
+  prev.onAddToCart === next.onAddToCart
+);
