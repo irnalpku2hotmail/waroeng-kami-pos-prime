@@ -1,7 +1,8 @@
-
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, Edit, Trash2 } from 'lucide-react';
+import PurchaseHistoryDialog from './PurchaseHistoryDialog';
 
 interface ProductsTableProps {
   products: any[];
@@ -9,7 +10,10 @@ interface ProductsTableProps {
   onDelete: (id: string) => void;
 }
 
-const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
+const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => {
+  const [historyProduct, setHistoryProduct] = useState<any | null>(null);
+  return (
+  <>
   <Table>
     <TableHeader>
       <TableRow>
@@ -57,7 +61,16 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
           <TableCell>{product.categories?.name || '-'}</TableCell>
           <TableCell className="hidden md:table-cell">{product.product_brands?.name || '-'}</TableCell>
           <TableCell>{product.units?.name || '-'}</TableCell>
-          <TableCell>Rp {product.selling_price?.toLocaleString('id-ID')}</TableCell>
+          <TableCell>
+            <button
+              type="button"
+              onClick={() => setHistoryProduct(product)}
+              className="text-left hover:underline text-primary"
+              title="Lihat riwayat harga beli & margin"
+            >
+              Rp {product.selling_price?.toLocaleString('id-ID')}
+            </button>
+          </TableCell>
           <TableCell>
             <span className={product.current_stock < product.min_stock ? 'text-red-600' : 'text-green-600'}>
               {product.current_stock} (readonly)
@@ -92,6 +105,17 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => (
       ))}
     </TableBody>
   </Table>
-);
+  {historyProduct && (
+    <PurchaseHistoryDialog
+      open={!!historyProduct}
+      onOpenChange={(o) => !o && setHistoryProduct(null)}
+      productId={historyProduct.id}
+      productName={historyProduct.name}
+      sellingPrice={Number(historyProduct.selling_price || 0)}
+    />
+  )}
+  </>
+  );
+};
 
 export default ProductsTable;
