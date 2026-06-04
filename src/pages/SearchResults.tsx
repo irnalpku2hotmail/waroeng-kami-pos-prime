@@ -704,7 +704,7 @@ const SearchResults = () => {
                           </div>
                         )}
                         {outOfStock && (
-                          <div className="absolute inset-0 bg-background/70 backdrop-blur-[1px] flex items-center justify-center">
+                          <div className="absolute inset-0 bg-background/70 backdrop-blur-[1px] flex items-center justify-center opacity-50">
                             <Badge variant="destructive" className="text-[10px]">Habis</Badge>
                           </div>
                         )}
