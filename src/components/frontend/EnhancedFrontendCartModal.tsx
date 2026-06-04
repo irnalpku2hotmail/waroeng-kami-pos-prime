@@ -198,6 +198,14 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
       const totalAmount = orderSubtotal + orderFinalDeliveryFee + orderServiceFee;
       const orderNumber = generateOrderNumber();
 
+      // Resolve loyalty customer id (customers.id, not auth user id)
+      let resolvedCustomerId: string | null = null;
+      if (user) {
+        const { data: cid, error: cidErr } = await supabase.rpc('get_or_create_customer_for_current_user');
+        if (cidErr) throw cidErr;
+        resolvedCustomerId = cid as string;
+      }
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -210,7 +218,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
           delivery_fee: orderFinalDeliveryFee,
           payment_method: 'cod',
           status: 'pending',
-          customer_id: user.id
+          customer_id: resolvedCustomerId
         })
         .select()
         .single();
