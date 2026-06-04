@@ -71,6 +71,12 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const timestamp = Date.now();
       const orderNumber = `WEB${timestamp}`;
 
+      let resolvedCustomerId: string | null = null;
+      if (user?.id) {
+        const { data: cid, error: cidErr } = await supabase.rpc('get_or_create_customer_for_current_user');
+        if (!cidErr) resolvedCustomerId = cid as string;
+      }
+
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -84,7 +90,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           payment_method: 'cod',
           status: 'pending',
           notes: 'Pesanan dari website',
-          customer_id: user?.id || null
+          customer_id: resolvedCustomerId
         })
         .select()
         .single();
