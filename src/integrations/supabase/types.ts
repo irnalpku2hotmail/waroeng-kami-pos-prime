@@ -284,6 +284,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          profile_id: string | null
           total_points: number
           total_spent: number
           updated_at: string
@@ -296,6 +297,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          profile_id?: string | null
           total_points?: number
           total_spent?: number
           updated_at?: string
@@ -308,11 +310,20 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          profile_id?: string | null
           total_points?: number
           total_spent?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expenses: {
         Row: {
@@ -1891,6 +1902,7 @@ export type Database = {
           total_unredeemed_points: number
         }[]
       }
+      get_or_create_customer_for_current_user: { Args: never; Returns: string }
       get_similar_products: {
         Args: {
           category_filter?: string
