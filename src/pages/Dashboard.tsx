@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,22 +22,33 @@ const Dashboard = () => {
   const startOfTodayISO = startOfToday.toISOString();
   const endOfTodayISO = endOfToday.toISOString();
 
+  // Shared cache options: show stale data instantly, refresh in background
+  const cacheOpts = {
+    staleTime: 60_000,           // 1 min fresh
+    gcTime: 5 * 60_000,          // keep cache 5 min
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    placeholderData: (prev: any) => prev,
+  } as const;
+
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*');
+      const { data, error } = await supabase.from('products').select('id');
       if (error) throw error;
       return data;
-    }
+    },
+    ...cacheOpts,
   });
 
   const { data: lowStock } = useQuery({
     queryKey: ['low-stock'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').lt('current_stock', 10);
+      const { data, error } = await supabase.from('products').select('id').lt('current_stock', 10);
       if (error) throw error;
       return data;
-    }
+    },
+    ...cacheOpts,
   });
 
   const { data: expiredProducts } = useQuery({
@@ -50,28 +62,31 @@ const Dashboard = () => {
       if (error) throw error;
       const uniqueProducts = new Set(data?.map(item => item.product_id) || []);
       return Array.from(uniqueProducts);
-    }
+    },
+    ...cacheOpts,
   });
 
   const { data: customers } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('customers').select('*');
+      const { data, error } = await supabase.from('customers').select('id, name');
       if (error) throw error;
       return data;
-    }
+    },
+    ...cacheOpts,
   });
 
   const { data: todayOrders } = useQuery({
     queryKey: ['today-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('orders').select('*')
+        .from('orders').select('id')
         .gte('created_at', startOfTodayISO)
         .lte('created_at', endOfTodayISO);
       if (error) throw error;
       return data;
-    }
+    },
+    ...cacheOpts,
   });
 
   const { data: posSales } = useQuery({
@@ -84,7 +99,8 @@ const Dashboard = () => {
         .lte('created_at', endOfTodayISO);
       if (error) throw error;
       return data;
-    }
+    },
+    ...cacheOpts,
   });
 
   const { data: codSalesToday } = useQuery({
@@ -98,7 +114,8 @@ const Dashboard = () => {
         .lte('delivery_date', endOfTodayISO);
       if (error) throw error;
       return data;
-    }
+    },
+    ...cacheOpts,
   });
 
   const totalProducts = products?.length || 0;
@@ -107,28 +124,47 @@ const Dashboard = () => {
   const totalCustomers = customers?.length || 0;
   const todayOrdersCount = todayOrders?.length || 0;
 
-  const todaySales = posSales?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
+  const todaySales = useMemo(
+    () => posSales?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0,
+    [posSales]
+  );
   const todayTransactions = posSales?.length || 0;
-  const codIncomeToday = codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0;
+  const codIncomeToday = useMemo(
+    () => codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0,
+    [codSalesToday]
+  );
 
-  const todaySalesTable = (posSales ?? []).map(trx => {
-    let customerName = 'Umum';
-    if (trx.customer_id) {
-      const matchCustomer = customers?.find((c) => c.id === trx.customer_id);
-      customerName = matchCustomer?.name || 'Umum';
-    }
-    return {
-      id: trx.id, number: trx.transaction_number,
-      name: customerName, total: trx.total_amount,
-      status: 'POS', created_at: trx.created_at,
-    };
-  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const customerMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (customers ?? []).forEach((c: any) => m.set(c.id, c.name));
+    return m;
+  }, [customers]);
 
-  const codSalesTable = (codSalesToday ?? []).map(trx => ({
-    id: trx.id, number: trx.order_number,
-    name: trx.customer_name || 'Umum', total: trx.total_amount,
-    status: trx.status, created_at: trx.created_at,
-  })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const todaySalesTable = useMemo(() => {
+    return (posSales ?? [])
+      .map(trx => ({
+        id: trx.id,
+        number: trx.transaction_number,
+        name: trx.customer_id ? (customerMap.get(trx.customer_id) || 'Umum') : 'Umum',
+        total: trx.total_amount,
+        status: 'POS',
+        created_at: trx.created_at,
+      }))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [posSales, customerMap]);
+
+  const codSalesTable = useMemo(() => {
+    return (codSalesToday ?? [])
+      .map(trx => ({
+        id: trx.id,
+        number: trx.order_number,
+        name: trx.customer_name || 'Umum',
+        total: trx.total_amount,
+        status: trx.status,
+        created_at: trx.created_at,
+      }))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [codSalesToday]);
 
   const getOrderStatusBadge = (status: string | null) => {
     switch (status) {
