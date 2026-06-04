@@ -67,6 +67,13 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
       const totalAmount = getTotalPrice() + deliveryFee;
       const orderNumber = generateOrderNumber();
 
+      let resolvedCustomerId: string | null = null;
+      if (user) {
+        const { data: cid, error: cidErr } = await supabase.rpc('get_or_create_customer_for_current_user');
+        if (cidErr) throw cidErr;
+        resolvedCustomerId = cid as string;
+      }
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -79,7 +86,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
           delivery_fee: deliveryFee,
           payment_method: 'cod',
           status: 'pending',
-          customer_id: user.id
+          customer_id: resolvedCustomerId
         })
         .select()
         .single();
