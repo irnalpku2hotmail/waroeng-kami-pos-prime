@@ -22,7 +22,7 @@ interface FrontendCartModalProps {
 }
 
 const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
-  const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart();
+  const { items, updateQuantity, removeItem, clearCart, getTotalPrice, getEstimatedPoints } = useCart();
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -324,6 +324,12 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
                 <span>Total</span>
                 <span>Rp {total.toLocaleString('id-ID')}</span>
               </div>
+              {getEstimatedPoints() > 0 && (
+                <div className="flex justify-between text-sm bg-amber-50 text-amber-800 px-3 py-2 rounded-md border border-amber-200">
+                  <span className="flex items-center gap-1">🎁 Estimasi Poin</span>
+                  <span className="font-semibold">+{getEstimatedPoints().toLocaleString('id-ID')} Poin</span>
+                </div>
+              )}
               <div className="text-center">
                 <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium inline-block">
                   💰 Cash on Delivery (COD)
