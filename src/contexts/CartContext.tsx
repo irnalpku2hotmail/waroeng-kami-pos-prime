@@ -1,6 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 export interface CartItem {
   id: string;
@@ -56,6 +59,7 @@ interface CartContextType {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  getEstimatedPoints: () => number;
   customerInfo: CustomerInfo;
   setCustomerInfo: React.Dispatch<React.SetStateAction<CustomerInfo>>;
   shippingCost: number;
@@ -67,6 +71,12 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  // Per-user storage key: each customer has their own isolated cart.
+  // Guests share a single 'cart_guest' key on the device.
+  const storageKey = user?.id ? `cart_${user.id}` : 'cart_guest';
+  const auditKey = user?.id ? `cart_audit_log_${user.id}` : 'cart_audit_log_guest';
+
   const [items, setItems] = useState<CartItem[]>([]);
   const [auditLog, setAuditLog] = useState<CartAuditEntry[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -77,36 +87,40 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [shippingCost, setShippingCost] = useState(0);
 
-  // Load cart from localStorage on mount
+  // Load cart whenever the active user changes (login/logout/switch account).
+  // This isolates carts per customer and prevents leakage across sessions.
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+    try {
+      // One-time migration: move legacy global 'cart' into guest bucket
+      // so existing guests don't lose their cart on this release.
+      const legacy = localStorage.getItem('cart');
+      if (legacy && !localStorage.getItem('cart_guest')) {
+        localStorage.setItem('cart_guest', legacy);
       }
-    }
-    const savedAudit = localStorage.getItem('cart_audit_log');
-    if (savedAudit) {
-      try {
-        setAuditLog(JSON.parse(savedAudit));
-      } catch (error) {
-        console.error('Error loading cart audit log:', error);
-      }
-    }
-  }, []);
+      if (legacy) localStorage.removeItem('cart');
 
-  // Save cart to localStorage whenever items change
+      const savedCart = localStorage.getItem(storageKey);
+      setItems(savedCart ? JSON.parse(savedCart) : []);
+
+      const savedAudit = localStorage.getItem(auditKey);
+      setAuditLog(savedAudit ? JSON.parse(savedAudit) : []);
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
+      setItems([]);
+      setAuditLog([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  // Persist cart per user key
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
-  }, [items]);
+    localStorage.setItem(storageKey, JSON.stringify(items));
+  }, [items, storageKey]);
 
-  // Persist audit log (cap at 200 entries to avoid bloat)
   useEffect(() => {
     const capped = auditLog.slice(-200);
-    localStorage.setItem('cart_audit_log', JSON.stringify(capped));
-  }, [auditLog]);
+    localStorage.setItem(auditKey, JSON.stringify(capped));
+  }, [auditLog, auditKey]);
 
   const logAudit = (entry: Omit<CartAuditEntry, 'timestamp'>) => {
     const full: CartAuditEntry = { ...entry, timestamp: Date.now() };
@@ -390,6 +404,37 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 0);
   };
 
+  // Loyalty point estimate — uses the SAME formula as POS/checkout:
+  // points = SUM(product.loyalty_points * quantity), defaulting to 1 per product
+  // (matching usePOS.ts behavior). Fetched live from the products table so the
+  // estimate matches what the loyalty trigger will actually award.
+  const productIds = Array.from(new Set(items.map(i => i.product_id || i.id).filter(Boolean)));
+  const { data: loyaltyMap } = useQuery({
+    queryKey: ['cart-loyalty-points', productIds.sort().join(',')],
+    queryFn: async () => {
+      if (productIds.length === 0) return {} as Record<string, number>;
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, loyalty_points')
+        .in('id', productIds);
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      (data || []).forEach((p: any) => { map[p.id] = p.loyalty_points ?? 1; });
+      return map;
+    },
+    enabled: productIds.length > 0,
+    staleTime: 60_000,
+  });
+
+  const getEstimatedPoints = () => {
+    if (!loyaltyMap) return 0;
+    return items.reduce((total, item) => {
+      const pid = item.product_id || item.id;
+      const perUnit = loyaltyMap[pid] ?? 1;
+      return total + perUnit * item.quantity;
+    }, 0);
+  };
+
   return (
     <CartContext.Provider value={{
       items,
@@ -401,6 +446,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearCart,
       getTotalItems,
       getTotalPrice,
+      getEstimatedPoints,
       customerInfo,
       setCustomerInfo,
       shippingCost,
