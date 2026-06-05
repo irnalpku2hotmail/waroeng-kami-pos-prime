@@ -20,7 +20,7 @@ interface CartModalProps {
 }
 
 const CartModal = ({ open, onOpenChange }: CartModalProps) => {
-  const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo, clearCart, updateQuantity, removeItem } = useCart();
+  const { items, getTotalItems, getTotalPrice, customerInfo, setCustomerInfo, clearCart, updateQuantity, removeItem, getEstimatedPoints } = useCart();
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isMobile = useIsMobile();
@@ -372,6 +372,12 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                 }).format(total)}
               </span>
             </div>
+            {getEstimatedPoints() > 0 && (
+              <div className="flex justify-between items-center text-sm bg-amber-50 text-amber-800 px-3 py-2 rounded-md border border-amber-200">
+                <span className="flex items-center gap-1">🎁 Estimasi Poin</span>
+                <span className="font-semibold">+{getEstimatedPoints().toLocaleString('id-ID')} Poin</span>
+              </div>
+            )}
           </div>
 
           <div className="text-center">
