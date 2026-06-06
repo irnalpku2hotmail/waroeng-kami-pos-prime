@@ -35,6 +35,10 @@ import {
 const Profile = () => {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
+  // Buyers get the dedicated customer account area.
+  if (profile?.role === 'buyer') {
+    return <Navigate to="/account" replace />;
+  }
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     full_name: profile?.full_name || '',

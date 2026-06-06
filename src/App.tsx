@@ -40,6 +40,7 @@ const BundleDetail = lazy(() => import("./pages/BundleDetail"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const CustomerAccount = lazy(() => import("./pages/CustomerAccount"));
 
 // Lightweight fallback (no large skeleton — just keeps layout from jumping)
 const RouteFallback = () => (
@@ -62,6 +63,7 @@ function App() {
                 <Route path="/bundle/:slug" element={<BundleDetail />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/account" element={<CustomerAccount />} />
                 
                 {/* Protected routes */}
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
