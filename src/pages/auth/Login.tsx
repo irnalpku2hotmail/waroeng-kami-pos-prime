@@ -15,10 +15,12 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, user, profile } = useAuth();
 
   if (user) {
-    return <Navigate to="/" replace />;
+    const staffRoles = ['admin', 'manager', 'staff', 'cashier'];
+    const target = profile && staffRoles.includes(profile.role) ? '/dashboard' : '/account';
+    return <Navigate to={target} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
