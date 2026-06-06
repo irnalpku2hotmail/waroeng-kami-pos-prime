@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,10 @@ import {
 const Profile = () => {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
+  // Buyers get the dedicated customer account area.
+  if (profile?.role === 'buyer') {
+    return <Navigate to="/account" replace />;
+  }
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     full_name: profile?.full_name || '',
