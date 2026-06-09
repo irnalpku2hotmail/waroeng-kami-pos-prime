@@ -22,22 +22,9 @@ const CustomerAccount = () => {
   const { user, profile, loading, signOut } = useAuth();
   const [tab, setTab] = useState('info');
 
-  // Only buyers should access this page; staff roles go to admin dashboard.
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-  if (!user) return <Navigate to="/login" replace />;
-  if (profile && profile.role && profile.role !== 'buyer') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   // Customer record (single source of truth)
   const { data: customer } = useQuery({
-    queryKey: ['account-customer', user.id],
+    queryKey: ['account-customer', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_or_create_customer_for_current_user');
       if (error) throw error;
@@ -46,6 +33,7 @@ const CustomerAccount = () => {
       return row;
     },
     staleTime: 60_000,
+    enabled: !!user?.id,
   });
 
   // Recent orders
@@ -81,6 +69,19 @@ const CustomerAccount = () => {
       return data || [];
     },
   });
+
+  // Only buyers should access this page; staff roles go to admin dashboard.
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (profile && profile.role && profile.role !== 'buyer') {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-16">
