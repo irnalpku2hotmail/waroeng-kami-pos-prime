@@ -39,6 +39,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
     { name: 'User Management', path: '/user-management', icon: UserCheck, resource: 'users', color: 'text-lime-600', bg: 'bg-lime-50' },
     { name: 'User Locations', path: '/user-locations', icon: MapPin, resource: 'user-locations', color: 'text-red-500', bg: 'bg-red-50' },
     { name: 'Point Exchange', path: '/point-exchange', icon: Star, resource: 'point-exchange', color: 'text-yellow-500', bg: 'bg-yellow-50' },
+    { name: 'Pengajuan Poin', path: '/reward-redemptions', icon: Star, resource: 'point-exchange', color: 'text-pink-500', bg: 'bg-pink-50' },
     { name: 'Points & Rewards', path: '/points-rewards', icon: Star, resource: 'points-rewards', color: 'text-amber-600', bg: 'bg-amber-50' },
     { name: 'Flash Sales', path: '/flash-sales', icon: Zap, resource: 'flash-sales', color: 'text-orange-600', bg: 'bg-orange-50' },
     { name: 'Paket Bundling', path: '/bundles', icon: Package, resource: 'flash-sales', color: 'text-fuchsia-500', bg: 'bg-fuchsia-50' },
