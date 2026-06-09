@@ -1350,6 +1350,69 @@ export type Database = {
           },
         ]
       }
+      reward_redemption_requests: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          points_used: number
+          quantity: number
+          requested_at: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reward_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          points_used: number
+          quantity?: number
+          requested_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reward_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          points_used?: number
+          quantity?: number
+          requested_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reward_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_redemption_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_redemption_requests_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rewards: {
         Row: {
           created_at: string
@@ -1867,6 +1930,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_reward_redemption: {
+        Args: { p_request_id: string; p_review_notes?: string }
+        Returns: {
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          points_used: number
+          quantity: number
+          requested_at: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reward_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reward_redemption_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_user_permission: {
         Args: {
           permission_type: string
@@ -1958,6 +2045,30 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      reject_reward_redemption: {
+        Args: { p_request_id: string; p_review_notes?: string }
+        Returns: {
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          points_used: number
+          quantity: number
+          requested_at: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reward_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reward_redemption_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_products_ranked: {
         Args: {
