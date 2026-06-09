@@ -24,7 +24,7 @@ const CustomerAccount = () => {
 
   // Customer record (single source of truth)
   const { data: customer } = useQuery({
-    queryKey: ['account-customer', user.id],
+    queryKey: ['account-customer', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_or_create_customer_for_current_user');
       if (error) throw error;
