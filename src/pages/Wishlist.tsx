@@ -30,6 +30,8 @@ const Wishlist: React.FC = () => {
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [stockFilter, setStockFilter] = useState<'all' | 'in' | 'out'>('all');
 
   // Fetch wishlist products
   const { data: wishlistProducts = [], isLoading } = useQuery({
@@ -51,6 +53,13 @@ const Wishlist: React.FC = () => {
       return data || [];
     },
     enabled: likedProducts.size > 0
+  });
+
+  const filteredWishlist = wishlistProducts.filter((p: any) => {
+    const matchesText = !filter || p.name.toLowerCase().includes(filter.toLowerCase());
+    const matchesStock =
+      stockFilter === 'all' ? true : stockFilter === 'in' ? p.current_stock > 0 : p.current_stock <= 0;
+    return matchesText && matchesStock;
   });
 
   const handleAddToCart = (product: any) => {
@@ -124,6 +133,31 @@ const Wishlist: React.FC = () => {
           <Badge variant="secondary">{wishlistProducts.length} Produk</Badge>
         </div>
 
+        {wishlistProducts.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <input
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Cari di wishlist..."
+              className="flex-1 h-9 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <div className="flex gap-1">
+              {(['all', 'in', 'out'] as const).map((s) => (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={stockFilter === s ? 'default' : 'outline'}
+                  onClick={() => setStockFilter(s)}
+                  className="h-9 text-xs"
+                >
+                  {s === 'all' ? 'Semua' : s === 'in' ? 'Ready' : 'Habis'}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {[...Array(6)].map((_, i) => (
@@ -136,18 +170,24 @@ const Wishlist: React.FC = () => {
               </Card>
             ))}
           </div>
-        ) : wishlistProducts.length === 0 ? (
+        ) : filteredWishlist.length === 0 ? (
           <Card className="p-8 text-center">
             <Heart className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-xl font-bold mb-2">Wishlist Kosong</h2>
-            <p className="text-gray-600 mb-4">Anda belum menambahkan produk ke wishlist</p>
+            <h2 className="text-xl font-bold mb-2">
+              {wishlistProducts.length === 0 ? 'Wishlist Kosong' : 'Tidak ditemukan'}
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {wishlistProducts.length === 0
+                ? 'Anda belum menambahkan produk ke wishlist'
+                : 'Coba ubah kata kunci atau filter.'}
+            </p>
             <Button onClick={() => navigate('/')}>
               Mulai Belanja
             </Button>
           </Card>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {wishlistProducts.map((product) => (
+            {filteredWishlist.map((product) => (
               <Card 
                 key={product.id}
                 className="group cursor-pointer hover:shadow-md transition-all duration-200"

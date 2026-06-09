@@ -41,6 +41,7 @@ const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const CustomerAccount = lazy(() => import("./pages/CustomerAccount"));
+const RewardRedemptions = lazy(() => import("./pages/RewardRedemptions"));
 
 // Lightweight fallback (no large skeleton — just keeps layout from jumping)
 const RouteFallback = () => (
@@ -90,6 +91,7 @@ function App() {
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/search-analytics" element={<ProtectedRoute><SearchAnalytics /></ProtectedRoute>} />
                 <Route path="/bundles" element={<ProtectedRoute><Bundles /></ProtectedRoute>} />
+                <Route path="/reward-redemptions" element={<ProtectedRoute><RewardRedemptions /></ProtectedRoute>} />
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />

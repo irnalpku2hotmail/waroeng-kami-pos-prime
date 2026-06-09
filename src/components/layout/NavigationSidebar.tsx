@@ -44,6 +44,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ onLinkClick }) =>
     { name: 'User Management', path: '/user-management', icon: UserCheck, resource: 'users' },
     { name: 'User Locations', path: '/user-locations', icon: MapPin, resource: 'user-locations' },
     { name: 'Point Exchange', path: '/point-exchange', icon: Star, resource: 'point-exchange' },
+    { name: 'Pengajuan Poin', path: '/reward-redemptions', icon: Star, resource: 'point-exchange' },
     { name: 'Points & Rewards', path: '/points-rewards', icon: Star, resource: 'points-rewards' },
     { name: 'Flash Sales', path: '/flash-sales', icon: Zap, resource: 'flash-sales' },
     { name: 'Paket Bundling', path: '/bundles', icon: Package, resource: 'flash-sales' },
