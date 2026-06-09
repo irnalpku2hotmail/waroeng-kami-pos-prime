@@ -3,8 +3,13 @@ import { Navigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import MinimalFooter from '@/components/frontend/MinimalFooter';
+import MobileBottomNav from '@/components/home/MobileBottomNav';
+import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
+import AuthModal from '@/components/AuthModal';
+import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -12,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { User, Star, ShoppingBag, Gift, Heart, Users, LogOut } from 'lucide-react';
 import SEO from '@/components/SEO';
+import RedemptionRequestList from '@/components/account/RedemptionRequestList';
 
 const ReferralSection = lazy(() => import('@/components/profile/ReferralSection'));
 
@@ -20,7 +26,10 @@ const formatRupiah = (n: number) =>
 
 const CustomerAccount = () => {
   const { user, profile, loading, signOut } = useAuth();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState('info');
+  const [cartOpen, setCartOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   // Customer record (single source of truth)
   const { data: customer } = useQuery({
@@ -84,11 +93,11 @@ const CustomerAccount = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-20 pt-12' : 'pt-[88px]'}`}>
       <SEO title="Akun Saya — LAPAU.ID" description="Kelola akun, loyalti, pesanan, dan referral Anda di LAPAU.ID." path="/account" />
-      <FrontendNavbar showSearch={false} />
+      <FrontendNavbar onCartClick={() => setCartOpen(true)} />
 
-      <main className="max-w-3xl mx-auto px-4 pt-20 pb-8 space-y-4">
+      <main className="max-w-3xl mx-auto px-4 pt-4 pb-8 space-y-4">
         {/* Header card */}
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
@@ -173,8 +182,16 @@ const CustomerAccount = () => {
               <Star className="h-6 w-6 mx-auto text-yellow-500" />
               <div className="text-xs text-muted-foreground mt-1">Poin Saat Ini</div>
               <div className="text-2xl font-bold">{customer?.total_points ?? 0}</div>
-              <Link to="/point-exchange"><Button size="sm" className="mt-2">Tukar Poin</Button></Link>
             </CardContent></Card>
+
+            {customer?.id && (
+              <RedemptionRequestList
+                customerId={customer.id}
+                customerPoints={customer?.total_points ?? 0}
+              />
+            )}
+
+            <h3 className="text-sm font-semibold pt-2">Aktivitas Poin</h3>
             {pointTxns.length === 0 && (
               <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Belum ada aktivitas poin.</CardContent></Card>
             )}
@@ -184,8 +201,8 @@ const CustomerAccount = () => {
                   <div className="font-medium">{p.description || p.transaction_type}</div>
                   <div className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString('id-ID')}</div>
                 </div>
-                <div className={`font-semibold ${p.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {p.points > 0 ? '+' : ''}{p.points}
+                <div className={`font-semibold ${(p.points_change ?? p.points ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {(p.points_change ?? p.points ?? 0) > 0 ? '+' : ''}{p.points_change ?? p.points ?? 0}
                 </div>
               </CardContent></Card>
             ))}
@@ -200,6 +217,12 @@ const CustomerAccount = () => {
       </main>
 
       <MinimalFooter />
+      <EnhancedFrontendCartModal open={cartOpen} onOpenChange={setCartOpen} />
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
+      {isMobile && (
+        <MobileBottomNav onCartClick={() => setCartOpen(true)} onAuthClick={() => setAuthOpen(true)} />
+      )}
+      <WhatsAppFloatingButton className={isMobile ? 'bottom-20' : ''} />
     </div>
   );
 };

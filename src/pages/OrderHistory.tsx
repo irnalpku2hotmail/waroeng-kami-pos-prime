@@ -3,23 +3,32 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import OrderDetailsModal from '@/components/OrderDetailsModal';
-import { Package, Search, Calendar, MapPin, Phone, User, CreditCard } from 'lucide-react';
-import HomeNavbar from '@/components/home/HomeNavbar';
-import HomeFooter from '@/components/home/HomeFooter';
-import CartModal from '@/components/CartModal';
+import { Package, Search, Calendar, MapPin, Phone, User, CreditCard, RotateCcw } from 'lucide-react';
+import FrontendNavbar from '@/components/frontend/FrontendNavbar';
+import MinimalFooter from '@/components/frontend/MinimalFooter';
+import MobileBottomNav from '@/components/home/MobileBottomNav';
+import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
+import AuthModal from '@/components/AuthModal';
+import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import SEO from '@/components/SEO';
+import { toast } from '@/hooks/use-toast';
 
 const OrderHistory = () => {
   const { user } = useAuth();
+  const { addItem } = useCart();
+  const isMobile = useIsMobile();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['user-orders', user?.id, searchTerm],
@@ -103,27 +112,39 @@ const OrderHistory = () => {
     }
   };
 
-  const handleSearch = () => {
-    // Search functionality is already handled by the searchTerm state
+  const handleReorder = (order: any) => {
+    if (!order.order_items?.length) return;
+    let added = 0;
+    order.order_items.forEach((it: any) => {
+      const p = it.products;
+      if (!p) return;
+      if ((p.current_stock ?? 0) <= 0) return;
+      addItem({
+        id: it.product_id,
+        name: p.name,
+        price: Number(it.unit_price ?? 0),
+        quantity: Math.min(it.quantity, p.current_stock ?? it.quantity),
+        stock: p.current_stock ?? it.quantity,
+        image: p.image_url,
+      } as any);
+      added++;
+    });
+    toast({ title: 'Ditambahkan ke keranjang', description: `${added} produk dari ${order.order_number} ditambahkan kembali.` });
+    setCartModalOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-20 pt-12' : 'pt-[88px]'}`}>
       <SEO title="Riwayat Pesanan — LAPAU.ID" description="Lihat riwayat pesanan dan status pengiriman Anda di LAPAU.ID. Pantau setiap transaksi belanja Anda dengan mudah." path="/order-history" />
-      <HomeNavbar 
-        onCartClick={() => setCartModalOpen(true)}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onSearch={handleSearch}
-      />
+      <FrontendNavbar onCartClick={() => setCartModalOpen(true)} />
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Riwayat Pesanan</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">Riwayat Pesanan</h1>
           
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Cari berdasarkan nomor pesanan atau nama..."
                 value={searchTerm}
@@ -258,6 +279,14 @@ const OrderHistory = () => {
                     >
                       Lihat Detail
                     </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleReorder(order)}
+                      className="flex-1 sm:flex-none bg-[#03AC0E] hover:bg-[#028A0B]"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Beli Lagi
+                    </Button>
                     {order.notes && (
                       <div className="flex-1 p-2 bg-yellow-50 rounded text-sm">
                         <span className="font-medium">Catatan:</span> {order.notes}
@@ -277,8 +306,13 @@ const OrderHistory = () => {
         />
       </div>
 
-      <HomeFooter />
-      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+      <MinimalFooter />
+      <EnhancedFrontendCartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      {isMobile && (
+        <MobileBottomNav onCartClick={() => setCartModalOpen(true)} onAuthClick={() => setAuthModalOpen(true)} />
+      )}
+      <WhatsAppFloatingButton className={isMobile ? 'bottom-20' : ''} />
     </div>
   );
 };
