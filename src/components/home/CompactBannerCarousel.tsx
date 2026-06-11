@@ -3,12 +3,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSettings } from '@/hooks/useSettings';
 
 const CompactBannerCarousel = () => {
   const isMobile = useIsMobile();
-  const { data: settings } = useSettings();
-  const storeName = (settings?.store_info as any)?.store_name || 'LAPAU.ID';
   const [currentIndex, setCurrentIndex] = useState(1); // start at 1 because of clone
   const [isTransitioning, setIsTransitioning] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
@@ -116,7 +113,7 @@ const CompactBannerCarousel = () => {
     return (
       <div className="w-full h-36 md:h-48 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white mb-4">
         <div className="text-center">
-          <h2 className="text-lg md:text-xl font-bold">Selamat Datang di {storeName}!</h2>
+          <h2 className="text-lg md:text-xl font-bold">Selamat Datang di TokoQu!</h2>
           <p className="text-xs md:text-sm opacity-90">Temukan produk terbaik untuk Anda</p>
         </div>
       </div>

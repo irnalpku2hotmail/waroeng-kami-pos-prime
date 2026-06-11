@@ -42,72 +42,59 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     }
   });
 
-  // Unified purchase history: POS transactions + Frontend orders
+  // Fetch purchase history with year filter
   const { data: purchaseHistory = [] } = useQuery({
-    queryKey: ['customer-purchase-history-unified', customer?.id, selectedYear],
+    queryKey: ['customer-purchase-history', customer?.id, selectedYear],
     queryFn: async () => {
       if (!customer?.id) return [];
-
-      const [posRes, orderRes] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('id, transaction_number, total_amount, points_earned, points_used, payment_method, created_at, transaction_items(quantity, products(name))')
-          .eq('customer_id', customer.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('orders')
-          .select('id, order_number, total_amount, status, payment_method, created_at, order_items(quantity, products(name))')
-          .eq('customer_id', customer.id)
-          .order('created_at', { ascending: false }),
-      ]);
-
-      const pos = (posRes.data || []).map((t: any) => ({
-        id: t.id,
-        number: t.transaction_number,
-        source: 'POS',
-        total_amount: Number(t.total_amount || 0),
+      
+      // Fetch transactions with items
+      const { data: transactions, error } = await supabase
+        .from('transactions')
+        .select(`
+          id,
+          transaction_number,
+          total_amount,
+          points_earned,
+          points_used,
+          created_at,
+          transaction_items(
+            quantity,
+            products(name)
+          )
+        `)
+        .eq('customer_id', customer.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      if (!transactions) return [];
+      
+      // Transform the data to match expected format
+      const transformedData = transactions.map((t: any) => ({
+        transaction_id: t.id,
+        transaction_number: t.transaction_number,
+        total_amount: t.total_amount,
         points_earned: t.points_earned || 0,
         points_used: t.points_used || 0,
-        payment_method: t.payment_method || '-',
-        status: 'completed',
         created_at: t.created_at,
-        items: (t.transaction_items || []).map((i: any) => ({ product_name: i.products?.name || '-', quantity: i.quantity })),
+        items: t.transaction_items?.map((item: any) => ({
+          product_name: item.products?.name || 'Unknown',
+          quantity: item.quantity
+        })) || []
       }));
-
-      const orders = (orderRes.data || []).map((o: any) => ({
-        id: o.id,
-        number: o.order_number,
-        source: 'Frontend',
-        total_amount: Number(o.total_amount || 0),
-        points_earned: 0,
-        points_used: 0,
-        payment_method: o.payment_method || '-',
-        status: o.status,
-        created_at: o.created_at,
-        items: (o.order_items || []).map((i: any) => ({ product_name: i.products?.name || '-', quantity: i.quantity })),
-      }));
-
-      const merged = [...pos, ...orders].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
+      
+      // Filter by year if selected
       if (selectedYear !== 'all') {
-        return merged.filter((t) => new Date(t.created_at).getFullYear().toString() === selectedYear);
+        return transformedData.filter((transaction: any) => {
+          const year = new Date(transaction.created_at).getFullYear().toString();
+          return year === selectedYear;
+        });
       }
-      return merged;
+      
+      return transformedData;
     },
     enabled: !!customer?.id && open
   });
-
-  // Summary stats
-  const summary = React.useMemo(() => {
-    const list = purchaseHistory as any[];
-    const total_value = list.reduce((s, t) => s + (t.total_amount || 0), 0);
-    const pos_total = list.filter(t => t.source === 'POS').reduce((s, t) => s + (t.total_amount || 0), 0);
-    const online_total = list.filter(t => t.source === 'Frontend').reduce((s, t) => s + (t.total_amount || 0), 0);
-    const cod_total = list.filter(t => (t.payment_method || '').toLowerCase().includes('cod')).reduce((s, t) => s + (t.total_amount || 0), 0);
-    return { count: list.length, total_value, pos_total, online_total, cod_total };
-  }, [purchaseHistory]);
 
   // Fetch point transactions
   const { data: pointHistory = [] } = useQuery({
@@ -278,31 +265,11 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   <History className="h-4 w-4 text-purple-600" />
                   <div>
                     <p className="text-sm text-gray-600">Total Transaksi</p>
-                    <p className="text-2xl font-bold text-purple-600">{summary.count}</p>
+                    <p className="text-2xl font-bold text-purple-600">{purchaseHistory.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Breakdown */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card><CardContent className="p-3">
-              <p className="text-xs text-gray-600">Total Nilai</p>
-              <p className="text-base font-bold">Rp {summary.total_value.toLocaleString('id-ID')}</p>
-            </CardContent></Card>
-            <Card><CardContent className="p-3">
-              <p className="text-xs text-gray-600">POS</p>
-              <p className="text-base font-bold">Rp {summary.pos_total.toLocaleString('id-ID')}</p>
-            </CardContent></Card>
-            <Card><CardContent className="p-3">
-              <p className="text-xs text-gray-600">Online</p>
-              <p className="text-base font-bold">Rp {summary.online_total.toLocaleString('id-ID')}</p>
-            </CardContent></Card>
-            <Card><CardContent className="p-3">
-              <p className="text-xs text-gray-600">COD</p>
-              <p className="text-base font-bold">Rp {summary.cod_total.toLocaleString('id-ID')}</p>
-            </CardContent></Card>
           </div>
 
           {/* Member Card Section */}
@@ -394,11 +361,8 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>No.</TableHead>
-                          <TableHead>Sumber</TableHead>
+                          <TableHead>No. Transaksi</TableHead>
                           <TableHead>Tanggal</TableHead>
-                          <TableHead>Pembayaran</TableHead>
-                          <TableHead>Status</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Points</TableHead>
                           <TableHead>Items</TableHead>
@@ -406,21 +370,12 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                       </TableHeader>
                       <TableBody>
                         {purchaseHistory.map((transaction: any) => (
-                          <TableRow key={`${transaction.source}-${transaction.id}`}>
+                          <TableRow key={transaction.transaction_id}>
                             <TableCell className="font-medium">
-                              {transaction.number}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={transaction.source === 'POS' ? 'secondary' : 'default'}>
-                                {transaction.source}
-                              </Badge>
+                              {transaction.transaction_number}
                             </TableCell>
                             <TableCell>
                               {new Date(transaction.created_at).toLocaleDateString('id-ID')}
-                            </TableCell>
-                            <TableCell className="capitalize">{transaction.payment_method}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{transaction.status}</Badge>
                             </TableCell>
                             <TableCell>
                               Rp {transaction.total_amount.toLocaleString('id-ID')}
