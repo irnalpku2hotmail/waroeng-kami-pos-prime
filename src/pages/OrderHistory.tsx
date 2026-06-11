@@ -35,14 +35,9 @@ const OrderHistory = () => {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Get customer based on user email
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-
-      if (!customer) return [];
+      // Resolve canonical customer id (same source as /account)
+      const { data: cid, error: cidErr } = await supabase.rpc('get_or_create_customer_for_current_user');
+      if (cidErr || !cid) return [];
 
       let query = supabase
         .from('orders')
@@ -60,7 +55,7 @@ const OrderHistory = () => {
             )
           )
         `)
-        .eq('customer_id', customer.id)
+        .eq('customer_id', cid as string)
         .order('created_at', { ascending: false });
 
       if (searchTerm) {

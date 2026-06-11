@@ -59,20 +59,23 @@ const Customers = () => {
       
       if (error) throw error;
 
-      // Calculate actual total_spent from transactions
-      const customersWithTotalSpent = await Promise.all(
+      // Aggregate spent + order counts from both POS transactions and online orders (delivered)
+      const customersEnriched = await Promise.all(
         (customers || []).map(async (customer) => {
-          const { data: transactions } = await supabase
-            .from('transactions')
-            .select('total_amount')
-            .eq('customer_id', customer.id);
-          
-          const total_spent = transactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
-          return { ...customer, total_spent };
+          const [{ data: txns }, { data: ords }] = await Promise.all([
+            supabase.from('transactions').select('total_amount').eq('customer_id', customer.id),
+            supabase.from('orders').select('total_amount,status').eq('customer_id', customer.id),
+          ]);
+          const spentTxn = (txns || []).reduce((s, t: any) => s + (Number(t.total_amount) || 0), 0);
+          const deliveredOrders = (ords || []).filter((o: any) => o.status === 'delivered');
+          const spentOrders = deliveredOrders.reduce((s, o: any) => s + (Number(o.total_amount) || 0), 0);
+          const total_spent = spentTxn + spentOrders;
+          const total_orders = (txns?.length || 0) + (ords?.length || 0);
+          return { ...customer, total_spent, total_orders };
         })
       );
-      
-      return { data: customersWithTotalSpent, count };
+
+      return { data: customersEnriched, count };
     }
   });
 
