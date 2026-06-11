@@ -394,8 +394,11 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>No. Transaksi</TableHead>
+                          <TableHead>No.</TableHead>
+                          <TableHead>Sumber</TableHead>
                           <TableHead>Tanggal</TableHead>
+                          <TableHead>Pembayaran</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Points</TableHead>
                           <TableHead>Items</TableHead>
@@ -403,12 +406,21 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                       </TableHeader>
                       <TableBody>
                         {purchaseHistory.map((transaction: any) => (
-                          <TableRow key={transaction.transaction_id}>
+                          <TableRow key={`${transaction.source}-${transaction.id}`}>
                             <TableCell className="font-medium">
-                              {transaction.transaction_number}
+                              {transaction.number}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={transaction.source === 'POS' ? 'secondary' : 'default'}>
+                                {transaction.source}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               {new Date(transaction.created_at).toLocaleDateString('id-ID')}
+                            </TableCell>
+                            <TableCell className="capitalize">{transaction.payment_method}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{transaction.status}</Badge>
                             </TableCell>
                             <TableCell>
                               Rp {transaction.total_amount.toLocaleString('id-ID')}
