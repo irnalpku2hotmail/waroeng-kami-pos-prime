@@ -45,7 +45,7 @@ const CustomerAccount = () => {
     enabled: !!user?.id,
   });
 
-  // Recent orders
+  // Recent orders (latest 10 for display)
   const { data: orders = [] } = useQuery({
     queryKey: ['account-orders', customer?.id],
     enabled: !!customer?.id,
@@ -59,6 +59,21 @@ const CustomerAccount = () => {
         .limit(10);
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Real order count (not limited to latest 10)
+  const { data: orderCount = 0 } = useQuery({
+    queryKey: ['account-order-count', customer?.id],
+    enabled: !!customer?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', customer!.id);
+      if (error) throw error;
+      return count || 0;
     },
   });
 
@@ -133,7 +148,7 @@ const CustomerAccount = () => {
           <Card><CardContent className="p-3 text-center">
             <Gift className="h-4 w-4 mx-auto text-pink-500" />
             <div className="text-xs text-muted-foreground mt-1">Pesanan</div>
-            <div className="font-semibold text-sm">{orders.length}</div>
+            <div className="font-semibold text-sm">{orderCount}</div>
           </CardContent></Card>
         </div>
 
