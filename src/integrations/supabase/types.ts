@@ -1729,7 +1729,7 @@ export type Database = {
       }
       transactions: {
         Row: {
-          cashier_id: string
+          cashier_id: string | null
           change_amount: number
           created_at: string
           customer_id: string | null
@@ -1738,18 +1738,20 @@ export type Database = {
           id: string
           is_credit: boolean
           notes: string | null
+          order_id: string | null
           paid_amount: number
           payment_amount: number
           payment_type: Database["public"]["Enums"]["transaction_type"]
           points_earned: number
           points_used: number
           receipt_url: string | null
+          source: string
           total_amount: number
           transaction_number: string
           updated_at: string
         }
         Insert: {
-          cashier_id: string
+          cashier_id?: string | null
           change_amount?: number
           created_at?: string
           customer_id?: string | null
@@ -1758,18 +1760,20 @@ export type Database = {
           id?: string
           is_credit?: boolean
           notes?: string | null
+          order_id?: string | null
           paid_amount?: number
           payment_amount?: number
           payment_type?: Database["public"]["Enums"]["transaction_type"]
           points_earned?: number
           points_used?: number
           receipt_url?: string | null
+          source?: string
           total_amount?: number
           transaction_number: string
           updated_at?: string
         }
         Update: {
-          cashier_id?: string
+          cashier_id?: string | null
           change_amount?: number
           created_at?: string
           customer_id?: string | null
@@ -1778,12 +1782,14 @@ export type Database = {
           id?: string
           is_credit?: boolean
           notes?: string | null
+          order_id?: string | null
           paid_amount?: number
           payment_amount?: number
           payment_type?: Database["public"]["Enums"]["transaction_type"]
           points_earned?: number
           points_used?: number
           receipt_url?: string | null
+          source?: string
           total_amount?: number
           transaction_number?: string
           updated_at?: string
@@ -1801,6 +1807,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
