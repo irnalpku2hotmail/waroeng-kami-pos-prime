@@ -7,15 +7,12 @@ export const useSettings = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('settings').select('*');
       if (error) throw error;
-
+      
       const settingsMap: Record<string, any> = {};
       data?.forEach(setting => {
         settingsMap[setting.key] = setting.value;
       });
       return settingsMap;
-    },
-    staleTime: 15 * 60 * 1000, // settings rarely change
-    gcTime: 60 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    }
   });
 };

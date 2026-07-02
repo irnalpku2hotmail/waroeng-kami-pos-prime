@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-const VoiceSearch = lazy(() => import('@/components/VoiceSearch'));
-const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
-const SmartSearchSuggestions = lazy(() => import('@/components/home/SmartSearchSuggestions'));
+import VoiceSearch from '@/components/VoiceSearch';
+import BarcodeScanner from '@/components/BarcodeScanner';
+import SmartSearchSuggestions from '@/components/home/SmartSearchSuggestions';
 
 
 interface EnhancedHomeSearchProps {
@@ -25,7 +25,6 @@ const EnhancedHomeSearch = ({
   onCategoryChange 
 }: EnhancedHomeSearchProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [interacted, setInteracted] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [debouncedTerm, setDebouncedTerm] = useState(searchTerm);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -152,7 +151,7 @@ const EnhancedHomeSearch = ({
               setSelectedIndex(-1);
             }}
             onKeyDown={handleKeyDown}
-            onFocus={() => { setInteracted(true); setShowSuggestions(true); }}
+            onFocus={() => setShowSuggestions(true)}
             className={`${isMobile ? 'pl-3 pr-16 h-7 text-[11px] placeholder:text-[11px]' : 'pl-10 pr-24 h-10'} bg-white border-0 focus:ring-2 focus:ring-[#03AC0E]/30 transition-colors rounded-lg`}
           />
           <div className={`absolute ${isMobile ? 'right-1' : 'right-2'} top-1/2 transform -translate-y-1/2 flex items-center gap-0.5`}>
@@ -170,40 +169,29 @@ const EnhancedHomeSearch = ({
                 <X className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'}`} />
               </Button>
             )}
-            <div
-              className={isMobile ? 'scale-75 origin-right flex items-center gap-0' : ''}
-              onPointerEnter={() => setInteracted(true)}
-            >
-              {interacted && (
-                <Suspense fallback={null}>
-                  <VoiceSearch
-                    onVoiceResult={(text) => {
-                      onSearchChange(text);
-                      setShowSuggestions(true);
-                    }}
-                  />
-                  <BarcodeScanner onScanSuccess={handleBarcodeScan} />
-                </Suspense>
-              )}
+            <div className={isMobile ? 'scale-75 origin-right flex items-center gap-0' : ''}>
+              <VoiceSearch 
+                onVoiceResult={(text) => {
+                  onSearchChange(text);
+                  setShowSuggestions(true);
+                }} 
+              />
+              <BarcodeScanner onScanSuccess={handleBarcodeScan} />
             </div>
           </div>
         </div>
       </div>
 
       {/* Smart Suggestions */}
-      {interacted && (
-        <Suspense fallback={null}>
-          <SmartSearchSuggestions
-            searchTerm={debouncedTerm}
-            showSuggestions={showSuggestions}
-            selectedIndex={selectedIndex}
-            onClose={() => { setShowSuggestions(false); setSelectedIndex(-1); }}
-            onSelectProduct={(id) => { navigate(`/product/${id}`); setShowSuggestions(false); }}
-            onSearch={(q) => { onSearchChange(q); handleSearch(q); }}
-            selectedCategory={selectedCategory}
-          />
-        </Suspense>
-      )}
+      <SmartSearchSuggestions
+        searchTerm={debouncedTerm}
+        showSuggestions={showSuggestions}
+        selectedIndex={selectedIndex}
+        onClose={() => { setShowSuggestions(false); setSelectedIndex(-1); }}
+        onSelectProduct={(id) => { navigate(`/product/${id}`); setShowSuggestions(false); }}
+        onSearch={(q) => { onSearchChange(q); handleSearch(q); }}
+        selectedCategory={selectedCategory}
+      />
     </div>
   );
 };

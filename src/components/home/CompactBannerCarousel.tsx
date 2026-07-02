@@ -29,10 +29,7 @@ const CompactBannerCarousel = () => {
         .single();
       if (error) return [];
       return Array.isArray(data?.value) ? data.value : [];
-    },
-    staleTime: 15 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    }
   });
 
   // For infinite loop: [lastClone, ...originals, firstClone]
