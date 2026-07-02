@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
 import AuthModal from '@/components/AuthModal';
 import { useSettings } from '@/hooks/useSettings';
-import NotificationDropdown from '@/components/notifications/NotificationDropdown';
+const NotificationDropdown = lazy(() => import('@/components/notifications/NotificationDropdown'));
 
 interface FrontendNavbarProps {
   searchTerm?: string;
@@ -59,7 +59,10 @@ const FrontendNavbar = ({
         .order('name');
       if (error) throw error;
       return data || [];
-    }
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch user profile
@@ -75,7 +78,9 @@ const FrontendNavbar = ({
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const storeInfo = settings?.store_info || {};
@@ -204,7 +209,11 @@ const FrontendNavbar = ({
             {/* Actions */}
             <div className="flex items-center space-x-1 sm:space-x-3">
               {/* Notification */}
-              {user && <NotificationDropdown />}
+              {user && (
+                <Suspense fallback={null}>
+                  <NotificationDropdown />
+                </Suspense>
+              )}
 
               {/* Cart - Desktop only (mobile has bottom nav) */}
               {!isMobile && (
