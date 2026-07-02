@@ -85,12 +85,28 @@ const CustomerAccount = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('point_transactions')
-        .select('id, points, transaction_type, description, created_at')
+        .select('id, points_change, description, created_at')
         .eq('customer_id', customer!.id)
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Delivered order count (single source of truth for "Pesanan")
+  const { data: deliveredCount = 0 } = useQuery({
+    queryKey: ['account-delivered-count', customer?.id],
+    enabled: !!customer?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', customer!.id)
+        .eq('status', 'delivered');
+      if (error) throw error;
+      return count || 0;
     },
   });
 
@@ -148,7 +164,7 @@ const CustomerAccount = () => {
           <Card><CardContent className="p-3 text-center">
             <Gift className="h-4 w-4 mx-auto text-pink-500" />
             <div className="text-xs text-muted-foreground mt-1">Pesanan</div>
-            <div className="font-semibold text-sm">{orderCount}</div>
+            <div className="font-semibold text-sm">{deliveredCount}</div>
           </CardContent></Card>
         </div>
 
