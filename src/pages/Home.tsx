@@ -29,7 +29,7 @@ const SectionPlaceholder = ({ height = 'h-40' }: { height?: string }) => (
   </div>
 );
 
-const LazySection = ({ children, height = 'h-40', rootMargin = '300px' }: { children: React.ReactNode; height?: string; rootMargin?: string }) => {
+const LazySection = ({ children, height = 'h-40', rootMargin = '150px' }: { children: React.ReactNode; height?: string; rootMargin?: string }) => {
   const { ref, isVisible } = useLazySection(rootMargin);
   return (
     <div ref={ref}>
