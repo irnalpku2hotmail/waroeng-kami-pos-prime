@@ -5,7 +5,7 @@ import {
   Home, Package, ShoppingCart, Users, BarChart3, Settings,
   CreditCard, UserCheck, MapPin, Truck, FileText, Star,
   Zap, Archive, TrendingUp, LayoutDashboard,
-  ChevronLeft, ChevronRight, Menu, X
+  ChevronLeft, ChevronRight, Menu, X, ClipboardList, ShieldCheck
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
     { name: 'Products', path: '/products', icon: Package, resource: 'products', color: 'text-orange-500', bg: 'bg-orange-50' },
     { name: 'Categories & Units', path: '/categories', icon: Archive, resource: 'categories', color: 'text-amber-500', bg: 'bg-amber-50' },
     { name: 'Inventory', path: '/inventory', icon: TrendingUp, resource: 'inventory', color: 'text-teal-500', bg: 'bg-teal-50' },
+    { name: 'Stock Opname', path: '/stock-opname', icon: ClipboardList, resource: 'inventory', color: 'text-teal-600', bg: 'bg-teal-50' },
     { name: 'Orders', path: '/orders', icon: FileText, resource: 'orders', color: 'text-cyan-500', bg: 'bg-cyan-50' },
     { name: 'Purchases', path: '/purchases', icon: Truck, resource: 'purchases', color: 'text-violet-500', bg: 'bg-violet-50' },
     { name: 'Returns', path: '/returns', icon: Archive, resource: 'returns', color: 'text-rose-500', bg: 'bg-rose-50' },
@@ -45,6 +46,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
     { name: 'Paket Bundling', path: '/bundles', icon: Package, resource: 'flash-sales', color: 'text-fuchsia-500', bg: 'bg-fuchsia-50' },
     { name: 'Expenses', path: '/expenses', icon: FileText, resource: 'expenses', color: 'text-slate-500', bg: 'bg-slate-50' },
     { name: 'Reports', path: '/reports', icon: BarChart3, resource: 'reports', color: 'text-blue-600', bg: 'bg-blue-50' },
+    { name: 'Audit Report', path: '/audit-report', icon: ShieldCheck, resource: 'reports', color: 'text-red-500', bg: 'bg-red-50' },
     { name: 'Settings', path: '/settings', icon: Settings, resource: 'settings', color: 'text-gray-500', bg: 'bg-gray-100' },
   ];
 
