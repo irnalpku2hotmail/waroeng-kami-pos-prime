@@ -1646,6 +1646,116 @@ export type Database = {
           },
         ]
       }
+      stock_opname_items: {
+        Row: {
+          barcode: string | null
+          checked_at: string | null
+          checked_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          physical_qty: number | null
+          product_id: string
+          session_id: string
+          status: string
+          system_qty: number
+          updated_at: string
+          variance: number | null
+        }
+        Insert: {
+          barcode?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          physical_qty?: number | null
+          product_id: string
+          session_id: string
+          status?: string
+          system_qty?: number
+          updated_at?: string
+          variance?: number | null
+        }
+        Update: {
+          barcode?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          physical_qty?: number | null
+          product_id?: string
+          session_id?: string
+          status?: string
+          system_qty?: number
+          updated_at?: string
+          variance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opname_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opname_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "stock_opname_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_opname_sessions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          session_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          session_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          session_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opname_sessions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
