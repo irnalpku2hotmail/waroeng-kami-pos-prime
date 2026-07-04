@@ -42,6 +42,9 @@ const Register = lazy(() => import("./pages/auth/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const CustomerAccount = lazy(() => import("./pages/CustomerAccount"));
 const RewardRedemptions = lazy(() => import("./pages/RewardRedemptions"));
+const AuditReport = lazy(() => import("./pages/AuditReport"));
+const StockOpname = lazy(() => import("./pages/StockOpname"));
+const StockOpnameDetail = lazy(() => import("./pages/StockOpnameDetail"));
 
 // Lightweight fallback (no large skeleton — just keeps layout from jumping)
 const RouteFallback = () => (
@@ -92,6 +95,9 @@ function App() {
                 <Route path="/search-analytics" element={<ProtectedRoute><SearchAnalytics /></ProtectedRoute>} />
                 <Route path="/bundles" element={<ProtectedRoute><Bundles /></ProtectedRoute>} />
                 <Route path="/reward-redemptions" element={<ProtectedRoute><RewardRedemptions /></ProtectedRoute>} />
+                <Route path="/audit-report" element={<ProtectedRoute><AuditReport /></ProtectedRoute>} />
+                <Route path="/stock-opname" element={<ProtectedRoute><StockOpname /></ProtectedRoute>} />
+                <Route path="/stock-opname/:id" element={<ProtectedRoute><StockOpnameDetail /></ProtectedRoute>} />
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />
