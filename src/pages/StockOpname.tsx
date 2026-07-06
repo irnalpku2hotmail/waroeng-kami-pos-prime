@@ -52,12 +52,31 @@ const StockOpname = () => {
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['opname-sessions'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      // NOTE: created_by FK points to auth.users, not profiles, so we cannot embed profiles via PostgREST.
+      // Fetch sessions + categories in one query, then join profiles client-side.
+      const { data: sess, error } = await (supabase as any)
         .from('stock_opname_sessions')
-        .select('*, categories(name), profiles!stock_opname_sessions_created_by_fkey(full_name)')
+        .select('*, categories(name)')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      if (error) {
+        console.error('[StockOpname] failed to fetch sessions:', error);
+        toast.error(`Gagal memuat session: ${error.message}`);
+        throw error;
+      }
+      const creatorIds = Array.from(new Set((sess || []).map((s: any) => s.created_by).filter(Boolean)));
+      let profileMap: Record<string, string> = {};
+      if (creatorIds.length) {
+        const { data: profs, error: pErr } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', creatorIds as string[]);
+        if (pErr) {
+          console.warn('[StockOpname] failed to fetch profiles (non-fatal):', pErr);
+        } else {
+          profileMap = Object.fromEntries((profs || []).map((p: any) => [p.id, p.full_name]));
+        }
+      }
+      return (sess || []).map((s: any) => ({ ...s, profiles: { full_name: profileMap[s.created_by] || '-' } }));
     },
   });
 
@@ -67,7 +86,10 @@ const StockOpname = () => {
       const { data, error } = await (supabase as any)
         .from('stock_opname_items')
         .select('session_id, status, variance');
-      if (error) throw error;
+      if (error) {
+        console.error('[StockOpname] failed to fetch items agg:', error);
+        throw error;
+      }
       return data || [];
     },
   });
@@ -86,6 +108,17 @@ const StockOpname = () => {
       if (!form.session_name.trim()) throw new Error('Nama session wajib');
       if (!form.category_id) throw new Error('Pilih kategori');
 
+      // Validate: kategori harus punya produk aktif
+      const { data: preview, error: prevErr } = await supabase
+        .from('products')
+        .select('id, barcode, current_stock')
+        .eq('category_id', form.category_id)
+        .eq('is_active', true);
+      if (prevErr) throw prevErr;
+      if (!preview || preview.length === 0) {
+        throw new Error('Kategori ini tidak memiliki produk aktif. Session tidak bisa dibuat.');
+      }
+
       const { data: session, error } = await (supabase as any)
         .from('stock_opname_sessions')
         .insert({
@@ -97,26 +130,24 @@ const StockOpname = () => {
         })
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        console.error('[StockOpname] insert session failed:', error);
+        throw new Error(`Insert session gagal: ${error.message}`);
+      }
 
-      // Populate items dari produk aktif dalam kategori. system_qty disimpan tapi tidak ditampilkan.
-      const { data: products, error: pErr } = await supabase
-        .from('products')
-        .select('id, barcode, current_stock')
-        .eq('category_id', form.category_id)
-        .eq('is_active', true);
-      if (pErr) throw pErr;
-
-      if (products && products.length) {
-        const rows = products.map((p: any) => ({
-          session_id: session.id,
-          product_id: p.id,
-          barcode: p.barcode,
-          system_qty: p.current_stock || 0,
-          status: 'pending',
-        }));
-        const { error: iErr } = await (supabase as any).from('stock_opname_items').insert(rows);
-        if (iErr) throw iErr;
+      const rows = preview.map((p: any) => ({
+        session_id: session.id,
+        product_id: p.id,
+        barcode: p.barcode,
+        system_qty: p.current_stock || 0,
+        status: 'pending',
+      }));
+      const { error: iErr } = await (supabase as any).from('stock_opname_items').insert(rows);
+      if (iErr) {
+        console.error('[StockOpname] insert items failed:', iErr);
+        // Rollback session if items failed
+        await (supabase as any).from('stock_opname_sessions').delete().eq('id', session.id);
+        throw new Error(`Insert items gagal: ${iErr.message}`);
       }
       return session;
     },
@@ -124,8 +155,8 @@ const StockOpname = () => {
       toast.success('Session opname dibuat');
       setOpen(false);
       setForm({ session_name: '', category_id: '', notes: '' });
-      qc.invalidateQueries({ queryKey: ['opname-sessions'] });
-      qc.invalidateQueries({ queryKey: ['opname-items-agg'] });
+      qc.invalidateQueries({ queryKey: ['opname-sessions'], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ['opname-items-agg'], refetchType: 'active' });
     },
     onError: (e: any) => toast.error(e.message || 'Gagal membuat session'),
   });
