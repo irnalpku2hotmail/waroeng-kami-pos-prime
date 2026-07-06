@@ -8,7 +8,7 @@ import { defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
 // src/lib/mcp/tools/search-products.ts
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { createClient } from "npm:@supabase/supabase-js@^2.50.0";
-import { z } from "npm:zod@^3.23.8";
+import { z } from "npm:zod@^4";
 var search_products_default = defineTool({
   name: "search_products",
   title: "Search products",
@@ -39,7 +39,7 @@ var search_products_default = defineTool({
 // src/lib/mcp/tools/get-product.ts
 import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.50.0";
-import { z as z2 } from "npm:zod@^3.23.8";
+import { z as z2 } from "npm:zod@^4";
 var get_product_default = defineTool2({
   name: "get_product",
   title: "Get product details",
@@ -77,7 +77,7 @@ var get_product_default = defineTool2({
 // src/lib/mcp/tools/list-low-stock.ts
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.50.0";
-import { z as z3 } from "npm:zod@^3.23.8";
+import { z as z3 } from "npm:zod@^4";
 var list_low_stock_default = defineTool3({
   name: "list_low_stock_products",
   title: "List low-stock products",
@@ -107,7 +107,7 @@ var list_low_stock_default = defineTool3({
 // src/lib/mcp/tools/sales-summary.ts
 import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { createClient as createClient4 } from "npm:@supabase/supabase-js@^2.50.0";
-import { z as z4 } from "npm:zod@^3.23.8";
+import { z as z4 } from "npm:zod@^4";
 var sales_summary_default = defineTool4({
   name: "sales_summary",
   title: "Sales summary",
