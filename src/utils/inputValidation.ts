@@ -71,7 +71,7 @@ export const validateAndSanitize = <T>(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.issues.map(err => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { success: false, errors: ['Validation failed'] };
