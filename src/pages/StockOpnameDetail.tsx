@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { toast } from 'sonner';
-import { ArrowLeft, Package, CheckCircle2, XCircle, Clock, Search } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, XCircle, Clock, Search, Lock, Unlock } from 'lucide-react';
 
 type OpnameItem = {
   id: string;
@@ -31,7 +31,7 @@ type OpnameItem = {
 
 const StockOpnameDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth() as any;
   const qc = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'match' | 'mismatch' | 'pending'>('all');
   const [search, setSearch] = useState('');
@@ -52,6 +52,9 @@ const StockOpnameDetail = () => {
     },
     enabled: !!id,
   });
+
+  const isLocked = !!session?.is_locked;
+  const canManageLock = ['admin', 'manager'].includes(profile?.role);
 
   const { data: items = [] } = useQuery<OpnameItem[]>({
     queryKey: ['opname-items', id],
@@ -91,6 +94,10 @@ const StockOpnameDetail = () => {
   };
 
   const handleScan = (barcode: string) => {
+    if (isLocked) {
+      toast.error('Sesi terkunci. Buka kunci terlebih dahulu.');
+      return;
+    }
     const found = findByBarcode(barcode);
     if (!found) {
       toast.error('Produk tidak ditemukan dalam session ini');
@@ -103,6 +110,7 @@ const StockOpnameDetail = () => {
 
   const saveMut = useMutation({
     mutationFn: async () => {
+      if (isLocked) throw new Error('Sesi terkunci — tidak dapat menyimpan.');
       if (!current) throw new Error('Belum ada produk dipilih');
       const qty = parseFloat(qtyInput);
       if (isNaN(qty) || qty < 0) throw new Error('Qty tidak valid');
@@ -126,6 +134,22 @@ const StockOpnameDetail = () => {
       setQtyInput('');
       qc.invalidateQueries({ queryKey: ['opname-items', id] });
       qc.invalidateQueries({ queryKey: ['opname-items-agg'] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const unlockMut = useMutation({
+    mutationFn: async () => {
+      const { error } = await (supabase as any)
+        .from('stock_opname_sessions')
+        .update({ status: 'in_progress' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Sesi dibuka kembali');
+      qc.invalidateQueries({ queryKey: ['opname-session', id] });
+      qc.invalidateQueries({ queryKey: ['opname-sessions'] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -169,14 +193,27 @@ const StockOpnameDetail = () => {
               <Button asChild variant="ghost" size="icon"><Link to="/stock-opname"><ArrowLeft className="h-4 w-4" /></Link></Button>
               <div>
                 <h1 className="text-xl font-bold">{session?.session_name || 'Loading...'}</h1>
-                <p className="text-xs text-muted-foreground">Kategori: {session?.categories?.name || '-'} · Status: <Badge variant="outline">{session?.status}</Badge></p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+                  Kategori: {session?.categories?.name || '-'} · Status:
+                  <Badge variant="outline">{session?.status}</Badge>
+                  {isLocked && (
+                    <Badge className="bg-amber-500 hover:bg-amber-600 gap-1">
+                      <Lock className="h-3 w-3" /> Terkunci
+                    </Badge>
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex gap-2">
               {session?.status === 'draft' && <Button size="sm" onClick={() => statusMut.mutate('in_progress')}>Mulai</Button>}
               {session?.status === 'in_progress' && <Button size="sm" onClick={() => statusMut.mutate('review')}>Ajukan Review</Button>}
-              {session?.status === 'review' && <Button size="sm" onClick={() => statusMut.mutate('approved')}>Setujui</Button>}
-              {session?.status === 'approved' && <Button size="sm" variant="outline" onClick={() => statusMut.mutate('closed')}>Tutup</Button>}
+              {session?.status === 'review' && canManageLock && <Button size="sm" onClick={() => statusMut.mutate('approved')}>Setujui</Button>}
+              {session?.status === 'approved' && canManageLock && <Button size="sm" variant="outline" onClick={() => statusMut.mutate('closed')}>Tutup</Button>}
+              {isLocked && canManageLock && session?.status !== 'closed' && (
+                <Button size="sm" variant="outline" onClick={() => unlockMut.mutate()} disabled={unlockMut.isPending}>
+                  <Unlock className="h-3 w-3 mr-1" /> Buka Kunci
+                </Button>
+              )}
             </div>
           </div>
 
@@ -193,6 +230,12 @@ const StockOpnameDetail = () => {
           <Card>
             <CardHeader><CardTitle className="text-base">Scan / Input Barcode</CardTitle></CardHeader>
             <CardContent className="space-y-3">
+              {isLocked && (
+                <div className="flex items-center gap-2 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded p-2">
+                  <Lock className="h-4 w-4" />
+                  Sesi ini terkunci. Item tidak dapat diubah sampai kunci dibuka.
+                </div>
+              )}
               <form onSubmit={handleManualSubmit} className="flex gap-2">
                 <Input
                   ref={manualRef}
@@ -201,9 +244,10 @@ const StockOpnameDetail = () => {
                   placeholder="Scan atau ketik barcode..."
                   className="font-mono"
                   autoFocus
+                  disabled={isLocked}
                 />
                 <BarcodeScanner onScanSuccess={handleScan} />
-                <Button type="submit">Cari</Button>
+                <Button type="submit" disabled={isLocked}>Cari</Button>
               </form>
 
               {current && (
@@ -230,9 +274,10 @@ const StockOpnameDetail = () => {
                         onChange={(e) => setQtyInput(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') saveMut.mutate(); }}
                         className="w-28"
+                        disabled={isLocked}
                       />
                     </div>
-                    <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>Simpan</Button>
+                    <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || isLocked}>Simpan</Button>
                     <Button variant="outline" onClick={() => { setCurrent(null); setQtyInput(''); manualRef.current?.focus(); }}>Batal</Button>
                   </div>
                 </div>

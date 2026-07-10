@@ -1,91 +1,53 @@
-# Audit Customer + Loyalty + Order + Stock — Temuan & Rencana Perbaikan
 
-## Akar masalah utama
-Saya cek `information_schema.triggers` schema `public` → **0 trigger**.
-Artinya semua function trigger (`update_stock_on_sale`, `update_stock_on_purchase`, `update_stock_on_order_delivery`, `update_stock_on_return_status_change`, `set_order_number`, `set_credit_due_date`, `set_customer_return_number`, `handle_product_price_change`, `update_updated_at_column`) **ada tapi tidak pernah terpasang ke tabel apapun**.
+# Rencana: Session Lock + Audit & Optimasi Performa Admin
 
-Konsekuensi yang cocok dengan keluhan user:
-- Order frontend → `order_items` masuk tapi `products.current_stock` **tidak berkurang** saat status `delivered`.
-- POS `transaction_items` → stok tidak berkurang (kecuali ada manual update di kode).
-- Purchase received → stok tidak bertambah.
-- Return approved → stok tidak kembali.
-- **Tidak ada trigger apapun yang menambah poin / total_spent / total_orders dari `orders`** — itulah kenapa customer signup yang checkout dari frontend: poin 0, belanja 0, jumlah pesanan 0.
-- POS (`transactions`) punya kolom `points_earned` & `points_used` tapi tidak otomatis menambah `customers.total_points` / `total_spent` lewat trigger (perlu cek apakah `usePOS` melakukannya manual — meskipun begitu, frontend order tetap tidak tersentuh).
+Pekerjaan ini besar. Untuk menghormati batasan Anda ("jangan ubah business logic / UI / flow transaksi") saya bagi jadi 3 turn eksekusi berurutan. Setiap turn selesai, build hijau, aplikasi tetap jalan sebelum lanjut ke turn berikutnya.
 
-## Identitas customer — sudah benar
-- `CartModal`, `FrontendCartModal`, `EnhancedFrontendCartModal` semua memanggil RPC `get_or_create_customer_for_current_user()` → `orders.customer_id` selalu menunjuk ke `public.customers.id` yang ter-link via `profile_id`.
-- POS pakai `customers.id` langsung.
-- **Tidak ada percampuran `profile_id` vs `customer_id`** di tabel transaksi. Customer manual & customer signup pakai tabel + kolom yang sama. ✅
-- Yang bermasalah bukan identitas — tapi **agregasi** (poin/spent/orders) tidak pernah dihitung ulang.
+## Turn 1 — Fitur baru + Laporan Audit (read-only)
 
-## Order History — sudah benar secara query
-`OrderHistory.tsx` & `CustomerAccount.tsx` memfilter `orders.customer_id = customer.id` (hasil RPC). Begitu agregasi diperbaiki dan order tersimpan, riwayat akan langsung muncul.
+### 1a. Stock Opname Session Lock/Unlock
+- Tambah kolom `is_locked boolean default false` + `locked_at`, `locked_by` di `stock_opname_sessions` via migrasi.
+- Auto-lock trigger: saat `status` berubah ke `in_review` atau `approved`, `is_locked = true`. Saat kembali ke `draft` (unlock manual admin), `is_locked = false`.
+- RLS: hanya `admin`/`manager` boleh update `is_locked` langsung. Item update ditolak jika parent session `is_locked = true` (via trigger `BEFORE UPDATE` pada `stock_opname_items`).
+- UI: badge "🔒 Locked" di `StockOpnameDetail.tsx`, disable input scan/qty/notes, sembunyikan tombol Save. Tombol "Unlock" hanya untuk admin bila status masih review.
 
-## Rencana perbaikan (1 migration besar, idempotent)
+### 1b. Laporan Audit Performa (dokumen, belum ubah kode lain)
+Menghasilkan file `.lovable/perf-audit.md` berisi:
+- Halaman yang menarik semua data (`allProducts`, `allAdjustments`, `allReturns`, `all-orders`, ...) — hasil grep.
+- Query pakai `select('*')` atau nested join berat.
+- Filter/sort di client (`Array.filter`, `.slice`, `.sort` setelah fetch).
+- Komponen berat yang belum lazy-loaded (Charts recharts, ExcelExport, JsPDF, Leaflet, BarcodeScanner, QR).
+- Rekomendasi index DB.
+- Estimasi impact.
 
-### A. Pasang ulang seluruh trigger stok yang hilang
-```text
-transaction_items   AFTER INSERT/UPDATE/DELETE → update_stock_on_sale
-purchase_items      AFTER INSERT/UPDATE/DELETE → update_stock_on_purchase
-orders              AFTER UPDATE OF status     → update_stock_on_order_delivery
-returns             AFTER INSERT/UPDATE/DELETE → update_stock_on_return_status_change
-products            AFTER UPDATE OF selling_price → handle_product_price_change
-orders/purchases/customer_returns BEFORE INSERT → set_*_number
-purchases           BEFORE INSERT             → set_credit_due_date
-updated_at triggers untuk tabel yang punya kolom updated_at
-```
+## Turn 2 — Refactor server-side (prioritas Anda)
 
-### B. Tambah ledger `stock_movements` (baru)
-Kolom: `product_id`, `movement_type` (`PURCHASE_IN|SALE_OUT|ONLINE_ORDER_OUT|RETURN_IN|ADJUSTMENT|REWARD_OUT`), `quantity` (signed), `reference_table`, `reference_id`, `notes`, `created_by`, `created_at`.
-Trigger pencatatan dipasang di: `transaction_items`, `purchase_items`, `order_items` (saat order jadi `delivered`), `returns`, `customer_returns`, `stock_adjustments`, `point_exchanges`/`reward_redemption_requests` (saat approved).
-RLS: read khusus staff/admin (via `profiles.role`), service_role full.
+Urutan: **Products → Orders → Transactions → Customers → Suppliers → Inventory → Purchases**.
 
-### C. Loyalty otomatis untuk order frontend
-Function baru `apply_order_loyalty_on_delivered()`:
-- Trigger di `orders AFTER UPDATE OF status` saat `NEW.status='delivered'` dan `OLD.status<>'delivered'`.
-- Hitung `points = SUM(products.loyalty_points * order_items.quantity)` untuk order tersebut.
-- `UPDATE customers SET total_points = total_points + points, total_spent = total_spent + NEW.total_amount WHERE id = NEW.customer_id`.
-- `INSERT INTO point_transactions(customer_id, points_change, description)`.
-- Reverse saat status pindah dari `delivered` ke status lain (rollback).
+Setiap halaman:
+- Hook data: pindahkan search/filter/sort ke query Supabase (`.ilike`, `.eq`, `.gte/.lte`, `.order`, `.range`).
+- Ganti `.slice()` client dengan `.range(from, to)` + `count: 'exact'` (atau `'planned'` bila cukup).
+- `select()` hanya kolom yang dipakai tabel (bukan `*`).
+- Selector page size 20/50/100 (default 20).
+- Debounce input pencarian 400ms (`useDebouncedValue`).
+- React Query: `staleTime: 30_000`, `gcTime: 5*60_000`, `refetchOnWindowFocus: false`, `keepPreviousData: true`, `placeholderData: keepPreviousData`.
+- Prefetch halaman berikutnya via `queryClient.prefetchQuery` saat hover Next / idle.
 
-### D. Loyalty otomatis untuk POS
-Function `apply_pos_loyalty()` trigger `transactions AFTER INSERT`:
-- Jika `customer_id IS NOT NULL` → tambah `points_earned` ke `customers.total_points`, kurangi `points_used`, tambah `total_amount` ke `total_spent`. Catat `point_transactions`.
-- (Hanya dipasang bila kode `usePOS` belum melakukannya — saya akan cek dulu sebelum aktifkan untuk hindari double-count.)
+Business logic (mutation, cart, POS, checkout, RLS policy, trigger) TIDAK diubah. Hanya lapisan data-fetch tabel admin.
 
-### E. Backfill historis
-Satu kali, dalam migration yang sama:
-```sql
--- Rebuild customers.total_spent / total_points dari data nyata
-WITH order_agg AS (
-  SELECT customer_id, SUM(total_amount) spent
-  FROM orders WHERE status='delivered' GROUP BY customer_id
-), pos_agg AS (
-  SELECT customer_id, SUM(total_amount) spent, SUM(points_earned) earned, SUM(points_used) used
-  FROM transactions WHERE customer_id IS NOT NULL GROUP BY customer_id
-)
-UPDATE customers c SET
-  total_spent = COALESCE(o.spent,0) + COALESCE(p.spent,0),
-  total_points = GREATEST(0, COALESCE(p.earned,0) - COALESCE(p.used,0) + <order_points_backfill>)
-FROM ... ;
-```
-Plus backfill `stock_movements` dari `transaction_items`, `purchase_items`, `order_items` (delivered), `returns`, `customer_returns`.
+## Turn 3 — Bundle & DB tuning
 
-### F. Tidak diubah
-- UI checkout, cart, dan reward approval workflow tidak disentuh.
-- RLS policies existing tetap.
-- Schema `auth` / `storage` tidak disentuh.
+- `vite.config.ts` `manualChunks`: `react-vendor`, `charts` (recharts), `pdf` (jspdf/xlsx), `maps` (leaflet), `supabase`, `ui` (radix).
+- Dynamic import: `Reports*`, `PriceHistoryChart`, `BarcodeScanner`, `SecureLocationPicker`, `ExcelImport`, `receiptGenerator`.
+- Migrasi index: `products (is_active, name)`, `products (barcode)`, `orders (status, created_at desc)`, `orders (customer_id, created_at desc)`, `transactions (created_at desc)`, `transactions (customer_id, created_at desc)`, `stock_movements (product_id, created_at desc)`, `purchase_items (product_id)`. Skip yang sudah ada.
+- Tambah `<img loading="lazy" decoding="async">` di tabel-tabel yang render thumbnail.
 
-## Output setelah migration
-- Trigger terpasang (bukti: `information_schema.triggers` non-kosong).
-- `customers.total_spent / total_points` ter-rebuild untuk semua customer historis.
-- Order baru `delivered` → poin & spent customer naik otomatis, muncul di Account & Order History.
-- Stok bergerak otomatis untuk POS / purchase / online order / return / reward.
-- `stock_movements` jadi ledger tunggal untuk audit.
+## Batasan yang saya jaga
 
-## Risiko
-- Bila `usePOS` sudah menambah poin manual, trigger POS akan dobel — saya akan baca file dulu, baru putuskan aktifkan trigger D atau tidak.
-- Backfill mengasumsikan order historis yang sudah `delivered` belum pernah memberi poin → poin akan masuk sekarang (sesuai keinginan user "rebuild berdasarkan data historis").
-- Trigger `update_stock_on_order_delivery` yang dipasang sekarang **tidak** mengurangi stok untuk order historis yang sudah `delivered` sebelum migration (karena trigger jalan di event UPDATE baru) — backfill stock_movements akan mencatat, tapi `current_stock` tidak diutak-atik agar tidak merusak data yang sudah dikoreksi manual. Bisa ditambah opsi rebuild stok bila diminta.
+- Tidak menyentuh: POS (`src/pages/POS.tsx`, `usePOS`), Marketplace/Home, Auth, Cart context, edge functions bisnis, RLS existing, trigger stok/loyalty.
+- Tidak mengubah tampilan visual/urutan kolom/label — hanya sumber data & event handler debounce.
+- Setiap perubahan halaman: jalankan build; kalau UI berubah tidak sengaja, revert halaman itu dan lapor.
 
-Setujui rencana ini? Kalau ada bagian yang ingin di-skip (misal jangan rebuild poin historis, atau jangan pasang trigger POS), beri tahu sebelum saya jalankan migration.
+## Konfirmasi
+
+Turn 1 akan saya kerjakan segera setelah plan ini di-approve. Turn 2 & 3 saya lanjutkan di pesan berikutnya (masing-masing jadi PR mental terpisah supaya mudah di-review). Kalau ada halaman yang Anda ingin dikecualikan dari refactor server-side (mis. Reports/Dashboard yang butuh agregat), beri tahu sekarang.
