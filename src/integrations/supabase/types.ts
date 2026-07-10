@@ -1717,6 +1717,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_locked: boolean
+          locked_at: string | null
+          locked_by: string | null
           notes: string | null
           session_name: string
           status: string
@@ -1729,6 +1732,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
           notes?: string | null
           session_name: string
           status?: string
@@ -1741,6 +1747,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
           notes?: string | null
           session_name?: string
           status?: string
@@ -2121,6 +2130,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      can_manage_opname_lock: { Args: { _user: string }; Returns: boolean }
       check_user_permission: {
         Args: {
           permission_type: string
