@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -27,10 +28,11 @@ const Customers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const debouncedSearch = useDebounce(searchTerm, 400);
 
 
   const { data: customersData, isLoading } = useQuery({
-    queryKey: ['customers', searchTerm, currentPage],
+    queryKey: ['customers', debouncedSearch, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -49,8 +51,8 @@ const Customers = () => {
           updated_at
         `, { count: 'exact' });
       
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
       }
       
       const { data: customers, error, count } = await query
