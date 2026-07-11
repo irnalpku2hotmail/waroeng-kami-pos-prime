@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { useDebounce } from '@/hooks/useDebounce';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -27,10 +26,9 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const debouncedSearch = useDebounce(searchTerm, 400);
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', debouncedSearch, selectedCategory, currentPage],
+    queryKey: ['products', searchTerm, selectedCategory, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -44,9 +42,9 @@ const Products = () => {
           product_brands(name, logo_url)
         `, { count: 'exact' });
 
-      // Apply search filter (debounced)
-      if (debouncedSearch) {
-        query = query.or(`name.ilike.%${debouncedSearch}%,barcode.ilike.%${debouncedSearch}%`);
+      // Apply search filter
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
       }
 
       // Apply category filter

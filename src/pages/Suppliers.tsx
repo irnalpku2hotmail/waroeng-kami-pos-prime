@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -23,18 +22,17 @@ const Suppliers = () => {
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [deleteSupplierId, setDeleteSupplierId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const debouncedSearch = useDebounce(searchTerm, 400);
 
   const { data: suppliers, isLoading } = useQuery({
-    queryKey: ['suppliers', debouncedSearch],
+    queryKey: ['suppliers', searchTerm],
     queryFn: async () => {
       let query = supabase
         .from('suppliers')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (debouncedSearch) {
-        query = query.or(`name.ilike.%${debouncedSearch}%,contact_person.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query;
