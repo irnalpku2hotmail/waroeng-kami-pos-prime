@@ -12,7 +12,18 @@ import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import './index.css';
 
-const queryClient = new QueryClient();
+// Global cache tuning — reduces Supabase requests dramatically
+// without changing any business logic or UI.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,          // 30s: treat data as fresh, skip refetch
+      gcTime: 5 * 60_000,         // 5m: keep in cache for back-navigation
+      refetchOnWindowFocus: false,// avoid duplicate fetches on tab switch
+      retry: 1,
+    },
+  },
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -9,6 +10,7 @@ export const useOrdersData = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const debouncedSearch = useDebounce(searchTerm, 400);
 
   // Query for all orders for export
   const { data: allOrdersData } = useQuery({
@@ -31,7 +33,7 @@ export const useOrdersData = () => {
   });
 
   const { data: ordersData, isLoading } = useQuery({
-    queryKey: ['orders', searchTerm, statusFilter, currentPage],
+    queryKey: ['orders', debouncedSearch, statusFilter, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -46,8 +48,8 @@ export const useOrdersData = () => {
           )
         `, { count: 'exact' });
       
-      if (searchTerm) {
-        query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`order_number.ilike.%${debouncedSearch}%,customer_name.ilike.%${debouncedSearch}%`);
       }
       
       if (statusFilter !== 'all') {

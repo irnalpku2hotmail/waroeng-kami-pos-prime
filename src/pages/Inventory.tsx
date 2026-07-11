@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
@@ -17,10 +18,11 @@ import PaginationComponent from '@/components/PaginationComponent';
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState('products');
+  const debouncedSearch = useDebounce(searchTerm, 400);
 
   // Fetch products with stock info
   const { data: allProducts = [] } = useQuery({
-    queryKey: ['inventory-products', searchTerm],
+    queryKey: ['inventory-products', debouncedSearch],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -35,8 +37,8 @@ const Inventory = () => {
           )
         `);
       
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`name.ilike.%${debouncedSearch}%,barcode.ilike.%${debouncedSearch}%`);
       }
       
       const { data, error } = await query.order('name');
