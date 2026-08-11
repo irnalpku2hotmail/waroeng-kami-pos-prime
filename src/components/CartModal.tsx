@@ -88,6 +88,7 @@ const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           total_amount: getTotalPrice() + deliveryFee,
           delivery_fee: deliveryFee,
           payment_method: 'cod',
+          delivery_method: 'COD',
           status: 'pending',
           notes: 'Pesanan dari website',
           customer_id: resolvedCustomerId

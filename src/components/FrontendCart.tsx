@@ -178,6 +178,7 @@ const FrontendCart = () => {
           total_amount: totalAmount,
           delivery_fee: shippingCost,
           payment_method: 'cod',
+          delivery_method: 'COD',
           status: 'pending', // Stock is only affected when status changes to 'delivered'
           notes: orderNotes || null
         })

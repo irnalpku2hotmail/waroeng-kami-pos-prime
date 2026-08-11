@@ -30,6 +30,7 @@ export interface ReceiptData {
   paid_amount?: number;
   change_amount?: number;
   payment_method?: string;
+  delivery_method?: string;
   points_earned?: number;
   points_used?: number;
   notes?: string;
@@ -172,6 +173,7 @@ export const generateReceiptHTML = (
       ${receipt_header ? `<div class="receipt-header">${receipt_header}</div>` : ''}
       
       <div class="transaction-info">
+        ${data.delivery_method ? `<div>Metode Pengambilan: ${String(data.delivery_method).toUpperCase() === 'PICKUP' ? 'AMBIL DI TEMPAT' : 'COD'}</div>` : ''}
         ${data.transaction_number ? `<div>No: ${data.transaction_number}</div>` : ''}
         <div>Tanggal: ${new Date(data.transaction_date).toLocaleString('id-ID')}</div>
         ${data.customer_name ? `<div>Pelanggan: ${data.customer_name}</div>` : ''}

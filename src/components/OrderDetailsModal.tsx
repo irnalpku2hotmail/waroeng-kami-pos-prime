@@ -97,6 +97,9 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
     // Use helper to extract receipt settings consistently
     const receiptSettings = extractReceiptSettings(settings);
 
+    // Metode pengambilan bersumber dari delivery_method (fallback COD untuk order lama)
+    const isPickupOrder = String(order.delivery_method || 'COD').toUpperCase() === 'PICKUP';
+
     const paperWidth = receiptSettings.paper_size === '58mm' ? '58mm' : '80mm';
     const contentWidth = receiptSettings.paper_size === '58mm' ? '50mm' : '70mm';
 
@@ -183,7 +186,8 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           <div><strong>Pelanggan:</strong> ${order.customer_name}</div>
           ${order.customer_phone ? `<div><strong>Telepon:</strong> ${order.customer_phone}</div>` : ''}
           <div><strong>Status:</strong> ${getStatusBadge(order.status).props.children}</div>
-          <div><strong>Pembayaran:</strong> ${order.payment_method.toUpperCase()}</div>
+          <div><strong>Metode Pengambilan:</strong> ${isPickupOrder ? 'AMBIL DI TEMPAT' : 'COD'}</div>
+          <div><strong>Metode Pembayaran:</strong> ${String(order.payment_method || 'cod').toUpperCase()}</div>
         </div>
         
         <div class="separator"></div>
@@ -207,7 +211,7 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
         </div>
         <div class="item">
           <span>Ongkos Kirim:</span>
-          <span>Rp ${Number(order.delivery_fee).toLocaleString('id-ID')}</span>
+          <span>Rp ${Number(isPickupOrder ? 0 : order.delivery_fee || 0).toLocaleString('id-ID')}</span>
         </div>
         <div class="separator"></div>
         <div class="item total">
@@ -215,7 +219,7 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           <span>Rp ${Number(order.total_amount).toLocaleString('id-ID')}</span>
         </div>
         
-        ${order.customer_address ? `
+        ${!isPickupOrder && order.customer_address ? `
           <div class="separator"></div>
           <div>
             <div class="bold">ALAMAT PENGIRIMAN:</div>

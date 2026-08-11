@@ -85,6 +85,7 @@ const FrontendCartModal = ({ open, onOpenChange }: FrontendCartModalProps) => {
           total_amount: totalAmount,
           delivery_fee: deliveryFee,
           payment_method: 'cod',
+          delivery_method: 'COD',
           status: 'pending',
           customer_id: resolvedCustomerId
         })
