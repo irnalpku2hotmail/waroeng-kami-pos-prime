@@ -228,6 +228,10 @@ const OrderHistory = () => {
                         <span className="font-medium">Metode Pembayaran:</span>
                         <span className="capitalize">{order.payment_method}</span>
                       </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-medium">Pengambilan:</span>
+                        <DeliveryMethodBadge method={order.delivery_method} />
+                      </div>
                       <div className="text-lg font-bold text-blue-600">
                         Total: {formatPrice(order.total_amount)}
                       </div>
