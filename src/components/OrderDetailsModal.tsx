@@ -183,7 +183,8 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           <div><strong>Pelanggan:</strong> ${order.customer_name}</div>
           ${order.customer_phone ? `<div><strong>Telepon:</strong> ${order.customer_phone}</div>` : ''}
           <div><strong>Status:</strong> ${getStatusBadge(order.status).props.children}</div>
-          <div><strong>Pembayaran:</strong> ${order.payment_method.toUpperCase()}</div>
+          <div><strong>Metode Pengambilan:</strong> ${isPickupOrder ? 'AMBIL DI TEMPAT' : 'COD'}</div>
+          <div><strong>Metode Pembayaran:</strong> ${String(order.payment_method || 'cod').toUpperCase()}</div>
         </div>
         
         <div class="separator"></div>
@@ -207,7 +208,7 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
         </div>
         <div class="item">
           <span>Ongkos Kirim:</span>
-          <span>Rp ${Number(order.delivery_fee).toLocaleString('id-ID')}</span>
+          <span>Rp ${Number(isPickupOrder ? 0 : order.delivery_fee || 0).toLocaleString('id-ID')}</span>
         </div>
         <div class="separator"></div>
         <div class="item total">
@@ -215,7 +216,7 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
           <span>Rp ${Number(order.total_amount).toLocaleString('id-ID')}</span>
         </div>
         
-        ${order.customer_address ? `
+        ${!isPickupOrder && order.customer_address ? `
           <div class="separator"></div>
           <div>
             <div class="bold">ALAMAT PENGIRIMAN:</div>
