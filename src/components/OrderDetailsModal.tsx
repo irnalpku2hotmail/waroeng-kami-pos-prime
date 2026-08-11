@@ -354,6 +354,10 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
                 </span>
                 <p className="uppercase">{order.payment_method}</p>
               </div>
+              <div>
+                <span className="font-medium">Metode Pengambilan:</span>
+                <p><DeliveryMethodBadge method={order.delivery_method} /></p>
+              </div>
               {order.notes && (
                 <div className="md:col-span-2">
                   <span className="font-medium">Catatan:</span>
