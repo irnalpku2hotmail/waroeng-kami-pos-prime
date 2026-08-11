@@ -488,9 +488,52 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
 
             {/* Customer Information - Read only */}
             <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Metode Pengambilan
+                </h3>
+                <RadioGroup
+                  value={deliveryMethod}
+                  onValueChange={(v) => setDeliveryMethod(v as 'COD' | 'PICKUP')}
+                  className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}
+                >
+                  <Label
+                    htmlFor="dm-cod"
+                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${!isPickup ? 'border-blue-500 bg-blue-50' : 'border-border'}`}
+                  >
+                    <RadioGroupItem value="COD" id="dm-cod" className="mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 font-medium">
+                        <Truck className="h-4 w-4" /> COD (Bayar di Tempat)
+                      </div>
+                      <p className="text-xs text-muted-foreground font-normal">
+                        Pesanan diantar ke alamat Anda, ongkir & biaya layanan berlaku.
+                      </p>
+                    </div>
+                  </Label>
+                  <Label
+                    htmlFor="dm-pickup"
+                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${isPickup ? 'border-green-500 bg-green-50' : 'border-border'}`}
+                  >
+                    <RadioGroupItem value="PICKUP" id="dm-pickup" className="mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 font-medium">
+                        <Store className="h-4 w-4" /> Ambil di Tempat
+                      </div>
+                      <p className="text-xs text-muted-foreground font-normal">
+                        Ambil sendiri di toko — tanpa ongkir & tanpa biaya layanan.
+                      </p>
+                    </div>
+                  </Label>
+                </RadioGroup>
+              </div>
+
+              <Separator />
+
               <h3 className="font-semibold flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Informasi Pengiriman
+                {isPickup ? 'Informasi Pemesan' : 'Informasi Pengiriman'}
               </h3>
               <div className="grid grid-cols-1 gap-4">
                 <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
@@ -519,19 +562,26 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="address" className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    Alamat Lengkap
-                  </Label>
-                  <Textarea
-                    id="address"
-                    value={customerInfo.address}
-                    readOnly
-                    className="bg-gray-50"
-                    rows={isMobile ? 2 : 3}
-                  />
-                </div>
+                {isPickup ? (
+                  <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                    <Store className="h-4 w-4 mt-0.5" />
+                    <span>Pesanan diambil langsung di toko, alamat pengiriman tidak diperlukan.</span>
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="address" className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Alamat Lengkap
+                    </Label>
+                    <Textarea
+                      id="address"
+                      value={customerInfo.address}
+                      readOnly
+                      className="bg-gray-50"
+                      rows={isMobile ? 2 : 3}
+                    />
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="notes">Catatan (Opsional)</Label>
                   <Textarea
@@ -558,8 +608,10 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   <MapPin className="h-4 w-4" />
                   Ongkos Kirim
                 </span>
-                <span className={isEligibleForFreeShipping ? 'text-green-600' : ''}>
-                  {isEligibleForFreeShipping ? (
+                <span className={isEligibleForFreeShipping || isPickup ? 'text-green-600' : ''}>
+                  {isPickup ? (
+                    <span className="font-medium">Rp 0</span>
+                  ) : isEligibleForFreeShipping ? (
                     <>
                       <span className="line-through text-gray-400">Rp {deliveryFee.toLocaleString('id-ID')}</span>
                       <span className="ml-2 font-medium">GRATIS</span>
@@ -590,8 +642,8 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                 </div>
               )}
               <div className="text-center">
-                <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium inline-block">
-                  💰 Cash on Delivery (COD)
+                <div className={`text-xs px-2 py-1 rounded-full font-medium inline-block ${isPickup ? 'bg-emerald-100 text-emerald-800' : 'bg-green-100 text-green-800'}`}>
+                  {isPickup ? '🏬 Ambil di Tempat (Bayar di Toko)' : '💰 Cash on Delivery (COD)'}
                 </div>
               </div>
             </div>
@@ -607,7 +659,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
               </Button>
               <Button
                 onClick={() => createOrder.mutate()}
-                disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address || createOrder.isPending}
+                disabled={!customerInfo.name || !customerInfo.phone || (!isPickup && !customerInfo.address) || createOrder.isPending}
                 className={`flex-1 bg-blue-600 hover:bg-blue-700 ${isMobile ? 'py-3 text-base' : ''} font-semibold`}
               >
                 {createOrder.isPending ? 'Memproses...' : '🛒 Pesan Sekarang'}
