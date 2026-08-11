@@ -97,6 +97,9 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
     // Use helper to extract receipt settings consistently
     const receiptSettings = extractReceiptSettings(settings);
 
+    // Metode pengambilan bersumber dari delivery_method (fallback COD untuk order lama)
+    const isPickupOrder = String(order.delivery_method || 'COD').toUpperCase() === 'PICKUP';
+
     const paperWidth = receiptSettings.paper_size === '58mm' ? '58mm' : '80mm';
     const contentWidth = receiptSettings.paper_size === '58mm' ? '50mm' : '70mm';
 
