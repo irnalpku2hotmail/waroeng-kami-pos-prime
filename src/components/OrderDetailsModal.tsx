@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import DeliveryMethodBadge from '@/components/orders/DeliveryMethodBadge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Package, User, MapPin, Phone, Calendar, CreditCard, Printer } from 'lucide-react';
@@ -353,6 +354,10 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
                   Metode Pembayaran:
                 </span>
                 <p className="uppercase">{order.payment_method}</p>
+              </div>
+              <div>
+                <span className="font-medium">Metode Pengambilan:</span>
+                <p><DeliveryMethodBadge method={order.delivery_method} /></p>
               </div>
               {order.notes && (
                 <div className="md:col-span-2">

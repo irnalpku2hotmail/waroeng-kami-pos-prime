@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck, Info, AlertTriangle, Tag } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Minus, Plus, Trash2, ShoppingCart, MapPin, Phone, User, Package, Truck, Info, AlertTriangle, Tag, Store } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,6 +42,9 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
     address: profile?.address_text || profile?.address || '',
     notes: ''
   });
+
+  const [deliveryMethod, setDeliveryMethod] = useState<'COD' | 'PICKUP'>('COD');
+  const isPickup = deliveryMethod === 'PICKUP';
 
   // Update customer info when profile changes
   useEffect(() => {
@@ -179,7 +183,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         throw new Error('Silakan login terlebih dahulu');
       }
 
-      if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+      if (!customerInfo.name || !customerInfo.phone || (!isPickup && !customerInfo.address)) {
         throw new Error('Mohon lengkapi semua data pengiriman yang wajib diisi');
       }
 
@@ -189,11 +193,11 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
       const orderFreeShippingMinimum = orderSettings?.min_order ?? orderSettings?.free_shipping_minimum ?? 100000;
       const orderServiceFeeAmount = orderSettings?.service_fee || 5000;
       const orderSubtotal = getTotalPriceWithVariants();
-      const orderFinalDeliveryFee = orderSubtotal >= orderFreeShippingMinimum ? 0 : orderDeliveryFee;
+      const orderFinalDeliveryFee = isPickup ? 0 : (orderSubtotal >= orderFreeShippingMinimum ? 0 : orderDeliveryFee);
       
       // Check if any product in cart has service fee
       const hasServiceFee = productsWithServiceFee && productsWithServiceFee.length > 0;
-      const orderServiceFee = hasServiceFee ? orderServiceFeeAmount : 0;
+      const orderServiceFee = isPickup ? 0 : (hasServiceFee ? orderServiceFeeAmount : 0);
       
       const totalAmount = orderSubtotal + orderFinalDeliveryFee + orderServiceFee;
       const orderNumber = generateOrderNumber();
@@ -212,7 +216,8 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
           order_number: orderNumber,
           customer_name: customerInfo.name,
           customer_phone: customerInfo.phone,
-          customer_address: customerInfo.address,
+          customer_address: isPickup ? null : customerInfo.address,
+          delivery_method: deliveryMethod,
           notes: customerInfo.notes ? `${customerInfo.notes}${orderServiceFee > 0 ? ` | Biaya Layanan: Rp ${orderServiceFee.toLocaleString('id-ID')}` : ''}` : (orderServiceFee > 0 ? `Biaya Layanan: Rp ${orderServiceFee.toLocaleString('id-ID')}` : 'Pesanan dari website'),
           total_amount: totalAmount,
           delivery_fee: orderFinalDeliveryFee,
@@ -248,6 +253,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
       });
       clearCart();
       setCustomerInfo({ name: '', phone: '', address: '', notes: '' });
+      setDeliveryMethod('COD');
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -283,14 +289,14 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
   const freeShippingMinimum = codSettingsTyped?.min_order ?? codSettingsTyped?.free_shipping_minimum ?? 100000;
   const serviceFeeAmount = codSettingsTyped?.service_fee || 5000;
   const subtotal = getTotalPriceWithVariants();
-  const finalDeliveryFee = subtotal >= freeShippingMinimum ? 0 : deliveryFee;
+  const finalDeliveryFee = isPickup ? 0 : (subtotal >= freeShippingMinimum ? 0 : deliveryFee);
   
   // Check if any product in cart has service fee
   const hasServiceFeeProduct = productsWithServiceFee && productsWithServiceFee.length > 0;
-  const serviceFee = hasServiceFeeProduct ? serviceFeeAmount : 0;
+  const serviceFee = isPickup ? 0 : (hasServiceFeeProduct ? serviceFeeAmount : 0);
   
   const total = subtotal + finalDeliveryFee + serviceFee;
-  const isEligibleForFreeShipping = subtotal >= freeShippingMinimum;
+  const isEligibleForFreeShipping = !isPickup && subtotal >= freeShippingMinimum;
 
   if (!user) {
     return (
@@ -343,7 +349,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
         ) : (
           <div className="space-y-6">
             {/* Free Shipping Banner */}
-            {!isEligibleForFreeShipping && (
+            {!isPickup && !isEligibleForFreeShipping && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                 <Truck className="h-5 w-5 inline mr-2 text-blue-600" />
                 <span className="text-blue-800 text-sm">
@@ -356,7 +362,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
               </div>
             )}
 
-            {isEligibleForFreeShipping && (
+            {!isPickup && isEligibleForFreeShipping && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                 <Truck className="h-5 w-5 inline mr-2 text-green-600" />
                 <span className="text-green-800 text-sm font-medium">
@@ -482,9 +488,52 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
 
             {/* Customer Information - Read only */}
             <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Metode Pengambilan
+                </h3>
+                <RadioGroup
+                  value={deliveryMethod}
+                  onValueChange={(v) => setDeliveryMethod(v as 'COD' | 'PICKUP')}
+                  className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}
+                >
+                  <Label
+                    htmlFor="dm-cod"
+                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${!isPickup ? 'border-blue-500 bg-blue-50' : 'border-border'}`}
+                  >
+                    <RadioGroupItem value="COD" id="dm-cod" className="mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 font-medium">
+                        <Truck className="h-4 w-4" /> COD (Bayar di Tempat)
+                      </div>
+                      <p className="text-xs text-muted-foreground font-normal">
+                        Pesanan diantar ke alamat Anda, ongkir & biaya layanan berlaku.
+                      </p>
+                    </div>
+                  </Label>
+                  <Label
+                    htmlFor="dm-pickup"
+                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${isPickup ? 'border-green-500 bg-green-50' : 'border-border'}`}
+                  >
+                    <RadioGroupItem value="PICKUP" id="dm-pickup" className="mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 font-medium">
+                        <Store className="h-4 w-4" /> Ambil di Tempat
+                      </div>
+                      <p className="text-xs text-muted-foreground font-normal">
+                        Ambil sendiri di toko — tanpa ongkir & tanpa biaya layanan.
+                      </p>
+                    </div>
+                  </Label>
+                </RadioGroup>
+              </div>
+
+              <Separator />
+
               <h3 className="font-semibold flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Informasi Pengiriman
+                {isPickup ? 'Informasi Pemesan' : 'Informasi Pengiriman'}
               </h3>
               <div className="grid grid-cols-1 gap-4">
                 <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
@@ -513,19 +562,26 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="address" className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    Alamat Lengkap
-                  </Label>
-                  <Textarea
-                    id="address"
-                    value={customerInfo.address}
-                    readOnly
-                    className="bg-gray-50"
-                    rows={isMobile ? 2 : 3}
-                  />
-                </div>
+                {isPickup ? (
+                  <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                    <Store className="h-4 w-4 mt-0.5" />
+                    <span>Pesanan diambil langsung di toko, alamat pengiriman tidak diperlukan.</span>
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="address" className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Alamat Lengkap
+                    </Label>
+                    <Textarea
+                      id="address"
+                      value={customerInfo.address}
+                      readOnly
+                      className="bg-gray-50"
+                      rows={isMobile ? 2 : 3}
+                    />
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="notes">Catatan (Opsional)</Label>
                   <Textarea
@@ -552,8 +608,10 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                   <MapPin className="h-4 w-4" />
                   Ongkos Kirim
                 </span>
-                <span className={isEligibleForFreeShipping ? 'text-green-600' : ''}>
-                  {isEligibleForFreeShipping ? (
+                <span className={isEligibleForFreeShipping || isPickup ? 'text-green-600' : ''}>
+                  {isPickup ? (
+                    <span className="font-medium">Rp 0</span>
+                  ) : isEligibleForFreeShipping ? (
                     <>
                       <span className="line-through text-gray-400">Rp {deliveryFee.toLocaleString('id-ID')}</span>
                       <span className="ml-2 font-medium">GRATIS</span>
@@ -584,8 +642,8 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
                 </div>
               )}
               <div className="text-center">
-                <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium inline-block">
-                  💰 Cash on Delivery (COD)
+                <div className={`text-xs px-2 py-1 rounded-full font-medium inline-block ${isPickup ? 'bg-emerald-100 text-emerald-800' : 'bg-green-100 text-green-800'}`}>
+                  {isPickup ? '🏬 Ambil di Tempat (Bayar di Toko)' : '💰 Cash on Delivery (COD)'}
                 </div>
               </div>
             </div>
@@ -601,7 +659,7 @@ const EnhancedFrontendCartModal = ({ open, onOpenChange }: EnhancedFrontendCartM
               </Button>
               <Button
                 onClick={() => createOrder.mutate()}
-                disabled={!customerInfo.name || !customerInfo.phone || !customerInfo.address || createOrder.isPending}
+                disabled={!customerInfo.name || !customerInfo.phone || (!isPickup && !customerInfo.address) || createOrder.isPending}
                 className={`flex-1 bg-blue-600 hover:bg-blue-700 ${isMobile ? 'py-3 text-base' : ''} font-semibold`}
               >
                 {createOrder.isPending ? 'Memproses...' : '🛒 Pesan Sekarang'}

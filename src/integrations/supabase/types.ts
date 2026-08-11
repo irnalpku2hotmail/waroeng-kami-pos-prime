@@ -513,6 +513,7 @@ export type Database = {
           customer_phone: string | null
           delivery_date: string | null
           delivery_fee: number
+          delivery_method: string
           id: string
           notes: string | null
           order_date: string
@@ -530,6 +531,7 @@ export type Database = {
           customer_phone?: string | null
           delivery_date?: string | null
           delivery_fee?: number
+          delivery_method?: string
           id?: string
           notes?: string | null
           order_date?: string
@@ -547,6 +549,7 @@ export type Database = {
           customer_phone?: string | null
           delivery_date?: string | null
           delivery_fee?: number
+          delivery_method?: string
           id?: string
           notes?: string | null
           order_date?: string
