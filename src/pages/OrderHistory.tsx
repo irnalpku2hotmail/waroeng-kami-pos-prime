@@ -15,6 +15,7 @@ import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import MinimalFooter from '@/components/frontend/MinimalFooter';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
+import DeliveryMethodBadge from '@/components/orders/DeliveryMethodBadge';
 import AuthModal from '@/components/AuthModal';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import SEO from '@/components/SEO';
