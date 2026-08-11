@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import DeliveryMethodBadge from '@/components/orders/DeliveryMethodBadge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Package, User, MapPin, Phone, Calendar, CreditCard, Printer } from 'lucide-react';
