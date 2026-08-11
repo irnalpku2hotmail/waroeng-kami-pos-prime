@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { Eye, Package, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import OrderStatusBadge from './OrderStatusBadge';
+import DeliveryMethodBadge from './DeliveryMethodBadge';
 import OrderStockStatus from './OrderStockStatus';
 import PaginationComponent from '@/components/PaginationComponent';
 
@@ -107,6 +108,7 @@ const OrdersTable = ({
             <TableHead>Total</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Metode Bayar</TableHead>
+            <TableHead>Pengambilan</TableHead>
             <TableHead>Status Stok</TableHead>
             <TableHead>Aksi</TableHead>
           </TableRow>
@@ -129,6 +131,7 @@ const OrdersTable = ({
               <TableCell>Rp {Number(order.total_amount).toLocaleString('id-ID')}</TableCell>
               <TableCell><OrderStatusBadge status={order.status} /></TableCell>
               <TableCell className="uppercase">{order.payment_method}</TableCell>
+              <TableCell><DeliveryMethodBadge method={order.delivery_method} /></TableCell>
               <TableCell>
                 <OrderStockStatus orderItems={order.order_items} orderStatus={order.status} />
               </TableCell>
