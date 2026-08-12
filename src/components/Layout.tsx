@@ -14,6 +14,13 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+/**
+ * Isolates page content from Layout-only state (sidebar collapse, notifications,
+ * user dropdown, mobile flag) so those never re-render the whole page.
+ */
+const PageContent = React.memo(({ children }: { children: React.ReactNode }) => <>{children}</>);
+PageContent.displayName = 'PageContent';
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, profile, loading } = useAuth();
   const { collapsed, setCollapsed } = useSidebarContext();
@@ -45,9 +52,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className={`min-h-screen bg-background ${isMobile ? 'text-sm' : ''}`}>
       <CollapsibleSidebar />
 
-      <div className={`${collapsed ? 'ml-[68px]' : 'ml-60'} ${isMobile ? '!ml-0' : ''} flex flex-col min-h-screen transition-all duration-300 ease-in-out`}>
+      <div className={`${collapsed ? 'ml-[68px]' : 'ml-60'} ${isMobile ? '!ml-0' : ''} flex flex-col min-h-screen`}>
         {/* Top Header */}
-        <header className={`bg-card/80 backdrop-blur-sm border-b border-border fixed top-0 right-0 ${isMobile ? 'left-0' : collapsed ? 'left-[68px]' : 'left-60'} z-10 transition-all duration-300 ease-in-out`}>
+        <header className={`bg-card/80 backdrop-blur-sm border-b border-border fixed top-0 right-0 ${isMobile ? 'left-0' : collapsed ? 'left-[68px]' : 'left-60'} z-10`}>
           <div className="flex items-center justify-between px-4 md:px-6 h-[60px]">
             <div className={isMobile ? 'ml-12' : ''}>
               <DateTimeDisplay />
@@ -62,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className={`flex-1 px-4 md:px-6 py-5 overflow-auto mt-[60px] ${isMobile ? 'pb-16' : ''}`}>
           <div className="max-w-full mx-auto">
-            {children}
+            <PageContent>{children}</PageContent>
           </div>
         </main>
       </div>
@@ -70,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Mobile sidebar overlay */}
       {isMobile && !collapsed && (
         <div 
-          className="fixed inset-0 bg-foreground/20 backdrop-blur-[2px] z-30 transition-opacity duration-300"
+          className="fixed inset-0 bg-foreground/20 backdrop-blur-[2px] z-30"
           onClick={() => setCollapsed(true)}
         />
       )}
