@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
@@ -15,8 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus } from 'lucide-react';
 import { exportToExcel } from '@/utils/excelExport';
-
-const ITEMS_PER_PAGE = 10;
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { DEFAULT_PAGE_SIZE, fetchProducts, productsKey } from '@/lib/adminQueries';
 
 const Products = () => {
   const [open, setOpen] = useState(false);
@@ -24,62 +24,20 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', searchTerm, selectedCategory, currentPage],
-    queryFn: async () => {
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          categories(name),
-          units(name),
-          price_variants(*),
-          product_brands(name, logo_url)
-        `, { count: 'exact' });
-
-      // Apply search filter
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
-      }
-
-      // Apply category filter
-      if (selectedCategory && selectedCategory !== 'all') {
-        query = query.eq('category_id', selectedCategory);
-      }
-
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      if (error) throw error;
-      return { data, count };
-    }
-  });
-
-  // Query for all products for export
-  const { data: allProductsData } = useQuery({
-    queryKey: ['all-products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories(name),
-          units(name)
-        `)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
+    queryKey: productsKey(debouncedSearch, selectedCategory, currentPage, pageSize),
+    queryFn: () => fetchProducts(debouncedSearch, selectedCategory, currentPage, pageSize),
+    placeholderData: keepPreviousData,
   });
 
   const products = productsData?.data || [];
   const productsCount = productsData?.count || 0;
-  const totalPages = Math.ceil(productsCount / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(productsCount / pageSize);
 
   const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
@@ -111,12 +69,17 @@ const Products = () => {
     setDeleteProductId(id);
   };
 
-  const handleExportToExcel = () => {
-    if (!allProductsData || allProductsData.length === 0) {
+  const handleExportToExcel = async () => {
+    // Data for export is fetched only when the user actually clicks Export.
+    const { data: allProductsData, error } = await supabase
+      .from('products')
+      .select('name, barcode, selling_price, current_stock, min_stock, is_active, created_at, categories(name), units(name)')
+      .order('created_at', { ascending: false });
+    if (error || !allProductsData || allProductsData.length === 0) {
       toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
       return;
     }
-    const exportData = allProductsData.map(product => ({
+    const exportData = allProductsData.map((product: any) => ({
       'Nama Produk': product.name,
       'Barcode': product.barcode || '-',
       'Kategori': product.categories?.name || '-',
@@ -127,7 +90,7 @@ const Products = () => {
       'Status': product.is_active ? 'Aktif' : 'Nonaktif',
       'Tanggal Dibuat': new Date(product.created_at).toLocaleDateString('id-ID')
     }));
-    exportToExcel(exportData, 'Data_Produk', 'Produk');
+    await exportToExcel(exportData, 'Data_Produk', 'Produk');
     toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
   };
 
@@ -186,7 +149,7 @@ const Products = () => {
         />
 
         <div className="border rounded-lg overflow-hidden">
-          {isLoading ? (
+          {isLoading && products.length === 0 ? (
             <ProductsLoading />
           ) : products?.length === 0 ? (
             <ProductsEmptyState />
@@ -200,11 +163,23 @@ const Products = () => {
                 }}
                 onDelete={handleDeleteProduct}
               />
-              <ProductsPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                setCurrentPage={setCurrentPage}
-              />
+              <div className="flex items-center justify-between gap-2 flex-wrap border-t px-3 py-2">
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  aria-label="Baris per halaman"
+                >
+                  {[20, 50, 100].map((n) => (
+                    <option key={n} value={n}>{n} / halaman</option>
+                  ))}
+                </select>
+                <ProductsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  setCurrentPage={setCurrentPage}
+                />
+              </div>
             </>
           )}
         </div>
