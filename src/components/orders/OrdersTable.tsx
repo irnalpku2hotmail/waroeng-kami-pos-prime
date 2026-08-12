@@ -78,7 +78,7 @@ const OrdersTable = ({
     }
   });
 
-  if (isLoading) {
+  if (isLoading && orders.length === 0) {
     return (
       <div className="border rounded-lg overflow-hidden">
         <div className="text-center py-8">Loading...</div>

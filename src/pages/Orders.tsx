@@ -10,6 +10,7 @@ import OrdersFilters from '@/components/orders/OrdersFilters';
 import OrdersTable from '@/components/orders/OrdersTable';
 import { useOrdersData } from '@/hooks/useOrdersData';
 import { exportToExcel } from '@/utils/excelExport';
+import { supabase } from '@/integrations/supabase/client';
 
 const Orders = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -21,11 +22,11 @@ const Orders = () => {
     searchTerm,
     statusFilter,
     isLoading,
-    allOrdersData,
     itemsPerPage,
     setCurrentPage,
     handleSearchChange,
-    handleStatusChange
+    handleStatusChange,
+    handlePageSizeChange
   } = useOrdersData();
 
   const handleShowDetails = (order: any) => {
@@ -39,13 +40,18 @@ const Orders = () => {
     .filter(o => o.status === 'delivered')
     .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
-  const handleExportToExcel = () => {
-    if (!allOrdersData || allOrdersData.length === 0) {
+  const handleExportToExcel = async () => {
+    // Full dataset is only fetched when Export is clicked — never on page open.
+    const { data: allOrdersData, error } = await supabase
+      .from('orders')
+      .select('order_number, customer_name, customer_phone, customer_address, order_date, total_amount, status, payment_method, notes, order_items(quantity, products(name))')
+      .order('created_at', { ascending: false });
+    if (error || !allOrdersData || allOrdersData.length === 0) {
       toast({ title: 'Warning', description: 'Tidak ada data untuk diekspor', variant: 'destructive' });
       return;
     }
 
-    const exportData = allOrdersData.map(order => ({
+    const exportData = allOrdersData.map((order: any) => ({
       'No. Pesanan': order.order_number,
       'Nama Pelanggan': order.customer_name,
       'Telepon': order.customer_phone || '-',
@@ -60,7 +66,7 @@ const Orders = () => {
       ).join(', ') || '-'
     }));
 
-    exportToExcel(exportData, 'Data_Pesanan', 'Pesanan');
+    await exportToExcel(exportData, 'Data_Pesanan', 'Pesanan');
     toast({ title: 'Berhasil', description: 'Data berhasil diekspor ke Excel' });
   };
 
@@ -104,6 +110,19 @@ const Orders = () => {
           onPageChange={setCurrentPage}
           onShowDetails={handleShowDetails}
         />
+
+        <div className="flex justify-end">
+          <select
+            value={itemsPerPage}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+            aria-label="Baris per halaman"
+          >
+            {[20, 50, 100].map((n) => (
+              <option key={n} value={n}>{n} / halaman</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Order Details Modal */}
