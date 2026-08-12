@@ -13,6 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Edit, Trash2, Users, UserCheck, Phone, Mail, MapPin, Search } from 'lucide-react';
 import SupplierDetails from '@/components/SupplierDetails';
 import SupplierForm from '@/components/SupplierForm';
+import PaginationComponent from '@/components/PaginationComponent';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { DEFAULT_PAGE_SIZE, fetchSuppliers, suppliersKey } from '@/lib/adminQueries';
 
 const Suppliers = () => {
   const [open, setOpen] = useState(false);
@@ -344,6 +347,26 @@ const Suppliers = () => {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-2 flex-wrap border-t pt-3">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    aria-label="Baris per halaman"
+                  >
+                    {[20, 50, 100].map((n) => (
+                      <option key={n} value={n}>{n} / halaman</option>
+                    ))}
+                  </select>
+                  <PaginationComponent
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={pageSize}
+                    totalItems={suppliersCount}
+                  />
                 </div>
               </>
             )}
