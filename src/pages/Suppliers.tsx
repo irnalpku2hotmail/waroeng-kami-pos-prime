@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
@@ -23,23 +23,19 @@ const Suppliers = () => {
   const [deleteSupplierId, setDeleteSupplierId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: suppliers, isLoading } = useQuery({
-    queryKey: ['suppliers', searchTerm],
-    queryFn: async () => {
-      let query = supabase
-        .from('suppliers')
-        .select('*')
-        .order('created_at', { ascending: false });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    }
+  const { data: suppliersData, isLoading } = useQuery({
+    queryKey: suppliersKey(debouncedSearch, currentPage, pageSize),
+    queryFn: () => fetchSuppliers(debouncedSearch, currentPage, pageSize),
+    placeholderData: keepPreviousData,
   });
+
+  const suppliers = suppliersData?.data || [];
+  const suppliersCount = suppliersData?.count || 0;
+  const totalPages = Math.max(1, Math.ceil(suppliersCount / pageSize));
 
   // Query for suppliers active this month (who made purchases)
   const { data: activeThisMonth } = useQuery({
@@ -106,7 +102,7 @@ const Suppliers = () => {
               <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold">{suppliers?.length || 0}</div>
+              <div className="text-lg md:text-2xl font-bold">{suppliersCount}</div>
               <p className="text-[10px] md:text-xs text-muted-foreground hidden md:block">
                 Supplier yang terdaftar
               </p>
@@ -134,7 +130,7 @@ const Suppliers = () => {
             <Input
               placeholder="Cari supplier..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="pl-10"
             />
           </div>
@@ -168,7 +164,7 @@ const Suppliers = () => {
             <CardTitle className="text-lg">Daftar Supplier</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {isLoading && suppliers.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="h-8 w-8 text-gray-400 mx-auto mb-2 animate-pulse" />
                 <p className="text-gray-500">Memuat data supplier...</p>
