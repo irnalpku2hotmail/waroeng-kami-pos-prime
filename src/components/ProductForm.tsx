@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Minus, X, Upload } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import BarcodeScanner from '@/components/BarcodeScanner';
+// html5-qrcode is heavy: load the scanner only when it is rendered
+const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
 import TagInput from '@/components/TagInput';
 import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
 
@@ -436,9 +437,11 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                   placeholder="Kode barcode"
                   className="flex-1"
                 />
-                <BarcodeScanner 
-                  onScanSuccess={(barcode) => setFormData({ ...formData, barcode })} 
-                />
+                <Suspense fallback={null}>
+                  <BarcodeScanner
+                    onScanSuccess={(barcode) => setFormData({ ...formData, barcode })}
+                  />
+                </Suspense>
               </div>
             </div>
 

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,8 @@ import CustomerDetails from '@/components/CustomerDetails';
 import CustomerForm from '@/components/CustomerForm';
 import PaginationComponent from '@/components/PaginationComponent';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-
-const ITEMS_PER_PAGE = 10;
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { DEFAULT_PAGE_SIZE, customersKey, fetchCustomers } from '@/lib/adminQueries';
 
 const Customers = () => {
   const [open, setOpen] = useState(false);
@@ -26,62 +26,19 @@ const Customers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const queryClient = useQueryClient();
-
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
   const { data: customersData, isLoading } = useQuery({
-    queryKey: ['customers', searchTerm, currentPage],
-    queryFn: async () => {
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      
-      let query = supabase
-        .from('customers')
-        .select(`
-          id,
-          name,
-          email,
-          phone,
-          address,
-          date_of_birth,
-          total_points,
-          created_at,
-          updated_at
-        `, { count: 'exact' });
-      
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
-      }
-      
-      const { data: customers, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      
-      if (error) throw error;
-
-      // Aggregate spent + order counts from both POS transactions and online orders (delivered)
-      const customersEnriched = await Promise.all(
-        (customers || []).map(async (customer) => {
-          const [{ data: txns }, { data: ords }] = await Promise.all([
-            supabase.from('transactions').select('total_amount').eq('customer_id', customer.id),
-            supabase.from('orders').select('total_amount,status').eq('customer_id', customer.id),
-          ]);
-          const spentTxn = (txns || []).reduce((s, t: any) => s + (Number(t.total_amount) || 0), 0);
-          const deliveredOrders = (ords || []).filter((o: any) => o.status === 'delivered');
-          const spentOrders = deliveredOrders.reduce((s, o: any) => s + (Number(o.total_amount) || 0), 0);
-          const total_spent = spentTxn + spentOrders;
-          const total_orders = (txns?.length || 0) + (ords?.length || 0);
-          return { ...customer, total_spent, total_orders };
-        })
-      );
-
-      return { data: customersEnriched, count };
-    }
+    queryKey: customersKey(debouncedSearch, currentPage, pageSize),
+    queryFn: () => fetchCustomers(debouncedSearch, currentPage, pageSize),
+    placeholderData: keepPreviousData,
   });
 
   const customers = customersData?.data || [];
   const customersCount = customersData?.count || 0;
-  const totalPages = Math.ceil(customersCount / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(customersCount / pageSize);
 
 
   const deleteCustomer = useMutation({
@@ -125,7 +82,7 @@ const Customers = () => {
     setDetailModalOpen(true);
   };
 
-  const totalCustomers = customers.length;
+  const totalCustomers = customersCount;
   const totalPoints = customers.reduce((sum, c) => sum + c.total_points, 0);
   const totalSpent = customers.reduce((sum, c) => sum + c.total_spent, 0);
 
@@ -216,7 +173,7 @@ const Customers = () => {
 
         {/* Table */}
         <div className="border rounded-lg overflow-hidden">
-          {isLoading ? (
+          {isLoading && customers.length === 0 ? (
             <div className="p-8 text-center">Loading...</div>
           ) : customers.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
@@ -292,17 +249,27 @@ const Customers = () => {
                 </table>
               </div>
               
-              {totalPages > 1 && (
-                <div className="border-t px-4 py-3">
+              <div className="border-t px-4 py-3 flex items-center justify-between gap-2 flex-wrap">
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  aria-label="Baris per halaman"
+                >
+                  {[20, 50, 100].map((n) => (
+                    <option key={n} value={n}>{n} / halaman</option>
+                  ))}
+                </select>
+                {totalPages > 1 && (
                   <PaginationComponent
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
-                    itemsPerPage={ITEMS_PER_PAGE}
+                    itemsPerPage={pageSize}
                     totalItems={customersCount}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
         </div>

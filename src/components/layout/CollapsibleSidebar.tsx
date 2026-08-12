@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSidebarContext } from '@/contexts/SidebarContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchAdminRoute, isSaveDataOrSlow } from '@/lib/adminPrefetch';
 
 interface CollapsibleSidebarProps {
   onLinkClick?: () => void;
@@ -22,6 +24,22 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
   const { canAccessRoute } = usePermissions();
   const { collapsed, setCollapsed } = useSidebarContext();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
+
+  // Hover/focus intent prefetch: route chunk + first page of data.
+  const handlePrefetch = React.useCallback(
+    (path: string) => prefetchAdminRoute(path, queryClient),
+    [queryClient]
+  );
+  // On slow/save-data connections only prefetch on explicit touch intent.
+  const hoverPrefetchProps = (path: string) =>
+    isSaveDataOrSlow()
+      ? { onTouchStart: () => handlePrefetch(path) }
+      : {
+          onMouseEnter: () => handlePrefetch(path),
+          onFocus: () => handlePrefetch(path),
+          onTouchStart: () => handlePrefetch(path),
+        };
 
   const menuItems = [
     { name: 'Home', path: '/', icon: Home, resource: 'dashboard', color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -60,7 +78,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
   };
 
   const navLinkClasses = (isActive: boolean, isMobileView: boolean) =>
-    `flex items-center gap-3 px-3 py-2.5 rounded-xl ${isMobileView ? 'text-[13px]' : 'text-sm'} font-medium transition-all duration-200 ease-in-out ${
+    `flex items-center gap-3 px-3 py-2.5 rounded-xl ${isMobileView ? 'text-[13px]' : 'text-sm'} font-medium ${
       isActive
         ? 'bg-primary/10 text-primary'
         : 'text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -101,6 +119,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
                     key={item.path}
                     to={item.path}
                     onClick={handleLinkClick}
+                    {...hoverPrefetchProps(item.path)}
                     className={({ isActive }) => navLinkClasses(isActive, true)}
                   >
                     <span className={`flex items-center justify-center h-7 w-7 rounded-lg ${item.bg} flex-shrink-0`}>
@@ -149,8 +168,9 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
                       <NavLink
                         to={item.path}
                         onClick={handleLinkClick}
+                        {...hoverPrefetchProps(item.path)}
                         className={({ isActive }) =>
-                          `flex items-center justify-center h-10 w-10 mx-auto rounded-xl transition-all duration-200 ease-in-out ${
+                          `flex items-center justify-center h-10 w-10 mx-auto rounded-xl ${
                             isActive
                               ? 'bg-primary/10'
                               : 'hover:bg-accent'
@@ -174,6 +194,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
                   key={item.path}
                   to={item.path}
                   onClick={handleLinkClick}
+                  {...hoverPrefetchProps(item.path)}
                   className={({ isActive }) => navLinkClasses(isActive, false)}
                 >
                   <span className={`flex items-center justify-center h-7 w-7 rounded-lg ${item.bg} flex-shrink-0`}>
@@ -190,4 +211,4 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLinkClick }) 
   );
 };
 
-export default CollapsibleSidebar;
+export default React.memo(CollapsibleSidebar);

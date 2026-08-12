@@ -1,6 +1,8 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchCommonAdminRoutes } from "@/lib/adminPrefetch";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Eagerly load the public homepage so first-paint is fast
@@ -54,6 +56,13 @@ const RouteFallback = () => (
 );
 
 function App() {
+  const queryClient = useQueryClient();
+
+  // Once the app is interactive, warm the most-used admin route chunks during idle time.
+  useEffect(() => {
+    prefetchCommonAdminRoutes(queryClient);
+  }, [queryClient]);
+
   return (
     <TooltipProvider>
       <Suspense fallback={<RouteFallback />}>
