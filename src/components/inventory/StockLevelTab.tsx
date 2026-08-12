@@ -1,11 +1,12 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Package, AlertTriangle, Edit, BarChart3, Barcode as BarcodeIcon, Printer } from 'lucide-react';
 import StockAdjustmentModal from './StockAdjustmentModal';
-import StockLevelDetailsModal from './StockLevelDetailsModal';
+// recharts-heavy modal: loaded only when the user opens stock details
+const StockLevelDetailsModal = lazy(() => import('./StockLevelDetailsModal'));
 import ProductBarcodeModal from './ProductBarcodeModal';
 
 interface StockLevelTabProps {
@@ -155,12 +156,14 @@ const StockLevelTab = ({ products }: StockLevelTabProps) => {
       )}
 
       {/* Stock Details Modal */}
-      {selectedProduct && (
-        <StockLevelDetailsModal
-          open={detailsModalOpen}
-          onOpenChange={setDetailsModalOpen}
-          product={selectedProduct}
-        />
+      {selectedProduct && detailsModalOpen && (
+        <Suspense fallback={null}>
+          <StockLevelDetailsModal
+            open={detailsModalOpen}
+            onOpenChange={setDetailsModalOpen}
+            product={selectedProduct}
+          />
+        </Suspense>
       )}
 
       {/* Barcode Modal */}
