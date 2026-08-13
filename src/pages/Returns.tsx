@@ -1,7 +1,8 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -29,9 +30,10 @@ const Returns = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteReturnId, setDeleteReturnId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
   const { data: returnsData, isLoading } = useQuery({
-    queryKey: ['returns', searchTerm, currentPage],
+    queryKey: ['returns', debouncedSearch, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -46,14 +48,15 @@ const Returns = () => {
           )
         `, { count: 'exact' });
       
-      if (searchTerm) {
-        query = query.or(`return_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`return_number.ilike.%${debouncedSearch}%,invoice_number.ilike.%${debouncedSearch}%`);
       }
       
       const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
       if (error) throw error;
       return { data, count };
-    }
+    },
+    placeholderData: keepPreviousData,
   });
 
   // Query untuk statistik

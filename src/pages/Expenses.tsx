@@ -1,7 +1,8 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,20 +38,24 @@ const Expenses = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
 
   const { data: expensesData, isLoading } = useQuery({
-    queryKey: ['expenses', searchTerm, categoryFilter, currentPage],
+    queryKey: ['expenses', debouncedSearch, categoryFilter, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
       
       let query = supabase
         .from('expenses')
-        .select('*', { count: 'exact' });
+        .select(
+          'id, title, category, amount, description, receipt_url, expense_date, created_at',
+          { count: 'exact' }
+        );
       
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`title.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
       }
       
       if (categoryFilter !== 'all') {
@@ -63,7 +68,8 @@ const Expenses = () => {
       
       if (error) throw error;
       return { data, count };
-    }
+    },
+    placeholderData: keepPreviousData,
   });
 
   const { data: stats } = useQuery({

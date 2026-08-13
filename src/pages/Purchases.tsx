@@ -1,7 +1,8 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -27,9 +28,11 @@ const Purchases = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deletePurchaseId, setDeletePurchaseId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  // 350ms debounce: one request per typing burst instead of per keystroke
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
   const { data: purchasesData, isLoading } = useQuery({
-    queryKey: ['purchases', searchTerm, currentPage],
+    queryKey: ['purchases', debouncedSearch, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -43,8 +46,8 @@ const Purchases = () => {
           purchase_payments(payment_amount)
         `, { count: 'exact' });
       
-      if (searchTerm) {
-        query = query.or(`purchase_number.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`purchase_number.ilike.%${debouncedSearch}%,invoice_number.ilike.%${debouncedSearch}%`);
       }
       
       const { data, error, count } = await query
@@ -53,7 +56,8 @@ const Purchases = () => {
       
       if (error) throw error;
       return { data, count };
-    }
+    },
+    placeholderData: keepPreviousData,
   });
 
   const purchases = purchasesData?.data || [];
