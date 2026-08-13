@@ -16,6 +16,7 @@ import { Plus, Edit, Trash2, Gift, Search, X, Star, Package, Eye } from 'lucide-
 import Layout from '@/components/Layout';
 import RewardDetailsModal from '@/components/RewardDetailsModal';
 import PaginationComponent from '@/components/PaginationComponent';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -30,6 +31,7 @@ const PointsRewards = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteRewardId, setDeleteRewardId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const debouncedProductSearch = useDebouncedValue(productSearch, 350);
 
   const [rewardData, setRewardData] = useState({
     name: '',
