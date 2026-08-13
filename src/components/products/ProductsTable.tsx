@@ -39,8 +39,12 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => {
             >
               {product.image_url ? (
                 <img 
-                  src={product.image_url} 
+                  src={getThumbnailUrl(product.image_url, 96)} 
                   alt={product.name} 
+                  width={48}
+                  height={48}
+                  loading="lazy"
+                  decoding="async"
                   className="w-12 h-12 object-cover rounded hover:opacity-80 transition-opacity" 
                 />
               ) : (
