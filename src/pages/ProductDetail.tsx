@@ -277,7 +277,9 @@ const ProductDetail = () => {
 
             {/* Price History inline (compact) */}
             <div className="mb-3">
-              <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
+              <Suspense fallback={<div className="min-h-[64px]" />}>
+                <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
+              </Suspense>
             </div>
 
             <div className="mb-3">
