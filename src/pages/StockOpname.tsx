@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -80,12 +80,17 @@ const StockOpname = () => {
     },
   });
 
+  const sessionIds = useMemo(() => (sessions as any[]).map((s: any) => s.id), [sessions]);
+
   const { data: itemsAgg = [] } = useQuery({
-    queryKey: ['opname-items-agg'],
+    // scoped to the sessions actually listed instead of every opname item ever created
+    queryKey: ['opname-items-agg', sessionIds],
+    enabled: sessionIds.length > 0,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('stock_opname_items')
-        .select('session_id, status, variance');
+        .select('session_id, status')
+        .in('session_id', sessionIds);
       if (error) {
         console.error('[StockOpname] failed to fetch items agg:', error);
         throw error;
@@ -94,13 +99,23 @@ const StockOpname = () => {
     },
   });
 
+  // Single pass grouping instead of 4 array scans per rendered session row
+  const aggMap = useMemo(() => {
+    const m = new Map<string, { total: number; checked: number; match: number; mismatch: number }>();
+    (itemsAgg as any[]).forEach((i: any) => {
+      const e = m.get(i.session_id) || { total: 0, checked: 0, match: 0, mismatch: 0 };
+      e.total += 1;
+      if (i.status !== 'pending') e.checked += 1;
+      if (i.status === 'match') e.match += 1;
+      if (i.status === 'mismatch') e.mismatch += 1;
+      m.set(i.session_id, e);
+    });
+    return m;
+  }, [itemsAgg]);
+
   const aggBySession = (sid: string) => {
-    const items = itemsAgg.filter((i: any) => i.session_id === sid);
-    const total = items.length;
-    const checked = items.filter((i: any) => i.status !== 'pending').length;
-    const match = items.filter((i: any) => i.status === 'match').length;
-    const mismatch = items.filter((i: any) => i.status === 'mismatch').length;
-    return { total, checked, match, mismatch, progress: total ? Math.round((checked / total) * 100) : 0 };
+    const e = aggMap.get(sid) || { total: 0, checked: 0, match: 0, mismatch: 0 };
+    return { ...e, progress: e.total ? Math.round((e.checked / e.total) * 100) : 0 };
   };
 
   const createMut = useMutation({

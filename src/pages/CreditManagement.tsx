@@ -8,6 +8,7 @@ import CreditTable from '@/components/credit/CreditTable';
 import CreditHistoryTab from '@/components/credit/CreditHistoryTab';
 import ReminderDialog from '@/components/credit/ReminderDialog';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreditCard, History } from 'lucide-react';
 
@@ -17,7 +18,8 @@ const CreditManagement = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: creditTransactions, isLoading } = useCreditTransactions(searchTerm);
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
+  const { data: creditTransactions, isLoading } = useCreditTransactions(debouncedSearch);
 
   const handleSendReminder = (transaction: any) => {
     setSelectedCredit(transaction);

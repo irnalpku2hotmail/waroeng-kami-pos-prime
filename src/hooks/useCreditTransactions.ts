@@ -23,10 +23,14 @@ export const useCreditTransactions = (searchTerm: string) => {
       const { data: transactions, error } = await query.order('due_date', { ascending: true });
       if (error) throw error;
 
-      // Get all credit payments to calculate remaining balance
+      const txIds = (transactions || []).map((t) => t.id);
+      if (txIds.length === 0) return [];
+
+      // Only the payments belonging to the fetched credit transactions
       const { data: payments } = await supabase
         .from('credit_payments')
-        .select('transaction_id, payment_amount');
+        .select('transaction_id, payment_amount')
+        .in('transaction_id', txIds);
 
       // Calculate total paid per transaction
       const paidByTransaction: Record<string, number> = {};

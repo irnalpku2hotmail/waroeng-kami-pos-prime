@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUp, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 
 const ExcelImport = () => {
@@ -26,7 +25,9 @@ const ExcelImport = () => {
     }
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
+    // xlsx (~400KB) is only fetched when the user actually uses import/template
+    const XLSX = await import('xlsx');
     const template = [
       {
         name: 'Contoh Produk 1',
@@ -53,6 +54,7 @@ const ExcelImport = () => {
 
     setIsLoading(true);
     try {
+      const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];

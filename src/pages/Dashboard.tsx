@@ -32,21 +32,27 @@ const Dashboard = () => {
   } as const;
 
   const { data: products } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['dashboard-products-count'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('id');
+      // count-only: no rows transferred
+      const { count, error } = await supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true });
       if (error) throw error;
-      return data;
+      return count || 0;
     },
     ...cacheOpts,
   });
 
   const { data: lowStock } = useQuery({
-    queryKey: ['low-stock'],
+    queryKey: ['dashboard-low-stock-count'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('id').lt('current_stock', 10);
+      const { count, error } = await supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .lt('current_stock', 10);
       if (error) throw error;
-      return data;
+      return count || 0;
     },
     ...cacheOpts,
   });
@@ -56,7 +62,7 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchase_items')
-        .select('product_id, expiration_date')
+        .select('product_id')
         .not('expiration_date', 'is', null)
         .lt('expiration_date', todayString);
       if (error) throw error;
@@ -67,24 +73,26 @@ const Dashboard = () => {
   });
 
   const { data: customers } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['dashboard-customers-count'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('customers').select('id, name');
+      const { count, error } = await supabase
+        .from('customers')
+        .select('id', { count: 'exact', head: true });
       if (error) throw error;
-      return data;
+      return count || 0;
     },
     ...cacheOpts,
   });
 
   const { data: todayOrders } = useQuery({
-    queryKey: ['today-orders'],
+    queryKey: ['dashboard-today-orders-count'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders').select('id')
+      const { count, error } = await supabase
+        .from('orders').select('id', { count: 'exact', head: true })
         .gte('created_at', startOfTodayISO)
         .lte('created_at', endOfTodayISO);
       if (error) throw error;
-      return data;
+      return count || 0;
     },
     ...cacheOpts,
   });
@@ -94,7 +102,7 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, transaction_number, total_amount, customer_id, created_at')
+        .select('id, transaction_number, total_amount, created_at, customers(name)')
         .gte('created_at', startOfTodayISO)
         .lte('created_at', endOfTodayISO);
       if (error) throw error;
@@ -118,11 +126,11 @@ const Dashboard = () => {
     ...cacheOpts,
   });
 
-  const totalProducts = products?.length || 0;
-  const lowStockProducts = lowStock?.length || 0;
+  const totalProducts = products || 0;
+  const lowStockProducts = lowStock || 0;
   const expiredProductsCount = expiredProducts?.length || 0;
-  const totalCustomers = customers?.length || 0;
-  const todayOrdersCount = todayOrders?.length || 0;
+  const totalCustomers = customers || 0;
+  const todayOrdersCount = todayOrders || 0;
 
   const todaySales = useMemo(
     () => posSales?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0,
@@ -134,24 +142,18 @@ const Dashboard = () => {
     [codSalesToday]
   );
 
-  const customerMap = useMemo(() => {
-    const m = new Map<string, string>();
-    (customers ?? []).forEach((c: any) => m.set(c.id, c.name));
-    return m;
-  }, [customers]);
-
   const todaySalesTable = useMemo(() => {
     return (posSales ?? [])
-      .map(trx => ({
+      .map((trx: any) => ({
         id: trx.id,
         number: trx.transaction_number,
-        name: trx.customer_id ? (customerMap.get(trx.customer_id) || 'Umum') : 'Umum',
+        name: trx.customers?.name || 'Umum',
         total: trx.total_amount,
         status: 'POS',
         created_at: trx.created_at,
       }))
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [posSales, customerMap]);
+  }, [posSales]);
 
   const codSalesTable = useMemo(() => {
     return (codSalesToday ?? [])

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, Edit, Trash2 } from 'lucide-react';
 import PurchaseHistoryDialog from './PurchaseHistoryDialog';
+import { getThumbnailUrl } from '@/utils/imageOptimization';
 
 interface ProductsTableProps {
   products: any[];
@@ -39,8 +40,12 @@ const ProductsTable = ({ products, onEdit, onDelete }: ProductsTableProps) => {
             >
               {product.image_url ? (
                 <img 
-                  src={product.image_url} 
+                  src={getThumbnailUrl(product.image_url, 96)} 
                   alt={product.name} 
+                  width={48}
+                  height={48}
+                  loading="lazy"
+                  decoding="async"
                   className="w-12 h-12 object-cover rounded hover:opacity-80 transition-opacity" 
                 />
               ) : (

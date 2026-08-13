@@ -20,7 +20,9 @@ import AuthModal from '@/components/AuthModal';
 import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCartModal';
 import WishlistButton from '@/components/wishlist/WishlistButton';
 import MobileBottomNav from '@/components/home/MobileBottomNav';
-import PriceHistoryChart from '@/components/product/PriceHistoryChart';
+import { Suspense, lazy } from 'react';
+// recharts is only downloaded when the price-history card is rendered
+const PriceHistoryChart = lazy(() => import('@/components/product/PriceHistoryChart'));
 import FrontendNavbar from '@/components/frontend/FrontendNavbar';
 import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
@@ -275,7 +277,9 @@ const ProductDetail = () => {
 
             {/* Price History inline (compact) */}
             <div className="mb-3">
-              <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
+              <Suspense fallback={<div className="min-h-[64px]" />}>
+                <PriceHistoryChart productId={product.id} currentPrice={currentPrice} />
+              </Suspense>
             </div>
 
             <div className="mb-3">

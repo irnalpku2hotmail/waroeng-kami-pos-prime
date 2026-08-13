@@ -169,3 +169,16 @@ export async function optimizeImage(
 
 /** Long cache lifetime (30 days) for optimized uploads — safe because filenames are unique. */
 export const OPTIMIZED_CACHE_CONTROL = '2592000';
+
+/**
+ * Rewrites a Supabase public storage URL to the on-the-fly image transform
+ * endpoint so admin tables download small thumbnails instead of full images.
+ * Non-Supabase URLs are returned unchanged.
+ */
+export function getThumbnailUrl(url: string | null | undefined, size = 96, quality = 60): string {
+  if (!url) return '';
+  if (!url.includes('/storage/v1/object/public/')) return url;
+  const transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  const sep = transformed.includes('?') ? '&' : '?';
+  return `${transformed}${sep}width=${size}&height=${size}&resize=cover&quality=${quality}`;
+}

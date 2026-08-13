@@ -1,13 +1,19 @@
 
+import { Suspense, lazy } from 'react';
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import POSSalesReports from '@/components/reports/POSSalesReports';
-import SalesReports from '@/components/reports/SalesReports';
-import CustomerReports from '@/components/reports/CustomerReports';
-import InventoryReports from '@/components/reports/InventoryReports';
-import ExpenseReports from '@/components/reports/ExpenseReports';
-import CODReports from '@/components/reports/CODReports';
 import { useNavigate } from 'react-router-dom';
+
+// Every report tab pulls in recharts; load only the tab the user opens.
+const POSSalesReports = lazy(() => import('@/components/reports/POSSalesReports'));
+const SalesReports = lazy(() => import('@/components/reports/SalesReports'));
+const CustomerReports = lazy(() => import('@/components/reports/CustomerReports'));
+const InventoryReports = lazy(() => import('@/components/reports/InventoryReports'));
+const ExpenseReports = lazy(() => import('@/components/reports/ExpenseReports'));
+const CODReports = lazy(() => import('@/components/reports/CODReports'));
+
+/** Minimal, layout-stable fallback (no skeleton, no animation). */
+const TabFallback = () => <div className="min-h-[240px]" />;
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -31,27 +37,27 @@ const Reports = () => {
           </div>
 
           <TabsContent value="pos-sales" className="space-y-6">
-            <POSSalesReports />
+            <Suspense fallback={<TabFallback />}><POSSalesReports /></Suspense>
           </TabsContent>
 
           <TabsContent value="cod-sales" className="space-y-6">
-            <SalesReports />
+            <Suspense fallback={<TabFallback />}><SalesReports /></Suspense>
           </TabsContent>
 
           <TabsContent value="customers" className="space-y-6">
-            <CustomerReports />
+            <Suspense fallback={<TabFallback />}><CustomerReports /></Suspense>
           </TabsContent>
 
           <TabsContent value="inventory" className="space-y-6">
-            <InventoryReports />
+            <Suspense fallback={<TabFallback />}><InventoryReports /></Suspense>
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-6">
-            <ExpenseReports />
+            <Suspense fallback={<TabFallback />}><ExpenseReports /></Suspense>
           </TabsContent>
 
           <TabsContent value="cod" className="space-y-6">
-            <CODReports />
+            <Suspense fallback={<TabFallback />}><CODReports /></Suspense>
           </TabsContent>
         </Tabs>
       </div>

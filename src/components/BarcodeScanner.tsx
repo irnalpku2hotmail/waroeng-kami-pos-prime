@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import type { Html5Qrcode as Html5QrcodeType } from "html5-qrcode";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Camera, X } from "lucide-react";
@@ -11,7 +11,7 @@ interface BarcodeScannerProps {
 const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<Html5QrcodeType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -57,6 +57,8 @@ const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
         
         if (!containerRef.current) return;
 
+        // html5-qrcode (~300KB) is only downloaded when the scanner dialog opens
+        const { Html5Qrcode } = await import("html5-qrcode");
         const scanner = new Html5Qrcode("barcode-reader");
         scannerRef.current = scanner;
 

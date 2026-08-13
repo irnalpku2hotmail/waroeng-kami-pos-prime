@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import type { Html5Qrcode as Html5QrcodeType } from "html5-qrcode";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ const MultiBarcodeScanner = ({ onAddProducts, isOpen: controlledIsOpen, onOpenCh
   const [error, setError] = useState<string | null>(null);
   const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
   const [lastScannedBarcode, setLastScannedBarcode] = useState<string>("");
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<Html5QrcodeType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const { toast } = useToast();
@@ -134,6 +134,8 @@ const MultiBarcodeScanner = ({ onAddProducts, isOpen: controlledIsOpen, onOpenCh
         
         if (!containerRef.current) return;
 
+        // html5-qrcode is loaded on demand so POS startup stays light
+        const { Html5Qrcode } = await import("html5-qrcode");
         const scanner = new Html5Qrcode("multi-barcode-reader");
         scannerRef.current = scanner;
 
