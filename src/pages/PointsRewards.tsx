@@ -40,20 +40,20 @@ const PointsRewards = () => {
 
   // Fetch products for search
   const { data: products = [] } = useQuery({
-    queryKey: ['products-search', productSearch],
+    queryKey: ['products-search', debouncedProductSearch],
     queryFn: async () => {
-      if (!productSearch.trim()) return [];
+      if (!debouncedProductSearch.trim()) return [];
       const { data, error } = await supabase
         .from('products')
-        .select('*')
-        .ilike('name', `%${productSearch}%`)
+        .select('id, name, selling_price, current_stock, image_url, loyalty_points')
+        .ilike('name', `%${debouncedProductSearch}%`)
         .eq('is_active', true)
         .limit(10);
       
       if (error) throw error;
       return data;
     },
-    enabled: productSearch.length > 0
+    enabled: debouncedProductSearch.length > 0
   });
 
   const { data: rewardsData, isLoading } = useQuery({
