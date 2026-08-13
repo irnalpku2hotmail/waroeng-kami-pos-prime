@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, Edit, Trash2 } from 'lucide-react';
 import PurchaseHistoryDialog from './PurchaseHistoryDialog';
+import { getThumbnailUrl } from '@/utils/imageOptimization';
 
 interface ProductsTableProps {
   products: any[];
