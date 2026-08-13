@@ -25,7 +25,9 @@ const ExcelImport = () => {
     }
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
+    // xlsx (~400KB) is only fetched when the user actually uses import/template
+    const XLSX = await import('xlsx');
     const template = [
       {
         name: 'Contoh Produk 1',
@@ -52,6 +54,7 @@ const ExcelImport = () => {
 
     setIsLoading(true);
     try {
+      const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
