@@ -21,54 +21,41 @@ const AuditReport = () => {
   const fromISO = useMemo(() => new Date(from + 'T00:00:00').toISOString(), [from]);
   const toISO = useMemo(() => endOfDay(new Date(to + 'T00:00:00')).toISOString(), [to]);
 
+  // Every aggregate (totals, duplicate detection, stock variance) is computed
+  // in Postgres — no full-history download in the browser.
+  const { data: summary } = useQuery({
+    queryKey: ['audit-summary', fromISO, toISO],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_audit_summary', {
+        p_from: fromISO,
+        p_to: toISO,
+      });
+      if (error) throw error;
+      return data as {
+        tx_count: number;
+        tx_revenue: number;
+        pos_count: number;
+        order_count: number;
+        items_count: number;
+        points_sum: number;
+        points_entries: number;
+        duplicates: { order_id: string; count: number }[];
+        stock_variance: { product_id: string; net: number }[];
+      };
+    },
+  });
+
+  // Only the latest 50 transactions are fetched for the preview table.
   const { data: transactions = [], isLoading: loadingTx } = useQuery({
-    queryKey: ['audit-tx', fromISO, toISO],
+    queryKey: ['audit-tx-recent', fromISO, toISO],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, transaction_number, total_amount, source, order_id, customer_id, created_at')
+        .select('id, transaction_number, total_amount, source, created_at')
         .gte('created_at', fromISO)
         .lte('created_at', toISO)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: txItems = [] } = useQuery({
-    queryKey: ['audit-tx-items', fromISO, toISO],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transaction_items')
-        .select('id, transaction_id, quantity, total_price, created_at')
-        .gte('created_at', fromISO)
-        .lte('created_at', toISO);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: pointTx = [] } = useQuery({
-    queryKey: ['audit-points', fromISO, toISO],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('point_transactions')
-        .select('id, customer_id, points_change, description, created_at')
-        .gte('created_at', fromISO)
-        .lte('created_at', toISO);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: stockMoves = [] } = useQuery({
-    queryKey: ['audit-stock', fromISO, toISO],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('stock_movements')
-        .select('id, product_id, movement_type, quantity, reference_table, reference_id, created_at')
-        .gte('created_at', fromISO)
-        .lte('created_at', toISO);
+        .order('created_at', { ascending: false })
+        .limit(50);
       if (error) throw error;
       return data || [];
     },
@@ -87,30 +74,23 @@ const AuditReport = () => {
     },
   });
 
-  // Duplication detection: same order_id appearing >1 in transactions
-  const orderIdCounts = useMemo(() => {
-    const m = new Map<string, number>();
-    transactions.forEach((t: any) => {
-      if (t.order_id) m.set(t.order_id, (m.get(t.order_id) || 0) + 1);
-    });
-    return Array.from(m.entries()).filter(([, c]) => c > 1);
-  }, [transactions]);
+  const orderIdCounts: [string, number][] = useMemo(
+    () => (summary?.duplicates || []).map((d) => [d.order_id, Number(d.count)]),
+    [summary]
+  );
 
-  const totalRevenue = transactions.reduce((s: number, t: any) => s + Number(t.total_amount || 0), 0);
-  const totalPoints = pointTx.reduce((s: number, p: any) => s + Number(p.points_change || 0), 0);
-  const posCount = transactions.filter((t: any) => t.source === 'POS' || !t.source).length;
-  const orderCount = transactions.filter((t: any) => t.source === 'FRONTEND_ORDER').length;
+  const stockVariance: [string, number][] = useMemo(
+    () => (summary?.stock_variance || []).map((s) => [s.product_id, Number(s.net)]),
+    [summary]
+  );
 
-  // Stock variance summary per product
-  const stockVariance = useMemo(() => {
-    const map = new Map<string, number>();
-    stockMoves.forEach((m: any) => {
-      map.set(m.product_id, (map.get(m.product_id) || 0) + Number(m.quantity || 0));
-    });
-    return Array.from(map.entries())
-      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-      .slice(0, 15);
-  }, [stockMoves]);
+  const txCount = summary?.tx_count || 0;
+  const totalRevenue = Number(summary?.tx_revenue || 0);
+  const totalPoints = Number(summary?.points_sum || 0);
+  const posCount = summary?.pos_count || 0;
+  const orderCount = summary?.order_count || 0;
+  const itemsCount = summary?.items_count || 0;
+  const pointsEntries = summary?.points_entries || 0;
 
   return (
     <AccessControl allowedRoles={['admin', 'manager']} resource="Audit Report">
@@ -136,9 +116,9 @@ const AuditReport = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Total Transaksi" value={transactions.length.toString()} sub={`${posCount} POS · ${orderCount} Order`} />
-            <StatCard icon={<Package className="h-4 w-4" />} label="Total Items" value={txItems.length.toString()} sub={fmtRp(totalRevenue)} />
-            <StatCard icon={<Coins className="h-4 w-4" />} label="Loyalty Δ" value={totalPoints.toString()} sub={`${pointTx.length} entri`} />
+            <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Total Transaksi" value={txCount.toString()} sub={`${posCount} POS · ${orderCount} Order`} />
+            <StatCard icon={<Package className="h-4 w-4" />} label="Total Items" value={itemsCount.toString()} sub={fmtRp(totalRevenue)} />
+            <StatCard icon={<Coins className="h-4 w-4" />} label="Loyalty Δ" value={totalPoints.toString()} sub={`${pointsEntries} entri`} />
             <StatCard icon={<Users className="h-4 w-4" />} label="Top Customers" value={(customerStats?.length || 0).toString()} sub="berdasarkan belanja" />
           </div>
 
@@ -241,7 +221,7 @@ const AuditReport = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {transactions.slice(0, 50).map((t: any) => (
+                      {transactions.map((t: any) => (
                         <TableRow key={t.id}>
                           <TableCell className="font-mono text-xs">{t.transaction_number}</TableCell>
                           <TableCell><Badge variant={t.source === 'FRONTEND_ORDER' ? 'default' : 'secondary'}>{t.source || 'POS'}</Badge></TableCell>

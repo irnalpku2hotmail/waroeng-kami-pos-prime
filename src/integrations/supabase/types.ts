@@ -2149,6 +2149,27 @@ export type Database = {
       generate_customer_return_number: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       generate_referral_code: { Args: never; Returns: string }
+      get_admin_notifications: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_priority?: string
+          p_type?: string
+        }
+        Returns: {
+          event_time: string
+          id: string
+          message: string
+          priority: string
+          title: string
+          total_count: number
+          type: string
+        }[]
+      }
+      get_audit_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
       get_customer_purchase_history: {
         Args: { customer_uuid: string }
         Returns: {
@@ -2169,7 +2190,9 @@ export type Database = {
           total_unredeemed_points: number
         }[]
       }
+      get_dashboard_summary: { Args: never; Returns: Json }
       get_or_create_customer_for_current_user: { Args: never; Returns: string }
+      get_search_analytics_summary: { Args: { p_days?: number }; Returns: Json }
       get_similar_products: {
         Args: {
           category_filter?: string
@@ -2226,6 +2249,7 @@ export type Database = {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      is_staff_user: { Args: never; Returns: boolean }
       log_stock_movement: {
         Args: {
           p_notes?: string

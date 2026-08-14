@@ -1,14 +1,18 @@
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import BundleFormModal from '@/components/bundles/BundleFormModal';
+import PaginationComponent from '@/components/PaginationComponent';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { DEFAULT_PAGE_SIZE, bundlesKey, fetchBundles } from '@/lib/adminQueries';
 
 interface Bundle {
   id: string;
@@ -23,25 +27,27 @@ interface Bundle {
   savings_amount: number;
   savings_percentage: number;
   created_at: string;
-  bundle_items?: { id: string; product_id: string; quantity: number; products: { id: string; name: string; image_url: string | null; selling_price: number; current_stock: number } }[];
+  bundle_items?: { id: string }[];
 }
 
 const Bundles = () => {
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editBundle, setEditBundle] = useState<Bundle | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
-  const { data: bundles = [], isLoading } = useQuery({
-    queryKey: ['admin-bundles'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bundles')
-        .select('*, bundle_items(*, products(id, name, image_url, selling_price, current_stock))')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as unknown as Bundle[];
-    },
+  // Server-side pagination + search: only one page of bundles is transferred.
+  const { data: bundlesData, isLoading } = useQuery({
+    queryKey: bundlesKey(debouncedSearch, currentPage, DEFAULT_PAGE_SIZE),
+    queryFn: () => fetchBundles(debouncedSearch, currentPage, DEFAULT_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
+
+  const bundles = (bundlesData?.data || []) as unknown as Bundle[];
+  const bundlesCount = bundlesData?.count || 0;
+  const totalPages = Math.ceil(bundlesCount / DEFAULT_PAGE_SIZE);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -78,6 +84,16 @@ const Bundles = () => {
           <Button onClick={() => { setEditBundle(null); setFormOpen(true); }} className="flex items-center gap-2">
             <Plus className="h-4 w-4" /> Buat Bundling
           </Button>
+        </div>
+
+        <div className="relative max-w-xs">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            placeholder="Cari bundling..."
+            className="pl-8 h-9"
+          />
         </div>
 
         {isLoading ? (
@@ -122,6 +138,16 @@ const Bundles = () => {
               </Card>
             ))}
           </div>
+        )}
+
+        {totalPages > 1 && (
+          <PaginationComponent
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={DEFAULT_PAGE_SIZE}
+            totalItems={bundlesCount}
+          />
         )}
       </div>
 

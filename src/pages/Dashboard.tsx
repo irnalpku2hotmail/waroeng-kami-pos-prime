@@ -31,72 +31,27 @@ const Dashboard = () => {
     placeholderData: (prev: any) => prev,
   } as const;
 
-  const { data: products } = useQuery({
-    queryKey: ['dashboard-products-count'],
+  // All eight stat cards come from ONE aggregate round-trip computed in Postgres.
+  const { data: summary } = useQuery({
+    queryKey: ['dashboard-summary', todayString],
     queryFn: async () => {
-      // count-only: no rows transferred
-      const { count, error } = await supabase
-        .from('products')
-        .select('id', { count: 'exact', head: true });
+      const { data, error } = await (supabase.rpc as any)('get_dashboard_summary');
       if (error) throw error;
-      return count || 0;
+      return data as {
+        total_products: number;
+        low_stock: number;
+        expired_products: number;
+        total_customers: number;
+        today_orders: number;
+        today_pos_total: number;
+        today_pos_count: number;
+        today_cod_total: number;
+      };
     },
     ...cacheOpts,
   });
 
-  const { data: lowStock } = useQuery({
-    queryKey: ['dashboard-low-stock-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('products')
-        .select('id', { count: 'exact', head: true })
-        .lt('current_stock', 10);
-      if (error) throw error;
-      return count || 0;
-    },
-    ...cacheOpts,
-  });
-
-  const { data: expiredProducts } = useQuery({
-    queryKey: ['expired-products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('purchase_items')
-        .select('product_id')
-        .not('expiration_date', 'is', null)
-        .lt('expiration_date', todayString);
-      if (error) throw error;
-      const uniqueProducts = new Set(data?.map(item => item.product_id) || []);
-      return Array.from(uniqueProducts);
-    },
-    ...cacheOpts,
-  });
-
-  const { data: customers } = useQuery({
-    queryKey: ['dashboard-customers-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('customers')
-        .select('id', { count: 'exact', head: true });
-      if (error) throw error;
-      return count || 0;
-    },
-    ...cacheOpts,
-  });
-
-  const { data: todayOrders } = useQuery({
-    queryKey: ['dashboard-today-orders-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('orders').select('id', { count: 'exact', head: true })
-        .gte('created_at', startOfTodayISO)
-        .lte('created_at', endOfTodayISO);
-      if (error) throw error;
-      return count || 0;
-    },
-    ...cacheOpts,
-  });
-
+  // Preview tables: newest 20 rows only.
   const { data: posSales } = useQuery({
     queryKey: ['pos-daily-sales', todayString],
     queryFn: async () => {
@@ -104,7 +59,9 @@ const Dashboard = () => {
         .from('transactions')
         .select('id, transaction_number, total_amount, created_at, customers(name)')
         .gte('created_at', startOfTodayISO)
-        .lte('created_at', endOfTodayISO);
+        .lte('created_at', endOfTodayISO)
+        .order('created_at', { ascending: false })
+        .limit(20);
       if (error) throw error;
       return data;
     },
@@ -112,35 +69,30 @@ const Dashboard = () => {
   });
 
   const { data: codSalesToday } = useQuery({
-    queryKey: ['cod-revenue-today'],
+    queryKey: ['cod-revenue-today', todayString],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, customer_id, customer_name, created_at, status')
+        .select('id, order_number, total_amount, customer_name, created_at, status')
         .eq('status', 'delivered')
         .gte('delivery_date', startOfTodayISO)
-        .lte('delivery_date', endOfTodayISO);
+        .lte('delivery_date', endOfTodayISO)
+        .order('delivery_date', { ascending: false })
+        .limit(20);
       if (error) throw error;
       return data;
     },
     ...cacheOpts,
   });
 
-  const totalProducts = products || 0;
-  const lowStockProducts = lowStock || 0;
-  const expiredProductsCount = expiredProducts?.length || 0;
-  const totalCustomers = customers || 0;
-  const todayOrdersCount = todayOrders || 0;
-
-  const todaySales = useMemo(
-    () => posSales?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0,
-    [posSales]
-  );
-  const todayTransactions = posSales?.length || 0;
-  const codIncomeToday = useMemo(
-    () => codSalesToday?.reduce((sum, trx) => sum + (Number(trx.total_amount) || 0), 0) || 0,
-    [codSalesToday]
-  );
+  const totalProducts = Number(summary?.total_products || 0);
+  const lowStockProducts = Number(summary?.low_stock || 0);
+  const expiredProductsCount = Number(summary?.expired_products || 0);
+  const totalCustomers = Number(summary?.total_customers || 0);
+  const todayOrdersCount = Number(summary?.today_orders || 0);
+  const todaySales = Number(summary?.today_pos_total || 0);
+  const todayTransactions = Number(summary?.today_pos_count || 0);
+  const codIncomeToday = Number(summary?.today_cod_total || 0);
 
   const todaySalesTable = useMemo(() => {
     return (posSales ?? [])

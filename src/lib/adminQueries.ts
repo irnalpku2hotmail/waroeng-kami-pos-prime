@@ -87,14 +87,103 @@ export async function fetchOrders(search: string, status: string, page: number, 
   const { from, to } = bounds(page, size);
   let query = supabase
     .from('orders')
-    .select('*, order_items(*, products(name, image_url, current_stock, min_stock))', {
-      count: 'exact',
-    });
+    .select(
+      // List view only: narrow order columns + the minimum item fields the
+      // "Status Stok" column needs. Full detail (prices, images) is fetched
+      // on demand by OrderDetailsModal.
+      'id, order_number, customer_name, customer_phone, order_date, total_amount, delivery_fee, status, payment_method, delivery_method, created_at, order_items(id, quantity, products(name, current_stock, min_stock))',
+      { count: 'exact' }
+    );
   if (search) query = query.or(`order_number.ilike.%${search}%,customer_name.ilike.%${search}%`);
   if (status !== 'all') query = query.eq('status', status);
   const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
   if (error) throw error;
   return { data: data || [], count: count || 0 };
+}
+
+/** Full single-order detail — used by the details modal / receipt only. */
+export const orderDetailKey = (id: string) => ['order-detail', id] as const;
+
+export async function fetchOrderDetail(id: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*, products(name, image_url, current_stock, min_stock))')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/* ---------------- BUNDLES ---------------- */
+export const bundlesKey = (search: string, page: number, size: number) =>
+  ['admin-bundles', search, page, size] as const;
+
+export async function fetchBundles(search: string, page: number, size: number) {
+  const { from, to } = bounds(page, size);
+  let query = supabase
+    .from('bundles')
+    .select(
+      'id, name, slug, description, image_url, bundle_type, status, discount_price, original_price, savings_amount, savings_percentage, created_at, bundle_items(id)',
+      { count: 'exact' }
+    );
+  if (search) query = query.ilike('name', `%${search}%`);
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return { data: data || [], count: count || 0 };
+}
+
+/* ---------------- REWARD REDEMPTION REQUESTS ---------------- */
+export const redemptionsKey = (status: string, page: number, size: number) =>
+  ['admin-redemption-requests', status, page, size] as const;
+
+export async function fetchRedemptions(status: string, page: number, size: number) {
+  const { from, to } = bounds(page, size);
+  let query = supabase
+    .from('reward_redemption_requests')
+    .select(
+      'id, status, points_used, quantity, notes, review_notes, requested_at, reviewed_at, customers(id, name, total_points), rewards(id, name, stock_quantity)',
+      { count: 'exact' }
+    );
+  if (status !== 'all') query = query.eq('status', status);
+  const { data, error, count } = await query
+    .order('requested_at', { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return { data: data || [], count: count || 0 };
+}
+
+/* ---------------- ADMIN NOTIFICATIONS (server-side) ---------------- */
+export const adminNotificationsKey = (priority: string, type: string, page: number, size: number) =>
+  ['admin-notifications', priority, type, page, size] as const;
+
+export interface AdminNotificationRow {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  event_time: string;
+  priority: string;
+  total_count: number;
+}
+
+export async function fetchAdminNotifications(
+  priority: string,
+  type: string,
+  page: number,
+  size: number
+) {
+  const { from } = bounds(page, size);
+  const { data, error } = await (supabase.rpc as any)('get_admin_notifications', {
+    p_priority: priority,
+    p_type: type,
+    p_limit: size,
+    p_offset: from,
+  });
+  if (error) throw error;
+  const rows = (data || []) as AdminNotificationRow[];
+  return { data: rows, count: Number(rows[0]?.total_count || 0) };
 }
 
 /* ---------------- INVENTORY (stock levels) ---------------- */
