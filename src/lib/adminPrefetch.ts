@@ -87,7 +87,13 @@ export function prefetchAdminRoute(path: string, queryClient?: QueryClient) {
 export function prefetchCommonAdminRoutes(queryClient: QueryClient) {
   if (isSaveDataOrSlow()) return;
   const priority = ['/dashboard', '/products', '/customers', '/orders', '/inventory', '/purchases'];
-  const run = () => priority.forEach((p) => routeChunks[p]?.().catch(() => {}));
+  const run = () => {
+    priority.forEach((p) => routeChunks[p]?.().catch(() => {}));
+    // Warm page-1 data for the top three menus so the first paint already has rows.
+    ['/products', '/orders', '/customers'].forEach((p) =>
+      queryPrefetchers[p]?.(queryClient).catch(() => {})
+    );
+  };
   const ric = (window as any).requestIdleCallback;
   if (typeof ric === 'function') ric(run, { timeout: 3000 });
   else setTimeout(run, 1500);
