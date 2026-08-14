@@ -13,53 +13,47 @@ import { id as idLocale } from 'date-fns/locale';
 const SearchAnalytics = () => {
   const [dateFilter, setDateFilter] = useState('7');
 
-  // Fetch search history
-  const { data: searchHistory = [], isLoading } = useQuery({
-    queryKey: ['search-analytics', dateFilter],
+  // All aggregation (totals, top keywords, zero-result keywords) is computed
+  // in Postgres; the browser downloads a tiny JSON summary instead of every row.
+  const { data: summary } = useQuery({
+    queryKey: ['search-analytics-summary', dateFilter],
     queryFn: async () => {
-      const daysAgo = new Date();
-      daysAgo.setDate(daysAgo.getDate() - parseInt(dateFilter));
-
-      const { data, error } = await supabase
-        .from('search_analytics')
-        .select('*')
-        .gte('created_at', daysAgo.toISOString())
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await (supabase.rpc as any)('get_search_analytics_summary', {
+        p_days: parseInt(dateFilter, 10),
+      });
       if (error) throw error;
-      return data;
-    }
+      return data as {
+        total_searches: number;
+        unique_searches: number;
+        no_results_count: number;
+        top_searches: { query: string; count: number }[];
+        no_result_searches: { query: string; count: number }[];
+      };
+    },
   });
 
-  // Calculate most searched keywords
-  const topSearches = searchHistory.reduce((acc: Record<string, number>, item) => {
-    const query = item.search_query.toLowerCase().trim();
-    acc[query] = (acc[query] || 0) + 1;
-    return acc;
-  }, {});
+  // Only the 20 most recent rows are fetched for the history table.
+  const { data: recentSearches = [], isLoading } = useQuery({
+    queryKey: ['search-analytics-recent', dateFilter],
+    queryFn: async () => {
+      const daysAgo = new Date();
+      daysAgo.setDate(daysAgo.getDate() - parseInt(dateFilter, 10));
+      const { data, error } = await supabase
+        .from('search_analytics')
+        .select('id, search_query, category_filter, results_count, created_at')
+        .gte('created_at', daysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
-  const topSearchesList = Object.entries(topSearches)
-    .map(([query, count]) => ({ query, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
-  // Find searches with no results
-  const noResultsSearches = searchHistory
-    .filter(item => item.results_count === 0)
-    .reduce((acc: Record<string, number>, item) => {
-      const query = item.search_query.toLowerCase().trim();
-      acc[query] = (acc[query] || 0) + 1;
-      return acc;
-    }, {});
-
-  const noResultsList = Object.entries(noResultsSearches)
-    .map(([query, count]) => ({ query, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
-  const totalSearches = searchHistory.length;
-  const uniqueSearches = Object.keys(topSearches).length;
-  const noResultsCount = searchHistory.filter(item => item.results_count === 0).length;
+  const topSearchesList = summary?.top_searches || [];
+  const noResultsList = summary?.no_result_searches || [];
+  const totalSearches = summary?.total_searches || 0;
+  const uniqueSearches = summary?.unique_searches || 0;
+  const noResultsCount = summary?.no_results_count || 0;
 
   return (
     <Layout>
@@ -226,8 +220,8 @@ const SearchAnalytics = () => {
                       Memuat data...
                     </TableCell>
                   </TableRow>
-                ) : searchHistory.length > 0 ? (
-                  searchHistory.slice(0, 20).map((item) => (
+                ) : recentSearches.length > 0 ? (
+                  recentSearches.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
                         {format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: idLocale })}
