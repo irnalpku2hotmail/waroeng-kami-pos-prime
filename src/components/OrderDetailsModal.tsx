@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
+import { fetchOrderDetail, orderDetailKey } from '@/lib/adminQueries';
 
 interface OrderDetailsModalProps {
   order: any;
@@ -15,14 +16,23 @@ interface OrderDetailsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps) => {
+const OrderDetailsModal = ({ order: orderSummary, open, onOpenChange }: OrderDetailsModalProps) => {
+  // The list only carries lightweight order rows; the full detail (item prices,
+  // images, address, notes) is fetched here, on demand.
+  const { data: orderDetail } = useQuery({
+    queryKey: orderDetailKey(orderSummary?.id || ''),
+    queryFn: () => fetchOrderDetail(orderSummary.id),
+    enabled: open && !!orderSummary?.id,
+    staleTime: 30_000,
+  });
+
   // Fetch settings for receipt customization
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('settings')
-        .select('*');
+        .select('key, value');
       if (error) throw error;
       
       const settingsObj: Record<string, any> = {};
@@ -30,8 +40,11 @@ const OrderDetailsModal = ({ order, open, onOpenChange }: OrderDetailsModalProps
         settingsObj[setting.key] = setting.value;
       });
       return settingsObj;
-    }
+    },
+    staleTime: 5 * 60_000,
   });
+
+  const order = (orderDetail as any) || orderSummary;
 
   if (!order) return null;
 
