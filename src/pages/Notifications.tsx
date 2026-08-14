@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,134 +8,29 @@ import { Bell, Package, AlertTriangle, TrendingDown, Calendar, Clock, Filter, X 
 import Layout from '@/components/Layout';
 import PaginationComponent from '@/components/PaginationComponent';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { adminNotificationsKey, fetchAdminNotifications } from '@/lib/adminQueries';
 
 const ITEMS_PER_PAGE = 20;
+
+const TYPE_ICONS: Record<string, typeof Bell> = {
+  low_stock: Package,
+  overdue_payment: AlertTriangle,
+  overdue_purchase: TrendingDown,
+  pending_order: Bell,
+  pending_return: TrendingDown,
+};
 
 const Notifications = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
+  // Filtering, sorting, paging and counting all happen inside Postgres —
+  // the browser only ever receives one page of rows.
   const { data: notificationsData } = useQuery({
-    queryKey: ['notifications', currentPage, priorityFilter, typeFilter],
-    queryFn: async () => {
-      // Get low stock products
-      const { data: lowStockProducts } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true);
-
-      const filteredLowStock = lowStockProducts?.filter(p => p.current_stock <= p.min_stock) || [];
-
-      // Get overdue credit transactions
-      const { data: overdueCredits } = await supabase
-        .from('transactions')
-        .select('*, customers(name)')
-        .eq('is_credit', true)
-        .lt('due_date', new Date().toISOString().split('T')[0]);
-
-      const filteredOverdueCredits = overdueCredits?.filter(t => t.total_amount > t.paid_amount) || [];
-
-      // Get overdue purchase payments
-      const { data: overduePurchases } = await supabase
-        .from('purchases')
-        .select('*, suppliers(name)')
-        .eq('payment_method', 'credit')
-        .neq('payment_status', 'paid')
-        .lt('due_date', new Date().toISOString().split('T')[0]);
-
-      // Get recent orders that need attention
-      const { data: pendingOrders } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      // Get returns that need processing
-      const { data: pendingReturns } = await supabase
-        .from('returns')
-        .select('*, suppliers(name)')
-        .eq('status', 'process')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      let notifications = [
-        ...(filteredLowStock?.map(product => ({
-          id: `low-stock-${product.id}`,
-          type: 'low_stock',
-          title: 'Stok Rendah',
-          message: `${product.name} tersisa ${product.current_stock} unit (minimum: ${product.min_stock})`,
-          time: new Date().toISOString(),
-          priority: 'high',
-          icon: Package
-        })) || []),
-        ...(filteredOverdueCredits?.map(credit => ({
-          id: `overdue-credit-${credit.id}`,
-          type: 'overdue_payment',
-          title: 'Piutang Terlambat',
-          message: `${credit.customers?.name || 'Customer'} - Rp ${credit.total_amount.toLocaleString('id-ID')}`,
-          time: credit.due_date,
-          priority: 'urgent',
-          icon: AlertTriangle
-        })) || []),
-        ...(overduePurchases?.map(purchase => ({
-          id: `overdue-purchase-${purchase.id}`,
-          type: 'overdue_purchase',
-          title: 'Hutang Terlambat',
-          message: `${purchase.suppliers?.name || 'Supplier'} - ${purchase.purchase_number} - Rp ${purchase.total_amount.toLocaleString('id-ID')}`,
-          time: purchase.due_date,
-          priority: 'urgent',
-          icon: TrendingDown
-        })) || []),
-        ...(pendingOrders?.map(order => ({
-          id: `pending-order-${order.id}`,
-          type: 'pending_order',
-          title: 'Pesanan Baru',
-          message: `${order.customer_name} - ${order.order_number}`,
-          time: order.created_at,
-          priority: 'medium',
-          icon: Bell
-        })) || []),
-        ...(pendingReturns?.map(returnItem => ({
-          id: `pending-return-${returnItem.id}`,
-          type: 'pending_return',
-          title: 'Return Menunggu Proses',
-          message: `${returnItem.suppliers?.name || 'Supplier'} - ${returnItem.return_number}`,
-          time: returnItem.created_at,
-          priority: 'medium',
-          icon: TrendingDown
-        })) || [])
-      ];
-
-      // Apply filters
-      if (priorityFilter !== 'all') {
-        notifications = notifications.filter(n => n.priority === priorityFilter);
-      }
-      if (typeFilter !== 'all') {
-        notifications = notifications.filter(n => n.type === typeFilter);
-      }
-
-      // Sort by priority and time
-      const sortedNotifications = notifications.sort((a, b) => {
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
-                            (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
-        if (priorityDiff !== 0) return priorityDiff;
-        
-        return new Date(b.time).getTime() - new Date(a.time).getTime();
-      });
-
-      // Pagination
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE;
-      const paginatedNotifications = sortedNotifications.slice(from, to);
-
-      return {
-        data: paginatedNotifications,
-        count: sortedNotifications.length
-      };
-    }
+    queryKey: adminNotificationsKey(priorityFilter, typeFilter, currentPage, ITEMS_PER_PAGE),
+    queryFn: () => fetchAdminNotifications(priorityFilter, typeFilter, currentPage, ITEMS_PER_PAGE),
+    placeholderData: keepPreviousData,
   });
 
   const notifications = notificationsData?.data || [];
@@ -197,7 +91,7 @@ const Notifications = () => {
           
           {/* Filters */}
           <div className="flex items-center gap-3">
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Prioritas" />
               </SelectTrigger>
@@ -210,7 +104,7 @@ const Notifications = () => {
               </SelectContent>
             </Select>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Jenis" />
               </SelectTrigger>
@@ -258,7 +152,7 @@ const Notifications = () => {
           ) : (
             <>
               {notifications.map((notification) => {
-                const IconComponent = notification.icon;
+                const IconComponent = TYPE_ICONS[notification.type] || Bell;
                 return (
                   <Card 
                     key={notification.id} 
@@ -284,7 +178,7 @@ const Notifications = () => {
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <Calendar className="h-4 w-4" />
                             <span>
-                              {new Date(notification.time).toLocaleDateString('id-ID', {
+                              {new Date(notification.event_time).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric',
