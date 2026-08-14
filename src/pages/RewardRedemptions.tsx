@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Gift, Check, X, Loader2, Star } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import PaginationComponent from '@/components/PaginationComponent';
+import { DEFAULT_PAGE_SIZE, fetchRedemptions, redemptionsKey } from '@/lib/adminQueries';
 
 const STATUS_COLOR: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -24,23 +26,18 @@ const RewardRedemptions = () => {
   const [reviewing, setReviewing] = useState<any | null>(null);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: requests = [], isLoading } = useQuery({
-    queryKey: ['admin-redemption-requests', statusTab],
-    queryFn: async () => {
-      let q = supabase
-        .from('reward_redemption_requests')
-        .select(
-          'id, status, points_used, quantity, notes, review_notes, requested_at, reviewed_at, reviewed_by, customers(id, name, email, phone, total_points), rewards(id, name, stock_quantity)'
-        )
-        .order('requested_at', { ascending: false })
-        .limit(100);
-      if (statusTab !== 'all') q = q.eq('status', statusTab);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data || [];
-    },
+  // Server-side pagination instead of a hard 100-row limit.
+  const { data: requestsData, isLoading } = useQuery({
+    queryKey: redemptionsKey(statusTab, currentPage, DEFAULT_PAGE_SIZE),
+    queryFn: () => fetchRedemptions(statusTab, currentPage, DEFAULT_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
+
+  const requests = requestsData?.data || [];
+  const requestsCount = requestsData?.count || 0;
+  const totalPages = Math.ceil(requestsCount / DEFAULT_PAGE_SIZE);
 
   const review = useMutation({
     mutationFn: async () => {
@@ -80,7 +77,7 @@ const RewardRedemptions = () => {
           </div>
         </div>
 
-        <Tabs value={statusTab} onValueChange={(v) => setStatusTab(v as any)}>
+        <Tabs value={statusTab} onValueChange={(v) => { setStatusTab(v as any); setCurrentPage(1); }}>
           <TabsList>
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -137,6 +134,18 @@ const RewardRedemptions = () => {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  itemsPerPage={DEFAULT_PAGE_SIZE}
+                  totalItems={requestsCount}
+                />
               </div>
             )}
           </TabsContent>

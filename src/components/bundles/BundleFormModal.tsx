@@ -43,6 +43,21 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
     enabled: open,
   });
 
+  // Bundle items are fetched on demand (edit mode only) so the list page
+  // never has to download every bundle's items.
+  const { data: bundleItems } = useQuery({
+    queryKey: ['bundle-items', bundle?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bundle_items')
+        .select('id, product_id, quantity, products(id, name, selling_price, current_stock)')
+        .eq('bundle_id', bundle.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!bundle?.id,
+  });
+
   useEffect(() => {
     if (bundle) {
       setName(bundle.name);
@@ -53,7 +68,7 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
       setStatus(bundle.status);
       setDiscountPrice(bundle.discount_price);
       setSelectedProducts(
-        (bundle.bundle_items || []).map((bi: any) => ({
+        ((bundleItems as any[]) || []).map((bi: any) => ({
           product_id: bi.product_id,
           quantity: bi.quantity,
           name: bi.products?.name || '',
@@ -64,7 +79,7 @@ const BundleFormModal = ({ open, onOpenChange, bundle, onSuccess }: BundleFormMo
     } else {
       setName(''); setDescription(''); setImageUrl(''); setImagePreview(null); setBundleType('fixed'); setStatus('draft'); setDiscountPrice(0); setSelectedProducts([]);
     }
-  }, [bundle, open]);
+  }, [bundle, open, bundleItems]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
