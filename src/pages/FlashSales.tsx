@@ -41,40 +41,21 @@ const FlashSales = () => {
     is_active: true
   });
 
-  // Fetch flash sale statistics
   const { data: flashSaleStats } = useQuery({
-    queryKey: ['flash-sale-stats'],
+    queryKey: ['flash-sale-statistics'],
     queryFn: async () => {
-      // Total flash sales available (active)
-      const { data: availableFlashSales } = await supabase
-        .from('flash_sales')
-        .select('id')
-        .eq('is_active', true);
-
-      // Get all flash sale items with their sales data
-      const { data: flashSaleItems } = await supabase
-        .from('flash_sale_items')
-        .select(`
-          *,
-          flash_sales!inner(is_active),
-          products(name, selling_price)
-        `)
-        .eq('flash_sales.is_active', true);
-
-      // Calculate total available value (stock_quantity * sale_price)
-      const totalAvailableValue = flashSaleItems?.reduce((sum, item) => 
-        sum + (item.stock_quantity * item.sale_price), 0) || 0;
-
-      // Calculate total sales value (sold_quantity * sale_price)
-      const totalSalesValue = flashSaleItems?.reduce((sum, item) => 
-        sum + (item.sold_quantity * item.sale_price), 0) || 0;
-
+      const { data, error } = await (supabase.rpc as any)('get_flash_sale_statistics', {
+        p_flash_sale_id: null,
+      });
+      if (error) throw error;
+      const row = (data || {}) as Record<string, number>;
       return {
-        totalAvailable: availableFlashSales?.length || 0,
-        totalAvailableValue,
-        totalSalesValue
+        totalAvailable: Number(row.total_available || 0),
+        totalAvailableValue: Number(row.total_available_value || 0),
+        totalSalesValue: Number(row.total_sales_value || 0),
       };
-    }
+    },
+    staleTime: 30_000,
   });
 
   const { data: flashSalesData, isLoading } = useQuery({
