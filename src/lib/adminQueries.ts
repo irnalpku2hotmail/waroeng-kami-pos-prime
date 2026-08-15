@@ -48,25 +48,18 @@ export async function fetchCustomers(search: string, page: number, size: number)
   const ids = (customers || []).map((c) => c.id);
   if (ids.length === 0) return { data: [], count: count || 0 };
 
-  // 2 batched aggregate queries instead of 2 queries per customer (N+1 removed)
-  const [{ data: txns }, { data: ords }] = await Promise.all([
-    supabase.from('transactions').select('customer_id,total_amount').in('customer_id', ids),
-    supabase.from('orders').select('customer_id,total_amount,status').in('customer_id', ids),
-  ]);
+  // Single database aggregation for the current page of customers (no client-side reduce, no N+1)
+  const { data: summaries, error: sumError } = await (supabase.rpc as any)('get_customer_summaries', {
+    p_customer_ids: ids,
+  });
+  if (sumError) throw sumError;
 
   const agg = new Map<string, { spent: number; orders: number }>();
-  ids.forEach((id) => agg.set(id, { spent: 0, orders: 0 }));
-  (txns || []).forEach((t: any) => {
-    const a = agg.get(t.customer_id);
-    if (!a) return;
-    a.spent += Number(t.total_amount) || 0;
-    a.orders += 1;
-  });
-  (ords || []).forEach((o: any) => {
-    const a = agg.get(o.customer_id);
-    if (!a) return;
-    if (o.status === 'delivered') a.spent += Number(o.total_amount) || 0;
-    a.orders += 1;
+  ((summaries || []) as any[]).forEach((s) => {
+    agg.set(s.customer_id, {
+      spent: Number(s.total_spent) || 0,
+      orders: Number(s.total_orders) || 0,
+    });
   });
 
   return {

@@ -51,43 +51,34 @@ const Inventory = () => {
     placeholderData: keepPreviousData,
   });
 
-  // Aggregate stats — one lightweight query (3 numeric columns), cached 5 minutes.
   const { data: stats } = useQuery({
-    queryKey: ['inventory-stats'],
+    queryKey: ['inventory-statistics'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('current_stock, min_stock, base_price')
-        .eq('is_active', true);
+      const { data, error } = await (supabase.rpc as any)('get_inventory_statistics');
       if (error) throw error;
-      const rows = data || [];
+      const row = (data || {}) as Record<string, number>;
       return {
-        totalProducts: rows.length,
-        lowStockCount: rows.filter((p) => p.current_stock <= p.min_stock).length,
-        totalStockValue: rows.reduce(
-          (sum, p) => sum + Number(p.current_stock) * Number(p.base_price),
-          0
-        ),
+        totalProducts: Number(row.total_products || 0),
+        lowStockCount: Number(row.low_stock_count || 0),
+        totalStockValue: Number(row.total_stock_value || 0),
       };
     },
-    staleTime: 5 * 60_000,
+    staleTime: 30_000,
   });
 
-  // Low stock list — only fetched when its tab is opened.
+  // Low stock list — filtered/ordered in the database, only fetched when its tab is opened.
   const { data: lowStockProducts = [] } = useQuery({
     queryKey: ['inventory-low-stock'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, barcode, current_stock, min_stock, selling_price, units(name, abbreviation), categories(name)')
-        .eq('is_active', true)
-        .order('current_stock', { ascending: true })
-        .limit(300);
+      const { data, error } = await (supabase.rpc as any)('get_low_stock_products', {
+        p_limit: 20,
+        p_offset: 0,
+      });
       if (error) throw error;
-      return (data || []).filter((p: any) => p.current_stock <= p.min_stock);
+      return (data || []) as any[];
     },
     enabled: currentTab === 'low-stock',
-    staleTime: 60_000,
+    staleTime: 30_000,
   });
 
   const products = productsData?.data || [];

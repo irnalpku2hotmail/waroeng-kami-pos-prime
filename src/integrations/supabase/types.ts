@@ -2170,6 +2170,7 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: Json
       }
+      get_customer_points_statistics: { Args: never; Returns: Json }
       get_customer_purchase_history: {
         Args: { customer_uuid: string }
         Returns: {
@@ -2190,7 +2191,39 @@ export type Database = {
           total_unredeemed_points: number
         }[]
       }
+      get_customer_summaries: {
+        Args: { p_customer_ids: string[] }
+        Returns: {
+          customer_id: string
+          total_orders: number
+          total_spent: number
+        }[]
+      }
       get_dashboard_summary: { Args: never; Returns: Json }
+      get_expense_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: Json
+      }
+      get_flash_sale_statistics: {
+        Args: { p_flash_sale_id?: string }
+        Returns: Json
+      }
+      get_inventory_statistics: { Args: never; Returns: Json }
+      get_low_stock_products: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          barcode: string
+          category_name: string
+          current_stock: number
+          id: string
+          image_url: string
+          min_stock: number
+          name: string
+          selling_price: number
+          total_count: number
+          unit_name: string
+        }[]
+      }
       get_or_create_customer_for_current_user: { Args: never; Returns: string }
       get_search_analytics_summary: { Args: { p_days?: number }; Returns: Json }
       get_similar_products: {
