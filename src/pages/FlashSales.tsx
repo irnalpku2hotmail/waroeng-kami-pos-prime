@@ -129,7 +129,7 @@ const FlashSales = () => {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
-      queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['flash-sale-statistics'] });
       
       // If creating a new flash sale, keep the dialog open and switch to items tab
       if (!editFlashSale && result) {
@@ -159,7 +159,7 @@ const FlashSales = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
-      queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['flash-sale-statistics'] });
       toast({ title: 'Berhasil', description: 'Flash sale berhasil dihapus' });
       setDeleteFlashSaleId(null);
     },

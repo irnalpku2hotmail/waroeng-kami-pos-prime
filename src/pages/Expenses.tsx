@@ -109,7 +109,7 @@ const Expenses = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expense-statistics'] });
       toast({ title: 'Berhasil', description: 'Pengeluaran berhasil dihapus' });
       setDeleteExpenseId(null);
     },
@@ -142,7 +142,7 @@ const Expenses = () => {
     setOpen(false);
     setEditExpense(null);
     queryClient.invalidateQueries({ queryKey: ['expenses'] });
-    queryClient.invalidateQueries({ queryKey: ['expenses-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['expense-statistics'] });
   };
 
   const handleClose = () => {

@@ -67,7 +67,7 @@ const FlashSaleItemsManager = ({ flashSaleId, onItemsChange }: FlashSaleItemsMan
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flash-sale-items', flashSaleId] });
       queryClient.invalidateQueries({ queryKey: ['flash-sales'] });
-      queryClient.invalidateQueries({ queryKey: ['flash-sale-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['flash-sale-statistics'] });
       if (onItemsChange) onItemsChange();
       toast({ title: 'Berhasil', description: 'Produk berhasil ditambahkan ke flash sale' });
     },
