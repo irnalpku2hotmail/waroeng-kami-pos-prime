@@ -73,22 +73,23 @@ const Expenses = () => {
   });
 
   const { data: stats } = useQuery({
-    queryKey: ['expenses-stats'],
+    queryKey: ['expense-statistics'],
     queryFn: async () => {
-      const [totalExpenses, thisMonthExpenses] = await Promise.all([
-        supabase.from('expenses').select('amount'),
-        supabase.from('expenses').select('amount').gte('expense_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
-      ]);
-
-      const totalAmount = totalExpenses.data?.reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
-      const thisMonthAmount = thisMonthExpenses.data?.reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
-
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+      const { data, error } = await (supabase.rpc as any)('get_expense_statistics', {
+        p_start_date: monthStart,
+        p_end_date: null,
+      });
+      if (error) throw error;
+      const row = (data || {}) as Record<string, number>;
       return {
-        totalExpenses: totalExpenses.data?.length || 0,
-        totalAmount,
-        thisMonthAmount
+        totalExpenses: Number(row.total_expenses || 0),
+        totalAmount: Number(row.total_amount || 0),
+        thisMonthAmount: Number(row.period_amount || 0),
       };
-    }
+    },
+    staleTime: 30_000,
   });
 
   const expenses = expensesData?.data || [];
