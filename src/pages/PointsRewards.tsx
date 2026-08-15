@@ -90,18 +90,19 @@ const PointsRewards = () => {
   const rewardsCount = rewardsData?.count || 0;
   const totalPages = Math.ceil(rewardsCount / ITEMS_PER_PAGE);
 
-  // Get total available points from all customers
   const { data: customerStats } = useQuery({
-    queryKey: ['customer-stats'],
+    queryKey: ['points-statistics'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('total_points');
+      const { data, error } = await (supabase.rpc as any)('get_customer_points_statistics');
       if (error) throw error;
-      
-      const totalPoints = data?.reduce((sum, customer) => sum + (customer.total_points || 0), 0) || 0;
-      return { totalPoints };
-    }
+      const row = (data || {}) as Record<string, number>;
+      return {
+        totalPoints: Number(row.total_points || 0),
+        totalCustomers: Number(row.total_customers || 0),
+        averagePoints: Number(row.average_points || 0),
+      };
+    },
+    staleTime: 30_000,
   });
 
   // Calculate totals
