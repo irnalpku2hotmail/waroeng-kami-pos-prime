@@ -44,6 +44,9 @@ const OrdersTable = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      // delivered orders create the canonical transaction + loyalty points
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-statistics'] });
       toast({ title: 'Berhasil', description: 'Status pesanan berhasil diperbarui' });
     },
     onError: (error) => {

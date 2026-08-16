@@ -62,21 +62,6 @@ const CustomerAccount = () => {
     },
   });
 
-  // Real order count (not limited to latest 10)
-  const { data: orderCount = 0 } = useQuery({
-    queryKey: ['account-order-count', customer?.id],
-    enabled: !!customer?.id,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('customer_id', customer!.id);
-      if (error) throw error;
-      return count || 0;
-    },
-  });
-
   // Point transactions
   const { data: pointTxns = [] } = useQuery({
     queryKey: ['account-points', customer?.id],
