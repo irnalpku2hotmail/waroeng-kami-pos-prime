@@ -16,7 +16,7 @@ import CustomerForm from '@/components/CustomerForm';
 import PaginationComponent from '@/components/PaginationComponent';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { DEFAULT_PAGE_SIZE, customersKey, fetchCustomers } from '@/lib/adminQueries';
+import { DEFAULT_PAGE_SIZE, customersKey, fetchCustomers, customerStatsKey, fetchCustomerStatistics } from '@/lib/adminQueries';
 
 const Customers = () => {
   const [open, setOpen] = useState(false);
@@ -39,6 +39,13 @@ const Customers = () => {
   const customers = customersData?.data || [];
   const customersCount = customersData?.count || 0;
   const totalPages = Math.ceil(customersCount / pageSize);
+
+  // Global statistics (all customers, computed in the database — not the current page)
+  const { data: stats } = useQuery({
+    queryKey: customerStatsKey(),
+    queryFn: fetchCustomerStatistics,
+    staleTime: 60_000,
+  });
 
 
   const deleteCustomer = useMutation({
@@ -82,9 +89,9 @@ const Customers = () => {
     setDetailModalOpen(true);
   };
 
-  const totalCustomers = customersCount;
-  const totalPoints = customers.reduce((sum, c) => sum + c.total_points, 0);
-  const totalSpent = customers.reduce((sum, c) => sum + c.total_spent, 0);
+  const totalCustomers = stats?.total_customers ?? customersCount;
+  const totalPoints = stats?.total_points ?? 0;
+  const totalSpent = stats?.total_spent ?? 0;
 
   return (
       <Layout>

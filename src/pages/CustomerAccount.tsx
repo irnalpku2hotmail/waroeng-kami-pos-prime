@@ -62,21 +62,6 @@ const CustomerAccount = () => {
     },
   });
 
-  // Real order count (not limited to latest 10)
-  const { data: orderCount = 0 } = useQuery({
-    queryKey: ['account-order-count', customer?.id],
-    enabled: !!customer?.id,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('customer_id', customer!.id);
-      if (error) throw error;
-      return count || 0;
-    },
-  });
-
   // Point transactions
   const { data: pointTxns = [] } = useQuery({
     queryKey: ['account-points', customer?.id],
@@ -94,19 +79,23 @@ const CustomerAccount = () => {
     },
   });
 
-  // Delivered order count (single source of truth for "Pesanan")
-  const { data: deliveredCount = 0 } = useQuery({
-    queryKey: ['account-delivered-count', customer?.id],
+  // Canonical financial summary — same RPC the Admin Customers list uses,
+  // so /account and the admin dashboard always agree.
+  const { data: summary } = useQuery({
+    queryKey: ['account-summary', customer?.id],
     enabled: !!customer?.id,
     staleTime: 60_000,
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('customer_id', customer!.id)
-        .eq('status', 'delivered');
+      const { data, error } = await (supabase.rpc as any)('get_customer_summaries', {
+        p_customer_ids: [customer!.id],
+      });
       if (error) throw error;
-      return count || 0;
+      const row = ((data || []) as any[])[0] || {};
+      return {
+        total_spent: Number(row.total_spent) || 0,
+        total_transactions: Number(row.total_transactions) || 0,
+        total_orders: Number(row.total_orders) || 0,
+      };
     },
   });
 
@@ -159,12 +148,12 @@ const CustomerAccount = () => {
           <Card><CardContent className="p-3 text-center">
             <ShoppingBag className="h-4 w-4 mx-auto text-primary" />
             <div className="text-xs text-muted-foreground mt-1">Belanja</div>
-            <div className="font-semibold text-sm">{formatRupiah(Number(customer?.total_spent || 0))}</div>
+            <div className="font-semibold text-sm">{formatRupiah(summary?.total_spent || 0)}</div>
           </CardContent></Card>
           <Card><CardContent className="p-3 text-center">
             <Gift className="h-4 w-4 mx-auto text-pink-500" />
             <div className="text-xs text-muted-foreground mt-1">Pesanan</div>
-            <div className="font-semibold text-sm">{deliveredCount}</div>
+            <div className="font-semibold text-sm">{summary?.total_orders ?? 0}</div>
           </CardContent></Card>
         </div>
 

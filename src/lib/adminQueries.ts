@@ -54,11 +54,12 @@ export async function fetchCustomers(search: string, page: number, size: number)
   });
   if (sumError) throw sumError;
 
-  const agg = new Map<string, { spent: number; orders: number }>();
+  const agg = new Map<string, { spent: number; orders: number; transactions: number }>();
   ((summaries || []) as any[]).forEach((s) => {
     agg.set(s.customer_id, {
       spent: Number(s.total_spent) || 0,
       orders: Number(s.total_orders) || 0,
+      transactions: Number(s.total_transactions) || 0,
     });
   });
 
@@ -67,8 +68,33 @@ export async function fetchCustomers(search: string, page: number, size: number)
       ...c,
       total_spent: agg.get(c.id)?.spent || 0,
       total_orders: agg.get(c.id)?.orders || 0,
+      total_transactions: agg.get(c.id)?.transactions || 0,
     })),
     count: count || 0,
+  };
+}
+
+/* ---------------- GLOBAL CUSTOMER STATISTICS (database aggregation) ---------------- */
+export const customerStatsKey = () => ['customer-statistics'] as const;
+
+export interface CustomerStatistics {
+  total_customers: number;
+  total_points: number;
+  total_spent: number;
+  total_transactions: number;
+  total_orders: number;
+}
+
+export async function fetchCustomerStatistics(): Promise<CustomerStatistics> {
+  const { data, error } = await (supabase.rpc as any)('get_customer_statistics');
+  if (error) throw error;
+  const row = (data || {}) as any;
+  return {
+    total_customers: Number(row.total_customers) || 0,
+    total_points: Number(row.total_points) || 0,
+    total_spent: Number(row.total_spent) || 0,
+    total_transactions: Number(row.total_transactions) || 0,
+    total_orders: Number(row.total_orders) || 0,
   };
 }
 
