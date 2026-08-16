@@ -2183,23 +2183,27 @@ export type Database = {
           transaction_number: string
         }[]
       }
-      get_customer_statistics: {
-        Args: never
-        Returns: {
-          active_customers_this_month: number
-          total_customers: number
-          total_unredeemed_points: number
-        }[]
-      }
+      get_customer_statistics: { Args: never; Returns: Json }
       get_customer_summaries: {
         Args: { p_customer_ids: string[] }
         Returns: {
           customer_id: string
           total_orders: number
           total_spent: number
+          total_transactions: number
         }[]
       }
       get_dashboard_summary: { Args: never; Returns: Json }
+      get_duplicate_order_transactions: {
+        Args: never
+        Returns: {
+          customer_id: string
+          order_id: string
+          total_amounts: number[]
+          transaction_count: number
+          transaction_ids: string[]
+        }[]
+      }
       get_expense_statistics: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
