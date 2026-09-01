@@ -2189,8 +2189,35 @@ export type Database = {
         Returns: {
           customer_id: string
           total_orders: number
+          total_points: number
           total_spent: number
           total_transactions: number
+        }[]
+      }
+      get_customer_transaction_years: {
+        Args: { p_customer_id: string }
+        Returns: {
+          year: number
+        }[]
+      }
+      get_customer_transactions: {
+        Args: {
+          p_customer_id: string
+          p_page?: number
+          p_page_size?: number
+          p_year?: number
+        }
+        Returns: {
+          created_at: string
+          id: string
+          item_count: number
+          order_id: string
+          points_earned: number
+          points_used: number
+          source: string
+          total_amount: number
+          total_count: number
+          transaction_number: string
         }[]
       }
       get_dashboard_summary: { Args: never; Returns: Json }
