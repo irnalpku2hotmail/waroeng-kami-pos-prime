@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, CreditCard, Gift, History, Printer, QrCode } from 'lucide-react';
+import { CalendarDays, CreditCard, Gift, History, Printer, QrCode, ShoppingBag } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import PaginationComponent from '@/components/PaginationComponent';
+import {
+  customerSummaryKey,
+  fetchCustomerSummary,
+  customerTransactionsKey,
+  fetchCustomerTransactions,
+  customerTransactionYearsKey,
+  fetchCustomerTransactionYears,
+  transactionItemsKey,
+  fetchTransactionItems,
+} from '@/lib/adminQueries';
+
+const TX_PAGE_SIZE = 10;
 
 interface CustomerDetailsProps {
   customer: any;
@@ -20,6 +33,8 @@ interface CustomerDetailsProps {
 
 const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps) => {
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [txPage, setTxPage] = useState(1);
+  const [expandedTx, setExpandedTx] = useState<string | null>(null);
 
   // Fetch store settings
   const { data: storeSettings } = useQuery({
@@ -42,58 +57,41 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     }
   });
 
-  // Fetch purchase history with year filter
-  const { data: purchaseHistory = [] } = useQuery({
-    queryKey: ['customer-purchase-history', customer?.id, selectedYear],
-    queryFn: async () => {
-      if (!customer?.id) return [];
-      
-      // Fetch transactions with items
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select(`
-          id,
-          transaction_number,
-          total_amount,
-          points_earned,
-          points_used,
-          created_at,
-          transaction_items(
-            quantity,
-            products(name)
-          )
-        `)
-        .eq('customer_id', customer.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      if (!transactions) return [];
-      
-      // Transform the data to match expected format
-      const transformedData = transactions.map((t: any) => ({
-        transaction_id: t.id,
-        transaction_number: t.transaction_number,
-        total_amount: t.total_amount,
-        points_earned: t.points_earned || 0,
-        points_used: t.points_used || 0,
-        created_at: t.created_at,
-        items: t.transaction_items?.map((item: any) => ({
-          product_name: item.products?.name || 'Unknown',
-          quantity: item.quantity
-        })) || []
-      }));
-      
-      // Filter by year if selected
-      if (selectedYear !== 'all') {
-        return transformedData.filter((transaction: any) => {
-          const year = new Date(transaction.created_at).getFullYear().toString();
-          return year === selectedYear;
-        });
-      }
-      
-      return transformedData;
-    },
-    enabled: !!customer?.id && open
+  // Canonical customer statistics (database aggregation, same RPC as the list & /account)
+  const { data: summary } = useQuery({
+    queryKey: customerSummaryKey(customer?.id),
+    queryFn: () => fetchCustomerSummary(customer!.id),
+    enabled: !!customer?.id && open,
+    staleTime: 60_000,
+  });
+
+  // Server-side paginated transaction history (minimal payload, year filtered in the DB)
+  const { data: txData } = useQuery({
+    queryKey: customerTransactionsKey(customer?.id, txPage, TX_PAGE_SIZE, selectedYear),
+    queryFn: () => fetchCustomerTransactions(customer!.id, txPage, TX_PAGE_SIZE, selectedYear),
+    enabled: !!customer?.id && open,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+
+  const purchaseHistory = txData?.data || [];
+  const txCount = txData?.count || 0;
+  const txTotalPages = Math.ceil(txCount / TX_PAGE_SIZE);
+
+  // Year options straight from the database (distinct years only)
+  const { data: availableYears = [] } = useQuery({
+    queryKey: customerTransactionYearsKey(customer?.id),
+    queryFn: () => fetchCustomerTransactionYears(customer!.id),
+    enabled: !!customer?.id && open,
+    staleTime: 5 * 60_000,
+  });
+
+  // Items for the expanded transaction only
+  const { data: expandedItems = [] } = useQuery({
+    queryKey: transactionItemsKey(expandedTx || undefined),
+    queryFn: () => fetchTransactionItems(expandedTx!),
+    enabled: !!expandedTx,
+    staleTime: 60_000,
   });
 
   // Fetch point transactions
@@ -131,18 +129,6 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     enabled: !!customer?.id && open
   });
 
-  // Get available years for filter
-  const availableYears = React.useMemo(() => {
-    if (!purchaseHistory || purchaseHistory.length === 0) return [];
-    
-    const years = new Set<string>();
-    purchaseHistory.forEach((transaction: any) => {
-      const year = new Date(transaction.created_at).getFullYear().toString();
-      years.add(year);
-    });
-    
-    return Array.from(years).sort((a, b) => b.localeCompare(a));
-  }, [purchaseHistory]);
 
   const generateQRCode = async () => {
     if (!customer) return;
