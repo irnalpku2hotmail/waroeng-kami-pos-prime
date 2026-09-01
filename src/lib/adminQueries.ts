@@ -98,6 +98,93 @@ export async function fetchCustomerStatistics(): Promise<CustomerStatistics> {
   };
 }
 
+/* ---------------- SINGLE CUSTOMER CANONICAL SUMMARY ---------------- */
+export interface CustomerSummary {
+  total_spent: number;
+  total_transactions: number;
+  total_orders: number;
+  total_points: number;
+}
+
+export const customerSummaryKey = (customerId?: string) =>
+  ['customer-summary', customerId] as const;
+
+export async function fetchCustomerSummary(customerId: string): Promise<CustomerSummary> {
+  const { data, error } = await (supabase.rpc as any)('get_customer_summaries', {
+    p_customer_ids: [customerId],
+  });
+  if (error) throw error;
+  const row = ((data || []) as any[])[0] || {};
+  return {
+    total_spent: Number(row.total_spent) || 0,
+    total_transactions: Number(row.total_transactions) || 0,
+    total_orders: Number(row.total_orders) || 0,
+    total_points: Number(row.total_points) || 0,
+  };
+}
+
+/* ---------------- CUSTOMER TRANSACTIONS (server-side pagination) ---------------- */
+export interface CustomerTransactionRow {
+  id: string;
+  transaction_number: string;
+  total_amount: number;
+  points_earned: number;
+  points_used: number;
+  created_at: string;
+  order_id: string | null;
+  source: string;
+  item_count: number;
+  total_count: number;
+}
+
+export const customerTransactionsKey = (
+  customerId: string | undefined,
+  page: number,
+  pageSize: number,
+  year: string
+) => ['customer-transactions', customerId, page, pageSize, year] as const;
+
+export async function fetchCustomerTransactions(
+  customerId: string,
+  page: number,
+  pageSize: number,
+  year: string
+) {
+  const { data, error } = await (supabase.rpc as any)('get_customer_transactions', {
+    p_customer_id: customerId,
+    p_page: page,
+    p_page_size: pageSize,
+    p_year: year && year !== 'all' ? Number(year) : null,
+  });
+  if (error) throw error;
+  const rows = (data || []) as CustomerTransactionRow[];
+  return { data: rows, count: Number(rows[0]?.total_count || 0) };
+}
+
+export const customerTransactionYearsKey = (customerId?: string) =>
+  ['customer-transaction-years', customerId] as const;
+
+export async function fetchCustomerTransactionYears(customerId: string): Promise<string[]> {
+  const { data, error } = await (supabase.rpc as any)('get_customer_transaction_years', {
+    p_customer_id: customerId,
+  });
+  if (error) throw error;
+  return ((data || []) as any[]).map((r) => String(r.year));
+}
+
+/** Items for ONE transaction — fetched only when a row is expanded. */
+export const transactionItemsKey = (transactionId?: string) =>
+  ['transaction-items', transactionId] as const;
+
+export async function fetchTransactionItems(transactionId: string) {
+  const { data, error } = await supabase
+    .from('transaction_items')
+    .select('id, quantity, unit_price, total_price, products(name)')
+    .eq('transaction_id', transactionId);
+  if (error) throw error;
+  return data || [];
+}
+
 /* ---------------- ORDERS ---------------- */
 export const ordersKey = (search: string, status: string, page: number, size: number) =>
   ['orders', search, status, page, size] as const;
