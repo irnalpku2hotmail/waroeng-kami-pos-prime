@@ -47,6 +47,9 @@ const OrdersTable = ({
       // delivered orders create the canonical transaction + loyalty points
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['customer-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-transaction-years'] });
       toast({ title: 'Berhasil', description: 'Status pesanan berhasil diperbarui' });
     },
     onError: (error) => {
