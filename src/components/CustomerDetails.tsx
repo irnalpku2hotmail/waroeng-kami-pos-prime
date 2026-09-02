@@ -217,15 +217,17 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Customer Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Customer Summary (canonical statistics from database RPC) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Gift className="h-4 w-4 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Total Points</p>
-                    <p className="text-2xl font-bold text-blue-600">{customer.total_points}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {(summary?.total_points ?? customer.total_points ?? 0).toLocaleString('id-ID')}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -238,8 +240,20 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   <div>
                     <p className="text-sm text-gray-600">Total Belanja</p>
                     <p className="text-2xl font-bold text-green-600">
-                      Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
+                      Rp {(summary?.total_spent ?? 0).toLocaleString('id-ID')}
                     </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 text-orange-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Total Pesanan</p>
+                    <p className="text-2xl font-bold text-orange-600">{summary?.total_orders ?? 0}</p>
                   </div>
                 </div>
               </CardContent>
@@ -251,12 +265,13 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   <History className="h-4 w-4 text-purple-600" />
                   <div>
                     <p className="text-sm text-gray-600">Total Transaksi</p>
-                    <p className="text-2xl font-bold text-purple-600">{purchaseHistory.length}</p>
+                    <p className="text-2xl font-bold text-purple-600">{summary?.total_transactions ?? 0}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+
 
           {/* Member Card Section */}
           <Card>
