@@ -284,6 +284,9 @@ export const usePOS = () => {
       queryClient.invalidateQueries({ queryKey: ['pos-products'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['customer-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-transaction-years'] });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

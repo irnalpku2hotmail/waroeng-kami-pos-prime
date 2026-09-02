@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ExpenseReceiptViewerProps {
   open: boolean;
@@ -9,14 +11,48 @@ interface ExpenseReceiptViewerProps {
   title: string;
 }
 
+const BUCKET = 'expense-receipts';
+
+/** Receipts live in a private bucket — resolve a short-lived signed URL for viewing. */
+const extractPath = (url: string) => {
+  const marker = `/${BUCKET}/`;
+  const idx = url.indexOf(marker);
+  return idx === -1 ? null : url.slice(idx + marker.length).split('?')[0];
+};
+
 const ExpenseReceiptViewer = ({ open, onOpenChange, receipt_url, title }: ExpenseReceiptViewerProps) => {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!open || !receipt_url) {
+      setSignedUrl(null);
+      return;
+    }
+    const path = extractPath(receipt_url);
+    if (!path) {
+      setSignedUrl(receipt_url);
+      return;
+    }
+    supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(decodeURIComponent(path), 60 * 10)
+      .then(({ data }) => {
+        if (active) setSignedUrl(data?.signedUrl || null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, receipt_url]);
+
   if (!receipt_url) return null;
 
   const isPDF = receipt_url.toLowerCase().endsWith('.pdf') || receipt_url.includes('application/pdf');
-  
+
   const handleDownload = () => {
-    window.open(receipt_url, '_blank');
+    if (signedUrl) window.open(signedUrl, '_blank');
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,12 +78,14 @@ const ExpenseReceiptViewer = ({ open, onOpenChange, receipt_url, title }: Expens
                 Download PDF
               </Button>
             </div>
-          ) : (
+          ) : signedUrl ? (
             <img 
-              src={receipt_url} 
+              src={signedUrl} 
               alt={title}
               className="w-full h-auto rounded-lg"
             />
+          ) : (
+            <p className="text-center text-sm text-muted-foreground py-8">Memuat bukti...</p>
           )}
         </div>
       </DialogContent>
