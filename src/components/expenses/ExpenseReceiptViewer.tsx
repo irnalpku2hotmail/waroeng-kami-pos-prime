@@ -78,12 +78,14 @@ const ExpenseReceiptViewer = ({ open, onOpenChange, receipt_url, title }: Expens
                 Download PDF
               </Button>
             </div>
-          ) : (
+          ) : signedUrl ? (
             <img 
-              src={receipt_url} 
+              src={signedUrl} 
               alt={title}
               className="w-full h-auto rounded-lg"
             />
+          ) : (
+            <p className="text-center text-sm text-muted-foreground py-8">Memuat bukti...</p>
           )}
         </div>
       </DialogContent>
