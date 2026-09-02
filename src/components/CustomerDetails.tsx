@@ -339,7 +339,10 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   <CardTitle className="flex items-center justify-between">
                     <span>Riwayat Pembelian</span>
                     <div className="flex gap-2">
-                      <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <Select
+                        value={selectedYear}
+                        onValueChange={(v) => { setSelectedYear(v); setTxPage(1); setExpandedTx(null); }}
+                      >
                         <SelectTrigger className="w-32">
                           <SelectValue placeholder="Pilih Tahun" />
                         </SelectTrigger>
@@ -359,6 +362,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   {purchaseHistory.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">Belum ada riwayat pembelian</p>
                   ) : (
+                    <>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -371,7 +375,11 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                       </TableHeader>
                       <TableBody>
                         {purchaseHistory.map((transaction: any) => (
-                          <TableRow key={transaction.transaction_id}>
+                          <React.Fragment key={transaction.id}>
+                          <TableRow
+                            className="cursor-pointer"
+                            onClick={() => setExpandedTx(expandedTx === transaction.id ? null : transaction.id)}
+                          >
                             <TableCell className="font-medium">
                               {transaction.transaction_number}
                             </TableCell>
@@ -379,7 +387,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                               {new Date(transaction.created_at).toLocaleDateString('id-ID')}
                             </TableCell>
                             <TableCell>
-                              Rp {transaction.total_amount.toLocaleString('id-ID')}
+                              Rp {Number(transaction.total_amount).toLocaleString('id-ID')}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
@@ -396,20 +404,48 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="text-sm">
-                                {transaction.items?.map((item: any, index: number) => (
-                                  <div key={index}>
-                                    {item.product_name} ({item.quantity}x)
-                                  </div>
-                                ))}
-                              </div>
+                              <div className="text-sm">{Number(transaction.item_count) || 0} item</div>
                             </TableCell>
                           </TableRow>
+                          {expandedTx === transaction.id && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="bg-gray-50">
+                                <div className="text-sm space-y-1">
+                                  {expandedItems.length === 0 ? (
+                                    <span className="text-gray-500">Memuat detail item...</span>
+                                  ) : (
+                                    expandedItems.map((item: any) => (
+                                      <div key={item.id} className="flex justify-between">
+                                        <span>
+                                          {(item.products as any)?.name || 'Unknown'} ({item.quantity}x)
+                                        </span>
+                                        <span>Rp {Number(item.total_price).toLocaleString('id-ID')}</span>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          </React.Fragment>
                         ))}
                       </TableBody>
                     </Table>
+                    {txTotalPages > 1 && (
+                      <div className="pt-4">
+                        <PaginationComponent
+                          currentPage={txPage}
+                          totalPages={txTotalPages}
+                          onPageChange={(p) => { setTxPage(p); setExpandedTx(null); }}
+                          itemsPerPage={TX_PAGE_SIZE}
+                          totalItems={txCount}
+                        />
+                      </div>
+                    )}
+                    </>
                   )}
                 </CardContent>
+
               </Card>
             </TabsContent>
             
