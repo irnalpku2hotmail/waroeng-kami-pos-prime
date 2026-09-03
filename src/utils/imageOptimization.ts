@@ -171,14 +171,15 @@ export async function optimizeImage(
 export const OPTIMIZED_CACHE_CONTROL = '2592000';
 
 /**
- * Rewrites a Supabase public storage URL to the on-the-fly image transform
- * endpoint so admin tables download small thumbnails instead of full images.
- * Non-Supabase URLs are returned unchanged.
+ * Returns a display URL for a stored image.
+ *
+ * NOTE: the Supabase image transformation endpoint (/render/image/public/) is
+ * NOT enabled on this project's plan — it responds 403 FeatureNotEnabled, which
+ * made every thumbnail render as a broken image. Uploads are already resized and
+ * compressed client-side, so we serve the original public object URL as-is.
  */
-export function getThumbnailUrl(url: string | null | undefined, size = 96, quality = 60): string {
+export function getThumbnailUrl(url: string | null | undefined, _size = 96, _quality = 60): string {
   if (!url) return '';
-  if (!url.includes('/storage/v1/object/public/')) return url;
-  const transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-  const sep = transformed.includes('?') ? '&' : '?';
-  return `${transformed}${sep}width=${size}&height=${size}&resize=cover&quality=${quality}`;
+  return url;
 }
+
