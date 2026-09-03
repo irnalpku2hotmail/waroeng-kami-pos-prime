@@ -24,6 +24,7 @@ import {
 } from '@/lib/adminQueries';
 
 const TX_PAGE_SIZE = 10;
+const HISTORY_PAGE_SIZE = 10;
 
 interface CustomerDetailsProps {
   customer: any;
@@ -35,6 +36,8 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [txPage, setTxPage] = useState(1);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
+  const [pointPage, setPointPage] = useState(1);
+  const [exchangePage, setExchangePage] = useState(1);
 
   // Fetch store settings
   const { data: storeSettings } = useQuery({
@@ -94,40 +97,50 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     staleTime: 60_000,
   });
 
-  // Fetch point transactions
-  const { data: pointHistory = [] } = useQuery({
-    queryKey: ['customer-point-history', customer?.id],
+  // Point history — SERVER-SIDE pagination, minimal columns (no fetch-all, no client slice)
+  const { data: pointData } = useQuery({
+    queryKey: ['customer-point-history', customer?.id, pointPage, HISTORY_PAGE_SIZE],
     queryFn: async () => {
-      if (!customer?.id) return [];
-      const { data, error } = await supabase
+      const from = (pointPage - 1) * HISTORY_PAGE_SIZE;
+      const { data, error, count } = await supabase
         .from('point_transactions')
-        .select('*')
-        .eq('customer_id', customer.id)
-        .order('created_at', { ascending: false });
+        .select('id, points_change, description, created_at', { count: 'exact' })
+        .eq('customer_id', customer!.id)
+        .order('created_at', { ascending: false })
+        .range(from, from + HISTORY_PAGE_SIZE - 1);
       if (error) throw error;
-      return data;
+      return { rows: data || [], count: count || 0 };
     },
-    enabled: !!customer?.id && open
+    enabled: !!customer?.id && open,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
+  const pointHistory = pointData?.rows || [];
+  const pointCount = pointData?.count || 0;
+  const pointTotalPages = Math.ceil(pointCount / HISTORY_PAGE_SIZE);
 
-  // Fetch point exchanges (redemption history)
-  const { data: pointExchanges = [] } = useQuery({
-    queryKey: ['customer-point-exchanges', customer?.id],
+  // Redemption history — SERVER-SIDE pagination, minimal columns
+  const { data: exchangeData } = useQuery({
+    queryKey: ['customer-point-exchanges', customer?.id, exchangePage, HISTORY_PAGE_SIZE],
     queryFn: async () => {
-      if (!customer?.id) return [];
-      const { data, error } = await supabase
+      const from = (exchangePage - 1) * HISTORY_PAGE_SIZE;
+      const { data, error, count } = await supabase
         .from('point_exchanges')
-        .select(`
-          *,
-          rewards(name, description)
-        `)
-        .eq('customer_id', customer.id)
-        .order('created_at', { ascending: false });
+        .select('id, quantity, points_used, status, created_at, rewards(name, description)', { count: 'exact' })
+        .eq('customer_id', customer!.id)
+        .order('created_at', { ascending: false })
+        .range(from, from + HISTORY_PAGE_SIZE - 1);
       if (error) throw error;
-      return data;
+      return { rows: data || [], count: count || 0 };
     },
-    enabled: !!customer?.id && open
+    enabled: !!customer?.id && open,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
+  const pointExchanges = exchangeData?.rows || [];
+  const exchangeCount = exchangeData?.count || 0;
+  const exchangeTotalPages = Math.ceil(exchangeCount / HISTORY_PAGE_SIZE);
+
 
 
   const generateQRCode = async () => {
@@ -458,6 +471,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   {pointHistory.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">Belum ada riwayat point</p>
                   ) : (
+                    <>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -484,7 +498,20 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                         ))}
                       </TableBody>
                     </Table>
+                    {pointTotalPages > 1 && (
+                      <div className="pt-4">
+                        <PaginationComponent
+                          currentPage={pointPage}
+                          totalPages={pointTotalPages}
+                          onPageChange={setPointPage}
+                          itemsPerPage={HISTORY_PAGE_SIZE}
+                          totalItems={pointCount}
+                        />
+                      </div>
+                    )}
+                    </>
                   )}
+
                 </CardContent>
               </Card>
             </TabsContent>
@@ -498,6 +525,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   {pointExchanges.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">Belum ada riwayat redeem point</p>
                   ) : (
+                    <>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -539,7 +567,20 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                         ))}
                       </TableBody>
                     </Table>
+                    {exchangeTotalPages > 1 && (
+                      <div className="pt-4">
+                        <PaginationComponent
+                          currentPage={exchangePage}
+                          totalPages={exchangeTotalPages}
+                          onPageChange={setExchangePage}
+                          itemsPerPage={HISTORY_PAGE_SIZE}
+                          totalItems={exchangeCount}
+                        />
+                      </div>
+                    )}
+                    </>
                   )}
+
                 </CardContent>
               </Card>
             </TabsContent>
