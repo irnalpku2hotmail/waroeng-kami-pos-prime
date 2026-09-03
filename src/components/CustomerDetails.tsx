@@ -552,7 +552,20 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                         ))}
                       </TableBody>
                     </Table>
+                    {exchangeTotalPages > 1 && (
+                      <div className="pt-4">
+                        <PaginationComponent
+                          currentPage={exchangePage}
+                          totalPages={exchangeTotalPages}
+                          onPageChange={setExchangePage}
+                          itemsPerPage={HISTORY_PAGE_SIZE}
+                          totalItems={exchangeCount}
+                        />
+                      </div>
+                    )}
+                    </>
                   )}
+
                 </CardContent>
               </Card>
             </TabsContent>
