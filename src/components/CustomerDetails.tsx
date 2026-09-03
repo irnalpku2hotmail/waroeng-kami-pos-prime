@@ -471,6 +471,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   {pointHistory.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">Belum ada riwayat point</p>
                   ) : (
+                    <>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -497,7 +498,20 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                         ))}
                       </TableBody>
                     </Table>
+                    {pointTotalPages > 1 && (
+                      <div className="pt-4">
+                        <PaginationComponent
+                          currentPage={pointPage}
+                          totalPages={pointTotalPages}
+                          onPageChange={setPointPage}
+                          itemsPerPage={HISTORY_PAGE_SIZE}
+                          totalItems={pointCount}
+                        />
+                      </div>
+                    )}
+                    </>
                   )}
+
                 </CardContent>
               </Card>
             </TabsContent>
