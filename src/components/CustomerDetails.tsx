@@ -511,6 +511,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                   {pointExchanges.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">Belum ada riwayat redeem point</p>
                   ) : (
+                    <>
                     <Table>
                       <TableHeader>
                         <TableRow>
