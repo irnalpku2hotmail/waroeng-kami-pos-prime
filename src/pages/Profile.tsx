@@ -77,8 +77,9 @@ const Profile = () => {
     const { optimizeImage, OPTIMIZED_CACHE_CONTROL } = await import('@/utils/imageOptimization');
     const { file: optimized } = await optimizeImage(file, 'avatar');
     const fileExt = optimized.name.split('.').pop();
-    const fileName = `${userId}-${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+    // Store inside a per-user folder so storage policies can verify ownership.
+    const filePath = `${userId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
