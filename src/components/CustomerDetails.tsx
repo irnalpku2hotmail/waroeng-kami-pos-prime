@@ -94,40 +94,50 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
     staleTime: 60_000,
   });
 
-  // Fetch point transactions
-  const { data: pointHistory = [] } = useQuery({
-    queryKey: ['customer-point-history', customer?.id],
+  // Point history — SERVER-SIDE pagination, minimal columns (no fetch-all, no client slice)
+  const { data: pointData } = useQuery({
+    queryKey: ['customer-point-history', customer?.id, pointPage, HISTORY_PAGE_SIZE],
     queryFn: async () => {
-      if (!customer?.id) return [];
-      const { data, error } = await supabase
+      const from = (pointPage - 1) * HISTORY_PAGE_SIZE;
+      const { data, error, count } = await supabase
         .from('point_transactions')
-        .select('*')
-        .eq('customer_id', customer.id)
-        .order('created_at', { ascending: false });
+        .select('id, points_change, description, created_at', { count: 'exact' })
+        .eq('customer_id', customer!.id)
+        .order('created_at', { ascending: false })
+        .range(from, from + HISTORY_PAGE_SIZE - 1);
       if (error) throw error;
-      return data;
+      return { rows: data || [], count: count || 0 };
     },
-    enabled: !!customer?.id && open
+    enabled: !!customer?.id && open,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
+  const pointHistory = pointData?.rows || [];
+  const pointCount = pointData?.count || 0;
+  const pointTotalPages = Math.ceil(pointCount / HISTORY_PAGE_SIZE);
 
-  // Fetch point exchanges (redemption history)
-  const { data: pointExchanges = [] } = useQuery({
-    queryKey: ['customer-point-exchanges', customer?.id],
+  // Redemption history — SERVER-SIDE pagination, minimal columns
+  const { data: exchangeData } = useQuery({
+    queryKey: ['customer-point-exchanges', customer?.id, exchangePage, HISTORY_PAGE_SIZE],
     queryFn: async () => {
-      if (!customer?.id) return [];
-      const { data, error } = await supabase
+      const from = (exchangePage - 1) * HISTORY_PAGE_SIZE;
+      const { data, error, count } = await supabase
         .from('point_exchanges')
-        .select(`
-          *,
-          rewards(name, description)
-        `)
-        .eq('customer_id', customer.id)
-        .order('created_at', { ascending: false });
+        .select('id, quantity, points_used, status, created_at, rewards(name, description)', { count: 'exact' })
+        .eq('customer_id', customer!.id)
+        .order('created_at', { ascending: false })
+        .range(from, from + HISTORY_PAGE_SIZE - 1);
       if (error) throw error;
-      return data;
+      return { rows: data || [], count: count || 0 };
     },
-    enabled: !!customer?.id && open
+    enabled: !!customer?.id && open,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
+  const pointExchanges = exchangeData?.rows || [];
+  const exchangeCount = exchangeData?.count || 0;
+  const exchangeTotalPages = Math.ceil(exchangeCount / HISTORY_PAGE_SIZE);
+
 
 
   const generateQRCode = async () => {
