@@ -36,6 +36,8 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [txPage, setTxPage] = useState(1);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
+  const [pointPage, setPointPage] = useState(1);
+  const [exchangePage, setExchangePage] = useState(1);
 
   // Fetch store settings
   const { data: storeSettings } = useQuery({
