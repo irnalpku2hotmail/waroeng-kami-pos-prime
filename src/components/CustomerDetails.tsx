@@ -24,6 +24,7 @@ import {
 } from '@/lib/adminQueries';
 
 const TX_PAGE_SIZE = 10;
+const HISTORY_PAGE_SIZE = 10;
 
 interface CustomerDetailsProps {
   customer: any;
