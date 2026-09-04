@@ -174,8 +174,9 @@ const AuditReport = () => {
                   </TableHeader>
                   <TableBody>
                     {(customerStats || []).map((c: any) => (
-                      <TableRow key={c.id}>
+                      <TableRow key={c.customer_id}>
                         <TableCell className="text-sm">{c.name}</TableCell>
+
                         <TableCell className="text-right text-sm">{c.total_orders || 0}</TableCell>
                         <TableCell className="text-right text-sm">{c.total_points || 0}</TableCell>
                         <TableCell className="text-right text-sm">{fmtRp(c.total_spent || 0)}</TableCell>
