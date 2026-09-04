@@ -61,18 +61,25 @@ const AuditReport = () => {
     },
   });
 
+  // Top customers — canonical statistics computed in the database from
+  // transactions (spend/count) and orders (order count), NOT from the legacy
+  // cached columns customers.total_spent / customers.total_orders.
   const { data: customerStats } = useQuery({
-    queryKey: ['audit-customers'],
+    queryKey: ['audit-top-customers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('id, name, total_spent, total_points, total_orders')
-        .order('total_spent', { ascending: false })
-        .limit(10);
+      const { data, error } = await (supabase.rpc as any)('get_top_customers', { p_limit: 10 });
       if (error) throw error;
-      return data || [];
+      return (data || []) as {
+        customer_id: string;
+        name: string;
+        total_spent: number;
+        total_transactions: number;
+        total_orders: number;
+        total_points: number;
+      }[];
     },
   });
+
 
   const orderIdCounts: [string, number][] = useMemo(
     () => (summary?.duplicates || []).map((d) => [d.order_id, Number(d.count)]),
