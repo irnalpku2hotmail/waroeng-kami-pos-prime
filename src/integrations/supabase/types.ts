@@ -2301,6 +2301,17 @@ export type Database = {
           total_amount: number
         }[]
       }
+      get_top_customers: {
+        Args: { p_limit?: number }
+        Returns: {
+          customer_id: string
+          name: string
+          total_orders: number
+          total_points: number
+          total_spent: number
+          total_transactions: number
+        }[]
+      }
       get_unit_conversion_factor: {
         Args: {
           p_from_unit_id: string
