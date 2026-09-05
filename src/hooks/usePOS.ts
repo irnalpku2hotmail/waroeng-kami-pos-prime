@@ -74,14 +74,15 @@ export const usePOS = () => {
     }
   });
 
-  // Fetch customers
+  // Fetch recent customers only (search is done server-side in CustomerSelector)
   const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', 'pos-recent'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('customers')
         .select('id, name, email, phone, total_points')
-        .order('name');
+        .order('created_at', { ascending: false })
+        .limit(20);
       if (error) throw error;
       return data;
     }
