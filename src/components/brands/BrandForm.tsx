@@ -194,11 +194,18 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
           <div>
             <Input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" id="logo-upload" />
             <Label htmlFor="logo-upload" className="cursor-pointer">
-              <Button type="button" variant="outline" asChild>
-                <span><Upload className="h-4 w-4 mr-2" />Upload Logo</span>
+              <Button type="button" variant="outline" asChild disabled={optimizing}>
+                <span><Upload className="h-4 w-4 mr-2" />{optimizing ? 'Mengoptimasi...' : 'Upload Logo'}</span>
               </Button>
             </Label>
-            <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG (Max: 2MB)</p>
+            {logoInfo ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                Asli: {logoInfo.original} → Optimasi: {logoInfo.optimized} ({logoInfo.format})
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG — otomatis dikompres maks. 50 KB</p>
+            )}
+
           </div>
         </div>
       </div>
