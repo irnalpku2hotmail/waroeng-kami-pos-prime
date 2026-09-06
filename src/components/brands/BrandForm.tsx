@@ -10,8 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { Upload, X, Tag } from 'lucide-react';
-import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { compressImageToMaxSize, MAX_BYTES, COMPRESSION_FAILED_MESSAGE, formatBytes } from '@/lib/imageCompression';
 import { deleteStorageFileByUrlAsync } from '@/utils/storageCleanup';
+
 
 const brandSchema = z.object({
   name: z.string().min(1, 'Nama brand wajib diisi'),
