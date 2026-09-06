@@ -13,7 +13,9 @@ import { Switch } from '@/components/ui/switch';
 // html5-qrcode is heavy: load the scanner only when it is rendered
 const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
 import TagInput from '@/components/TagInput';
-import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { compressImageToMaxSize, MAX_BYTES, COMPRESSION_FAILED_MESSAGE, formatBytes } from '@/lib/imageCompression';
+
 
 interface PriceVariant {
   id?: string;
