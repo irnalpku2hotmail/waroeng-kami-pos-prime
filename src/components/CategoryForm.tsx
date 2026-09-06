@@ -256,16 +256,23 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
               id="icon-upload"
             />
             <Label htmlFor="icon-upload" className="cursor-pointer">
-              <Button type="button" variant="outline" asChild>
+              <Button type="button" variant="outline" asChild disabled={optimizing}>
                 <span>
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload Icon
+                  {optimizing ? 'Mengoptimasi...' : 'Upload Icon'}
                 </span>
               </Button>
             </Label>
-            <p className="text-xs text-gray-500 mt-1">
-              Format: JPG, PNG (Max: 2MB)
-            </p>
+            {iconInfo ? (
+              <p className="text-xs text-gray-500 mt-1">
+                Asli: {iconInfo.original} → Optimasi: {iconInfo.optimized} ({iconInfo.format})
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1">
+                Format: JPG, PNG — otomatis dikompres maks. 50 KB
+              </p>
+            )}
+
           </div>
         </div>
       </div>
