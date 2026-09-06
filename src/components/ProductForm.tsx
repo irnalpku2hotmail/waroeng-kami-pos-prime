@@ -629,9 +629,19 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
+                disabled={optimizingImage}
               />
+              {optimizingImage && (
+                <p className="text-xs text-muted-foreground mt-1">Mengoptimasi gambar...</p>
+              )}
+              {imageInfo && !optimizingImage && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Asli: {imageInfo.original} → Optimasi: {imageInfo.optimized} ({imageInfo.format})
+                </p>
+              )}
             </div>
             {imagePreview && (
+
               <div className="flex justify-center">
                 <img 
                   src={imagePreview} 
