@@ -46,33 +46,50 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
     }
   });
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => setLogoPreview(String(ev.target?.result || ''));
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setOptimizing(true);
+    try {
+      // Brand logos keep alpha when the source has transparency.
+      const result = await compressImageToMaxSize(file, { target: 'brand' });
+      setLogoFile(result.file);
+      setLogoPreview(URL.createObjectURL(result.file));
+      setLogoInfo({
+        original: formatBytes(result.originalSize),
+        optimized: formatBytes(result.size),
+        format: result.format === 'original' ? (file.type.split('/')[1] || '').toUpperCase() : result.format,
+      });
+    } catch {
+      setLogoFile(null);
+      setLogoInfo(null);
+      setLogoPreview(brand?.logo_url || '');
+      e.target.value = '';
+      toast({ title: 'Gagal mengoptimasi gambar', description: COMPRESSION_FAILED_MESSAGE, variant: 'destructive' });
+    } finally {
+      setOptimizing(false);
     }
   };
 
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview('');
+    setLogoInfo(null);
   };
 
   const uploadLogo = async (file: File): Promise<string> => {
-    const { file: optimized } = await optimizeImage(file, 'brand');
-    const fileExt = optimized.name.split('.').pop();
+    if (file.size > MAX_BYTES) throw new Error(COMPRESSION_FAILED_MESSAGE);
+    const fileExt = file.name.split('.').pop();
     const fileName = `brand_${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('website-assets')
-      .upload(fileName, optimized, {
-        contentType: optimized.type,
+      .upload(fileName, file, {
+        contentType: file.type,
         cacheControl: OPTIMIZED_CACHE_CONTROL,
         upsert: false,
       });
+
 
     if (uploadError) throw uploadError;
 
