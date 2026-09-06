@@ -32,8 +32,11 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>(brand?.logo_url || '');
   const [uploading, setUploading] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [logoInfo, setLogoInfo] = useState<{ original: string; optimized: string; format: string } | null>(null);
   const [isActive, setIsActive] = useState<boolean>(brand?.is_active ?? true);
   const queryClient = useQueryClient();
+
 
   const { register, handleSubmit, formState: { errors } } = useForm<BrandFormData>({
     resolver: zodResolver(brandSchema),
