@@ -13,7 +13,9 @@ import { Switch } from '@/components/ui/switch';
 // html5-qrcode is heavy: load the scanner only when it is rendered
 const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
 import TagInput from '@/components/TagInput';
-import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { compressImageToMaxSize, MAX_BYTES, COMPRESSION_FAILED_MESSAGE, formatBytes } from '@/lib/imageCompression';
+
 
 interface PriceVariant {
   id?: string;
@@ -55,7 +57,10 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
   const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageInfo, setImageInfo] = useState<{ original: string; optimized: string; format: string } | null>(null);
+  const [optimizingImage, setOptimizingImage] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+
 
   const queryClient = useQueryClient();
 
@@ -170,14 +175,17 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
   }, [product]);
 
   const uploadImage = async (file: File): Promise<string> => {
-    const { file: optimized } = await optimizeImage(file, 'product');
-    const fileExt = optimized.name.split('.').pop();
+    // Hard limit guard — the file was already optimized on selection.
+    if (file.size > MAX_BYTES) {
+      throw new Error(COMPRESSION_FAILED_MESSAGE);
+    }
+    const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('product-images')
-      .upload(fileName, optimized, {
-        contentType: optimized.type,
+      .upload(fileName, file, {
+        contentType: file.type,
         cacheControl: OPTIMIZED_CACHE_CONTROL,
         upsert: false,
       });
@@ -190,6 +198,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
     return data.publicUrl;
   };
+
 
   const saveProduct = useMutation({
     mutationFn: async () => {
@@ -364,17 +373,31 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     setUnitConversions(unitConversions.filter((_, i) => i !== index));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setOptimizingImage(true);
+    try {
+      const result = await compressImageToMaxSize(file, { target: 'product' });
+      setImageFile(result.file);
+      setImagePreview(URL.createObjectURL(result.file));
+      setImageInfo({
+        original: formatBytes(result.originalSize),
+        optimized: formatBytes(result.size),
+        format: result.format === 'original' ? (file.type.split('/')[1] || '').toUpperCase() : result.format,
+      });
+    } catch {
+      setImageFile(null);
+      setImageInfo(null);
+      if (!product?.image_url) setImagePreview('');
+      e.target.value = '';
+      toast({ title: 'Gagal mengoptimasi gambar', description: COMPRESSION_FAILED_MESSAGE, variant: 'destructive' });
+    } finally {
+      setOptimizingImage(false);
     }
   };
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -606,9 +629,19 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
+                disabled={optimizingImage}
               />
+              {optimizingImage && (
+                <p className="text-xs text-muted-foreground mt-1">Mengoptimasi gambar...</p>
+              )}
+              {imageInfo && !optimizingImage && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Asli: {imageInfo.original} → Optimasi: {imageInfo.optimized} ({imageInfo.format})
+                </p>
+              )}
             </div>
             {imagePreview && (
+
               <div className="flex justify-center">
                 <img 
                   src={imagePreview} 

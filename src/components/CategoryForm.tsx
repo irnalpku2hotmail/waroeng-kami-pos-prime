@@ -11,7 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Upload, X, Package } from 'lucide-react';
-import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { compressImageToMaxSize, MAX_BYTES, COMPRESSION_FAILED_MESSAGE, formatBytes } from '@/lib/imageCompression';
+
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Nama kategori wajib diisi'),
@@ -30,7 +32,10 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string>(String(category?.icon_url || ''));
   const [uploading, setUploading] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [iconInfo, setIconInfo] = useState<{ original: string; optimized: string; format: string } | null>(null);
   const queryClient = useQueryClient();
+
 
   const { register, handleSubmit, formState: { errors } } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -40,36 +45,50 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
     }
   });
 
-  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setIconFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setIconPreview(String(e.target?.result || ''));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setOptimizing(true);
+    try {
+      const result = await compressImageToMaxSize(file, { target: 'category' });
+      setIconFile(result.file);
+      setIconPreview(URL.createObjectURL(result.file));
+      setIconInfo({
+        original: formatBytes(result.originalSize),
+        optimized: formatBytes(result.size),
+        format: result.format === 'original' ? (file.type.split('/')[1] || '').toUpperCase() : result.format,
+      });
+    } catch {
+      setIconFile(null);
+      setIconInfo(null);
+      setIconPreview(String(category?.icon_url || ''));
+      e.target.value = '';
+      toast({ title: 'Gagal mengoptimasi gambar', description: COMPRESSION_FAILED_MESSAGE, variant: 'destructive' });
+    } finally {
+      setOptimizing(false);
     }
   };
 
   const removeIcon = () => {
     setIconFile(null);
     setIconPreview('');
+    setIconInfo(null);
   };
 
   const uploadIcon = async (file: File): Promise<string> => {
-    const { file: optimized } = await optimizeImage(file, 'category');
-    const fileExt = optimized.name.split('.').pop();
+    if (file.size > MAX_BYTES) throw new Error(COMPRESSION_FAILED_MESSAGE);
+    const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('category-icons')
-      .upload(filePath, optimized, {
-        contentType: optimized.type,
+      .upload(filePath, file, {
+        contentType: file.type,
         cacheControl: OPTIMIZED_CACHE_CONTROL,
         upsert: false,
       });
+
 
     if (uploadError) {
       throw uploadError;
@@ -150,15 +169,17 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
       let icon_url = iconPreview;
 
       if (iconFile) {
+        // Upload first — only clean up the old file after the new one succeeds.
+        icon_url = await uploadIcon(iconFile);
         if (category?.icon_url) {
           const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
           deleteStorageFileByUrlAsync(String(category.icon_url));
         }
-        icon_url = await uploadIcon(iconFile);
       } else if (category?.icon_url && !iconPreview) {
         const { deleteStorageFileByUrlAsync } = await import('@/utils/storageCleanup');
         deleteStorageFileByUrlAsync(String(category.icon_url));
       }
+
 
       const formData = { 
         name: String(data.name), 
@@ -235,16 +256,23 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
               id="icon-upload"
             />
             <Label htmlFor="icon-upload" className="cursor-pointer">
-              <Button type="button" variant="outline" asChild>
+              <Button type="button" variant="outline" asChild disabled={optimizing}>
                 <span>
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload Icon
+                  {optimizing ? 'Mengoptimasi...' : 'Upload Icon'}
                 </span>
               </Button>
             </Label>
-            <p className="text-xs text-gray-500 mt-1">
-              Format: JPG, PNG (Max: 2MB)
-            </p>
+            {iconInfo ? (
+              <p className="text-xs text-gray-500 mt-1">
+                Asli: {iconInfo.original} → Optimasi: {iconInfo.optimized} ({iconInfo.format})
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1">
+                Format: JPG, PNG — otomatis dikompres maks. 50 KB
+              </p>
+            )}
+
           </div>
         </div>
       </div>

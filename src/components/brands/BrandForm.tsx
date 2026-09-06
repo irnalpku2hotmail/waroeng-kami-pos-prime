@@ -10,8 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { Upload, X, Tag } from 'lucide-react';
-import { optimizeImage, OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { OPTIMIZED_CACHE_CONTROL } from '@/utils/imageOptimization';
+import { compressImageToMaxSize, MAX_BYTES, COMPRESSION_FAILED_MESSAGE, formatBytes } from '@/lib/imageCompression';
 import { deleteStorageFileByUrlAsync } from '@/utils/storageCleanup';
+
 
 const brandSchema = z.object({
   name: z.string().min(1, 'Nama brand wajib diisi'),
@@ -30,8 +32,11 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>(brand?.logo_url || '');
   const [uploading, setUploading] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [logoInfo, setLogoInfo] = useState<{ original: string; optimized: string; format: string } | null>(null);
   const [isActive, setIsActive] = useState<boolean>(brand?.is_active ?? true);
   const queryClient = useQueryClient();
+
 
   const { register, handleSubmit, formState: { errors } } = useForm<BrandFormData>({
     resolver: zodResolver(brandSchema),
@@ -41,33 +46,50 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
     }
   });
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => setLogoPreview(String(ev.target?.result || ''));
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setOptimizing(true);
+    try {
+      // Brand logos keep alpha when the source has transparency.
+      const result = await compressImageToMaxSize(file, { target: 'brand' });
+      setLogoFile(result.file);
+      setLogoPreview(URL.createObjectURL(result.file));
+      setLogoInfo({
+        original: formatBytes(result.originalSize),
+        optimized: formatBytes(result.size),
+        format: result.format === 'original' ? (file.type.split('/')[1] || '').toUpperCase() : result.format,
+      });
+    } catch {
+      setLogoFile(null);
+      setLogoInfo(null);
+      setLogoPreview(brand?.logo_url || '');
+      e.target.value = '';
+      toast({ title: 'Gagal mengoptimasi gambar', description: COMPRESSION_FAILED_MESSAGE, variant: 'destructive' });
+    } finally {
+      setOptimizing(false);
     }
   };
 
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview('');
+    setLogoInfo(null);
   };
 
   const uploadLogo = async (file: File): Promise<string> => {
-    const { file: optimized } = await optimizeImage(file, 'brand');
-    const fileExt = optimized.name.split('.').pop();
+    if (file.size > MAX_BYTES) throw new Error(COMPRESSION_FAILED_MESSAGE);
+    const fileExt = file.name.split('.').pop();
     const fileName = `brand_${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('website-assets')
-      .upload(fileName, optimized, {
-        contentType: optimized.type,
+      .upload(fileName, file, {
+        contentType: file.type,
         cacheControl: OPTIMIZED_CACHE_CONTROL,
         upsert: false,
       });
+
 
     if (uploadError) throw uploadError;
 
@@ -172,11 +194,18 @@ const BrandForm = ({ brand, onSuccess, onClose }: BrandFormProps) => {
           <div>
             <Input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" id="logo-upload" />
             <Label htmlFor="logo-upload" className="cursor-pointer">
-              <Button type="button" variant="outline" asChild>
-                <span><Upload className="h-4 w-4 mr-2" />Upload Logo</span>
+              <Button type="button" variant="outline" asChild disabled={optimizing}>
+                <span><Upload className="h-4 w-4 mr-2" />{optimizing ? 'Mengoptimasi...' : 'Upload Logo'}</span>
               </Button>
             </Label>
-            <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG (Max: 2MB)</p>
+            {logoInfo ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                Asli: {logoInfo.original} → Optimasi: {logoInfo.optimized} ({logoInfo.format})
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG — otomatis dikompres maks. 50 KB</p>
+            )}
+
           </div>
         </div>
       </div>
