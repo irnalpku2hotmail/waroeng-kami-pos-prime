@@ -45,22 +45,35 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
     }
   });
 
-  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setIconFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setIconPreview(String(e.target?.result || ''));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setOptimizing(true);
+    try {
+      const result = await compressImageToMaxSize(file, { target: 'category' });
+      setIconFile(result.file);
+      setIconPreview(URL.createObjectURL(result.file));
+      setIconInfo({
+        original: formatBytes(result.originalSize),
+        optimized: formatBytes(result.size),
+        format: result.format === 'original' ? (file.type.split('/')[1] || '').toUpperCase() : result.format,
+      });
+    } catch {
+      setIconFile(null);
+      setIconInfo(null);
+      setIconPreview(String(category?.icon_url || ''));
+      e.target.value = '';
+      toast({ title: 'Gagal mengoptimasi gambar', description: COMPRESSION_FAILED_MESSAGE, variant: 'destructive' });
+    } finally {
+      setOptimizing(false);
     }
   };
 
   const removeIcon = () => {
     setIconFile(null);
     setIconPreview('');
-  };
+    setIconInfo(null);
+
 
   const uploadIcon = async (file: File): Promise<string> => {
     const { file: optimized } = await optimizeImage(file, 'category');
