@@ -32,7 +32,10 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string>(String(category?.icon_url || ''));
   const [uploading, setUploading] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [iconInfo, setIconInfo] = useState<{ original: string; optimized: string; format: string } | null>(null);
   const queryClient = useQueryClient();
+
 
   const { register, handleSubmit, formState: { errors } } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
