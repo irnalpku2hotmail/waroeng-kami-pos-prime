@@ -373,17 +373,31 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
     setUnitConversions(unitConversions.filter((_, i) => i !== index));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setOptimizingImage(true);
+    try {
+      const result = await compressImageToMaxSize(file, { target: 'product' });
+      setImageFile(result.file);
+      setImagePreview(URL.createObjectURL(result.file));
+      setImageInfo({
+        original: formatBytes(result.originalSize),
+        optimized: formatBytes(result.size),
+        format: result.format === 'original' ? (file.type.split('/')[1] || '').toUpperCase() : result.format,
+      });
+    } catch {
+      setImageFile(null);
+      setImageInfo(null);
+      if (!product?.image_url) setImagePreview('');
+      e.target.value = '';
+      toast({ title: 'Gagal mengoptimasi gambar', description: COMPRESSION_FAILED_MESSAGE, variant: 'destructive' });
+    } finally {
+      setOptimizingImage(false);
     }
   };
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
