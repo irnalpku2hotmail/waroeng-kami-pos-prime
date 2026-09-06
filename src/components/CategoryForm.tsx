@@ -73,21 +73,22 @@ const CategoryForm = ({ category, onSuccess, onClose }: CategoryFormProps) => {
     setIconFile(null);
     setIconPreview('');
     setIconInfo(null);
-
+  };
 
   const uploadIcon = async (file: File): Promise<string> => {
-    const { file: optimized } = await optimizeImage(file, 'category');
-    const fileExt = optimized.name.split('.').pop();
+    if (file.size > MAX_BYTES) throw new Error(COMPRESSION_FAILED_MESSAGE);
+    const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('category-icons')
-      .upload(filePath, optimized, {
-        contentType: optimized.type,
+      .upload(filePath, file, {
+        contentType: file.type,
         cacheControl: OPTIMIZED_CACHE_CONTROL,
         upsert: false,
       });
+
 
     if (uploadError) {
       throw uploadError;
