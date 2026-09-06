@@ -173,14 +173,17 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
   }, [product]);
 
   const uploadImage = async (file: File): Promise<string> => {
-    const { file: optimized } = await optimizeImage(file, 'product');
-    const fileExt = optimized.name.split('.').pop();
+    // Hard limit guard — the file was already optimized on selection.
+    if (file.size > MAX_BYTES) {
+      throw new Error(COMPRESSION_FAILED_MESSAGE);
+    }
+    const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('product-images')
-      .upload(fileName, optimized, {
-        contentType: optimized.type,
+      .upload(fileName, file, {
+        contentType: file.type,
         cacheControl: OPTIMIZED_CACHE_CONTROL,
         upsert: false,
       });
@@ -193,6 +196,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
     return data.publicUrl;
   };
+
 
   const saveProduct = useMutation({
     mutationFn: async () => {
