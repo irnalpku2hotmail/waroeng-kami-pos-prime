@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -33,7 +33,14 @@ export const getImageUrl = (imageUrl: string | null | undefined) => {
 export const usePOS = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCartState] = useState<CartItem[]>([]);
+  const cartRef = useRef<CartItem[]>(cart);
+  cartRef.current = cart;
+  const setCart = useCallback((next: CartItem[] | ((prev: CartItem[]) => CartItem[])) => {
+    const value = typeof next === 'function' ? (next as (p: CartItem[]) => CartItem[])(cartRef.current) : next;
+    cartRef.current = value;
+    setCartState(value);
+  }, []);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentType, setPaymentType] = useState<'cash' | 'credit' | 'transfer'>('cash');
