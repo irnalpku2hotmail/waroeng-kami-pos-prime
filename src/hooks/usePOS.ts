@@ -111,7 +111,6 @@ export const usePOS = () => {
   const addToCart = (product: any, quantity: number = 1) => {
     // Use latest cart (ref) so rapid consecutive scans never lose increments
     const cart = cartRef.current;
-    const setCart = (next: CartItem[]) => { cartRef.current = next; setCartState(next); };
     if (product.current_stock < quantity) {
       toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${product.current_stock}`, variant: 'destructive' });
       return;
