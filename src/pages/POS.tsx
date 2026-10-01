@@ -19,6 +19,9 @@ import CustomerFavoritesModal from '@/components/pos/CustomerFavoritesModal';
 import MultiBarcodeScanner from '@/components/pos/MultiBarcodeScanner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useHardwareBarcodeScanner } from '@/hooks/useHardwareBarcodeScanner';
+import { Switch } from '@/components/ui/switch';
 const POS = () => {
   const pos = usePOS();
   const isMobile = useIsMobile();
@@ -28,6 +31,51 @@ const POS = () => {
   const [multiScanOpen, setMultiScanOpen] = useState(false);
   const [holdModalOpen, setHoldModalOpen] = useState(false);
   const [holdModalTrigger, setHoldModalTrigger] = useState(0);
+
+  // Hardware barcode scanner (keyboard wedge)
+  const [hwMultiScan, setHwMultiScan] = useState(false);
+  const [hwScanCount, setHwScanCount] = useState(0);
+  const [lastHwScan, setLastHwScan] = useState<string | null>(null);
+  const barcodeCache = useRef(new Map<string, any>());
+  const scanQueue = useRef<Promise<void>>(Promise.resolve());
+  const posRef = useRef(pos);
+  posRef.current = pos;
+
+  const lookupBarcode = useCallback(async (barcode: string) => {
+    const cached = barcodeCache.current.get(barcode);
+    if (cached) return cached;
+    const { data, error } = await supabase
+      .from('products')
+      .select('*, categories(name), units(name, abbreviation), price_variants(*)')
+      .eq('barcode', barcode)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) barcodeCache.current.set(barcode, data);
+    return data;
+  }, []);
+
+  const handleHardwareScan = useCallback((barcode: string) => {
+    // Sequential queue: one physical scan = one lookup, order preserved
+    scanQueue.current = scanQueue.current.then(async () => {
+      if (!navigator.onLine && !barcodeCache.current.has(barcode)) {
+        toast({ title: 'Offline', description: `Tidak dapat mencari barcode ${barcode} saat offline.`, variant: 'destructive' });
+        return;
+      }
+      try {
+        const product = await lookupBarcode(barcode);
+        if (!product) {
+          toast({ title: 'Produk tidak ditemukan', description: `Barcode: ${barcode}`, variant: 'destructive', duration: 2500 });
+          return;
+        }
+        posRef.current.addToCart(product, 1);
+        setHwScanCount(c => c + 1);
+        setLastHwScan(product.name);
+      } catch {
+        toast({ title: 'Gagal mencari produk', description: 'Terjadi kesalahan saat membaca barcode.', variant: 'destructive' });
+      }
+    });
+  }, [lookupBarcode]);
 
   // Held transactions
   const heldTransactions = useHeldTransactions();
@@ -126,6 +174,13 @@ const POS = () => {
   };
   usePOSKeyboardShortcuts(shortcutActions, true);
 
+  useHardwareBarcodeScanner({
+    enabled: !multiScanOpen,
+    onScan: handleHardwareScan,
+    allowedInputRef: searchInputRef,
+    onRestoreInput: (before) => pos.setSearchTerm(before),
+  });
+
   // Handle multi-barcode scan results
   const handleMultiScanProducts = (items: {
     product: any;
@@ -219,6 +274,17 @@ const POS = () => {
           </div>
           
           <DailySalesSummary />
+
+          <div className="flex items-center justify-between gap-2 rounded-md border bg-card px-3 py-2 text-xs">
+            <span className={hwMultiScan ? 'font-medium text-primary' : 'text-muted-foreground'}>
+              {hwMultiScan ? `● Hardware Multi Scan Aktif · ${hwScanCount} scan` : '○ Hardware Scanner Siap'}
+              {lastHwScan && <span className="ml-2 text-muted-foreground">Terakhir: {lastHwScan}</span>}
+            </span>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span>Hardware Multi Scan</span>
+              <Switch checked={hwMultiScan} onCheckedChange={(v) => { setHwMultiScan(v); setHwScanCount(0); }} />
+            </label>
+          </div>
           
           <ProductSearch searchTerm={pos.searchTerm} setSearchTerm={pos.setSearchTerm} handleVoiceSearch={pos.handleVoiceSearch} searchInputRef={searchInputRef} voiceSearchRef={voiceSearchRef} />
           <ProductGrid products={pos.products} isLoading={pos.isLoading} addToCart={pos.addToCart} />
