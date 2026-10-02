@@ -40,6 +40,14 @@ const POS = () => {
   const scanQueue = useRef<Promise<void>>(Promise.resolve());
   const posRef = useRef(pos);
   posRef.current = pos;
+  const hwMultiScanRef = useRef(hwMultiScan);
+  hwMultiScanRef.current = hwMultiScan;
+  const hwErrorToast = useRef<ReturnType<typeof toast> | null>(null);
+  const showScanError = (title: string, description: string) => {
+    // Single replaceable toast so rapid failed scans don't flood the screen
+    hwErrorToast.current?.dismiss();
+    hwErrorToast.current = toast({ title, description, variant: 'destructive', duration: 2500 });
+  };
 
   const lookupBarcode = useCallback(async (barcode: string) => {
     const cached = barcodeCache.current.get(barcode);
@@ -59,20 +67,24 @@ const POS = () => {
     // Sequential queue: one physical scan = one lookup, order preserved
     scanQueue.current = scanQueue.current.then(async () => {
       if (!navigator.onLine && !barcodeCache.current.has(barcode)) {
-        toast({ title: 'Offline', description: `Tidak dapat mencari barcode ${barcode} saat offline.`, variant: 'destructive' });
+        showScanError('Offline', `Tidak dapat mencari barcode ${barcode} saat offline.`);
         return;
       }
       try {
         const product = await lookupBarcode(barcode);
         if (!product) {
-          toast({ title: 'Produk tidak ditemukan', description: `Barcode: ${barcode}`, variant: 'destructive', duration: 2500 });
+          showScanError('Barcode tidak ditemukan', `Barcode: ${barcode}`);
           return;
         }
         posRef.current.addToCart(product, 1);
-        setHwScanCount(c => c + 1);
         setLastHwScan(product.name);
+        if (hwMultiScanRef.current) {
+          setHwScanCount(c => c + 1); // batch mode: inline counter only, no success toast
+        } else {
+          toast({ title: 'Ditambahkan', description: product.name, duration: 1500 });
+        }
       } catch {
-        toast({ title: 'Gagal mencari produk', description: 'Terjadi kesalahan saat membaca barcode.', variant: 'destructive' });
+        showScanError('Gagal mencari produk', 'Terjadi kesalahan saat membaca barcode.');
       }
     });
   }, [lookupBarcode]);
@@ -282,7 +294,7 @@ const POS = () => {
             </span>
             <label className="flex items-center gap-2 cursor-pointer">
               <span>Hardware Multi Scan</span>
-              <Switch checked={hwMultiScan} onCheckedChange={(v) => { setHwMultiScan(v); setHwScanCount(0); }} />
+              <Switch checked={hwMultiScan} onCheckedChange={(v) => { setHwMultiScan(v); setHwScanCount(0); setLastHwScan(null); }} />
             </label>
           </div>
           

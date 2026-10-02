@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateReceiptHTML } from '@/utils/receiptGenerator';
 import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 export interface CartItem {
   id: string;
@@ -62,17 +63,20 @@ export const usePOS = () => {
     }
   });
 
+  // Debounced so fast keystrokes (or a leaked scanner char) don't fire one query per char
+  const debouncedSearch = useDebouncedValue(searchTerm, 250);
+
   // Fetch products with stock and pricing info
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['pos-products', searchTerm],
+    queryKey: ['pos-products', debouncedSearch],
     queryFn: async () => {
       let query = supabase
         .from('products')
         .select(`*, categories(name), units(name, abbreviation), price_variants(*)`)
         .eq('is_active', true);
       
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`name.ilike.%${debouncedSearch}%,barcode.ilike.%${debouncedSearch}%`);
       }
       
       const { data, error } = await query.order('name');
