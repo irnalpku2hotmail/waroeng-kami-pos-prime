@@ -88,6 +88,8 @@ export const useHardwareBarcodeScanner = ({ enabled, onScan, allowedInputRef, on
       } else if (now - lastTime > MAX_INTERVAL_MS) {
         allFast = false;
       }
+      // Fast follow-up char in the search box = scanner burst: keep it out of the input
+      if (isAllowedInput && buffer && allFast) e.preventDefault();
       buffer += e.key;
       lastTime = now;
       if (timer) clearTimeout(timer);

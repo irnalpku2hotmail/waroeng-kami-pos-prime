@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateReceiptHTML } from '@/utils/receiptGenerator';
 import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 export interface CartItem {
   id: string;
@@ -62,17 +63,20 @@ export const usePOS = () => {
     }
   });
 
+  // Debounced so fast keystrokes (or a leaked scanner char) don't fire one query per char
+  const debouncedSearch = useDebouncedValue(searchTerm, 250);
+
   // Fetch products with stock and pricing info
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['pos-products', searchTerm],
+    queryKey: ['pos-products', debouncedSearch],
     queryFn: async () => {
       let query = supabase
         .from('products')
         .select(`*, categories(name), units(name, abbreviation), price_variants(*)`)
         .eq('is_active', true);
       
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`name.ilike.%${debouncedSearch}%,barcode.ilike.%${debouncedSearch}%`);
       }
       
       const { data, error } = await query.order('name');
@@ -108,12 +112,12 @@ export const usePOS = () => {
     return { price: product.selling_price, variant: null };
   };
 
-  const addToCart = (product: any, quantity: number = 1) => {
+  const addToCart = (product: any, quantity: number = 1, opts?: { silent?: boolean }): boolean => {
     // Use latest cart (ref) so rapid consecutive scans never lose increments
     const cart = cartRef.current;
     if (product.current_stock < quantity) {
       toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${product.current_stock}`, variant: 'destructive' });
-      return;
+      return false;
     }
 
     const existingItem = cart.find(item => item.product_id === product.id);
@@ -121,7 +125,7 @@ export const usePOS = () => {
     
     if (product.current_stock < newQuantity) {
       toast({ title: 'Stok Tidak Mencukupi', description: `Maksimal yang bisa ditambahkan: ${product.current_stock - (existingItem?.quantity || 0)}`, variant: 'destructive' });
-      return;
+      return false;
     }
 
     const priceInfo = getProductPrice(product, newQuantity);
@@ -148,11 +152,12 @@ export const usePOS = () => {
       setCart([...cart, cartItem]);
     }
 
-    toast({ 
+    if (!opts?.silent) toast({ 
       title: 'Produk Ditambahkan', 
       description: `${quantity}x ${product.name} ditambahkan ke keranjang`,
       duration: 2000 
     });
+    return true;
   };
 
   const updateCartQuantity = (productId: string, newQuantity: number) => {
