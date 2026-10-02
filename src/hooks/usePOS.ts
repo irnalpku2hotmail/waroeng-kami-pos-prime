@@ -112,12 +112,12 @@ export const usePOS = () => {
     return { price: product.selling_price, variant: null };
   };
 
-  const addToCart = (product: any, quantity: number = 1) => {
+  const addToCart = (product: any, quantity: number = 1, opts?: { silent?: boolean }): boolean => {
     // Use latest cart (ref) so rapid consecutive scans never lose increments
     const cart = cartRef.current;
     if (product.current_stock < quantity) {
       toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${product.current_stock}`, variant: 'destructive' });
-      return;
+      return false;
     }
 
     const existingItem = cart.find(item => item.product_id === product.id);
@@ -125,7 +125,7 @@ export const usePOS = () => {
     
     if (product.current_stock < newQuantity) {
       toast({ title: 'Stok Tidak Mencukupi', description: `Maksimal yang bisa ditambahkan: ${product.current_stock - (existingItem?.quantity || 0)}`, variant: 'destructive' });
-      return;
+      return false;
     }
 
     const priceInfo = getProductPrice(product, newQuantity);
@@ -152,11 +152,12 @@ export const usePOS = () => {
       setCart([...cart, cartItem]);
     }
 
-    toast({ 
+    if (!opts?.silent) toast({ 
       title: 'Produk Ditambahkan', 
       description: `${quantity}x ${product.name} ditambahkan ke keranjang`,
       duration: 2000 
     });
+    return true;
   };
 
   const updateCartQuantity = (productId: string, newQuantity: number) => {

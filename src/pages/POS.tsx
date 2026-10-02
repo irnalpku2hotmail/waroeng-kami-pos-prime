@@ -76,13 +76,12 @@ const POS = () => {
           showScanError('Barcode tidak ditemukan', `Barcode: ${barcode}`);
           return;
         }
-        posRef.current.addToCart(product, 1);
+        const batch = hwMultiScanRef.current;
+        // Batch mode: no per-scan success toast, inline counter instead
+        const ok = posRef.current.addToCart(product, 1, { silent: batch });
+        if (!ok) return; // e.g. out of stock: not counted
         setLastHwScan(product.name);
-        if (hwMultiScanRef.current) {
-          setHwScanCount(c => c + 1); // batch mode: inline counter only, no success toast
-        } else {
-          toast({ title: 'Ditambahkan', description: product.name, duration: 1500 });
-        }
+        if (batch) setHwScanCount(c => c + 1);
       } catch {
         showScanError('Gagal mencari produk', 'Terjadi kesalahan saat membaca barcode.');
       }
