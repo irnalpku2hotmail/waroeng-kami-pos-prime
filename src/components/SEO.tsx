@@ -56,7 +56,9 @@ export const SiteHead = ({ isPrivate }: { isPrivate: boolean }) => {
   const cfg = resolveSeoConfig(settings);
   return (
     <Helmet>
-      {cfg.favicon && <link rel="icon" type={cfg.favicon.type} href={cfg.favicon.url} />}
+      {cfg.favicon
+        ? <link rel="icon" type={cfg.favicon.type} href={cfg.favicon.url} />
+        : <link rel="icon" type="image/x-icon" href="/favicon.ico" />}
       {isPrivate && <meta name="robots" content={ROBOTS.private} />}
     </Helmet>
   );

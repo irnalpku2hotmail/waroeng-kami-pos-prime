@@ -133,6 +133,7 @@ const BundleDetail = () => {
         title={`${bundle?.name ?? 'Bundle'} — Paket Hemat LAPAU.ID`}
         description={(bundle?.description?.toString().slice(0, 155)) || `Dapatkan paket hemat ${bundle?.name ?? ''} di LAPAU.ID dengan harga spesial dan gratis ongkir.`}
         path={`/bundle/${slug}`}
+        image={bundle?.image_url || null}
       />
       <FrontendNavbar
         searchTerm={searchTerm}

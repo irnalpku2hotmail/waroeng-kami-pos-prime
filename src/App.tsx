@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { SiteHead } from "@/components/SEO";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchCommonAdminRoutes } from "@/lib/adminPrefetch";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -57,6 +58,8 @@ const RouteFallback = () => (
 
 function App() {
   const queryClient = useQueryClient();
+  const { pathname } = useLocation();
+  const isPublic = pathname === "/" || /^\/(product|bundle|search)(\/|$)/.test(pathname);
 
   // Once the app is interactive, warm the most-used admin route chunks during idle time.
   useEffect(() => {
@@ -65,6 +68,7 @@ function App() {
 
   return (
     <TooltipProvider>
+      <SiteHead isPrivate={!isPublic} />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
                 {/* Public routes */}

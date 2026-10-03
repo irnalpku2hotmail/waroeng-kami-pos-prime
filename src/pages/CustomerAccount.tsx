@@ -16,7 +16,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { User, Star, ShoppingBag, Gift, Heart, Users, LogOut } from 'lucide-react';
-import SEO from '@/components/SEO';
+import SEO, { ROBOTS } from '@/components/SEO';
 import RedemptionRequestList from '@/components/account/RedemptionRequestList';
 
 const ReferralSection = lazy(() => import('@/components/profile/ReferralSection'));
@@ -114,7 +114,7 @@ const CustomerAccount = () => {
 
   return (
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-20 pt-12' : 'pt-[88px]'}`}>
-      <SEO title="Akun Saya — LAPAU.ID" description="Kelola akun, loyalti, pesanan, dan referral Anda di LAPAU.ID." path="/account" />
+      <SEO title="Akun Saya — LAPAU.ID" description="Kelola akun, loyalti, pesanan, dan referral Anda di LAPAU.ID." path="/account" robots={ROBOTS.private} />
       <FrontendNavbar onCartClick={() => setCartOpen(true)} />
 
       <main className="max-w-3xl mx-auto px-4 pt-4 pb-8 space-y-4">
