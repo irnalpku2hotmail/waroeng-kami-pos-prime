@@ -209,6 +209,23 @@ const ProductDetail = () => {
         title={`${product?.name ?? 'Produk'} — LAPAU.ID`}
         description={(product?.description?.toString().slice(0, 155)) || `Beli ${product?.name ?? 'produk'} di LAPAU.ID dengan harga terbaik dan gratis ongkir ke seluruh Indonesia.`}
         path={`/product/${id}`}
+        type="product"
+        image={product?.image_url || null}
+        jsonLd={product ? {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: product.name,
+          ...(product.image_url ? { image: product.image_url } : {}),
+          ...(product.description ? { description: String(product.description).slice(0, 500) } : {}),
+          ...(product.barcode ? { sku: product.barcode } : {}),
+          offers: {
+            '@type': 'Offer',
+            price: Number(product.selling_price),
+            priceCurrency: 'IDR',
+            availability: (product.current_stock ?? 0) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            url: `https://tinggalklik.lovable.app/product/${id}`,
+          },
+        } : undefined}
       />
       {/* Navbar - Reusing FrontendNavbar with EnhancedHomeSearch */}
       <FrontendNavbar 

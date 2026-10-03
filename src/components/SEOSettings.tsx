@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Search, Globe, Image } from 'lucide-react';
+import FaviconSettings from '@/components/FaviconSettings';
 
 const SEOSettings = () => {
   const queryClient = useQueryClient();
@@ -66,6 +67,7 @@ const SEOSettings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seo-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
       toast({ title: 'Berhasil', description: 'Pengaturan SEO berhasil disimpan' });
     },
     onError: (error) => {
@@ -119,6 +121,7 @@ const SEOSettings = () => {
 
   return (
     <div className="space-y-6">
+      <FaviconSettings />
       {/* Basic SEO Settings */}
       <Card>
         <CardHeader>
