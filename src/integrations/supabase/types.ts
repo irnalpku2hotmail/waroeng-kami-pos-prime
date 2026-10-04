@@ -108,6 +108,7 @@ export type Database = {
           icon_url: string | null
           id: string
           name: string
+          slug: string | null
           updated_at: string
         }
         Insert: {
@@ -116,6 +117,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           name: string
+          slug?: string | null
           updated_at?: string
         }
         Update: {
@@ -124,6 +126,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           name?: string
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -768,6 +771,7 @@ export type Database = {
           is_active: boolean
           logo_url: string | null
           name: string
+          slug: string | null
           updated_at: string
           website_url: string | null
         }
@@ -777,6 +781,7 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name: string
+          slug?: string | null
           updated_at?: string
           website_url?: string | null
         }
@@ -786,6 +791,7 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          slug?: string | null
           updated_at?: string
           website_url?: string | null
         }
@@ -2390,6 +2396,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      slugify: { Args: { _t: string }; Returns: string }
     }
     Enums: {
       adjustment_type: "increase" | "decrease" | "correction"
