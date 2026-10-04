@@ -51,7 +51,7 @@ export const SEO = ({ title, description, path = '', robots, image, type = 'webs
       <meta name="twitter:description" content={ogDesc} />
       {img && <meta name="twitter:image" content={img} />}
       {cfg.twitterSite && <meta name="twitter:site" content={cfg.twitterSite} />}
-      {jsonLd && <script type="application/ld+json">{safeJsonLd(jsonLd)}</script>}
+      {ld && <script type="application/ld+json">{safeJsonLd(ld)}</script>}
     </Helmet>
   );
 };

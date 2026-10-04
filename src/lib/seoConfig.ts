@@ -108,4 +108,4 @@ export const buildSiteJsonLd = (cfg: SeoConfig) => {
 };
 
 /** Escape "<" so JSON-LD can never break out of its <script> tag. */
-export const safeJsonLd = (data: unknown) => JSON.stringify(data).replace(/</g, '\\u003c');
+export const safeJsonLd = (data: unknown) => (JSON.stringify(data) ?? '{}').replace(/</g, '\\u003c');
