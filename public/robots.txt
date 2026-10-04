@@ -2,5 +2,3 @@ User-agent: *
 Allow: /
 Disallow: /dashboard
 Disallow: /pos
-
-Sitemap: https://tinggalklik.lovable.app/sitemap.xml

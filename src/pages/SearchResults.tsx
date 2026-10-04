@@ -465,8 +465,8 @@ const SearchResults = () => {
   return (
     <div className={`min-h-screen bg-muted/20 ${isMobile ? 'pb-20 pt-12' : 'pt-[88px]'}`}>
       <SEO
-        title={searchQuery ? `Cari "${searchQuery}" — LAPAU.ID` : 'Pencarian Produk — LAPAU.ID'}
-        description={searchQuery ? `Hasil pencarian untuk "${searchQuery}" di LAPAU.ID. Temukan produk terbaik dengan harga hemat dan gratis ongkir.` : 'Cari produk pilihan di LAPAU.ID dengan filter kategori, brand, dan harga.'}
+        title={searchQuery ? `Cari "${searchQuery}"` : 'Pencarian Produk'}
+        description={searchQuery ? `Hasil pencarian untuk "${searchQuery}" di {site}. Temukan produk terbaik dengan harga hemat dan gratis ongkir.` : 'Cari produk pilihan di {site} dengan filter kategori, brand, dan harga.'}
         path="/search"
         robots={ROBOTS.search}
       />

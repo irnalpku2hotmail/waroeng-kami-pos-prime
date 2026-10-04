@@ -69,7 +69,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <SEO title="Masuk Akun — LAPAU.ID" description="Masuk ke akun LAPAU.ID untuk berbelanja, melacak pesanan, dan menikmati promo eksklusif." path="/login" robots={ROBOTS.private} />
+      <SEO title="Masuk Akun" description="Masuk ke akun {site} untuk berbelanja, melacak pesanan, dan menikmati promo eksklusif." path="/login" robots={ROBOTS.private} />
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-pink-600/20 animate-pulse"></div>
