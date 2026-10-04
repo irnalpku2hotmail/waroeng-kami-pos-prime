@@ -130,8 +130,8 @@ const BundleDetail = () => {
   return (
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
       <SEO
-        title={`${bundle?.name ?? 'Bundle'} — Paket Hemat LAPAU.ID`}
-        description={(bundle?.description?.toString().slice(0, 155)) || `Dapatkan paket hemat ${bundle?.name ?? ''} di LAPAU.ID dengan harga spesial dan gratis ongkir.`}
+        title={`${bundle?.name ?? 'Bundle'} — Paket Hemat`}
+        description={(bundle?.description?.toString().slice(0, 155)) || `Dapatkan paket hemat ${bundle?.name ?? ''} di {site} dengan harga spesial dan gratis ongkir.`}
         path={`/bundle/${slug}`}
         image={bundle?.image_url || null}
       />

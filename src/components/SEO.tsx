@@ -1,30 +1,36 @@
 import { Helmet } from 'react-helmet-async';
 import { useSettings } from '@/hooks/useSettings';
-import { resolveSeoConfig, safeJsonLd, ROBOTS } from '@/lib/seoConfig';
+import { resolveSeoConfig, safeJsonLd, withSite, ROBOTS, type SeoConfig } from '@/lib/seoConfig';
+
+type JsonLd = Record<string, unknown> | Record<string, unknown>[];
 
 interface SEOProps {
-  /** Page title; omit to use the admin SEO title. */
+  /** Page title (may contain "{site}"); omit to use the admin SEO title. Store name is appended automatically. */
   title?: string;
   description?: string;
   path?: string;
   robots?: string;
   image?: string | null;
   type?: 'website' | 'product';
-  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  /** Static JSON-LD or a builder receiving the central SEO config. */
+  jsonLd?: JsonLd | ((cfg: SeoConfig) => JsonLd | undefined);
 }
 
 /** Per-route SEO engine. All defaults come from admin SEO settings. */
 export const SEO = ({ title, description, path = '', robots, image, type = 'website', jsonLd }: SEOProps) => {
   const { data: settings } = useSettings();
   const cfg = resolveSeoConfig(settings);
-  const t = title?.trim() || cfg.title;
-  const d = description?.trim() || cfg.description;
+  const pageTitle = title?.trim() ? withSite(title.trim(), cfg.siteName) : '';
+  const t = pageTitle ? (pageTitle.includes(cfg.siteName) ? pageTitle : `${pageTitle} — ${cfg.siteName}`) : cfg.title;
+  const d = description?.trim() ? withSite(description.trim(), cfg.siteName) : cfg.description;
   const url = `${cfg.siteUrl}${path}`;
   const r = robots || cfg.robots;
   const indexable = r.startsWith('index');
   const ogTitle = title ? t : cfg.ogTitle;
   const ogDesc = description ? d : cfg.ogDescription;
   const img = image && /^https:\/\//.test(image) ? image : cfg.ogImage;
+  const ld = typeof jsonLd === 'function' ? jsonLd(cfg) : jsonLd;
+
 
   return (
     <Helmet>

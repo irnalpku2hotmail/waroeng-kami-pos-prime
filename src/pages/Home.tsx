@@ -10,6 +10,7 @@ import CompactBannerCarousel from '@/components/home/CompactBannerCarousel';
 import AuthModal from '@/components/AuthModal';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import SEO from '@/components/SEO';
+import { buildSiteJsonLd } from '@/lib/seoConfig';
 
 // Lazy load below-the-fold sections
 const EnhancedShippingInfo = lazy(() => import('@/components/home/EnhancedShippingInfo'));
@@ -64,7 +65,7 @@ const Home = () => {
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-16' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
       <SEO
         path="/"
-        jsonLd={{ '@context': 'https://schema.org', '@type': 'WebSite', name: 'LAPAU.ID', url: 'https://tinggalklik.lovable.app/' }}
+        jsonLd={buildSiteJsonLd}
       />
       {/* Fixed Navbar */}
       <FrontendNavbar

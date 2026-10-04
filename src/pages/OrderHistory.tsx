@@ -131,7 +131,7 @@ const OrderHistory = () => {
 
   return (
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-20 pt-12' : 'pt-[88px]'}`}>
-      <SEO title="Riwayat Pesanan — LAPAU.ID" description="Lihat riwayat pesanan dan status pengiriman Anda di LAPAU.ID. Pantau setiap transaksi belanja Anda dengan mudah." path="/order-history" robots={ROBOTS.private} />
+      <SEO title="Riwayat Pesanan" description="Lihat riwayat pesanan dan status pengiriman Anda di {site}. Pantau setiap transaksi belanja Anda dengan mudah." path="/order-history" robots={ROBOTS.private} />
       <FrontendNavbar onCartClick={() => setCartModalOpen(true)} />
 
       <div className="max-w-5xl mx-auto px-4 py-6">

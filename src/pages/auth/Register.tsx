@@ -68,7 +68,7 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <SEO title="Daftar Akun Baru — LAPAU.ID" description="Daftar gratis di LAPAU.ID dan mulai belanja produk berkualitas dengan harga hemat dan gratis ongkir." path="/register" robots={ROBOTS.private} />
+      <SEO title="Daftar Akun Baru" description="Daftar gratis di {site} dan mulai belanja produk berkualitas dengan harga hemat dan gratis ongkir." path="/register" robots={ROBOTS.private} />
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-blue-600 to-purple-600">
         <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 via-blue-600/20 to-purple-600/20 animate-pulse"></div>

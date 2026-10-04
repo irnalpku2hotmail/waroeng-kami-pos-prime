@@ -54,7 +54,8 @@ const ProductDetail = () => {
           *,
           categories (name, id),
           units (name, abbreviation),
-          price_variants (*)
+          price_variants (*),
+          brands (name)
         `)
         .eq('id', id)
         .single();
@@ -206,24 +207,26 @@ const ProductDetail = () => {
   return (
     <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pb-20' : ''} ${isMobile ? 'pt-12' : 'pt-[88px]'}`}>
       <SEO
-        title={`${product?.name ?? 'Produk'} — LAPAU.ID`}
-        description={(product?.description?.toString().slice(0, 155)) || `Beli ${product?.name ?? 'produk'} di LAPAU.ID dengan harga terbaik dan gratis ongkir ke seluruh Indonesia.`}
+        title={`${product?.name ?? 'Produk'}`}
+        description={(product?.description?.toString().slice(0, 155)) || `Beli ${product?.name ?? 'produk'} di {site} dengan harga terbaik dan gratis ongkir ke seluruh Indonesia.`}
         path={`/product/${id}`}
         type="product"
         image={product?.image_url || null}
-        jsonLd={product ? {
+        jsonLd={(cfg) => product ? {
           '@context': 'https://schema.org',
           '@type': 'Product',
           name: product.name,
           ...(product.image_url ? { image: product.image_url } : {}),
           ...(product.description ? { description: String(product.description).slice(0, 500) } : {}),
           ...(product.barcode ? { sku: product.barcode } : {}),
+          ...((product as any).brands?.name ? { brand: { '@type': 'Brand', name: (product as any).brands.name } } : {}),
           offers: {
             '@type': 'Offer',
             price: Number(product.selling_price),
             priceCurrency: 'IDR',
             availability: (product.current_stock ?? 0) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-            url: `https://tinggalklik.lovable.app/product/${id}`,
+            url: `${cfg.siteUrl}/product/${id}`,
+            seller: { '@type': 'Organization', name: cfg.siteName },
           },
         } : undefined}
       />
