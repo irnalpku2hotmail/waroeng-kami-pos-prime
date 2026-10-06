@@ -2,3 +2,12 @@ User-agent: *
 Allow: /
 Disallow: /dashboard
 Disallow: /pos
+Disallow: /settings
+Disallow: /login
+Disallow: /register
+Disallow: /account
+Disallow: /order-history
+Disallow: /wishlist
+Disallow: /search
+
+Sitemap: https://fkqfdwxunnymmsutbeuu.supabase.co/functions/v1/sitemap
