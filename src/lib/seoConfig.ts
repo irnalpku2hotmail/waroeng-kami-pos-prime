@@ -34,7 +34,7 @@ const normalizeSiteUrl = (u: string) => {
 };
 
 const envSiteUrl = () => normalizeSiteUrl(str(import.meta.env.VITE_SITE_URL));
-const originUrl = () => (typeof window !== 'undefined' ? normalizeSiteUrl(window.location.origin) : '');
+const originUrl = () => (typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '');
 
 export interface SeoConfig {
   siteUrl: string;
