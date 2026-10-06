@@ -29,12 +29,12 @@ const str = (v: unknown): string => {
 const isLovableAsset = (u: string) => /lovable\.dev\/opengraph|lovable_dev/i.test(u);
 
 const normalizeSiteUrl = (u: string) => {
-  if (!/^https?:\/\/[^\s]+$/i.test(u)) return '';
+  if (!/^https?:\/\/[^\s]+$/i.test(u) || /lovable(project)?\.(app|dev|com)/i.test(u)) return '';
   return u.replace(/\/+$/, '');
 };
 
 const envSiteUrl = () => normalizeSiteUrl(str(import.meta.env.VITE_SITE_URL));
-const originUrl = () => (typeof window !== 'undefined' ? normalizeSiteUrl(window.location.origin) : '');
+const originUrl = () => (typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : '');
 
 export interface SeoConfig {
   siteUrl: string;
@@ -109,3 +109,12 @@ export const buildSiteJsonLd = (cfg: SeoConfig) => {
 
 /** Escape "<" so JSON-LD can never break out of its <script> tag. */
 export const safeJsonLd = (data: unknown) => (JSON.stringify(data) ?? '{}').replace(/</g, '\\u003c');
+
+/** BreadcrumbList JSON-LD with absolute URLs built from the dynamic site URL. */
+export const buildBreadcrumbJsonLd = (cfg: SeoConfig, items: { name: string; path: string }[]) => ({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((it, i) => ({
+    '@type': 'ListItem', position: i + 1, name: it.name, item: `${cfg.siteUrl}${it.path}`,
+  })),
+});

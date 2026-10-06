@@ -28,6 +28,7 @@ import EnhancedHomeSearch from '@/components/home/EnhancedHomeSearch';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import BundleCarousel from '@/components/bundles/BundleCarousel';
 import SEO from '@/components/SEO';
+import { buildBreadcrumbJsonLd } from '@/lib/seoConfig';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,10 +53,10 @@ const ProductDetail = () => {
         .from('products')
         .select(`
           *,
-          categories (name, id),
+          categories (name, id, slug),
           units (name, abbreviation),
           price_variants (*),
-          brands (name)
+          brands (name, slug)
         `)
         .eq('id', id)
         .single();
@@ -212,7 +213,7 @@ const ProductDetail = () => {
         path={`/product/${id}`}
         type="product"
         image={product?.image_url || null}
-        jsonLd={(cfg) => product ? {
+        jsonLd={(cfg) => product ? [{
           '@context': 'https://schema.org',
           '@type': 'Product',
           name: product.name,
@@ -228,7 +229,11 @@ const ProductDetail = () => {
             url: `${cfg.siteUrl}/product/${id}`,
             seller: { '@type': 'Organization', name: cfg.siteName },
           },
-        } : undefined}
+        }, buildBreadcrumbJsonLd(cfg, [
+          { name: 'Beranda', path: '/' },
+          ...((product as any).categories?.slug ? [{ name: (product as any).categories.name, path: `/category/${(product as any).categories.slug}` }] : []),
+          { name: product.name, path: `/product/${id}` },
+        ])] : undefined}
       />
       {/* Navbar - Reusing FrontendNavbar with EnhancedHomeSearch */}
       <FrontendNavbar 

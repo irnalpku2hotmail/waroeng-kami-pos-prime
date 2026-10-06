@@ -18,7 +18,8 @@ import EnhancedFrontendCartModal from '@/components/frontend/EnhancedFrontendCar
 import MobileBottomNav from '@/components/home/MobileBottomNav';
 import WhatsAppFloatingButton from '@/components/frontend/WhatsAppFloatingButton';
 import { Skeleton } from '@/components/ui/skeleton';
-import SEO from '@/components/SEO';
+import SEO, { ROBOTS } from '@/components/SEO';
+import { buildBreadcrumbJsonLd } from '@/lib/seoConfig';
 
 const BundleDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -134,6 +135,11 @@ const BundleDetail = () => {
         description={(bundle?.description?.toString().slice(0, 155)) || `Dapatkan paket hemat ${bundle?.name ?? ''} di {site} dengan harga spesial dan gratis ongkir.`}
         path={`/bundle/${slug}`}
         image={bundle?.image_url || null}
+        robots={!isLoading && !bundle ? ROBOTS.notFound : undefined}
+        jsonLd={bundle ? (cfg) => buildBreadcrumbJsonLd(cfg, [
+          { name: 'Beranda', path: '/' },
+          { name: bundle.name, path: `/bundle/${slug}` },
+        ]) : undefined}
       />
       <FrontendNavbar
         searchTerm={searchTerm}

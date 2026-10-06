@@ -40,6 +40,7 @@ const SearchAnalytics = lazy(() => import("./pages/SearchAnalytics"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const Bundles = lazy(() => import("./pages/Bundles"));
 const BundleDetail = lazy(() => import("./pages/BundleDetail"));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -59,7 +60,7 @@ const RouteFallback = () => (
 function App() {
   const queryClient = useQueryClient();
   const { pathname } = useLocation();
-  const isPublic = pathname === "/" || /^\/(product|bundle|search)(\/|$)/.test(pathname);
+  const isPublic = pathname === "/" || /^\/(product|bundle|search|category|brand)(\/|$)/.test(pathname);
 
   // Once the app is interactive, warm the most-used admin route chunks during idle time.
   useEffect(() => {
@@ -78,6 +79,8 @@ function App() {
                 <Route path="/order-history" element={<OrderHistory />} />
                 <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/bundle/:slug" element={<BundleDetail />} />
+                <Route path="/category/:slug" element={<CatalogPage kind="category" />} />
+                <Route path="/brand/:slug" element={<CatalogPage kind="brand" />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/account" element={<CustomerAccount />} />
