@@ -1,0 +1,12 @@
+# Toko Online
+
+> Toko online untuk belanja kebutuhan sehari-hari: produk, kategori, brand, dan paket hemat dengan harga terbaik.
+
+## Pages
+
+- [Beranda](/): Produk pilihan, flash sale, rekomendasi, dan brand pilihan.
+- [Pencarian](/search): Cari produk berdasarkan nama, kategori, atau brand.
+
+## Optional
+
+- [Contoh kategori](/category/kecap): Daftar produk dalam satu kategori.
