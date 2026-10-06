@@ -29,7 +29,7 @@ const str = (v: unknown): string => {
 const isLovableAsset = (u: string) => /lovable\.dev\/opengraph|lovable_dev/i.test(u);
 
 const normalizeSiteUrl = (u: string) => {
-  if (!/^https?:\/\/[^\s]+$/i.test(u)) return '';
+  if (!/^https?:\/\/[^\s]+$/i.test(u) || /lovable(project)?\.(app|dev|com)/i.test(u)) return '';
   return u.replace(/\/+$/, '');
 };
 
