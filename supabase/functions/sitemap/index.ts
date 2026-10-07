@@ -42,8 +42,7 @@ Deno.serve(async (req) => {
     const { data: used } = await sb.from('products').select(fk).eq('is_active', true).not(fk, 'is', null).limit(45000);
     const ids = [...new Set((used || []).map((r: any) => r[fk]))];
     if (ids.length) {
-      let q = sb.from(isCat ? 'categories' : 'product_brands').select('slug, updated_at').in('id', ids).not('slug', 'is', null);
-      if (!isCat) q = q.eq('is_active', true);
+      const q = sb.from(isCat ? 'categories' : 'product_brands').select('slug, updated_at').in('id', ids).not('slug', 'is', null).eq('is_active', true);
       const { data } = await q;
       data?.forEach((r: any) => urls.push({ loc: `${site}/${isCat ? 'category' : 'brand'}/${encodeURIComponent(r.slug)}`, lastmod: r.updated_at }));
     }

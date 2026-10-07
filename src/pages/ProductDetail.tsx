@@ -243,7 +243,7 @@ const ProductDetail = () => {
           ...(product.image_url ? { image: product.image_url } : {}),
           ...(product.description ? { description: String(product.description).slice(0, 500) } : {}),
           ...(product.barcode ? { sku: product.barcode } : {}),
-          ...((product as any).brands?.name ? { brand: { '@type': 'Brand', name: (product as any).brands.name } } : {}),
+          ...((product as any).product_brands?.name ? { brand: { '@type': 'Brand', name: (product as any).product_brands.name } } : {}),
           offers: {
             '@type': 'Offer',
             price: Number(product.selling_price),

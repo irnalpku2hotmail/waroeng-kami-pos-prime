@@ -51,6 +51,7 @@ export interface SeoConfig {
   twitterSite: string;
   schemaType: SchemaType;
   favicon: { url: string; type: string } | null;
+  local: { area: string; city: string; province: string; country: string; serviceAreas: string[]; description: string } | null;
 }
 
 /** Replace "{site}" placeholder with the configured store name. */
@@ -59,9 +60,17 @@ export const withSite = (text: string, siteName: string) => text.replace(/\{site
 export const resolveSeoConfig = (s: Record<string, any> | undefined): SeoConfig => {
   s = s || {};
   const siteName = str(s.store_name) || FALLBACK_SITE_NAME;
-  const title = str(s.seo_title) || `${siteName} — Belanja Mudah & Berkualitas`;
+  const localOn = s.local_seo_enabled === true || str(s.local_seo_enabled) === 'true';
+  const areas = Array.isArray(s.service_areas) ? s.service_areas.map(str).filter(Boolean) : [];
+  const local = localOn && (str(s.primary_area) || str(s.city))
+    ? { area: str(s.primary_area), city: str(s.city), province: str(s.province), country: str(s.country), serviceAreas: areas, description: str(s.local_seo_description) }
+    : null;
+  const where = local ? [local.area, local.city].filter(Boolean).join(', ') : '';
+  const title = str(s.seo_title) || (where ? `${siteName} — Belanja Mudah di ${where}` : `${siteName} — Belanja Mudah & Berkualitas`);
   const description =
-    str(s.seo_description) || `${siteName} — belanja online mudah, hemat & berkualitas. Temukan produk pilihan dengan harga terbaik.`;
+    str(s.seo_description) || local?.description ||
+    (where ? `${siteName} — belanja online mudah & hemat untuk wilayah ${where}. Temukan produk pilihan dengan harga terbaik.`
+      : `${siteName} — belanja online mudah, hemat & berkualitas. Temukan produk pilihan dengan harga terbaik.`);
   const ogImageRaw = str(s.seo_og_image);
   const robots = str(s.seo_robots);
   const tw = str(s.seo_twitter_site);
@@ -83,6 +92,7 @@ export const resolveSeoConfig = (s: Record<string, any> | undefined): SeoConfig 
     twitterSite: /^@?\w{1,15}$/.test(tw) && !/lovable/i.test(tw) ? (tw.startsWith('@') ? tw : `@${tw}`) : '',
     schemaType: (SCHEMA_TYPES as readonly string[]).includes(schemaRaw) ? (schemaRaw as SchemaType) : 'Store',
     favicon: /^https:\/\//.test(favUrl) ? { url: favUrl, type: str(fav?.type) || 'image/png' } : null,
+    local,
   };
 };
 
@@ -103,6 +113,19 @@ export const buildSiteJsonLd = (cfg: SeoConfig) => {
     ...(cfg.favicon ? { logo: cfg.favicon.url } : {}),
     ...(cfg.ogImage ? { image: cfg.ogImage } : {}),
   };
+  const l = cfg.local;
+  if (l) {
+    const address = {
+      '@type': 'PostalAddress',
+      ...(l.area ? { addressLocality: l.city ? `${l.area}, ${l.city}` : l.area } : l.city ? { addressLocality: l.city } : {}),
+      ...(l.province ? { addressRegion: l.province } : {}),
+      ...(l.country ? { addressCountry: l.country } : {}),
+    };
+    if (cfg.schemaType === 'Organization') entity.location = { '@type': 'Place', address };
+    else entity.address = address;
+    const served = l.serviceAreas.length ? l.serviceAreas : [l.area].filter(Boolean);
+    if (served.length) entity.areaServed = served.map((n) => ({ '@type': 'Place', name: l.city ? `${n}, ${l.city}` : n }));
+  }
   website.publisher = { '@id': `${url}#org` };
   return { '@context': 'https://schema.org', '@graph': [website, entity] };
 };

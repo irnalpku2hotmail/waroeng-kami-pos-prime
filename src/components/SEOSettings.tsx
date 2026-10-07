@@ -35,7 +35,8 @@ const SEOSettings = () => {
           'seo_twitter_site',
           'seo_schema_type',
           'seo_google_analytics',
-          'seo_google_tag_manager'
+          'seo_google_tag_manager',
+          'local_seo_enabled', 'primary_area', 'city', 'province', 'country', 'service_areas', 'local_seo_description'
         ]);
       if (error) throw error;
       
@@ -105,6 +106,21 @@ const SEOSettings = () => {
     };
 
     updateSEOSettings.mutate(socialData);
+  };
+
+  const handleLocalSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const g = (k: string) => String(f.get(k) || '').trim();
+    updateSEOSettings.mutate({
+      local_seo_enabled: f.get('local_seo_enabled') === 'on',
+      primary_area: g('primary_area'),
+      city: g('city'),
+      province: g('province'),
+      country: g('country'),
+      service_areas: [...new Set(g('service_areas').split(/[\n,]/).map((x) => x.trim()).filter(Boolean))],
+      local_seo_description: g('local_seo_description'),
+    });
   };
 
   const handleAnalyticsSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -294,6 +310,47 @@ const SEOSettings = () => {
 
             <Button type="submit" disabled={updateSEOSettings.isPending}>
               {updateSEOSettings.isPending ? 'Menyimpan...' : 'Simpan Pengaturan Media Sosial'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Local SEO */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Local SEO
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form key={settings ? 'loaded' : 'loading'} onSubmit={handleLocalSubmit} className="space-y-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="local_seo_enabled" defaultChecked={settings?.local_seo_enabled === true || settings?.local_seo_enabled === 'true'} />
+              Aktifkan Local SEO
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {([['primary_area', 'Area Utama'], ['city', 'Kota'], ['province', 'Provinsi'], ['country', 'Negara']] as const).map(([k, l]) => (
+                <div key={k} className="space-y-2">
+                  <Label htmlFor={k}>{l}</Label>
+                  <Input id={k} name={k} defaultValue={typeof settings?.[k] === 'string' ? settings[k] : ''} />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="service_areas">Area Layanan</Label>
+              <Textarea id="service_areas" name="service_areas" rows={3}
+                defaultValue={Array.isArray(settings?.service_areas) ? settings.service_areas.join('\n') : ''} />
+              <p className="text-xs text-muted-foreground">Satu area per baris. Hapus baris untuk menghapus area.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="local_seo_description">Deskripsi Local SEO</Label>
+              <Textarea id="local_seo_description" name="local_seo_description" rows={2}
+                defaultValue={typeof settings?.local_seo_description === 'string' ? settings.local_seo_description : ''} />
+              <p className="text-xs text-muted-foreground">Dipakai sebagai deskripsi beranda jika Deskripsi Website kosong.</p>
+            </div>
+            <Button type="submit" disabled={updateSEOSettings.isPending}>
+              {updateSEOSettings.isPending ? 'Menyimpan...' : 'Simpan Local SEO'}
             </Button>
           </form>
         </CardContent>
