@@ -124,8 +124,7 @@ export const buildSiteJsonLd = (cfg: SeoConfig) => {
     if (cfg.schemaType === 'Organization') entity.location = { '@type': 'Place', address };
     else entity.address = address;
     const served = l.serviceAreas.length ? l.serviceAreas : [l.area].filter(Boolean);
-    if (served.length && cfg.schemaType !== 'Organization') entity.areaServed = served.map((n) => ({ '@type': 'Place', name: l.city ? `${n}, ${l.city}` : n }));
-    if (served.length && cfg.schemaType === 'Organization') entity.areaServed = served.map((n) => ({ '@type': 'Place', name: l.city ? `${n}, ${l.city}` : n }));
+    if (served.length) entity.areaServed = served.map((n) => ({ '@type': 'Place', name: l.city ? `${n}, ${l.city}` : n }));
   }
   website.publisher = { '@id': `${url}#org` };
   return { '@context': 'https://schema.org', '@graph': [website, entity] };
