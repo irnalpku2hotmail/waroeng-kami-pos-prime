@@ -21,7 +21,7 @@ const CatalogPage = ({ kind }: { kind: Kind }) => {
     queryFn: async () => {
       const table = kind === 'category' ? 'categories' : 'product_brands';
       let q = (supabase.from(table as any) as any).select('*').eq('slug', slug);
-      if (kind === 'brand') q = q.eq('is_active', true);
+      q = q.eq('is_active', true);
       const { data: entity } = await q.maybeSingle();
       if (!entity) return null;
       const { data: products } = await supabase
