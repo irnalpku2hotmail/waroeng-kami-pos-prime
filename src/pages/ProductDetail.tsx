@@ -44,7 +44,7 @@ const ProductDetail = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading, isError, error } = useQuery({
     queryKey: ['product-detail', id],
     queryFn: async () => {
       if (!id) return null;
@@ -56,15 +56,19 @@ const ProductDetail = () => {
           categories (name, id, slug),
           units (name, abbreviation),
           price_variants (*),
-          brands (name, slug)
+          product_brands (name, slug)
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[ProductDetail] Supabase error:', error);
+        throw error;
+      }
       return data;
     },
-    enabled: !!id
+    enabled: !!id,
+    retry: 1,
   });
 
   // Check if product is liked
@@ -195,12 +199,31 @@ const ProductDetail = () => {
       });
     }
   };
-  if (isLoading || !product) {
+  if (id && isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (isError || !product) {
+    if (error) console.error('[ProductDetail] gagal memuat produk:', error);
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <SEO title={isError ? 'Terjadi Kesalahan' : 'Produk Tidak Ditemukan'} robots="noindex,follow" />
+        <Package className="h-12 w-12 text-gray-400" />
+        <h1 className="text-lg font-semibold text-gray-900">
+          {isError ? 'Gagal memuat produk' : 'Produk tidak ditemukan'}
+        </h1>
+        <p className="text-sm text-gray-500 max-w-sm">
+          {isError
+            ? 'Terjadi kesalahan saat memuat produk. Silakan coba lagi.'
+            : 'Produk yang Anda cari tidak tersedia atau sudah dihapus.'}
+        </p>
+        <Button onClick={() => navigate('/')}>Kembali ke Beranda</Button>
       </div>
     );
   }
