@@ -112,9 +112,19 @@ const CompactBannerCarousel = () => {
   // Slide width percentages
   const slideWidth = isMobile ? 85 : 70; // % of container
   const peekSize = isMobile ? 7.5 : 15; // % on each side
+  // Banner source images are 3:1 (1500x500) — the container uses the same
+  // ratio so object-cover never crops the artwork.
+  const BANNER_ASPECT = '3 / 1';
 
   if (bannersLoading || settingsLoading) {
-    return <Skeleton className="w-full h-36 md:h-48 rounded-xl mb-4" />;
+    return (
+      <div className="w-full mb-6">
+        <Skeleton
+          className="mx-auto rounded-xl"
+          style={{ width: `${slideWidth}%`, aspectRatio: BANNER_ASPECT }}
+        />
+      </div>
+    );
   }
 
   if (!banners.length) {
@@ -160,14 +170,15 @@ const CompactBannerCarousel = () => {
                 style={{ width: `${slideWidth}%` }}
               >
                 <div
-                  className={`relative w-full h-36 md:h-52 lg:h-60 overflow-hidden rounded-xl transition-all duration-500 ease-in-out cursor-grab active:cursor-grabbing ${
+                  style={{ aspectRatio: BANNER_ASPECT }}
+                  className={`relative w-full overflow-hidden rounded-xl transition-all duration-500 ease-in-out cursor-grab active:cursor-grabbing ${
                     isActive ? 'shadow-lg scale-100 opacity-100' : 'scale-[0.92] opacity-70'
                   }`}
                 >
                   <img
                     src={imageUrl || '/placeholder.svg'}
                     alt={`Banner ${index + 1}`}
-                    className="w-full h-full object-cover pointer-events-none"
+                    className="w-full h-full object-cover object-center pointer-events-none"
                     loading={index <= 2 ? 'eager' : 'lazy'}
                     fetchPriority={index === 1 ? 'high' : 'auto'}
                     decoding={index <= 2 ? 'sync' : 'async'}
