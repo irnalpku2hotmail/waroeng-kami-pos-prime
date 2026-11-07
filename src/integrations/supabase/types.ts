@@ -1815,28 +1815,46 @@ export type Database = {
       }
       transaction_items: {
         Row: {
+          conversion_factor: number
           created_at: string
           id: string
           product_id: string
           quantity: number
+          sale_unit_abbreviation: string | null
+          sale_unit_id: string | null
+          sale_unit_name: string | null
+          sale_unit_price: number
+          sold_quantity: number
           total_price: number
           transaction_id: string
           unit_price: number
         }
         Insert: {
+          conversion_factor: number
           created_at?: string
           id?: string
           product_id: string
           quantity?: number
+          sale_unit_abbreviation?: string | null
+          sale_unit_id?: string | null
+          sale_unit_name?: string | null
+          sale_unit_price: number
+          sold_quantity: number
           total_price?: number
           transaction_id: string
           unit_price?: number
         }
         Update: {
+          conversion_factor?: number
           created_at?: string
           id?: string
           product_id?: string
           quantity?: number
+          sale_unit_abbreviation?: string | null
+          sale_unit_id?: string | null
+          sale_unit_name?: string | null
+          sale_unit_price?: number
+          sold_quantity?: number
           total_price?: number
           transaction_id?: string
           unit_price?: number

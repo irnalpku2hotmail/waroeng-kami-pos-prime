@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.set_transaction_item_sale_unit_snapshot() FROM PUBLIC, anon, authenticated;
