@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { generateReceiptHTML } from '@/utils/receiptGenerator';
 import { extractReceiptSettings } from '@/utils/receiptSettingsHelper';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { buildSaleUnits, getBaseQuantity, getTierUnitPrice, type SaleUnit, type UnitDetails } from '@/lib/posSaleUnits';
 
 export interface CartItem {
   id: string;
@@ -18,6 +19,17 @@ export interface CartItem {
   current_stock: number;
   price_variant?: any;
   loyalty_points: number;
+  sale_unit_id: string;
+  sale_unit_name: string;
+  sale_unit_abbreviation: string;
+  conversion_factor: number;
+  sold_quantity: number;
+  sale_unit_price: number;
+  base_quantity: number;
+  base_unit_id: string;
+  base_unit_name: string;
+  base_unit_abbreviation: string;
+  sale_units: SaleUnit[];
 }
 
 export const getImageUrl = (imageUrl: string | null | undefined) => {
@@ -85,6 +97,35 @@ export const usePOS = () => {
     }
   });
 
+  const { data: units = [] } = useQuery({
+    queryKey: ['pos-sale-units'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('units').select('id, name, abbreviation');
+      if (error) throw error;
+      return (data || []) as UnitDetails[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const conversionProductIds = Array.from(new Set([
+    ...products.map((product: any) => product.id),
+    ...cart.map((item) => item.product_id),
+  ])).sort();
+  const { data: unitConversions = [] } = useQuery({
+    queryKey: ['pos-unit-conversions', conversionProductIds],
+    queryFn: async () => {
+      if (conversionProductIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('unit_conversions')
+        .select('product_id, from_unit_id, to_unit_id, conversion_factor')
+        .in('product_id', conversionProductIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: conversionProductIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Fetch recent customers only (search is done server-side in CustomerSelector)
   const { data: customers = [] } = useQuery({
     queryKey: ['customers', 'pos-recent'],
@@ -99,57 +140,115 @@ export const usePOS = () => {
     }
   });
 
-  const getProductPrice = (product: any, quantity: number) => {
-    if (product.price_variants?.length > 0) {
-      const applicableVariants = product.price_variants
-        .filter((pv: any) => pv.is_active && quantity >= pv.minimum_quantity)
-        .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity);
-      
-      if (applicableVariants.length > 0) {
-        return { price: applicableVariants[0].price, variant: applicableVariants[0] };
-      }
-    }
-    return { price: product.selling_price, variant: null };
+  const getProductUnitOptions = (product: any): { baseUnit: UnitDetails | null; options: SaleUnit[] } => {
+    const nestedUnit = Array.isArray(product.units) ? product.units[0] : product.units;
+    const baseUnitId = product.unit_id || nestedUnit?.id;
+    const baseUnit = baseUnitId
+      ? units.find((unit) => unit.id === baseUnitId) || (nestedUnit?.id ? nestedUnit as UnitDetails : null)
+      : null;
+    if (!baseUnit) return { baseUnit: null, options: [] };
+    const productConversions = unitConversions.filter((conversion: any) => conversion.product_id === product.id);
+    return {
+      baseUnit,
+      options: buildSaleUnits(baseUnit, productConversions, units),
+    };
+  };
+
+  const getProductPrice = (product: any, baseQuantity: number) => {
+    const price = getTierUnitPrice(product, baseQuantity);
+    const variant = (product.price_variants || [])
+      .filter((item: any) => item.is_active && baseQuantity >= item.minimum_quantity)
+      .sort((a: any, b: any) => b.minimum_quantity - a.minimum_quantity)[0] || null;
+    return { price, variant };
+  };
+
+  const getAvailableBaseStock = (productId: string) => {
+    const product = products.find((item: any) => item.id === productId);
+    return Number(product?.current_stock ?? cart.find((item) => item.product_id === productId)?.current_stock ?? 0);
+  };
+
+  const getOtherCartBaseQuantity = (productId: string, exceptLineId?: string) =>
+    cart.reduce((sum, item) => sum + (
+      item.product_id === productId && item.id !== exceptLineId
+        ? (item.base_quantity ?? getBaseQuantity(item.quantity, item.conversion_factor) ?? item.quantity)
+        : 0
+    ), 0);
+
+  const repriceProductLines = (nextCart: CartItem[], productId: string, product: any) => {
+    const aggregateBaseQuantity = nextCart.reduce((sum, item) => sum + (
+      item.product_id === productId
+        ? (item.base_quantity ?? getBaseQuantity(item.quantity, item.conversion_factor) ?? item.quantity)
+        : 0
+    ), 0);
+    const priceInfo = getProductPrice(product, aggregateBaseQuantity);
+    return nextCart.map((item) => {
+      if (item.product_id !== productId) return item;
+      const baseQuantity = item.base_quantity ?? getBaseQuantity(item.quantity, item.conversion_factor) ?? item.quantity;
+      const saleUnitPrice = priceInfo.price * item.conversion_factor;
+      return {
+        ...item,
+        base_quantity: baseQuantity,
+        unit_price: priceInfo.price,
+        sale_unit_price: saleUnitPrice,
+        total_price: item.quantity * saleUnitPrice,
+        price_variant: priceInfo.variant,
+      };
+    });
   };
 
   const addToCart = (product: any, quantity: number = 1, opts?: { silent?: boolean }): boolean => {
     // Use latest cart (ref) so rapid consecutive scans never lose increments
     const cart = cartRef.current;
-    if (product.current_stock < quantity) {
-      toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${product.current_stock}`, variant: 'destructive' });
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) return false;
+    const availableStock = getAvailableBaseStock(product.id) || Number(product.current_stock || 0);
+    const { baseUnit, options } = getProductUnitOptions(product);
+    if (!baseUnit || options.length === 0) {
+      toast({ title: 'Satuan dasar tidak tersedia', description: `Atur satuan dasar untuk ${product.name} di data produk.`, variant: 'destructive' });
       return false;
     }
 
-    const existingItem = cart.find(item => item.product_id === product.id);
+    const baseOption = options.find((option) => option.id === baseUnit.id);
+    if (!baseOption) return false;
+    const existingItem = cart.find(item => item.product_id === product.id && item.sale_unit_id === baseUnit.id);
     const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
-    
-    if (product.current_stock < newQuantity) {
-      toast({ title: 'Stok Tidak Mencukupi', description: `Maksimal yang bisa ditambahkan: ${product.current_stock - (existingItem?.quantity || 0)}`, variant: 'destructive' });
+    const newBaseQuantity = getBaseQuantity(newQuantity, baseOption.conversionFactor);
+    if (newBaseQuantity === null || getOtherCartBaseQuantity(product.id, existingItem?.id) + newBaseQuantity > availableStock) {
+      toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${availableStock} ${baseUnit.abbreviation}.`, variant: 'destructive' });
       return false;
     }
 
-    const priceInfo = getProductPrice(product, newQuantity);
-
+    const baseUnitPriceInfo = getProductPrice(product, getOtherCartBaseQuantity(product.id, existingItem?.id) + newBaseQuantity);
     if (existingItem) {
-      setCart(cart.map(item => 
-        item.product_id === product.id 
-          ? { ...item, quantity: newQuantity, unit_price: priceInfo.price, total_price: newQuantity * priceInfo.price, price_variant: priceInfo.variant, loyalty_points: product.loyalty_points || 1 }
-          : item
-      ));
+      const updated = cart.map(item => item.id === existingItem.id
+        ? { ...item, quantity: newQuantity, sold_quantity: newQuantity, base_quantity: newBaseQuantity }
+        : item);
+      setCart(repriceProductLines(updated, product.id, product));
     } else {
       const cartItem: CartItem = {
-        id: Date.now().toString(),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         product_id: product.id,
         name: product.name,
         image_url: product.image_url,
         quantity: quantity,
-        unit_price: priceInfo.price,
-        total_price: quantity * priceInfo.price,
-        current_stock: product.current_stock,
-        price_variant: priceInfo.variant,
-        loyalty_points: product.loyalty_points || 1
+        unit_price: baseUnitPriceInfo.price,
+        total_price: quantity * baseUnitPriceInfo.price,
+        current_stock: availableStock,
+        price_variant: baseUnitPriceInfo.variant,
+        loyalty_points: product.loyalty_points || 1,
+        sale_unit_id: baseUnit.id,
+        sale_unit_name: baseUnit.name,
+        sale_unit_abbreviation: baseUnit.abbreviation,
+        conversion_factor: 1,
+        sold_quantity: quantity,
+        sale_unit_price: baseUnitPriceInfo.price,
+        base_quantity: quantity,
+        base_unit_id: baseUnit.id,
+        base_unit_name: baseUnit.name,
+        base_unit_abbreviation: baseUnit.abbreviation,
+        sale_units: options,
       };
-      setCart([...cart, cartItem]);
+      const updated = [...cart, cartItem];
+      setCart(repriceProductLines(updated, product.id, product));
     }
 
     if (!opts?.silent) toast({ 
@@ -160,38 +259,86 @@ export const usePOS = () => {
     return true;
   };
 
-  const updateCartQuantity = (productId: string, newQuantity: number) => {
+  const updateCartQuantity = (lineId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(lineId);
       return;
     }
 
-    const cartItem = cart.find(item => item.product_id === productId);
+    if (!Number.isSafeInteger(newQuantity)) return;
+    const cartItem = cart.find(item => item.id === lineId);
     if (!cartItem) return;
 
-    if (cartItem.current_stock < newQuantity) {
-      toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${cartItem.current_stock}`, variant: 'destructive' });
+    const baseQuantity = getBaseQuantity(newQuantity, cartItem.conversion_factor);
+    if (baseQuantity === null) {
+      toast({ title: 'Jumlah tidak sesuai', description: `Jumlah harus menghasilkan bilangan ${cartItem.base_unit_name}.`, variant: 'destructive' });
       return;
     }
-
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-
-    const priceInfo = getProductPrice(product, newQuantity);
-
-    setCart(cart.map(item => 
-      item.product_id === productId 
-        ? { ...item, quantity: newQuantity, unit_price: priceInfo.price, total_price: newQuantity * priceInfo.price, price_variant: priceInfo.variant }
-        : item
-    ));
+    const availableStock = getAvailableBaseStock(cartItem.product_id);
+    if (getOtherCartBaseQuantity(cartItem.product_id, lineId) + baseQuantity > availableStock) {
+      toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${availableStock} ${cartItem.base_unit_abbreviation}.`, variant: 'destructive' });
+      return;
+    }
+    const product = products.find((item: any) => item.id === cartItem.product_id) || {
+      selling_price: cartItem.unit_price,
+      price_variants: cartItem.price_variant ? [cartItem.price_variant] : [],
+    };
+    const updated = cart.map((item) => item.id === lineId
+      ? { ...item, quantity: newQuantity, sold_quantity: newQuantity, base_quantity: baseQuantity }
+      : item);
+    setCart(repriceProductLines(updated, cartItem.product_id, product));
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter(item => item.product_id !== productId));
+  const updateCartItemUnit = (lineId: string, unitId: string) => {
+    const cartItem = cart.find((item) => item.id === lineId);
+    if (!cartItem) return;
+    const product = products.find((item: any) => item.id === cartItem.product_id);
+    const options = product ? getProductUnitOptions(product).options : cartItem.sale_units;
+    const option = options.find((unit) => unit.id === unitId);
+    if (!option) return;
+    const baseQuantity = getBaseQuantity(cartItem.quantity, option.conversionFactor);
+    if (baseQuantity === null) {
+      toast({ title: 'Jumlah tidak sesuai', description: `Pilih jumlah yang menghasilkan bilangan ${cartItem.base_unit_name}.`, variant: 'destructive' });
+      return;
+    }
+    const availableStock = getAvailableBaseStock(cartItem.product_id);
+    if (getOtherCartBaseQuantity(cartItem.product_id, lineId) + baseQuantity > availableStock) {
+      toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${availableStock} ${cartItem.base_unit_abbreviation}.`, variant: 'destructive' });
+      return;
+    }
+    const updated = cart.map((item) => item.id === lineId
+      ? {
+          ...item,
+          sale_unit_id: option.id,
+          sale_unit_name: option.name,
+          sale_unit_abbreviation: option.abbreviation,
+          conversion_factor: option.conversionFactor,
+          sold_quantity: item.quantity,
+          sale_units: options,
+          base_quantity: baseQuantity,
+        }
+      : item);
+    const pricingProduct = product || { selling_price: cartItem.unit_price, price_variants: [] };
+    setCart(repriceProductLines(updated, cartItem.product_id, pricingProduct));
+  };
+
+  const removeFromCart = (lineId: string) => {
+    const removed = cart.find((item) => item.id === lineId);
+    const updated = cart.filter(item => item.id !== lineId);
+    if (!removed) {
+      setCart(updated);
+      return;
+    }
+    const product = products.find((item: any) => item.id === removed.product_id);
+    if (product && updated.some((item) => item.product_id === removed.product_id)) {
+      setCart(repriceProductLines(updated, removed.product_id, product));
+    } else {
+      setCart(updated);
+    }
   };
 
   const getTotalAmount = () => cart.reduce((total, item) => total + item.total_price, 0);
-  const getTotalPointsEarned = () => cart.reduce((total, item) => total + (item.loyalty_points * item.quantity), 0);
+  const getTotalPointsEarned = () => cart.reduce((total, item) => total + (item.loyalty_points * (item.base_quantity ?? item.quantity)), 0);
   const getChangeAmount = () => Math.max(0, paymentAmount - getTotalAmount());
 
   const printReceipt = async (transaction: any) => {
@@ -217,7 +364,9 @@ export const usePOS = () => {
         items: cart.map(item => ({
           name: item.name,
           quantity: item.quantity,
-          unit_price: item.unit_price,
+          unit_price: item.sale_unit_price ?? item.unit_price,
+          unit_name: item.sale_unit_name,
+          unit_abbreviation: item.sale_unit_abbreviation,
           total_price: item.total_price,
         })),
         subtotal: getTotalAmount(),
@@ -276,7 +425,19 @@ export const usePOS = () => {
 
       if (transactionError) throw transactionError;
 
-      const transactionItems = cart.map(item => ({ transaction_id: transaction.id, product_id: item.product_id, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price }));
+      const transactionItems = cart.map(item => ({
+        transaction_id: transaction.id,
+        product_id: item.product_id,
+        quantity: item.base_quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        sold_quantity: item.sold_quantity,
+        sale_unit_id: item.sale_unit_id,
+        sale_unit_name: item.sale_unit_name,
+        sale_unit_abbreviation: item.sale_unit_abbreviation,
+        conversion_factor: item.conversion_factor,
+        sale_unit_price: item.sale_unit_price,
+      }));
       const { error: itemsError } = await supabase.from('transaction_items').insert(transactionItems);
       if (itemsError) throw itemsError;
 
@@ -445,6 +606,7 @@ export const usePOS = () => {
     customers,
     addToCart,
     updateCartQuantity,
+    updateCartItemUnit,
     removeFromCart,
     getTotalAmount,
     getTotalPointsEarned,
