@@ -103,7 +103,7 @@ const HeldTransactionsModal: React.FC<HeldTransactionsModalProps> = ({
   };
 
   const calculateTotal = (cart: any[]) => {
-    return cart.reduce((sum, item) => sum + (item.selling_price * item.quantity), 0);
+    return cart.reduce((sum, item) => sum + (item.total_price ?? ((item.selling_price ?? item.unit_price ?? 0) * item.quantity)), 0);
   };
 
   return (
@@ -230,7 +230,7 @@ const HeldTransactionsModal: React.FC<HeldTransactionsModalProps> = ({
                       {held.cart.slice(0, 3).map((item, idx) => (
                         <div key={idx} className="flex justify-between">
                           <span className="truncate flex-1">{item.name}</span>
-                          <span className="ml-2">x{item.quantity}</span>
+                          <span className="ml-2">x{item.quantity} {item.sale_unit_abbreviation || ''}</span>
                         </div>
                       ))}
                       {held.cart.length > 3 && (

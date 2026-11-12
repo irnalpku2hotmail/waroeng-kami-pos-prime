@@ -66,6 +66,7 @@ const CartSidebar: React.FC<CartSidebarProps> = (props) => {
           <CartItemsList
             cart={posProps.cart}
             updateCartQuantity={posProps.updateCartQuantity}
+            updateCartItemUnit={posProps.updateCartItemUnit}
             removeFromCart={posProps.removeFromCart}
           />
           <PaymentDetails 

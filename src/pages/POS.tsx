@@ -59,8 +59,15 @@ const POS = () => {
       .eq('is_active', true)
       .maybeSingle();
     if (error) throw error;
-    if (data) barcodeCache.current.set(barcode, data);
-    return data;
+    if (!data) return data;
+    const { data: conversions, error: conversionsError } = await supabase
+      .from('unit_conversions')
+      .select('product_id, from_unit_id, to_unit_id, conversion_factor')
+      .eq('product_id', data.id);
+    if (conversionsError) throw conversionsError;
+    const productWithConversions = { ...data, unit_conversions: conversions || [] };
+    barcodeCache.current.set(barcode, productWithConversions);
+    return productWithConversions;
   }, []);
 
   const handleHardwareScan = useCallback((barcode: string) => {

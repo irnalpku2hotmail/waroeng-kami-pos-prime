@@ -84,7 +84,7 @@ export const usePOS = () => {
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select(`*, categories(name), units(name, abbreviation), price_variants(*), unit_conversions(product_id, from_unit_id, to_unit_id, conversion_factor)`)
+        .select(`*, categories(name), units(name, abbreviation), price_variants(*)`)
         .eq('is_active', true);
       
       if (debouncedSearch) {
@@ -151,9 +151,8 @@ export const usePOS = () => {
         } : null)
       : null;
     if (!baseUnit) return { baseUnit: null, options: [] };
-    const cachedConversions = (product.unit_conversions || []).filter((conversion: any) => conversion.product_id === product.id);
     const fetchedConversions = unitConversions.filter((conversion: any) => conversion.product_id === product.id);
-    const productConversions = fetchedConversions.length > 0 ? fetchedConversions : cachedConversions;
+    const productConversions = fetchedConversions;
     const allUnits = units.length > 0 ? units : (nestedUnit?.name ? [{
       id: baseUnit.id,
       name: nestedUnit.name,
@@ -164,6 +163,35 @@ export const usePOS = () => {
       options: buildSaleUnits(baseUnit, productConversions, allUnits),
     };
   };
+
+  const hydrateCartItems = (items: CartItem[]) => items.map((item) => {
+    const product = products.find((candidate: any) => candidate.id === item.product_id);
+    const { baseUnit, options } = product
+      ? getProductUnitOptions(product)
+      : { baseUnit: null, options: item.sale_units || [] };
+    const baseId = item.base_unit_id || baseUnit?.id || item.sale_unit_id || '';
+    const baseName = item.base_unit_name || baseUnit?.name || item.sale_unit_name || '';
+    const baseAbbreviation = item.base_unit_abbreviation || baseUnit?.abbreviation || item.sale_unit_abbreviation || '';
+    const selectedUnit = options.find((option) => option.id === item.sale_unit_id)
+      || options.find((option) => option.id === baseId);
+    const factor = Number(item.conversion_factor || selectedUnit?.conversionFactor || 1);
+    const soldQuantity = Number(item.sold_quantity || item.quantity);
+    const baseQuantity = getBaseQuantity(soldQuantity, factor) ?? item.quantity;
+    return {
+      ...item,
+      sale_unit_id: item.sale_unit_id || selectedUnit?.id || baseId,
+      sale_unit_name: item.sale_unit_name || selectedUnit?.name || baseName,
+      sale_unit_abbreviation: item.sale_unit_abbreviation || selectedUnit?.abbreviation || baseAbbreviation,
+      conversion_factor: factor,
+      sold_quantity: soldQuantity,
+      sale_unit_price: item.sale_unit_price || item.unit_price * factor,
+      base_quantity: baseQuantity,
+      base_unit_id: baseId,
+      base_unit_name: baseName,
+      base_unit_abbreviation: baseAbbreviation,
+      sale_units: options.length > 0 ? options : item.sale_units || [],
+    };
+  });
 
   useEffect(() => {
     if (cart.length === 0) return;
@@ -204,8 +232,8 @@ export const usePOS = () => {
     return Number(product?.current_stock ?? cart.find((item) => item.product_id === productId)?.current_stock ?? 0);
   };
 
-  const getOtherCartBaseQuantity = (productId: string, exceptLineId?: string) =>
-    cart.reduce((sum, item) => sum + (
+  const getOtherCartBaseQuantity = (productId: string, exceptLineId?: string, sourceCart: CartItem[] = cart) =>
+    sourceCart.reduce((sum, item) => sum + (
       item.product_id === productId && item.id !== exceptLineId
         ? (item.base_quantity ?? getBaseQuantity(item.quantity, item.conversion_factor) ?? item.quantity)
         : 0
@@ -237,7 +265,7 @@ export const usePOS = () => {
     // Use latest cart (ref) so rapid consecutive scans never lose increments
     const cart = cartRef.current;
     if (!Number.isSafeInteger(quantity) || quantity <= 0) return false;
-    const availableStock = getAvailableBaseStock(product.id) || Number(product.current_stock || 0);
+    const availableStock = getAvailableBaseStock(product.id);
     const { baseUnit, options } = getProductUnitOptions(product);
     if (!baseUnit || options.length === 0) {
       toast({ title: 'Satuan dasar tidak tersedia', description: `Atur satuan dasar untuk ${product.name} di data produk.`, variant: 'destructive' });
@@ -249,12 +277,12 @@ export const usePOS = () => {
     const existingItem = cart.find(item => item.product_id === product.id && item.sale_unit_id === baseUnit.id);
     const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
     const newBaseQuantity = getBaseQuantity(newQuantity, baseOption.conversionFactor);
-    if (newBaseQuantity === null || getOtherCartBaseQuantity(product.id, existingItem?.id) + newBaseQuantity > availableStock) {
+    if (newBaseQuantity === null || getOtherCartBaseQuantity(product.id, existingItem?.id, cart) + newBaseQuantity > availableStock) {
       toast({ title: 'Stok Tidak Mencukupi', description: `Stok tersedia: ${availableStock} ${baseUnit.abbreviation}.`, variant: 'destructive' });
       return false;
     }
 
-    const baseUnitPriceInfo = getProductPrice(product, getOtherCartBaseQuantity(product.id, existingItem?.id) + newBaseQuantity);
+    const baseUnitPriceInfo = getProductPrice(product, getOtherCartBaseQuantity(product.id, existingItem?.id, cart) + newBaseQuantity);
     if (existingItem) {
       const updated = cart.map(item => item.id === existingItem.id
         ? { ...item, quantity: newQuantity, sold_quantity: newQuantity, base_quantity: newBaseQuantity }
@@ -645,6 +673,7 @@ export const usePOS = () => {
     updateCartQuantity,
     updateCartItemUnit,
     removeFromCart,
+    hydrateCartItems,
     getTotalAmount,
     getTotalPointsEarned,
     getChangeAmount,

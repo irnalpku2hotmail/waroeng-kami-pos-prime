@@ -57,8 +57,10 @@ const CreditInvoiceModal = ({ open, onOpenChange, transaction }: CreditInvoiceMo
       customer_name: transaction.customers?.name || 'Umum',
       items: (transactionItems || []).map((item: any) => ({
         name: item.products?.name || '',
-        quantity: item.quantity,
-        unit_price: item.unit_price,
+        quantity: item.sold_quantity ?? item.quantity,
+        unit_price: item.sale_unit_price ?? item.unit_price,
+        unit_name: item.sale_unit_name || item.sale_unit_abbreviation || undefined,
+        unit_abbreviation: item.sale_unit_abbreviation || undefined,
         total_price: item.total_price,
       })),
       subtotal: transaction.total_amount,

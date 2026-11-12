@@ -56,7 +56,7 @@ const HeldTransactionsBadge: React.FC<HeldTransactionsBadgeProps> = ({
   };
 
   const calculateTotal = (cart: any[]) => {
-    return cart.reduce((sum, item) => sum + (item.selling_price * item.quantity), 0);
+    return cart.reduce((sum, item) => sum + (item.total_price ?? ((item.selling_price ?? item.unit_price ?? 0) * item.quantity)), 0);
   };
 
   const handleRecall = (id: string) => {

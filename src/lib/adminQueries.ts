@@ -179,7 +179,7 @@ export const transactionItemsKey = (transactionId?: string) =>
 export async function fetchTransactionItems(transactionId: string) {
   const { data, error } = await supabase
     .from('transaction_items')
-    .select('id, quantity, unit_price, total_price, products(name)')
+    .select('id, quantity, sold_quantity, sale_unit_name, sale_unit_abbreviation, sale_unit_price, conversion_factor, unit_price, total_price, products(name)')
     .eq('transaction_id', transactionId);
   if (error) throw error;
   return data || [];

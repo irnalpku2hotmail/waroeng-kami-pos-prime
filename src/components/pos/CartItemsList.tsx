@@ -1,16 +1,18 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Minus, Trash2 } from 'lucide-react';
 import { CartItem, getImageUrl } from '@/hooks/usePOS';
 
 interface CartItemsListProps {
   cart: CartItem[];
-  updateCartQuantity: (productId: string, newQuantity: number) => void;
-  removeFromCart: (productId: string) => void;
+  updateCartQuantity: (lineId: string, newQuantity: number) => void;
+  updateCartItemUnit: (lineId: string, unitId: string) => void;
+  removeFromCart: (lineId: string) => void;
 }
 
-const CartItemsList: React.FC<CartItemsListProps> = ({ cart, updateCartQuantity, removeFromCart }) => {
+const CartItemsList: React.FC<CartItemsListProps> = ({ cart, updateCartQuantity, updateCartItemUnit, removeFromCart }) => {
   if (cart.length === 0) {
     return <p className="text-gray-500 text-center py-4">Keranjang kosong</p>;
   }
@@ -26,15 +28,32 @@ const CartItemsList: React.FC<CartItemsListProps> = ({ cart, updateCartQuantity,
             )}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{item.name}</p>
-              <p className="text-xs text-gray-500">
-                Rp {item.unit_price.toLocaleString('id-ID')} | {item.loyalty_points}pts
+              <p className="text-xs text-muted-foreground">
+                Rp {(item.sale_unit_price ?? item.unit_price).toLocaleString('id-ID')} / {item.sale_unit_name || item.base_unit_name} · {item.loyalty_points}pts per {item.base_unit_abbreviation || 'unit'}
                 {item.price_variant && (
-                  <span className="ml-1 text-blue-600">({item.price_variant.name})</span>
+                  <span className="ml-1 text-primary">({item.price_variant.name})</span>
                 )}
+              </p>
+              {item.sale_units?.length > 1 && (
+                <Select value={item.sale_unit_id} onValueChange={(unitId) => updateCartItemUnit(item.id, unitId)}>
+                  <SelectTrigger className="mt-1 h-7 w-full text-xs">
+                    <SelectValue aria-label="Satuan jual" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {item.sale_units.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name} ({unit.abbreviation}){unit.conversionFactor !== 1 ? ` · ${unit.conversionFactor} ${item.base_unit_abbreviation}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="mt-1 text-xs font-semibold text-foreground">
+                Subtotal: Rp {item.total_price.toLocaleString('id-ID')}
               </p>
             </div>
             <div className="flex items-center gap-1">
-              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}>
+              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => updateCartQuantity(item.id, item.quantity - 1)}>
                 <Minus className="h-3 w-3" />
               </Button>
               <input 
@@ -44,15 +63,15 @@ const CartItemsList: React.FC<CartItemsListProps> = ({ cart, updateCartQuantity,
                 onChange={(e) => {
                   const value = parseInt(e.target.value, 10);
                   if (!isNaN(value) && value > 0) {
-                    updateCartQuantity(item.product_id, value);
+                    updateCartQuantity(item.id, value);
                   }
                 }}
                 className="w-12 text-center text-sm border rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}>
+              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => updateCartQuantity(item.id, item.quantity + 1)}>
                 <Plus className="h-3 w-3" />
               </Button>
-              <Button size="sm" variant="destructive" className="h-6 w-6 p-0 ml-1" onClick={() => removeFromCart(item.product_id)}>
+              <Button size="sm" variant="destructive" className="h-6 w-6 p-0 ml-1" onClick={() => removeFromCart(item.id)}>
                 <Trash2 className="h-3 w-3" />
               </Button>
             </div>

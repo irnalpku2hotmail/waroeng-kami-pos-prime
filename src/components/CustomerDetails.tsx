@@ -430,7 +430,7 @@ const CustomerDetails = ({ customer, open, onOpenChange }: CustomerDetailsProps)
                                     expandedItems.map((item: any) => (
                                       <div key={item.id} className="flex justify-between">
                                         <span>
-                                          {(item.products as any)?.name || 'Unknown'} ({item.quantity}x)
+                                          {(item.products as any)?.name || 'Unknown'} ({item.sold_quantity ?? item.quantity} {item.sale_unit_name || item.sale_unit_abbreviation || ''})
                                         </span>
                                         <span>Rp {Number(item.total_price).toLocaleString('id-ID')}</span>
                                       </div>

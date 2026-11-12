@@ -16,6 +16,8 @@ export interface ReceiptItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  unit_name?: string;
+  unit_abbreviation?: string;
 }
 
 export interface ReceiptData {
@@ -185,7 +187,7 @@ export const generateReceiptHTML = (
           <div class="item">
             <div class="item-name">${item.name}</div>
             <div class="item-details">
-              <span>${item.quantity} x Rp ${item.unit_price.toLocaleString('id-ID')}</span>
+              <span>${item.quantity} ${item.unit_name || item.unit_abbreviation || ''} x Rp ${item.unit_price.toLocaleString('id-ID')}</span>
               <span>Rp ${item.total_price.toLocaleString('id-ID')}</span>
             </div>
           </div>

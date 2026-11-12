@@ -129,9 +129,15 @@ export const useOfflineMode = () => {
       const transactionItems = transaction.cart.map(item => ({
         transaction_id: transactionData.id,
         product_id: item.product_id,
-        quantity: item.quantity,
+        quantity: item.base_quantity ?? item.quantity,
         unit_price: item.unit_price,
         total_price: item.total_price,
+        sold_quantity: item.sold_quantity ?? item.quantity,
+        sale_unit_id: item.sale_unit_id ?? null,
+        sale_unit_name: item.sale_unit_name ?? null,
+        sale_unit_abbreviation: item.sale_unit_abbreviation ?? null,
+        conversion_factor: item.conversion_factor ?? 1,
+        sale_unit_price: item.sale_unit_price ?? item.unit_price,
       }));
 
       const { error: itemsError } = await supabase
