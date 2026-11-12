@@ -84,7 +84,7 @@ export const usePOS = () => {
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select(`*, categories(name), units(name, abbreviation), price_variants(*)`)
+        .select(`*, categories(name), units(name, abbreviation), price_variants(*), unit_conversions(product_id, from_unit_id, to_unit_id, conversion_factor)`)
         .eq('is_active', true);
       
       if (debouncedSearch) {
@@ -144,15 +144,52 @@ export const usePOS = () => {
     const nestedUnit = Array.isArray(product.units) ? product.units[0] : product.units;
     const baseUnitId = product.unit_id || nestedUnit?.id;
     const baseUnit = baseUnitId
-      ? units.find((unit) => unit.id === baseUnitId) || (nestedUnit?.id ? nestedUnit as UnitDetails : null)
+      ? units.find((unit) => unit.id === baseUnitId) || (nestedUnit?.name ? {
+          id: baseUnitId,
+          name: nestedUnit.name,
+          abbreviation: nestedUnit.abbreviation || '',
+        } : null)
       : null;
     if (!baseUnit) return { baseUnit: null, options: [] };
-    const productConversions = unitConversions.filter((conversion: any) => conversion.product_id === product.id);
+    const cachedConversions = (product.unit_conversions || []).filter((conversion: any) => conversion.product_id === product.id);
+    const fetchedConversions = unitConversions.filter((conversion: any) => conversion.product_id === product.id);
+    const productConversions = fetchedConversions.length > 0 ? fetchedConversions : cachedConversions;
+    const allUnits = units.length > 0 ? units : (nestedUnit?.name ? [{
+      id: baseUnit.id,
+      name: nestedUnit.name,
+      abbreviation: nestedUnit.abbreviation || '',
+    }] : []);
     return {
       baseUnit,
-      options: buildSaleUnits(baseUnit, productConversions, units),
+      options: buildSaleUnits(baseUnit, productConversions, allUnits),
     };
   };
+
+  useEffect(() => {
+    if (cart.length === 0) return;
+    const refreshed = cart.map((item) => {
+      const product = products.find((candidate: any) => candidate.id === item.product_id);
+      if (!product) return item;
+      const { baseUnit, options } = getProductUnitOptions(product);
+      if (!baseUnit || options.length === 0) return item;
+      const selectedUnit = options.find((option) => option.id === item.sale_unit_id);
+      return {
+        ...item,
+        sale_unit_id: item.sale_unit_id || baseUnit.id,
+        sale_unit_name: item.sale_unit_name || selectedUnit?.name || baseUnit.name,
+        sale_unit_abbreviation: item.sale_unit_abbreviation || selectedUnit?.abbreviation || baseUnit.abbreviation,
+        conversion_factor: item.conversion_factor || selectedUnit?.conversionFactor || 1,
+        sold_quantity: item.sold_quantity || item.quantity,
+        sale_unit_price: item.sale_unit_price || item.unit_price,
+        base_quantity: item.base_quantity || getBaseQuantity(item.quantity, item.conversion_factor || 1) || item.quantity,
+        base_unit_id: item.base_unit_id || baseUnit.id,
+        base_unit_name: item.base_unit_name || baseUnit.name,
+        base_unit_abbreviation: item.base_unit_abbreviation || baseUnit.abbreviation,
+        sale_units: options,
+      };
+    });
+    if (refreshed.some((item, index) => item !== cart[index])) setCart(refreshed);
+  }, [products, units, unitConversions]);
 
   const getProductPrice = (product: any, baseQuantity: number) => {
     const price = getTierUnitPrice(product, baseQuantity);
